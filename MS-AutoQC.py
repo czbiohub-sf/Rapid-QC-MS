@@ -157,7 +157,10 @@ app.layout = html.Div(className="app-layout", children=[
                             {"label": "Positive Mode", "value": "pos"},
                             {"label": "Negative Mode", "value": "neg"}],
                         value="pos",
-                        style={"margin-top": "30px", "margin-left": "4%"},
+                        style={"margin-top": "30px",
+                               "width": "90%",
+                               "margin-left": "5%",
+                               "margin-right": "5%"},
                         inputStyle={"margin-left": "15px",
                                     "margin-right": "5px"}),
 
@@ -264,7 +267,10 @@ app.layout = html.Div(className="app-layout", children=[
                             {"label": "Positive Mode", "value": "pos"},
                             {"label": "Negative Mode", "value": "neg"}],
                         value="pos",
-                        style={"margin-top": "30px", "margin-left": "4%"},
+                        style={"margin-top": "30px",
+                               "width": "90%",
+                               "margin-left": "5%",
+                               "margin-right": "5%"},
                         inputStyle={"margin-left": "15px",
                                     "margin-right": "5px"}),
 
@@ -290,7 +296,7 @@ app.layout = html.Div(className="app-layout", children=[
 
                     html.Div(className="istd-plot-div", children=[
 
-                        html.Div(className="plot-container", children=[
+                        html.Div(className="istd-plot-container", children=[
 
                             dcc.Dropdown(
                                 id="QE2-istd-rt-dropdown",
@@ -307,7 +313,7 @@ app.layout = html.Div(className="app-layout", children=[
                             dcc.Graph(id="QE2-istd-rt-plot", animate=True)
                         ]),
 
-                        html.Div(className="plot-container", children=[
+                        html.Div(className="istd-plot-container", children=[
 
                             dcc.Dropdown(
                                 id="QE2-istd-intensity-dropdown",
@@ -355,9 +361,10 @@ app.layout = html.Div(className="app-layout", children=[
                 html.H2("Construction in progress")
             ]),
 
-        ]),
+        ])
 
     ])
+
 ])
 
 
@@ -419,6 +426,144 @@ def get_data(location, study_id):
         return "Data parsing error: " + str(error)
 
 
+def create_istd_scatter_plot(dataframe, x, y):
+
+    """
+    Returns scatter plot figure of retention time vs. sample for internal standards
+    """
+
+    istd_rt_plot = px.line(dataframe,
+                           title="RT – Internal Standards",
+                           x=x,
+                           y=y,
+                           height=600,
+                           markers=True,
+                           hover_name=x,
+                           labels={"variable": "Internal Standard",
+                                   "index": "Sample",
+                                   "value": "Retention Time"},
+                           log_x=False,
+                           color_discrete_map=istd_colors)
+    istd_rt_plot.update_layout(transition_duration=500,
+                               clickmode="event",
+                               legend_title_text="Internal Standards",
+                               margin=dict(t=75, b=75))
+    istd_rt_plot.update_xaxes(showticklabels=False, title="Sample")
+    istd_rt_plot.update_yaxes(title="Retention Time")
+
+    return istd_rt_plot
+
+
+def create_istd_intensity_plot(dataframe, x, y, text):
+
+    """
+    Returns bar plot figure of intensity vs. sample for internal standards
+    """
+
+    istd_intensity_plot = px.bar(dataframe,
+                                 title="Intensity – " + y,
+                                 x=x,
+                                 y=y,
+                                 # color=text,
+                                 text=text,
+                                 height=600)
+    istd_intensity_plot.update_layout(showlegend=False,
+                                      transition_duration=500,
+                                      clickmode="event",
+                                      xaxis=dict(rangeslider=dict(visible=True), autorange=True),
+                                      legend=dict(font=dict(size=10)),
+                                      margin=dict(t=75, b=75))
+    istd_intensity_plot.update_xaxes(showticklabels=False, title="Sample")
+    istd_intensity_plot.update_yaxes(title="Intensity")
+    istd_intensity_plot.update_traces(textposition='outside', hovertemplate='Sample: %{x} <br>Intensity: %{y}<br>')
+
+    return istd_intensity_plot
+
+
+def create_urine_scatter_plot(dataframe, study_name):
+
+    """
+    Returns scatter plot figure of retention time vs. feature for urine features
+    """
+
+    urine_rt_plot = px.scatter(dataframe,
+                               title="RT – Urine Features",
+                               x="InChIKey",
+                               y=study_name + ": RT (min)",
+                               height=500,
+                               hover_name="InChIKey",
+                               color="InChIKey",
+                               size=study_name + ": RT (min)",
+                               size_max=30,
+                               # hover_data=["Title"],
+                               log_x=False,
+                               color_discrete_map=istd_colors)
+    urine_rt_plot.update_layout(showlegend=False,
+                                transition_duration=500,
+                                clickmode="event",
+                                margin=dict(t=75, b=75))
+    urine_rt_plot.update_xaxes(showticklabels=False, title="Feature")
+    urine_rt_plot.update_yaxes(title="Retention Time")
+
+    return urine_rt_plot
+
+
+def create_urine_intensity_plot(dataframe, study_name):
+
+    """
+    Returns bar plot figure of intensity vs. feature for urine features
+    """
+
+    urine_intensity_plot = px.bar(dataframe,
+                                  title="Intensity – Urine Features",
+                                  x="InChIKey",
+                                  y=study_name + ": Height",
+                                  color="InChIKey",
+                                  height=500,
+                                  # text="Scientific Notation",
+                                  hover_data=["InChIKey"])
+    urine_intensity_plot.update_layout(showlegend=False,
+                                       transition_duration=500,
+                                       clickmode="event",
+                                       xaxis=dict(rangeslider=dict(visible=True), autorange=True),
+                                       legend=dict(font=dict(size=10)),
+                                       margin=dict(t=75, b=75))
+    urine_intensity_plot.update_xaxes(showticklabels=False, title="Feature")
+    urine_intensity_plot.update_yaxes(title="Intensity")
+    urine_intensity_plot.update_traces(textposition='outside')
+
+    return urine_intensity_plot
+
+
+def get_samples(instrument):
+
+    """
+    Returns list of samples for a given study run on an instrument
+    """
+
+    files = study_loaded[instrument]["study_file"]
+
+    pos_samples = files["rt_pos"].transpose()
+    neg_samples = files["rt_neg"].transpose()
+
+    for dataframe in [pos_samples, neg_samples]:
+        dataframe.columns = dataframe.iloc[0]
+        dataframe.drop(dataframe.index[0], inplace=True)
+
+    pos_samples = pos_samples.index.values.tolist()
+    neg_samples = neg_samples.index.values.tolist()
+    samples = pos_samples + neg_samples
+
+    df_samples = pd.DataFrame()
+    df_samples["Samples"] = samples
+    df_samples["Order"] = df_samples["Samples"].str.split("_").str[-1]
+    df_samples.sort_values(by="Order", ascending=False, inplace=True)
+
+    sample_list = df_samples["Samples"].tolist()
+
+    return [{"Completed Samples": sample.replace(": RT Info", "")} for sample in sample_list]
+
+
 @app.callback(Output("QE1-table", "data"),
               Output("QE2-table", "data"),
               Input("header", "children"))
@@ -445,27 +590,7 @@ def populate_QE1_sample_tables(rt_plot):
     Populates table with list of samples for selected study from QE 1 instrument table
     """
 
-    files = study_loaded["QE 1"]["study_file"]
-
-    pos_samples = files["rt_pos"].transpose()
-    neg_samples = files["rt_neg"].transpose()
-
-    for dataframe in [pos_samples, neg_samples]:
-        dataframe.columns = dataframe.iloc[0]
-        dataframe.drop(dataframe.index[0], inplace=True)
-
-    pos_samples = pos_samples.index.values.tolist()
-    neg_samples = neg_samples.index.values.tolist()
-    samples = pos_samples + neg_samples
-
-    df_samples = pd.DataFrame()
-    df_samples["Samples"] = samples
-    df_samples["Order"] = df_samples["Samples"].str.split("_").str[-1]
-    df_samples.sort_values(by="Order", ascending=False, inplace=True)
-
-    sample_list = df_samples["Samples"].tolist()
-
-    return [{"Completed Samples": sample} for sample in sample_list]
+    return get_samples("QE 1")
 
 
 @app.callback(Output("QE2-sample-table", "data"),
@@ -476,7 +601,7 @@ def populate_sample_tables(rt_plot):
     Populates table with list of samples for selected study from QE 2 instrument table
     """
 
-    pass
+    return get_samples("QE 2")
 
 
 @app.callback(Output("QE1-istd-rt-plot", "figure"),
@@ -552,76 +677,26 @@ def populate_QE1_plots(active_cell, table_data, polarity, scatter_plot_standards
             # df_istd_rt[istd + "_diff"] = rt_diff
 
         samples = df_istd_rt.index.values.tolist()
+        samples = [sample.replace(": RT Info", "") for sample in samples]
 
         try:
 
-            # INTERNAL STANDARD RETENTION TIME versus SAMPLE
-            istd_rt_plot = px.line(df_istd_rt,
-                                   title="RT – Internal Standards",
-                                   x=samples,
-                                   y=scatter_plot_standards,
-                                   height=600,
-                                   markers=True,
-                                   # hover_name=samples,
-                                   # hover_data=samples,
-                                   log_x=False,
-                                   color_discrete_map=istd_colors)
-            istd_rt_plot.update_layout(transition_duration=500,
-                                       clickmode="event",
-                                       margin=dict(t=75, b=75))
-            istd_rt_plot.update_xaxes(showticklabels=False, title="Sample")
-            istd_rt_plot.update_yaxes(title="Retention Time")
+            # Internal standards – retention time vs. sample
+            istd_rt_plot = create_istd_scatter_plot(dataframe=df_istd_rt,
+                                                    x=samples,
+                                                    y=scatter_plot_standards)
 
-            # URINE FEATURE RETENTION TIME versus SAMPLE
-            urine_rt_plot = px.scatter(df_urine_rt,
-                                       title="RT – Urine Features",
-                                       x="InChIKey",
-                                       y=study_name + ": RT (min)",
-                                       height=500,
-                                       hover_name="InChIKey",
-                                       # hover_data=["Title"],
-                                       log_x=False,
-                                       color_discrete_map=istd_colors)
-            urine_rt_plot.update_layout(transition_duration=500,
-                                        clickmode="event",
-                                        margin=dict(t=75, b=75))
-            urine_rt_plot.update_xaxes(showticklabels=False, title="Feature")
-            urine_rt_plot.update_yaxes(title="Retention Time")
+            # Internal standards – intensity vs. sample
+            istd_intensity_plot = create_istd_intensity_plot(dataframe=df_istd_intensity,
+                                                             x=df_istd_intensity.index,
+                                                             y=bar_plot_standard,
+                                                             text=samples)
 
-            # INTERNAL STANDARD INTENSITY versus SAMPLE
-            istd_intensity_plot = px.bar(df_istd_intensity,
-                                         title="Intensity – " + bar_plot_standard,
-                                         # text="Title",
-                                         x=samples,
-                                         y=bar_plot_standard,
-                                         height=600)
-            istd_intensity_plot.update_layout(transition_duration=500,
-                                              clickmode="event",
-                                              showlegend=True,
-                                              xaxis=dict(rangeslider=dict(visible=True), autorange=True),
-                                              legend=dict(font=dict(size=10)),
-                                              margin=dict(t=75, b=75))
-            istd_intensity_plot.update_xaxes(showticklabels=False, title="Sample")
-            istd_intensity_plot.update_yaxes(title="Intensity")
-            istd_intensity_plot.update_traces(textposition='outside')
+            # Urine features – retention time vs. feature
+            urine_rt_plot = create_urine_scatter_plot(df_urine_rt, study_name)
 
-            # URINE FEATURE INTENSITY versus SAMPLE
-            urine_intensity_plot = px.bar(df_urine_intensity,
-                                          title="Intensity – Urine Features",
-                                          x="InChIKey",
-                                          y=study_name + ": Height",
-                                          height=500,
-                                          # text="Scientific Notation",
-                                          hover_data=["InChIKey"])
-            urine_intensity_plot.update_layout(transition_duration=500,
-                                               clickmode="event",
-                                               showlegend=True,
-                                               xaxis=dict(rangeslider=dict(visible=True), autorange=True),
-                                               legend=dict(font=dict(size=10)),
-                                               margin=dict(t=75, b=75))
-            urine_intensity_plot.update_xaxes(showticklabels=False, title="Feature")
-            urine_intensity_plot.update_yaxes(title="Intensity")
-            urine_intensity_plot.update_traces(textposition='outside')
+            # Urine features – intensity vs. feature
+            urine_intensity_plot = create_urine_intensity_plot(df_urine_intensity, study_name)
 
             return istd_rt_plot, urine_rt_plot, istd_intensity_plot, urine_intensity_plot
 
@@ -631,6 +706,137 @@ def populate_QE1_plots(active_cell, table_data, polarity, scatter_plot_standards
 
     else:
         return dash.no_update
+
+
+@app.callback(Output("QE2-istd-rt-plot", "figure"),
+              Output("QE2-urine-rt-plot", "figure"),
+              Output("QE2-istd-intensity-plot", "figure"),
+              Output("QE2-urine-intensity-plot", "figure"),
+              Input("QE2-table", "active_cell"),
+              State("QE2-table", "data"),
+              Input("QE2-polarity-options", "value"),
+              Input("QE2-istd-rt-dropdown", "value"),
+              Input("QE2-istd-intensity-dropdown", "value"), prevent_initial_call=True)
+def populate_QE2_plots(active_cell, table_data, polarity, scatter_plot_standards, bar_plot_standard):
+
+    """
+    Dash callback for loading QE 2 instrument data into scatter and bar plots
+    """
+
+    # Get name of clicked study from table
+    if active_cell:
+        study_name = table_data[active_cell['row']][active_cell['column_id']]
+
+        # Retrieve data for clicked study and store as a dictionary
+        if study_loaded["QE 2"]["study_name"] != study_name:
+
+            directory = "QE_2/" + study_name + "/"
+            files = get_data(directory, study_name)
+
+            study_loaded["QE 2"]["study_name"] = study_name
+            study_loaded["QE 2"]["study_file"] = files
+
+        else:
+            files = study_loaded["QE 2"]["study_file"]
+
+        # Get internal standards from QC DataFrames for RT scatter plot
+        pos_internal_standards = files["rt_pos"]["Title"].astype(str).tolist()
+        neg_internal_standards = files["rt_neg"]["Title"].astype(str).tolist()
+        pos_urine_features = files["urine_rt_pos"]["InChIKey"].astype(str).tolist()
+        neg_urine_features = files["urine_rt_pos"]["InChIKey"].astype(str).tolist()
+
+        if polarity == "pos":
+            internal_standards = pos_internal_standards
+            urine_features = pos_urine_features
+        elif polarity == "neg":
+            internal_standards = neg_internal_standards
+            urine_features = neg_urine_features
+
+        # Set initial dropdown values when none are selected
+        if not scatter_plot_standards:
+            scatter_plot_standards = internal_standards
+
+        if not bar_plot_standard:
+            bar_plot_standard = internal_standards[0]
+
+        # Prepare DataFrames for plotting
+        df_istd_rt = files["rt_" + polarity]
+        df_urine_rt = files["urine_rt_" + polarity]
+        df_istd_intensity = files["intensity_" + polarity]
+        df_urine_intensity = files["urine_intensity_" + polarity]
+
+        # Transpose internal standard DataFrames
+        df_istd_rt = df_istd_rt.transpose()
+        df_istd_intensity = df_istd_intensity.transpose()
+
+        for dataframe in [df_istd_rt, df_istd_intensity]:
+            dataframe.columns = dataframe.iloc[0]
+            dataframe.drop(dataframe.index[0], inplace=True)
+
+        # Split text in internal_standard DataFrames
+        for istd in internal_standards:
+            rt = df_istd_rt[istd].str.split(": ").str[0]
+            rt_diff = df_istd_rt[istd].str.split(": ").str[1]
+            df_istd_rt[istd] = rt.astype(float)
+            # df_istd_rt[istd + "_diff"] = rt_diff
+
+        samples = df_istd_rt.index.values.tolist()
+        samples = [sample.replace(": RT Info", "") for sample in samples]
+
+        try:
+
+            # Internal standards – retention time vs. sample
+            istd_rt_plot = create_istd_scatter_plot(dataframe=df_istd_rt,
+                                                    x=samples,
+                                                    y=scatter_plot_standards)
+
+            # Internal standards – intensity vs. sample
+            istd_intensity_plot = create_istd_intensity_plot(dataframe=df_istd_intensity,
+                                                             x=df_istd_intensity.index,
+                                                             y=bar_plot_standard,
+                                                             text=samples)
+
+            # Urine features – retention time vs. feature
+            urine_rt_plot = create_urine_scatter_plot(df_urine_rt, study_name)
+
+            # Urine features – intensity vs. feature
+            urine_intensity_plot = create_urine_intensity_plot(df_urine_intensity, study_name)
+
+            return istd_rt_plot, urine_rt_plot, istd_intensity_plot, urine_intensity_plot
+
+        except Exception as error:
+            print(error)
+            return dash.no_update
+
+    else:
+        return dash.no_update
+
+
+@app.callback(Output("QE1-istd-rt-dropdown", "options"),
+              Output("QE1-istd-intensity-dropdown", "options"),
+              Output("QE2-istd-rt-dropdown", "options"),
+              Output("QE2-istd-intensity-dropdown", "options"),
+              Input("QE1-polarity-options", "value"),
+              Input("QE2-polarity-options", "value"), prevent_initial_call=True)
+def update_dropdowns(polarity_QE1, polarity_QE2):
+
+    """
+    Updates internal standard dropdown list with correct standards for corresponding polarity
+    """
+
+    neg_internal_standards = ["1_Methionine_d8", "1_Creatinine_d3", "1_CUDA", "1_Glutamine_d5", "1_Glutamic Acid_d3",
+                              "1_Arginine_d7", "1_Tryptophan d5", "1_Serine d3", "1_Hippuric acid d5"]
+
+    QE1_dropdown = standards_list
+    QE2_dropdown = standards_list
+
+    if polarity_QE1 == "neg":
+        QE1_dropdown = neg_internal_standards
+
+    if polarity_QE2 == "neg":
+        QE2_dropdown = neg_internal_standards
+
+    return QE1_dropdown, QE1_dropdown, QE2_dropdown, QE2_dropdown
 
 
 # @app.callback(Output("information-card", "children"),

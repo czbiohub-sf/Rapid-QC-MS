@@ -15,8 +15,8 @@
 
 .table-container {
     float: left;
-    margin-right: 1%;
-    width: 21%;
+    margin-right: 2%;
+    width: 23%;
 }
 
 .dash-table-container {
@@ -25,7 +25,7 @@
 
 .all-plots-container {
     float: left;
-    width: 78%;
+    width: 75%;
 }
 
 .istd-plot-div {
@@ -46,12 +46,7 @@
 
 .plot-container {
     float: left;
-    margin-left: 1%;
-    width: 49%;
-}
-
-.information-card {
-
+    width: 50%;
 }
 
 h2 {
