@@ -1,17 +1,20 @@
 import os, sys, webbrowser
 import pandas as pd
-import numpy as np
 import plotly.express as px
 from dash import dash, dcc, html, dash_table, Input, Output, State
+from pydrive2.auth import GoogleAuth
+from pydrive2.drive import GoogleDrive
 
 study_loaded = {
     "QE 1": {
         "study_name": "",
-        "study_file": ""
+        "study_file": "",
+        "drive_id": "1-0y1jUARBM1DwExjrhyl0WF3KRLFWHom"
     },
     "QE 2": {
         "study_name": "",
-        "study_file": ""
+        "study_file": "",
+        "drive_id": "1-9unZeOHyTPYZScox5Wv9X0CxTWIE-Ih"
     },
 }
 
@@ -20,68 +23,190 @@ standards_list = ["1_Methionine_d8", "1_1_Methylnicotinamide_d3", "1_Creatinine_
              "1_Arginine_d7", "1_Alanine_d3", "1_Valine d8", "1_Tryptophan d5", "1_Serine d3", "1_Lysine d8",
              "1_Phenylalanine d8", "1_Hippuric acid d5"]
 
-neg_urine_features_list = ["AEMOLEFTQBMNLQ-AQKNRBDQSA-N", "AKEUNCKRJATALU-UHFFFAOYSA-N", "ALRHLSYJTWAHJZ-UHFFFAOYSA-N",
-                           "AQTYXAPIHMXAAV-UHFFFAOYSA-N", "AYFVYJQAPQTCCC-UHFFFAOYSA-N", "BTJIUGUIPKRLHP-UHFFFAOYSA-N",
-                           "BXFFHSIDQOFMLE-UHFFFAOYSA-N", "BYXCFUMGEBZDDI-UHFFFAOYSA-N", "CBQJSKKFNMDLON-UHFFFAOYSA-N",
-                           "CCVYRRGZDBSHFU-UHFFFAOYSA-N", "CGFRVKXGZRODPA-UHFFFAOYSA-N", "COLNVLDHVKWLRT-UHFFFAOYSA-N",
-                           "CZMRCDWAGMRECN-UGDNZRGBSA-N", "CZWCKYRVOZZJNM-USOAJAOKSA-N", "DCICDMMXFIELDF-UHFFFAOYSA-N",
-                           "DCXYFEDJOCDNAF-REOHCLBHSA-N", "DDRJAANPRJIHGJ-UHFFFAOYSA-N", "DRTQHJPVMGBUCF-XVFCMESISA-N",
-                           "DTERQYGMUDWYAZ-ZETCQYMHSA-N", "DUUGKQCEGZLZNO-UHFFFAOYSA-N", "FDGQSTZJBFJUBT-UHFFFAOYSA-N",
-                           "FJKROLUGYXJWQN-UHFFFAOYSA-N", "GHOKWGTUZJEAQD-UHFFFAOYSA-N", "HCZHHEIFKROPDY-UHFFFAOYSA-N",
-                           "HEBKCHPVOIAQTA-QWWZWVQMSA-N", "HNDVDQJCIGZPNO-YFKPBYRVSA-N", "HNEGQIOMVPPMNR-IHWYPQMZSA-N",
-                           "IGMNYECMUMZDDF-UHFFFAOYSA-N", "ILGMGHZPXRDCCS-UHFFFAOYSA-N", "JDHILDINMRGULE-UHFFFAOYSA-N",
-                           "JFCQEDHGNNZCLN-UHFFFAOYSA-N", "JFLIEFSWGNOPJJ-JTQLQIEISA-N", "JVGVDSSUAVXRDY-UHFFFAOYSA-N",
-                           "JVTAAEKCZFNVCJ-UHFFFAOYSA-N", "KBOJOGQFRVVWBH-ZETCQYMHSA-N", "KDYFGRWQOYBRFD-UHFFFAOYSA-N",
-                           "KSPQDMRTZZYQLM-UHFFFAOYSA-N", "KTHDTJVBEPMMGL-UHFFFAOYSA-N", "LOIYMIARKYCTBW-OWOJBTEDSA-N",
-                           "LXVSANCQXSSLPA-UHFFFAOYSA-N", "MTCFGRXMJLQNBG-UHFFFAOYSA-N", "MYYIAHXIVFADCU-QMMMGPOBSA-N",
-                           "NBIIXXVUZAFLBC-UHFFFAOYSA-N", "NIDVTARKFBZMOT-PEBGCTIMSA-N", "NOFNCLGCUJJPKU-UHFFFAOYSA-N",
-                           "NWGZOALPWZDXNG-UHFFFAOYSA-N", "ONPXCLZMBSJLSP-CSMHCCOUSA-N", "PMOWTIHVNWZYFI-AATRIKPKSA-N",
-                           "POJWUDADGALRAB-UHFFFAOYSA-N", "PTJWIQPHWPFNBW-GBNDHIKLSA-N", "PXQPEWDEAKTCGB-UHFFFAOYSA-N",
-                           "PYUSHNKNPOHWEZ-YFKPBYRVSA-N", "QFDRTQONISXGJA-UHFFFAOYSA-N", "QIVBCDIJIAJPQS-UHFFFAOYSA-N",
-                           "QVWAEZJXDYOKEH-UHFFFAOYSA-N", "RFCQJGFZUQFYRF-UHFFFAOYSA-N", "RSPURTUNRHNVGF-IOSLPCCCSA-N",
-                           "RWSXRVCMGQZWBV-UHFFFAOYSA-N", "SQVRNKJHWKZAKO-LUWBGTNYSA-N", "SXUXMRMBWZCMEN-ZOQUXTDFSA-N",
-                           "TYFQFVWCELRYAO-UHFFFAOYSA-N", "UTAIYTHAJQNQDW-KQYNXXCUSA-N", "UZTFMUBKZQVKLK-UHFFFAOYSA-N",
-                           "VBUYCZFBVCCYFD-NUNKFHFFSA-N", "VVHOUVWJCQOYGG-UHFFFAOYSA-N", "VZCYOOQTPOCHFL-UPHRSURJSA-N",
-                           "WGNAKZGUSRVWRH-UHFFFAOYSA-N", "WHUUTDBJXJRKMK-UHFFFAOYSA-N", "WLJVNTCWHIRURA-UHFFFAOYSA-N",
-                           "WNLRTRBMVRJNCN-UHFFFAOYSA-N", "WRUSVQOKJIDBLP-HWKANZROSA-N", "WXNXCEHXYPACJF-UHFFFAOYSA-N",
-                           "WXTMDXOMEHJXQO-UHFFFAOYSA-N", "XGILAAMKEQUXLS-UHFFFAOYSA-N", "XLBVNMSMFQMKEY-BYPYZUCNSA-N",
-                           "XOAAWQZATWQOTB-UHFFFAOYSA-N", "XUYPXLNMDZIRQH-UHFFFAOYSA-N", "YGSDEFSMJLZEOE-UHFFFAOYSA-N",
-                           "ZDXPYRJPNDTMRX-UHFFFAOYSA-N", "ZFXYFBGIUFBOJW-UHFFFAOYSA-N", "ZMHLUFWWWPBTIU-UHFFFAOYSA-N"]
+pos_urine_features_dict = {
+    "DL-Isoleucine": "AGPKZVBTJJNPAG-UHFFFAOYSA-N",
+    "Riboflavin": "AUNGANRZJHBGPY-SCRDCRAPSA-N",
+    "3-Hydroxypropionic acid": "AYFVYJQAPQTCCC-UHFFFAOYSA-N",
+    "o-Methoxyphenyl sulfate": "BPMFZUMJYQTVII-UHFFFAOYSA-N",
+    "DL-Threonine": "COLNVLDHVKWLRT-UHFFFAOYSA-N",
+    "4-Nitrophenol": "CQOVPNPJLQNMDC-ZETCQYMHSA-N",
+    "Creatine": "CVSVTCORWBXHQV-UHFFFAOYSA-N",
+    "7-Trimethyluric acid": "CWLQUGTUXBXTLF-UHFFFAOYSA-N",
+    "Afalanine": "CYZKJBZEIFWZSR-LURJTMIESA-N",
+    "Sucrose": "CZMRCDWAGMRECN-UGDNZRGBSA-N",
+    "2-Hydroxyphenylacetic acid": "DCXYFEDJOCDNAF-REOHCLBHSA-N",
+    "3-Acetylphenol sulfate": "DDRJAANPRJIHGJ-UHFFFAOYSA-N",
+    "Nicotinamide": "DFPAKSUCGFBDDF-UHFFFAOYSA-N",
+    "Dehydroepiandrosterone sulfate": "DTERQYGMUDWYAZ-ZETCQYMHSA-N",
+    "Tyramine": "DZGWFCGJZKJUFP-UHFFFAOYSA-N",
+    "N-Acetyl-D-tryptophan": "DZTHIGRZJZPRDV-GFCCVEGCSA-N",
+    "Isobutyrylglycine": "FDGQSTZJBFJUBT-UHFFFAOYSA-N",
+    "Asparagine": "FEMXZDUTFRTWPE-UHFFFAOYSA-N",
+    "N8-Acetylspermidine": "FONIWJIDLJEJTL-UHFFFAOYSA-N",
+    "Adenine": "GFFGJBXGBJISGV-UHFFFAOYSA-N",
+    "1-Methyladenosine": "GFYLSDSUCHVORB-IOSLPCCCSA-N",
+    "DL-Pantothenic acid": "GHOKWGTUZJEAQD-UHFFFAOYSA-N",
+    "Maltose": "GUBGYTABKSRVRQ-QUYVBRFLSA-N",
+    "Kynurenic acid": "HCZHHEIFKROPDY-UHFFFAOYSA-N",
+    "3-Cyclohexanedione": "HJSLFCCWAKVHIW-UHFFFAOYSA-N",
+    "Histidine": "HNDVDQJCIGZPNO-YFKPBYRVSA-N",
+    "Citraconic acid": "HNXQXTQTPAJEJL-UHFFFAOYSA-N",
+    "Ethanolamine": "HZAXFHJVJLSVMW-UHFFFAOYSA-N",
+    "Dimethyl sulfoxide": "IAZDPXIOMUYVGZ-UHFFFAOYSA-N",
+    "3-dihydro-1H-indol-3-yl)acetic acid": "JDHILDINMRGULE-UHFFFAOYSA-N",
+    "Phenylacetylglutamine": "JFLIEFSWGNOPJJ-JTQLQIEISA-N",
+    "3-Ureidopropionic acid": "JSJWCHRYRHKBBW-UHFFFAOYSA-N",
+    "Thiamine": "JZRWCGZRTZMZEH-UHFFFAOYSA-N",
+    "N-Acetylhistidine": "KBOJOGQFRVVWBH-ZETCQYMHSA-N",
+    "Lysine": "KDXKERNSBIXSRK-YFKPBYRVSA-N",
+    "Succinic acid": "KSPIYJQBLVDRRI-WDSKDSINSA-N",
+    "N-(2-Furoyl)glycine": "KSPQDMRTZZYQLM-UHFFFAOYSA-N",
+    "Betaine": "KWIUHFFTVRNATP-UHFFFAOYSA-N",
+    "1-Methylnicotinamide": "LDHMAVIPBRSVRG-UHFFFAOYSA-O",
+    "Urocanic acid": "LOIYMIARKYCTBW-OWOJBTEDSA-N",
+    "5-Hydroxyindole": "LMIQERWZRIFWNZ-UHFFFAOYSA-N",
+    "3'-Adenylic acid": "LNQVTSROQXJCDD-KQYNXXCUSA-N",
+    "S-adenosylmethionine": "MEFKEPWMEQBLKI-AIRLBKTGSA-N",
+    "1,7-Dimethyluric acid": "NOFNCLGCUJJPKU-UHFFFAOYSA-N",
+    "2-Amino-6-(trimethylazaniumyl)hexanoate": "MXNRLFUSFKVQSK-UHFFFAOYSA-N",
+    "Anserine": "MYYIAHXIVFADCU-QMMMGPOBSA-N",
+    "N4-Acetylcytidine": "NIDVTARKFBZMOT-PEBGCTIMSA-N",
+    "Histamine": "NTYJJOPFIAHURM-UHFFFAOYSA-N",
+    "Dimethylarginine": "NWGZOALPWZDXNG-UHFFFAOYSA-N",
+    "N-Formylmethionine": "ODKSFYDXXFIFQN-BYPYZUCNSA-N",
+    "Choline": "OEYIOHPDSNJKLS-UHFFFAOYSA-N",
+    "Adenosine": "OIRDTQYFTABQOQ-KQYNXXCUSA-N",
+    "Dihydrouracil": "OIVLITBTBDPEFK-UHFFFAOYSA-N",
+    "3-(3-Hydroxyphenyl)propanoic acid": "ONPXCLZMBSJLSP-CSMHCCOUSA-N",
+    "N-Acetyl-1-aspartylglutamic acid": "OPVPGKGADVGKTG-UHFFFAOYSA-N",
+    "Spermine": "PFNFFQXMRSDOHW-UHFFFAOYSA-N",
+    "7-Methylxanthine": "PFWLFWPASULGAN-UHFFFAOYSA-N",
+    "3-Methylcrotonylglycine": "PFWQSHXPNKRLIV-UHFFFAOYSA-N",
+    "DL-Carnitine": "PHIQHXFUZVPYII-UHFFFAOYSA-N",
+    "4-Hydroxyquinoline": "PMZDQRJGMBOQBF-UHFFFAOYSA-N",
+    "Suberic acid": "PQNASZJZHFPQLE-UHFFFAOYSA-N",
+    "Imidazoleacetic acid": "PRJKNHOMHKJCEJ-UHFFFAOYSA-N",
+    "Acetylcysteine": "PWKSKIMOESPYIA-BYPYZUCNSA-N",
+    "1-Methyluric acid": "QFDRTQONISXGJA-UHFFFAOYSA-N",
+    "Hippuric acid": "QIAFMBKCNZACKA-UHFFFAOYSA-N",
+    "DL-Tryptophan": "QIVBCDIJIAJPQS-UHFFFAOYSA-N",
+    "Acetylcarnitine": "RDHQFKQIGNGIED-UHFFFAOYSA-N",
+    "3-Methylcytidine": "RDPUKVRQKWBSPK-ZOQUXTDFSA-N",
+    "DL-Leucine": "ROHFNLRQFUQHCH-UHFFFAOYSA-N",
+    "N2,N2-Dimethylguanosine": "RSPURTUNRHNVGF-IOSLPCCCSA-N",
+    "gamma-Glutamylcysteinylglycine": "RWSXRVCMGQZWBV-UHFFFAOYSA-N",
+    "Caffeine": "RYYVLZVUVIJVGH-UHFFFAOYSA-N",
+    "3'-O-Methylcytidine": "RZJCFLSPBDUNDH-ZOQUXTDFSA-N",
+    "2-Methylguanosine": "SLEHROROQDYRAW-KQYNXXCUSA-N",
+    "gamma-Glu-Ile": "SNCKGJWJABDZHI-ZKWXMUAHSA-N",
+    "Choline Alfoscerate": "SUHOQUVVVLNYQR-MRVPVSSYSA-N",
+    "Cyclo(-Leu-Pro)": "SZJNCZMRZAUNQT-IUCAKERBSA-N",
+    "4-Guanidinobutyric acid": "TUHVEAJXIMEOSA-UHFFFAOYSA-N",
+    "Levocarnitine propionate": "UFAHZIUFPNSHSL-MRVPVSSYSA-N",
+    "1-Methylguanosine": "UTAIYTHAJQNQDW-KQYNXXCUSA-N",
+    "Trimethylamine oxide": "UYPYRKYUKCHHIB-UHFFFAOYSA-N",
+    "Guanine": "UYTPUPDQBNUYGX-UHFFFAOYSA-N",
+    "N-alpha-Acetyl-L-lysine": "VEYYWZRYIYDQJM-ZETCQYMHSA-N",
+    "N6-Methyladenosine": "VQAYFKKCNSOZKM-IOSLPCCCSA-N",
+    "N-amidinoaspartic acid": "VVHOUVWJCQOYGG-UHFFFAOYSA-N",
+    "DL-Glutamic acid": "WHUUTDBJXJRKMK-UHFFFAOYSA-N",
+    "5'-Deoxy-5'-methylthioadenosine": "WUUGFSXJNOTRMR-IOSLPCCCSA-N",
+    "Trigonelline": "WWNNZCOKKKDOPX-UHFFFAOYSA-N",
+    "Methylurea": "XGEGHDBEHXKFPX-UHFFFAOYSA-N",
+    "2-Amino-6-ureidohexanoic acid": "XIGSAGMEBXLVJJ-UHFFFAOYSA-N",
+    "N-Methylleucine": "XJODGRWDFZVTKW-LURJTMIESA-N",
+    "N-Acetylhistamine": "XJWPISBUKWZALE-UHFFFAOYSA-N",
+    "Taurine": "XOAAWQZATWQOTB-UHFFFAOYSA-N",
+    "Urea": "XSQUKJJJFZCRTK-UHFFFAOYSA-N",
+    "N(6),N(6)-Dimethyl-L-lysine": "XXEWFEBMSGLYBY-ZETCQYMHSA-N",
+    "DL-Glutamine": "ZDXPYRJPNDTMRX-UHFFFAOYSA-N",
+    "Theophylline": "ZFXYFBGIUFBOJW-UHFFFAOYSA-N",
+    "S-adenosyl-L-homocysteine": "ZJUKTBDSGOFHSH-WFMPWKQPSA-N"
+ }
 
-pos_urine_features_list = ["AGPKZVBTJJNPAG-UHFFFAOYSA-N", "AUNGANRZJHBGPY-SCRDCRAPSA-N", "AYFVYJQAPQTCCC-UHFFFAOYSA-N",
-                           "BPMFZUMJYQTVII-UHFFFAOYSA-N", "COLNVLDHVKWLRT-UHFFFAOYSA-N", "CQOVPNPJLQNMDC-ZETCQYMHSA-N",
-                           "CVSVTCORWBXHQV-UHFFFAOYSA-N", "CWLQUGTUXBXTLF-UHFFFAOYSA-N", "CYZKJBZEIFWZSR-LURJTMIESA-N",
-                           "CZMRCDWAGMRECN-UGDNZRGBSA-N", "DCXYFEDJOCDNAF-REOHCLBHSA-N", "DDRJAANPRJIHGJ-UHFFFAOYSA-N",
-                           "DFPAKSUCGFBDDF-UHFFFAOYSA-N", "DTERQYGMUDWYAZ-ZETCQYMHSA-N", "DZGWFCGJZKJUFP-UHFFFAOYSA-N",
-                           "DZTHIGRZJZPRDV-GFCCVEGCSA-N", "FDGQSTZJBFJUBT-UHFFFAOYSA-N", "FEMXZDUTFRTWPE-UHFFFAOYSA-N",
-                           "FONIWJIDLJEJTL-UHFFFAOYSA-N", "GFFGJBXGBJISGV-UHFFFAOYSA-N", "GFYLSDSUCHVORB-IOSLPCCCSA-N",
-                           "GHOKWGTUZJEAQD-UHFFFAOYSA-N", "GUBGYTABKSRVRQ-QUYVBRFLSA-N", "HCZHHEIFKROPDY-UHFFFAOYSA-N",
-                           "HJSLFCCWAKVHIW-UHFFFAOYSA-N", "HNDVDQJCIGZPNO-YFKPBYRVSA-N", "HNXQXTQTPAJEJL-UHFFFAOYSA-N",
-                           "HZAXFHJVJLSVMW-UHFFFAOYSA-N", "IAZDPXIOMUYVGZ-UHFFFAOYSA-N", "JDHILDINMRGULE-UHFFFAOYSA-N",
-                           "JFLIEFSWGNOPJJ-JTQLQIEISA-N", "JSJWCHRYRHKBBW-UHFFFAOYSA-N", "JZRWCGZRTZMZEH-UHFFFAOYSA-N",
-                           "KBOJOGQFRVVWBH-ZETCQYMHSA-N", "KDXKERNSBIXSRK-YFKPBYRVSA-N", "KSPIYJQBLVDRRI-WDSKDSINSA-N",
-                           "KSPQDMRTZZYQLM-UHFFFAOYSA-N", "KWIUHFFTVRNATP-UHFFFAOYSA-N", "LDHMAVIPBRSVRG-UHFFFAOYSA-O",
-                           "LEVWYRKDKASIDU-IMJSIDKUSA-N", "LMIQERWZRIFWNZ-UHFFFAOYSA-N", "LNQVTSROQXJCDD-KQYNXXCUSA-N",
-                           "LOIYMIARKYCTBW-OWOJBTEDSA-N", "MEFKEPWMEQBLKI-AIRLBKTGSA-N", "MTCFGRXMJLQNBG-UHFFFAOYSA-N",
-                           "MXNRLFUSFKVQSK-UHFFFAOYSA-N", "MYYIAHXIVFADCU-QMMMGPOBSA-N", "NIDVTARKFBZMOT-PEBGCTIMSA-N",
-                           "NOFNCLGCUJJPKU-UHFFFAOYSA-N", "NTYJJOPFIAHURM-UHFFFAOYSA-N", "NWGZOALPWZDXNG-UHFFFAOYSA-N",
-                           "ODKSFYDXXFIFQN-BYPYZUCNSA-N", "OEYIOHPDSNJKLS-UHFFFAOYSA-N", "OIRDTQYFTABQOQ-KQYNXXCUSA-N",
-                           "OIVLITBTBDPEFK-UHFFFAOYSA-N", "ONPXCLZMBSJLSP-CSMHCCOUSA-N", "OPVPGKGADVGKTG-UHFFFAOYSA-N",
-                           "PFNFFQXMRSDOHW-UHFFFAOYSA-N", "PFWLFWPASULGAN-UHFFFAOYSA-N", "PFWQSHXPNKRLIV-UHFFFAOYSA-N",
-                           "PHIQHXFUZVPYII-UHFFFAOYSA-N", "PMZDQRJGMBOQBF-UHFFFAOYSA-N", "PQNASZJZHFPQLE-UHFFFAOYSA-N",
-                           "PRJKNHOMHKJCEJ-UHFFFAOYSA-N", "PWKSKIMOESPYIA-BYPYZUCNSA-N", "QFDRTQONISXGJA-UHFFFAOYSA-N",
-                           "QIAFMBKCNZACKA-UHFFFAOYSA-N", "QIVBCDIJIAJPQS-UHFFFAOYSA-N", "RDHQFKQIGNGIED-UHFFFAOYSA-N",
-                           "RDPUKVRQKWBSPK-ZOQUXTDFSA-N", "ROHFNLRQFUQHCH-UHFFFAOYSA-N", "RSPURTUNRHNVGF-IOSLPCCCSA-N",
-                           "RWSXRVCMGQZWBV-UHFFFAOYSA-N", "RYYVLZVUVIJVGH-UHFFFAOYSA-N", "RZJCFLSPBDUNDH-ZOQUXTDFSA-N",
-                           "SLEHROROQDYRAW-KQYNXXCUSA-N", "SNCKGJWJABDZHI-ZKWXMUAHSA-N", "SUHOQUVVVLNYQR-MRVPVSSYSA-N",
-                           "SZJNCZMRZAUNQT-IUCAKERBSA-N", "TUHVEAJXIMEOSA-UHFFFAOYSA-N", "UFAHZIUFPNSHSL-MRVPVSSYSA-N",
-                           "UTAIYTHAJQNQDW-KQYNXXCUSA-N", "UYPYRKYUKCHHIB-UHFFFAOYSA-N", "UYTPUPDQBNUYGX-UHFFFAOYSA-N",
-                           "VEYYWZRYIYDQJM-ZETCQYMHSA-N", "VQAYFKKCNSOZKM-IOSLPCCCSA-N", "VVHOUVWJCQOYGG-UHFFFAOYSA-N",
-                           "WHUUTDBJXJRKMK-UHFFFAOYSA-N", "WUUGFSXJNOTRMR-IOSLPCCCSA-N", "WWNNZCOKKKDOPX-UHFFFAOYSA-N",
-                           "XGEGHDBEHXKFPX-UHFFFAOYSA-N", "XIGSAGMEBXLVJJ-UHFFFAOYSA-N", "XJODGRWDFZVTKW-LURJTMIESA-N",
-                           "XJWPISBUKWZALE-UHFFFAOYSA-N", "XOAAWQZATWQOTB-UHFFFAOYSA-N", "XSQUKJJJFZCRTK-UHFFFAOYSA-N",
-                           "XXEWFEBMSGLYBY-ZETCQYMHSA-N", "ZDXPYRJPNDTMRX-UHFFFAOYSA-N", "ZFXYFBGIUFBOJW-UHFFFAOYSA-N",
-                           "ZJUKTBDSGOFHSH-WFMPWKQPSA-N"]
+neg_urine_features_dict = {
+    "D-Glucuronic Acid": "AEMOLEFTQBMNLQ-AQKNRBDQSA-N",
+    "2,6-Dihydroxybenzoic acid": "AKEUNCKRJATALU-UHFFFAOYSA-N",
+    "3-Hydroxypropionic acid": "ALRHLSYJTWAHJZ-UHFFFAOYSA-N",
+    "o-Methoxyphenyl sulfate": "AQTYXAPIHMXAAV-UHFFFAOYSA-N",
+    "DL-Threonine": "AYFVYJQAPQTCCC-UHFFFAOYSA-N",
+    "4-Nitrophenol": "BTJIUGUIPKRLHP-UHFFFAOYSA-N",
+    "Indoxyl sulfate": "BXFFHSIDQOFMLE-UHFFFAOYSA-N",
+    "1,3,7-Trimethyluric acid": "BYXCFUMGEBZDDI-UHFFFAOYSA-N",
+    "Afalanine": "CBQJSKKFNMDLON-UHFFFAOYSA-N",
+    "2-Hydroxyphenylacetic acid": "CCVYRRGZDBSHFU-UHFFFAOYSA-N",
+    "3-Acetylphenol sulfate": "CGFRVKXGZRODPA-UHFFFAOYSA-N",
+    "L-Phenylalanine": "COLNVLDHVKWLRT-UHFFFAOYSA-N",
+    "Sucrose": "CZMRCDWAGMRECN-UGDNZRGBSA-N",
+    "Dehydroepiandrosterone sulfate": "CZWCKYRVOZZJNM-USOAJAOKSA-N",
+    "Isobutyrylglycine": "DCICDMMXFIELDF-UHFFFAOYSA-N",
+    "Asparagine": "DCXYFEDJOCDNAF-REOHCLBHSA-N",
+    "Creatinine": "DDRJAANPRJIHGJ-UHFFFAOYSA-N",
+    "Uridine": "DRTQHJPVMGBUCF-XVFCMESISA-N",
+    "N6-Acetyl-L-lysine": "DTERQYGMUDWYAZ-ZETCQYMHSA-N",
+    "5-Hydroxyindole-3-acetic acid": "DUUGKQCEGZLZNO-UHFFFAOYSA-N",
+    "Hypoxanthine": "FDGQSTZJBFJUBT-UHFFFAOYSA-N",
+    "4-Hydroxybenzoic acid": "FJKROLUGYXJWQN-UHFFFAOYSA-N",
+    "DL-Pantothenic acid": "GHOKWGTUZJEAQD-UHFFFAOYSA-N",
+    "Kynurenic acid": "HCZHHEIFKROPDY-UHFFFAOYSA-N",
+    "D-Arabinitol": "HEBKCHPVOIAQTA-QWWZWVQMSA-N",
+    "Histidine": "HNDVDQJCIGZPNO-YFKPBYRVSA-N",
+    "Citraconic acid": "HNEGQIOMVPPMNR-IHWYPQMZSA-N",
+    "Homogentisic acid": "IGMNYECMUMZDDF-UHFFFAOYSA-N",
+    "(2-oxo-2,3-dihydro-1H-indol-3-yl)acetic acid": "ILGMGHZPXRDCCS-UHFFFAOYSA-N",
+    "3-methyl-DL-histidine": "JDHILDINMRGULE-UHFFFAOYSA-N",
+    "Glutaric acid": "JFCQEDHGNNZCLN-UHFFFAOYSA-N",
+    "Phenylacetylglutamine": "JFLIEFSWGNOPJJ-JTQLQIEISA-N",
+    "2-Hydroxy-3-(4-hydroxyphenyl)propanoic acid": "JVGVDSSUAVXRDY-UHFFFAOYSA-N",
+    "Lactic acid": "JVTAAEKCZFNVCJ-UHFFFAOYSA-N",
+    "N-Acetylhistidine": "KBOJOGQFRVVWBH-ZETCQYMHSA-N",
+    "Succinic acid": "KDYFGRWQOYBRFD-UHFFFAOYSA-N",
+    "N-(2-Furoyl)glycine": "KSPQDMRTZZYQLM-UHFFFAOYSA-N",
+    "N-Acetyl-DL-alanine": "KTHDTJVBEPMMGL-UHFFFAOYSA-N",
+    "Urocanic acid": "LOIYMIARKYCTBW-OWOJBTEDSA-N",
+    "2-Ethyl-2-hydroxybutyric acid": "LXVSANCQXSSLPA-UHFFFAOYSA-N",
+    "DL-Serine": "MTCFGRXMJLQNBG-UHFFFAOYSA-N",
+    "Anserine": "MYYIAHXIVFADCU-QMMMGPOBSA-N",
+    "Phosphoric acid": "NBIIXXVUZAFLBC-UHFFFAOYSA-N",
+    "N4-Acetylcytidine": "NIDVTARKFBZMOT-PEBGCTIMSA-N",
+    "1,7-Dimethyluric acid": "NOFNCLGCUJJPKU-UHFFFAOYSA-N",
+    "5-(Diaminomethylideneamino)-2-(dimethylamino)pentanoic acid": "NWGZOALPWZDXNG-UHFFFAOYSA-N",
+    "2-Hydroxycinnamic acid": "ONPXCLZMBSJLSP-CSMHCCOUSA-N",
+    "Allantoin": "PMOWTIHVNWZYFI-AATRIKPKSA-N",
+    "Pseudouridine": "POJWUDADGALRAB-UHFFFAOYSA-N",
+    "Orotic acid": "PTJWIQPHWPFNBW-GBNDHIKLSA-N",
+    "N-Formylmethionine": "PXQPEWDEAKTCGB-UHFFFAOYSA-N",
+    "1-Methyluric acid": "PYUSHNKNPOHWEZ-YFKPBYRVSA-N",
+    "DL-Tryptophan": "QFDRTQONISXGJA-UHFFFAOYSA-N",
+    "3-(3-Hydroxyphenyl)propanoic acid": "QIVBCDIJIAJPQS-UHFFFAOYSA-N",
+    "4-Amino-1-[4-hydroxy-5-(hydroxymethyl)-3-methoxyoxolan-2-yl]pyrimidin-2-one": "QVWAEZJXDYOKEH-UHFFFAOYSA-N",
+    "2?-O-Methylcytidine": "RFCQJGFZUQFYRF-UHFFFAOYSA-N",
+    "N2,N2-Dimethylguanosine": "RSPURTUNRHNVGF-IOSLPCCCSA-N",
+    "gamma-Glutamylcysteinylglycine": "RWSXRVCMGQZWBV-UHFFFAOYSA-N",
+    "N-Acetyl-Neuraminic Acid": "SQVRNKJHWKZAKO-LUWBGTNYSA-N",
+    "2'-O-Methyluridine": "SXUXMRMBWZCMEN-ZOQUXTDFSA-N",
+    "Suberic acid": "TYFQFVWCELRYAO-UHFFFAOYSA-N",
+    "1-Methylguanosine": "UTAIYTHAJQNQDW-KQYNXXCUSA-N",
+    "4-Acetamidobutyric acid": "UZTFMUBKZQVKLK-UHFFFAOYSA-N",
+    "2-Keto-L-gulonic acid": "VBUYCZFBVCCYFD-NUNKFHFFSA-N",
+    "N-amidinoaspartic acid": "VVHOUVWJCQOYGG-UHFFFAOYSA-N",
+    "Maleic acid": "VZCYOOQTPOCHFL-UPHRSURJSA-N",
+    "p-Cresol sulfate": "WGNAKZGUSRVWRH-UHFFFAOYSA-N",
+    "DL-Glutamic acid": "WHUUTDBJXJRKMK-UHFFFAOYSA-N",
+    "Pimelic acid": "WLJVNTCWHIRURA-UHFFFAOYSA-N",
+    "Adipic acid": "WNLRTRBMVRJNCN-UHFFFAOYSA-N",
+    "Tiglylglycine": "WRUSVQOKJIDBLP-HWKANZROSA-N",
+    "Acetylleucine": "WXNXCEHXYPACJF-UHFFFAOYSA-N",
+    "2,5-Dihydroxybenzoic acid": "WXTMDXOMEHJXQO-UHFFFAOYSA-N",
+    "Indole-3-lactic acid": "XGILAAMKEQUXLS-UHFFFAOYSA-N",
+    "N-Methyl-L-glutamic acid": "XLBVNMSMFQMKEY-BYPYZUCNSA-N",
+    "Taurine": "XOAAWQZATWQOTB-UHFFFAOYSA-N",
+    "N-Acetyl-DL-methionine": "XUYPXLNMDZIRQH-UHFFFAOYSA-N",
+    "Salicylic acid": "YGSDEFSMJLZEOE-UHFFFAOYSA-N",
+    "DL-Glutamine": "ZDXPYRJPNDTMRX-UHFFFAOYSA-N",
+    "Theophylline": "ZFXYFBGIUFBOJW-UHFFFAOYSA-N",
+    "4-Hydroxyhippuric acid": "ZMHLUFWWWPBTIU-UHFFFAOYSA-N"
+}
 
 # Define styles for Dash app
 external_stylesheets = [
@@ -91,6 +216,13 @@ external_stylesheets = [
         "rel": "stylesheet",
     },
 ]
+
+# Authenticate with Google Drive
+gauth = GoogleAuth()
+drive = GoogleDrive(gauth)
+
+# Get directory for files
+current_directory =  os.getcwd()
 
 # Initialize Dash app
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
@@ -146,7 +278,7 @@ app.layout = html.Div(className="app-layout", children=[
                         style_data={"whiteSpace": "normal",
                                     "textOverflow": "ellipsis",
                                     "maxWidth": 0},
-                        style_table={"max-height": "285px",
+                        style_table={"max-height": "1000px",
                                     "overflowY": "auto"}
                         ),
 
@@ -186,11 +318,11 @@ app.layout = html.Div(className="app-layout", children=[
 
                     html.Div(className="istd-plot-div", children=[
 
-                        html.Div(className="istd-plot-container", children=[
+                        html.Div(className="plot-container", children=[
 
+                            # Dropdown for internal standard RT plot
                             dcc.Dropdown(
                                 id="QE1-istd-rt-dropdown",
-                                className="QE1-istd-dropdown",
                                 options=standards_list,
                                 placeholder="Select internal standards...",
                                 style={"text-align": "left",
@@ -203,11 +335,11 @@ app.layout = html.Div(className="app-layout", children=[
                             dcc.Graph(id="QE1-istd-rt-plot", animate=True)
                         ]),
 
-                        html.Div(className="istd-plot-container", children=[
+                        html.Div(className="plot-container", children=[
 
+                            # Dropdown for internal standard intensity plot
                             dcc.Dropdown(
                                 id="QE1-istd-intensity-dropdown",
-                                className="istd-dropdown",
                                 options=standards_list,
                                 placeholder="Select internal standard...",
                                 style={"text-align": "left",
@@ -230,6 +362,18 @@ app.layout = html.Div(className="app-layout", children=[
 
                         # Bar plot of QC urine feature peak heights from QE 1
                         html.Div(className="plot-container", children=[
+
+                            # Dropdown for urine feature intensity plot
+                            dcc.Dropdown(
+                                id="QE1-urine-intensity-dropdown",
+                                options=list(pos_urine_features_dict.keys()),
+                                placeholder="Select urine feature...",
+                                style={"text-align": "left",
+                                       "height": "35px",
+                                       "width": "100%",
+                                       "display": "inline-block"}
+                            ),
+
                             dcc.Graph(id="QE1-urine-intensity-plot", animate=False)
                         ])
 
@@ -256,7 +400,7 @@ app.layout = html.Div(className="app-layout", children=[
                          style_data={"whiteSpace": "normal",
                                      "textOverflow": "ellipsis",
                                      "maxWidth": 0},
-                         style_table={"max-height": "285px",
+                         style_table={"max-height": "1000px",
                                       "overflowY": "auto"}
                      ),
 
@@ -296,11 +440,11 @@ app.layout = html.Div(className="app-layout", children=[
 
                     html.Div(className="istd-plot-div", children=[
 
-                        html.Div(className="istd-plot-container", children=[
+                        html.Div(className="plot-container", children=[
 
+                            # Dropdown for internal standard RT plot
                             dcc.Dropdown(
                                 id="QE2-istd-rt-dropdown",
-                                className="istd-dropdown",
                                 options=standards_list,
                                 placeholder="Select internal standards...",
                                 style={"text-align": "left",
@@ -313,11 +457,11 @@ app.layout = html.Div(className="app-layout", children=[
                             dcc.Graph(id="QE2-istd-rt-plot", animate=True)
                         ]),
 
-                        html.Div(className="istd-plot-container", children=[
+                        html.Div(className="plot-container", children=[
 
+                            # Dropdown for internal standard intensity plot
                             dcc.Dropdown(
                                 id="QE2-istd-intensity-dropdown",
-                                className="QE2-istd-dropdown",
                                 options=standards_list,
                                 placeholder="Select internal standard...",
                                 style={"text-align": "left",
@@ -340,6 +484,18 @@ app.layout = html.Div(className="app-layout", children=[
 
                         # Bar plot of QC urine feature peak heights from QE 2
                         html.Div(className="plot-container", children=[
+
+                            # Dropdown for urine feature intensity plot
+                            dcc.Dropdown(
+                                id="QE2-urine-intensity-dropdown",
+                                options=list(pos_urine_features_dict.keys()),
+                                placeholder="Select urine feature...",
+                                style={"text-align": "left",
+                                       "height": "35px",
+                                       "width": "100%",
+                                       "display": "inline-block"}
+                            ),
+
                             dcc.Graph(id="QE2-urine-intensity-plot", animate=False)
                         ])
 
@@ -368,14 +524,37 @@ app.layout = html.Div(className="app-layout", children=[
 ])
 
 
-def get_data(location, study_id):
+def get_data(instrument, study_id):
 
     """
     Loads internal standard and urine m/z, RT, and peak height from instrument run into pandas DataFrames
     """
 
-    # TODO: Get chromatography from study
-    chromatography = "HILIC"
+    chromatography = ""
+
+    # Save .csv files in folder
+    files_directory = current_directory + "/qc_files"
+    if not os.path.exists(files_directory):
+        os.makedirs(files_directory)
+    os.chdir(files_directory)
+
+    # Auto-iterate through all QC files for the particular study in Google Drive
+    file_list = drive.ListFile({'q': "'" + study_loaded[instrument]["drive_id"] + "' in parents and trashed=false"}).GetList()
+
+    for file in file_list:
+
+        # Download files for study
+        if study_id in file["title"] or "urine" in file["title"]:
+            file.GetContentFile(file["title"])
+
+        # Set chromatography (if it hasn't already been set)
+        if chromatography == "":
+            if "HILIC" in file["title"]:
+                chromatography = "HILIC"
+            elif "C18" in file["title"]:
+                chromatography = "C18"
+            elif "Lipidomics" in file["title"]:
+                chromatography = "Lipidomics"
 
     # Overarching try/catch
     try:
@@ -383,19 +562,19 @@ def get_data(location, study_id):
         # Parse data into pandas DataFrames
         try:
             # Retrieve m/z, RT, and peak height .csv files from bufferbox2
-            df_mz_pos = pd.read_csv(location + study_id + "_MZ_" + chromatography + "_Pos.csv", index_col=False)
-            df_rt_pos = pd.read_csv(location + study_id + "_RT_" + chromatography + "_Pos.csv", index_col=False)
-            df_intensity_pos = pd.read_csv(location + study_id + "_PeakHeight_" + chromatography + "_Pos.csv", index_col=False)
-            df_urine_mz_pos = pd.read_csv(location + "urine_MZ_" + chromatography + "_Pos.csv", index_col=False)
-            df_urine_rt_pos = pd.read_csv(location + "urine_RT_" + chromatography + "_Pos.csv", index_col=False)
-            df_urine_intensity_pos = pd.read_csv(location + "urine_PeakHeight_" + chromatography + "_Pos.csv", index_col=False)
+            df_mz_pos = pd.read_csv(study_id + "_MZ_" + chromatography + "_Pos.csv", index_col=False)
+            df_rt_pos = pd.read_csv(study_id + "_RT_" + chromatography + "_Pos.csv", index_col=False)
+            df_intensity_pos = pd.read_csv(study_id + "_PeakHeight_" + chromatography + "_Pos.csv", index_col=False)
+            df_urine_mz_pos = pd.read_csv("urine_MZ_" + chromatography + "_Pos.csv", index_col=False)
+            df_urine_rt_pos = pd.read_csv("urine_RT_" + chromatography + "_Pos.csv", index_col=False)
+            df_urine_intensity_pos = pd.read_csv("urine_PeakHeight_" + chromatography + "_Pos.csv", index_col=False)
 
-            df_mz_neg = pd.read_csv(location + study_id + "_MZ_" + chromatography + "_Neg.csv", index_col=False)
-            df_rt_neg = pd.read_csv(location + study_id + "_RT_" + chromatography + "_Neg.csv", index_col=False)
-            df_intensity_neg = pd.read_csv(location + study_id + "_PeakHeight_" + chromatography + "_Neg.csv", index_col=False)
-            df_urine_mz_neg = pd.read_csv(location + "urine_MZ_" + chromatography + "_Neg.csv", index_col=False)
-            df_urine_rt_neg = pd.read_csv(location + "urine_RT_" + chromatography + "_Neg.csv", index_col=False)
-            df_urine_intensity_neg = pd.read_csv(location + "urine_PeakHeight_" + chromatography + "_Neg.csv", index_col=False)
+            df_mz_neg = pd.read_csv(study_id + "_MZ_" + chromatography + "_Neg.csv", index_col=False)
+            df_rt_neg = pd.read_csv(study_id + "_RT_" + chromatography + "_Neg.csv", index_col=False)
+            df_intensity_neg = pd.read_csv(study_id + "_PeakHeight_" + chromatography + "_Neg.csv", index_col=False)
+            df_urine_mz_neg = pd.read_csv("urine_MZ_" + chromatography + "_Neg.csv", index_col=False)
+            df_urine_rt_neg = pd.read_csv("urine_RT_" + chromatography + "_Neg.csv", index_col=False)
+            df_urine_intensity_neg = pd.read_csv("urine_PeakHeight_" + chromatography + "_Neg.csv", index_col=False)
 
         except Exception as error:
             return "Data retrieval error: " + str(error)
@@ -426,7 +605,7 @@ def get_data(location, study_id):
         return "Data parsing error: " + str(error)
 
 
-def create_istd_scatter_plot(dataframe, x, y):
+def istd_scatter_plot(dataframe, x, y):
 
     """
     Returns scatter plot figure of retention time vs. sample for internal standards
@@ -446,6 +625,7 @@ def create_istd_scatter_plot(dataframe, x, y):
                            color_discrete_map=istd_colors)
     istd_rt_plot.update_layout(transition_duration=500,
                                clickmode="event",
+                               showlegend=False,
                                legend_title_text="Internal Standards",
                                margin=dict(t=75, b=75))
     istd_rt_plot.update_xaxes(showticklabels=False, title="Sample")
@@ -454,7 +634,7 @@ def create_istd_scatter_plot(dataframe, x, y):
     return istd_rt_plot
 
 
-def create_istd_intensity_plot(dataframe, x, y, text):
+def istd_bar_plot(dataframe, x, y, text):
 
     """
     Returns bar plot figure of intensity vs. sample for internal standards
@@ -475,62 +655,69 @@ def create_istd_intensity_plot(dataframe, x, y, text):
                                       margin=dict(t=75, b=75))
     istd_intensity_plot.update_xaxes(showticklabels=False, title="Sample")
     istd_intensity_plot.update_yaxes(title="Intensity")
-    istd_intensity_plot.update_traces(textposition='outside', hovertemplate='Sample: %{x} <br>Intensity: %{y}<br>')
+    istd_intensity_plot.update_traces(textposition='outside',
+                                      hovertemplate='Sample: %{x} <br>Intensity: %{y}<br>')
 
     return istd_intensity_plot
 
 
-def create_urine_scatter_plot(dataframe, study_name):
+def urine_scatter_plot(study_name, df_rt, df_mz, df_intensity):
 
     """
-    Returns scatter plot figure of retention time vs. feature for urine features
+    Returns scatter plot figure of m/z vs. retention time for urine features
     """
 
-    urine_rt_plot = px.scatter(dataframe,
-                               title="RT – Urine Features",
-                               x="InChIKey",
-                               y=study_name + ": RT (min)",
+    urine_df = pd.DataFrame()
+    urine_df["INCHIKEY"] = df_mz["InChIKey"]
+    urine_df["Precursor m/z"] = df_mz[study_name + ":Precursor m/z"]
+    urine_df["Retention time (min)"] = df_rt[study_name + ":RT (min)"]
+    urine_df["Intensity"] = df_intensity[study_name + ":Height"]
+
+    urine_rt_plot = px.scatter(urine_df,
+                               title="QC Urine Features",
+                               x="Retention time (min)",
+                               y="Precursor m/z",
                                height=500,
-                               hover_name="InChIKey",
-                               color="InChIKey",
-                               size=study_name + ": RT (min)",
-                               size_max=30,
-                               # hover_data=["Title"],
-                               log_x=False,
-                               color_discrete_map=istd_colors)
+                               hover_name="INCHIKEY",
+                               color="INCHIKEY",
+                               log_x=False)
     urine_rt_plot.update_layout(showlegend=False,
                                 transition_duration=500,
                                 clickmode="event",
                                 margin=dict(t=75, b=75))
-    urine_rt_plot.update_xaxes(showticklabels=False, title="Feature")
-    urine_rt_plot.update_yaxes(title="Retention Time")
+    urine_rt_plot.update_xaxes(title="Retention Time")
+    urine_rt_plot.update_yaxes(title="m/z")
+    urine_rt_plot.update_traces(marker={'size': 30})
 
     return urine_rt_plot
 
 
-def create_urine_intensity_plot(dataframe, study_name):
+def urine_bar_plot(dataframe, study, feature_name, polarity):
 
     """
-    Returns bar plot figure of intensity vs. feature for urine features
+    Returns bar plot figure of intensity vs. study for urine features
     """
+
+    if polarity == "pos":
+        inchikey = pos_urine_features_dict[feature_name]
+    elif polarity == "neg":
+        inchikey = neg_urine_features_dict[feature_name]
 
     urine_intensity_plot = px.bar(dataframe,
                                   title="Intensity – Urine Features",
-                                  x="InChIKey",
-                                  y=study_name + ": Height",
-                                  color="InChIKey",
-                                  height=500,
-                                  # text="Scientific Notation",
-                                  hover_data=["InChIKey"])
+                                  x=study,
+                                  y=inchikey,
+                                  height=500)
     urine_intensity_plot.update_layout(showlegend=False,
                                        transition_duration=500,
                                        clickmode="event",
                                        xaxis=dict(rangeslider=dict(visible=True), autorange=True),
                                        legend=dict(font=dict(size=10)),
                                        margin=dict(t=75, b=75))
-    urine_intensity_plot.update_xaxes(showticklabels=False, title="Feature")
+    urine_intensity_plot.update_xaxes(title="Study")
     urine_intensity_plot.update_yaxes(title="Intensity")
-    urine_intensity_plot.update_traces(textposition='outside')
+    urine_intensity_plot.update_traces(textposition='outside',
+                                      hovertemplate='Study: %{x} <br>Intensity: %{y}<br>')
 
     return urine_intensity_plot
 
@@ -573,8 +760,21 @@ def populate_instrument_tables(placeholder_input):
     Dash callback for populating tables with list of past/active instrument runs
     """
 
-    list_of_QE1_studies = [f.name for f in os.scandir("QE_1") if f.is_dir()]
-    list_of_QE2_studies = [f.name for f in os.scandir("QE_2") if f.is_dir()]
+    list_of_QE1_studies = []
+    list_of_QE2_studies = []
+
+    QE1_files = drive.ListFile({'q': "'" + study_loaded["QE 1"]["drive_id"] + "' in parents and trashed=false"}).GetList()
+    QE2_files = drive.ListFile({'q': "'" + study_loaded["QE 2"]["drive_id"] + "' in parents and trashed=false"}).GetList()
+
+    for file in QE1_files:
+        study = file["title"].split("_")[0]
+        if study not in list_of_QE1_studies and "urine" not in file["title"]:
+            list_of_QE1_studies.append(study)
+
+    for file in QE2_files:
+        study = file["title"].split("_")[0]
+        if study not in list_of_QE2_studies and "urine" not in file["title"]:
+            list_of_QE2_studies.append(study)
 
     data_for_QE1 = [{"Past / Active Studies": study} for study in list_of_QE1_studies]
     data_for_QE2 = [{"Past / Active Studies": study} for study in list_of_QE2_studies]
@@ -612,8 +812,9 @@ def populate_sample_tables(rt_plot):
               State("QE1-table", "data"),
               Input("QE1-polarity-options", "value"),
               Input("QE1-istd-rt-dropdown", "value"),
-              Input("QE1-istd-intensity-dropdown", "value"), prevent_initial_call=True)
-def populate_QE1_plots(active_cell, table_data, polarity, scatter_plot_standards, bar_plot_standard):
+              Input("QE1-istd-intensity-dropdown", "value"),
+              Input("QE1-urine-intensity-dropdown", "value"), prevent_initial_call=True)
+def populate_QE1_plots(active_cell, table_data, polarity, scatter_plot_standards, bar_plot_standard, urine_plot_feature):
 
     """
     Dash callback for loading QE 1 instrument data into scatter and bar plots
@@ -625,10 +826,7 @@ def populate_QE1_plots(active_cell, table_data, polarity, scatter_plot_standards
 
         # Retrieve data for clicked study and store as a dictionary
         if study_loaded["QE 1"]["study_name"] != study_name:
-
-            directory = "QE_1/" + study_name + "/"
-            files = get_data(directory, study_name)
-
+            files = get_data("QE 1", study_name)
             study_loaded["QE 1"]["study_name"] = study_name
             study_loaded["QE 1"]["study_file"] = files
 
@@ -636,17 +834,10 @@ def populate_QE1_plots(active_cell, table_data, polarity, scatter_plot_standards
             files = study_loaded["QE 1"]["study_file"]
 
         # Get internal standards from QC DataFrames for RT scatter plot
-        pos_internal_standards = files["rt_pos"]["Title"].astype(str).tolist()
-        neg_internal_standards = files["rt_neg"]["Title"].astype(str).tolist()
-        pos_urine_features = files["urine_rt_pos"]["InChIKey"].astype(str).tolist()
-        neg_urine_features = files["urine_rt_pos"]["InChIKey"].astype(str).tolist()
-
         if polarity == "pos":
-            internal_standards = pos_internal_standards
-            urine_features = pos_urine_features
+            internal_standards = files["rt_pos"]["Title"].astype(str).tolist()
         elif polarity == "neg":
-            internal_standards = neg_internal_standards
-            urine_features = neg_urine_features
+            internal_standards = files["rt_neg"]["Title"].astype(str).tolist()
 
         # Set initial dropdown values when none are selected
         if not scatter_plot_standards:
@@ -655,17 +846,25 @@ def populate_QE1_plots(active_cell, table_data, polarity, scatter_plot_standards
         if not bar_plot_standard:
             bar_plot_standard = internal_standards[0]
 
+        if not urine_plot_feature:
+            if polarity == "pos":
+                urine_plot_feature = list(pos_urine_features_dict.keys())[0]
+            elif polarity == "neg":
+                urine_plot_feature = list(neg_urine_features_dict.keys())[0]
+
         # Prepare DataFrames for plotting
         df_istd_rt = files["rt_" + polarity]
-        df_urine_rt = files["urine_rt_" + polarity]
         df_istd_intensity = files["intensity_" + polarity]
+        df_urine_rt = files["urine_rt_" + polarity]
         df_urine_intensity = files["urine_intensity_" + polarity]
+        df_urine_mz = files["urine_mz_" + polarity]
 
-        # Transpose internal standard DataFrames
+        # Transpose DataFrames
         df_istd_rt = df_istd_rt.transpose()
         df_istd_intensity = df_istd_intensity.transpose()
+        df_urine_intensity = df_urine_intensity.transpose()
 
-        for dataframe in [df_istd_rt, df_istd_intensity]:
+        for dataframe in [df_istd_rt, df_istd_intensity, df_urine_intensity]:
             dataframe.columns = dataframe.iloc[0]
             dataframe.drop(dataframe.index[0], inplace=True)
 
@@ -676,27 +875,34 @@ def populate_QE1_plots(active_cell, table_data, polarity, scatter_plot_standards
             df_istd_rt[istd] = rt.astype(float)
             # df_istd_rt[istd + "_diff"] = rt_diff
 
+        # Get list of samples and features from transposed DataFrames
         samples = df_istd_rt.index.values.tolist()
         samples = [sample.replace(": RT Info", "") for sample in samples]
 
         try:
 
             # Internal standards – retention time vs. sample
-            istd_rt_plot = create_istd_scatter_plot(dataframe=df_istd_rt,
-                                                    x=samples,
-                                                    y=scatter_plot_standards)
+            istd_rt_plot = istd_scatter_plot(dataframe=df_istd_rt,
+                                             x=samples,
+                                             y=scatter_plot_standards)
 
             # Internal standards – intensity vs. sample
-            istd_intensity_plot = create_istd_intensity_plot(dataframe=df_istd_intensity,
-                                                             x=df_istd_intensity.index,
-                                                             y=bar_plot_standard,
-                                                             text=samples)
+            istd_intensity_plot = istd_bar_plot(dataframe=df_istd_intensity,
+                                                      x=df_istd_intensity.index,
+                                                      y=bar_plot_standard,
+                                                      text=samples)
 
             # Urine features – retention time vs. feature
-            urine_rt_plot = create_urine_scatter_plot(df_urine_rt, study_name)
+            urine_rt_plot = urine_scatter_plot(study_name=study_name,
+                                               df_rt=df_urine_rt,
+                                               df_mz=df_urine_mz,
+                                               df_intensity=files["urine_intensity_" + polarity])
 
             # Urine features – intensity vs. feature
-            urine_intensity_plot = create_urine_intensity_plot(df_urine_intensity, study_name)
+            urine_intensity_plot = urine_bar_plot(dataframe=df_urine_intensity,
+                                                  study=df_urine_intensity.index,
+                                                  feature_name=urine_plot_feature,
+                                                  polarity=polarity)
 
             return istd_rt_plot, urine_rt_plot, istd_intensity_plot, urine_intensity_plot
 
@@ -716,8 +922,9 @@ def populate_QE1_plots(active_cell, table_data, polarity, scatter_plot_standards
               State("QE2-table", "data"),
               Input("QE2-polarity-options", "value"),
               Input("QE2-istd-rt-dropdown", "value"),
-              Input("QE2-istd-intensity-dropdown", "value"), prevent_initial_call=True)
-def populate_QE2_plots(active_cell, table_data, polarity, scatter_plot_standards, bar_plot_standard):
+              Input("QE2-istd-intensity-dropdown", "value"),
+              Input("QE2-urine-intensity-dropdown", "value"), prevent_initial_call=True)
+def populate_QE2_plots(active_cell, table_data, polarity, scatter_plot_standards, bar_plot_standard, urine_plot_feature):
 
     """
     Dash callback for loading QE 2 instrument data into scatter and bar plots
@@ -729,10 +936,7 @@ def populate_QE2_plots(active_cell, table_data, polarity, scatter_plot_standards
 
         # Retrieve data for clicked study and store as a dictionary
         if study_loaded["QE 2"]["study_name"] != study_name:
-
-            directory = "QE_2/" + study_name + "/"
-            files = get_data(directory, study_name)
-
+            files = get_data("QE 2", study_name)
             study_loaded["QE 2"]["study_name"] = study_name
             study_loaded["QE 2"]["study_file"] = files
 
@@ -740,17 +944,10 @@ def populate_QE2_plots(active_cell, table_data, polarity, scatter_plot_standards
             files = study_loaded["QE 2"]["study_file"]
 
         # Get internal standards from QC DataFrames for RT scatter plot
-        pos_internal_standards = files["rt_pos"]["Title"].astype(str).tolist()
-        neg_internal_standards = files["rt_neg"]["Title"].astype(str).tolist()
-        pos_urine_features = files["urine_rt_pos"]["InChIKey"].astype(str).tolist()
-        neg_urine_features = files["urine_rt_pos"]["InChIKey"].astype(str).tolist()
-
         if polarity == "pos":
-            internal_standards = pos_internal_standards
-            urine_features = pos_urine_features
+            internal_standards = files["rt_pos"]["Title"].astype(str).tolist()
         elif polarity == "neg":
-            internal_standards = neg_internal_standards
-            urine_features = neg_urine_features
+            internal_standards = files["rt_neg"]["Title"].astype(str).tolist()
 
         # Set initial dropdown values when none are selected
         if not scatter_plot_standards:
@@ -759,17 +956,25 @@ def populate_QE2_plots(active_cell, table_data, polarity, scatter_plot_standards
         if not bar_plot_standard:
             bar_plot_standard = internal_standards[0]
 
+        if not urine_plot_feature:
+            if polarity == "pos":
+                urine_plot_feature = list(pos_urine_features_dict.keys())[0]
+            elif polarity == "neg":
+                urine_plot_feature = list(neg_urine_features_dict.keys())[0]
+
         # Prepare DataFrames for plotting
         df_istd_rt = files["rt_" + polarity]
-        df_urine_rt = files["urine_rt_" + polarity]
         df_istd_intensity = files["intensity_" + polarity]
+        df_urine_rt = files["urine_rt_" + polarity]
         df_urine_intensity = files["urine_intensity_" + polarity]
+        df_urine_mz = files["urine_mz_" + polarity]
 
-        # Transpose internal standard DataFrames
+        # Transpose DataFrames
         df_istd_rt = df_istd_rt.transpose()
         df_istd_intensity = df_istd_intensity.transpose()
+        df_urine_intensity = df_urine_intensity.transpose()
 
-        for dataframe in [df_istd_rt, df_istd_intensity]:
+        for dataframe in [df_istd_rt, df_istd_intensity, df_urine_intensity]:
             dataframe.columns = dataframe.iloc[0]
             dataframe.drop(dataframe.index[0], inplace=True)
 
@@ -786,21 +991,27 @@ def populate_QE2_plots(active_cell, table_data, polarity, scatter_plot_standards
         try:
 
             # Internal standards – retention time vs. sample
-            istd_rt_plot = create_istd_scatter_plot(dataframe=df_istd_rt,
-                                                    x=samples,
-                                                    y=scatter_plot_standards)
+            istd_rt_plot = istd_scatter_plot(dataframe=df_istd_rt,
+                                             x=samples,
+                                             y=scatter_plot_standards)
 
             # Internal standards – intensity vs. sample
-            istd_intensity_plot = create_istd_intensity_plot(dataframe=df_istd_intensity,
-                                                             x=df_istd_intensity.index,
-                                                             y=bar_plot_standard,
-                                                             text=samples)
+            istd_intensity_plot = istd_bar_plot(dataframe=df_istd_intensity,
+                                                x=df_istd_intensity.index,
+                                                y=bar_plot_standard,
+                                                text=samples)
 
             # Urine features – retention time vs. feature
-            urine_rt_plot = create_urine_scatter_plot(df_urine_rt, study_name)
+            urine_rt_plot = urine_scatter_plot(study_name=study_name,
+                                               df_rt=df_urine_rt,
+                                               df_mz=df_urine_mz,
+                                               df_intensity=files["urine_intensity_" + polarity])
 
             # Urine features – intensity vs. feature
-            urine_intensity_plot = create_urine_intensity_plot(df_urine_intensity, study_name)
+            urine_intensity_plot = urine_bar_plot(dataframe=df_urine_intensity,
+                                                  study=df_urine_intensity.index,
+                                                  feature_name=urine_plot_feature,
+                                                  polarity=polarity)
 
             return istd_rt_plot, urine_rt_plot, istd_intensity_plot, urine_intensity_plot
 
@@ -816,6 +1027,8 @@ def populate_QE2_plots(active_cell, table_data, polarity, scatter_plot_standards
               Output("QE1-istd-intensity-dropdown", "options"),
               Output("QE2-istd-rt-dropdown", "options"),
               Output("QE2-istd-intensity-dropdown", "options"),
+              Output("QE1-urine-intensity-dropdown", "options"),
+              Output("QE2-urine-intensity-dropdown", "options"),
               Input("QE1-polarity-options", "value"),
               Input("QE2-polarity-options", "value"), prevent_initial_call=True)
 def update_dropdowns(polarity_QE1, polarity_QE2):
@@ -827,16 +1040,20 @@ def update_dropdowns(polarity_QE1, polarity_QE2):
     neg_internal_standards = ["1_Methionine_d8", "1_Creatinine_d3", "1_CUDA", "1_Glutamine_d5", "1_Glutamic Acid_d3",
                               "1_Arginine_d7", "1_Tryptophan d5", "1_Serine d3", "1_Hippuric acid d5"]
 
-    QE1_dropdown = standards_list
-    QE2_dropdown = standards_list
+    QE1_istd_dropdown = standards_list
+    QE2_istd_dropdown = standards_list
+    QE1_urine_dropdown = list(pos_urine_features_dict.keys())
+    QE2_urine_dropdown = list(pos_urine_features_dict.keys())
 
     if polarity_QE1 == "neg":
-        QE1_dropdown = neg_internal_standards
+        QE1_istd_dropdown = neg_internal_standards
+        QE1_urine_dropdown = list(neg_urine_features_dict.keys())
 
     if polarity_QE2 == "neg":
-        QE2_dropdown = neg_internal_standards
+        QE2_istd_dropdown = neg_internal_standards
+        QE1_urine_dropdown = list(neg_urine_features_dict.keys())
 
-    return QE1_dropdown, QE1_dropdown, QE2_dropdown, QE2_dropdown
+    return QE1_istd_dropdown, QE1_istd_dropdown, QE2_istd_dropdown, QE2_istd_dropdown, QE1_urine_dropdown, QE2_urine_dropdown
 
 
 # @app.callback(Output("information-card", "children"),
@@ -966,4 +1183,5 @@ if __name__ == "__main__":
     # elif sys.platform == "darwin":
     #     webbrowser.get("chrome").open("http://127.0.0.1:8050/", new=1)
 
+    # Start Dash app
     app.run_server(debug=True)

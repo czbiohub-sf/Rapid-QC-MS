@@ -37,16 +37,11 @@
     width: 100%;
 }
 
-.istd-plot-container {
+.plot-container {
     margin-bottom: 30px;
     margin-left: 1%;
     margin-right: 1%;
     width: 98%;
-}
-
-.plot-container {
-    float: left;
-    width: 50%;
 }
 
 h2 {
