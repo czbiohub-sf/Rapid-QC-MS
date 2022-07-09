@@ -19,8 +19,13 @@
     width: 23%;
 }
 
+.dash-spreadsheet.dash-freeze-top, .dash-spreadsheet.dash-virtualized {
+    max-height: inherit !important;
+}
+
 .dash-table-container {
     margin-top: 30px;
+    max-height: calc(100vh - 15px);
 }
 
 .all-plots-container {

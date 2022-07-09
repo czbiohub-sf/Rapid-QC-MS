@@ -24,6 +24,8 @@ standards_list = ["1_Methionine_d8", "1_1_Methylnicotinamide_d3", "1_Creatinine_
              "1_Phenylalanine d8", "1_Hippuric acid d5"]
 
 pos_urine_features_dict = {
+    "L-Serine": "MTCFGRXMJLQNBG-UHFFFAOYSA-N",
+    "L-Cystine": "LEVWYRKDKASIDU-IMJSIDKUSA-N",
     "DL-Isoleucine": "AGPKZVBTJJNPAG-UHFFFAOYSA-N",
     "Riboflavin": "AUNGANRZJHBGPY-SCRDCRAPSA-N",
     "3-Hydroxypropionic acid": "AYFVYJQAPQTCCC-UHFFFAOYSA-N",
@@ -278,7 +280,7 @@ app.layout = html.Div(className="app-layout", children=[
                         style_data={"whiteSpace": "normal",
                                     "textOverflow": "ellipsis",
                                     "maxWidth": 0},
-                        style_table={"max-height": "1000px",
+                        style_table={"max-height": "285px",
                                     "overflowY": "auto"}
                         ),
 
@@ -308,8 +310,7 @@ app.layout = html.Div(className="app-layout", children=[
                         style_data={"whiteSpace": "normal",
                                     "textOverflow": "ellipsis",
                                     "maxWidth": 0},
-                        style_table={"height": "100%",
-                                    "overflowY": "auto"}
+                        style_table={"overflowY": "auto"}
                         )
                 ]),
 
@@ -400,7 +401,7 @@ app.layout = html.Div(className="app-layout", children=[
                          style_data={"whiteSpace": "normal",
                                      "textOverflow": "ellipsis",
                                      "maxWidth": 0},
-                         style_table={"max-height": "1000px",
+                         style_table={"max-height": "285px",
                                       "overflowY": "auto"}
                      ),
 
@@ -430,8 +431,7 @@ app.layout = html.Div(className="app-layout", children=[
                         style_data={"whiteSpace": "normal",
                                     "textOverflow": "ellipsis",
                                     "maxWidth": 0},
-                        style_table={"height": "100%",
-                                    "overflowY": "auto"}
+                        style_table={"overflowY": "auto"}
                         )
                 ]),
 
@@ -629,7 +629,7 @@ def istd_scatter_plot(dataframe, x, y):
                                legend_title_text="Internal Standards",
                                margin=dict(t=75, b=75))
     istd_rt_plot.update_xaxes(showticklabels=False, title="Sample")
-    istd_rt_plot.update_yaxes(title="Retention Time")
+    istd_rt_plot.update_yaxes(title="Retention time (min)")
 
     return istd_rt_plot
 
@@ -644,7 +644,6 @@ def istd_bar_plot(dataframe, x, y, text):
                                  title="Intensity – " + y,
                                  x=x,
                                  y=y,
-                                 # color=text,
                                  text=text,
                                  height=600)
     istd_intensity_plot.update_layout(showlegend=False,
@@ -661,13 +660,19 @@ def istd_bar_plot(dataframe, x, y, text):
     return istd_intensity_plot
 
 
-def urine_scatter_plot(study_name, df_rt, df_mz, df_intensity):
+def urine_scatter_plot(study_name, df_rt, df_mz, df_intensity, urine_features_dict):
 
     """
     Returns scatter plot figure of m/z vs. retention time for urine features
     """
 
     urine_df = pd.DataFrame()
+
+    inverted_dict = {value: key for key, value in urine_features_dict.items()}
+    inchikey_list = df_mz["InChIKey"].tolist()
+    metabolite_list = [inverted_dict[inchikey] for inchikey in inchikey_list]
+
+    urine_df["Metabolite name"] = metabolite_list
     urine_df["INCHIKEY"] = df_mz["InChIKey"]
     urine_df["Precursor m/z"] = df_mz[study_name + ":Precursor m/z"]
     urine_df["Retention time (min)"] = df_rt[study_name + ":RT (min)"]
@@ -677,16 +682,20 @@ def urine_scatter_plot(study_name, df_rt, df_mz, df_intensity):
                                title="QC Urine Features",
                                x="Retention time (min)",
                                y="Precursor m/z",
-                               height=500,
-                               hover_name="INCHIKEY",
-                               color="INCHIKEY",
+                               height=600,
+                               hover_name="Metabolite name",
+                               color="Intensity",
+                               range_color=[urine_df["Intensity"].min(), 20000000],
+                               labels={"Retention time (min)": "Retention time (min)",
+                                       "Precursor m/z": "Precursor m/z",
+                                       "Intensity": "Intensity"},
                                log_x=False)
     urine_rt_plot.update_layout(showlegend=False,
                                 transition_duration=500,
                                 clickmode="event",
                                 margin=dict(t=75, b=75))
-    urine_rt_plot.update_xaxes(title="Retention Time")
-    urine_rt_plot.update_yaxes(title="m/z")
+    urine_rt_plot.update_xaxes(title="Retention time (min)")
+    urine_rt_plot.update_yaxes(title="Precursor m/z")
     urine_rt_plot.update_traces(marker={'size': 30})
 
     return urine_rt_plot
@@ -707,7 +716,7 @@ def urine_bar_plot(dataframe, study, feature_name, polarity):
                                   title="Intensity – Urine Features",
                                   x=study,
                                   y=inchikey,
-                                  height=500)
+                                  height=600)
     urine_intensity_plot.update_layout(showlegend=False,
                                        transition_duration=500,
                                        clickmode="event",
@@ -825,19 +834,17 @@ def populate_QE1_plots(active_cell, table_data, polarity, scatter_plot_standards
         study_name = table_data[active_cell['row']][active_cell['column_id']]
 
         # Retrieve data for clicked study and store as a dictionary
-        if study_loaded["QE 1"]["study_name"] != study_name:
-            files = get_data("QE 1", study_name)
-            study_loaded["QE 1"]["study_name"] = study_name
-            study_loaded["QE 1"]["study_file"] = files
-
-        else:
-            files = study_loaded["QE 1"]["study_file"]
+        files = get_data("QE 1", study_name)
+        study_loaded["QE 1"]["study_name"] = study_name
+        study_loaded["QE 1"]["study_file"] = files
 
         # Get internal standards from QC DataFrames for RT scatter plot
         if polarity == "pos":
             internal_standards = files["rt_pos"]["Title"].astype(str).tolist()
+            urine_features_dict = pos_urine_features_dict
         elif polarity == "neg":
             internal_standards = files["rt_neg"]["Title"].astype(str).tolist()
+            urine_features_dict = neg_urine_features_dict
 
         # Set initial dropdown values when none are selected
         if not scatter_plot_standards:
@@ -847,10 +854,7 @@ def populate_QE1_plots(active_cell, table_data, polarity, scatter_plot_standards
             bar_plot_standard = internal_standards[0]
 
         if not urine_plot_feature:
-            if polarity == "pos":
-                urine_plot_feature = list(pos_urine_features_dict.keys())[0]
-            elif polarity == "neg":
-                urine_plot_feature = list(neg_urine_features_dict.keys())[0]
+            urine_plot_feature = list(urine_features_dict.keys())[0]
 
         # Prepare DataFrames for plotting
         df_istd_rt = files["rt_" + polarity]
@@ -896,7 +900,8 @@ def populate_QE1_plots(active_cell, table_data, polarity, scatter_plot_standards
             urine_rt_plot = urine_scatter_plot(study_name=study_name,
                                                df_rt=df_urine_rt,
                                                df_mz=df_urine_mz,
-                                               df_intensity=files["urine_intensity_" + polarity])
+                                               df_intensity=files["urine_intensity_" + polarity],
+                                               urine_features_dict=urine_features_dict)
 
             # Urine features – intensity vs. feature
             urine_intensity_plot = urine_bar_plot(dataframe=df_urine_intensity,
@@ -935,19 +940,17 @@ def populate_QE2_plots(active_cell, table_data, polarity, scatter_plot_standards
         study_name = table_data[active_cell['row']][active_cell['column_id']]
 
         # Retrieve data for clicked study and store as a dictionary
-        if study_loaded["QE 2"]["study_name"] != study_name:
-            files = get_data("QE 2", study_name)
-            study_loaded["QE 2"]["study_name"] = study_name
-            study_loaded["QE 2"]["study_file"] = files
-
-        else:
-            files = study_loaded["QE 2"]["study_file"]
+        files = get_data("QE 2", study_name)
+        study_loaded["QE 2"]["study_name"] = study_name
+        study_loaded["QE 2"]["study_file"] = files
 
         # Get internal standards from QC DataFrames for RT scatter plot
         if polarity == "pos":
             internal_standards = files["rt_pos"]["Title"].astype(str).tolist()
+            urine_features_dict = pos_urine_features_dict
         elif polarity == "neg":
             internal_standards = files["rt_neg"]["Title"].astype(str).tolist()
+            urine_features_dict = neg_urine_features_dict
 
         # Set initial dropdown values when none are selected
         if not scatter_plot_standards:
@@ -957,10 +960,7 @@ def populate_QE2_plots(active_cell, table_data, polarity, scatter_plot_standards
             bar_plot_standard = internal_standards[0]
 
         if not urine_plot_feature:
-            if polarity == "pos":
-                urine_plot_feature = list(pos_urine_features_dict.keys())[0]
-            elif polarity == "neg":
-                urine_plot_feature = list(neg_urine_features_dict.keys())[0]
+            urine_plot_feature = list(urine_features_dict.keys())[0]
 
         # Prepare DataFrames for plotting
         df_istd_rt = files["rt_" + polarity]
@@ -1005,7 +1005,8 @@ def populate_QE2_plots(active_cell, table_data, polarity, scatter_plot_standards
             urine_rt_plot = urine_scatter_plot(study_name=study_name,
                                                df_rt=df_urine_rt,
                                                df_mz=df_urine_mz,
-                                               df_intensity=files["urine_intensity_" + polarity])
+                                               df_intensity=files["urine_intensity_" + polarity],
+                                               urine_features_dict=urine_features_dict)
 
             # Urine features – intensity vs. feature
             urine_intensity_plot = urine_bar_plot(dataframe=df_urine_intensity,
@@ -1056,132 +1057,14 @@ def update_dropdowns(polarity_QE1, polarity_QE2):
     return QE1_istd_dropdown, QE1_istd_dropdown, QE2_istd_dropdown, QE2_istd_dropdown, QE1_urine_dropdown, QE2_urine_dropdown
 
 
-# @app.callback(Output("information-card", "children"),
-#               Output("feature-bar-plot", "figure"),
-#               Input("feature-scatter-plot", "clickData"),
-#               Input("metabolite-table", "active_cell"),
-#               State("metabolite-table", "data"),
-#               Input("plot-container", "style"), prevent_initial_call=True)
-# def update_info_card(click_data, active_cell, table_data, data_container):
-#
-#     """
-#     TODO: Dash callback for updating information card on plot click
-#     """
-#
-#     df_with_samples = studies[0][0]
-#     df = studies[0][1]
-#     df_samples_only = studies[0][2]
-#     classes = studies[0][3]
-#     sample_ids = studies[0][4]
-#
-#     # Get clicked feature from feature plot
-#     if click_data or active_cell:
-#
-#         if click_source[0] == "plot":
-#             feature = click_data["points"][0]["hovertext"]
-#
-#         elif click_source[0] == "table":
-#             feature = table_data[active_cell['row']][active_cell['column_id']]
-#
-#         feature_data = df[df["Metabolite name"] == feature]
-#
-#     else:
-#         feature_data = df[0:1]
-#         feature = feature_data["Metabolite name"].astype(str).values
-#
-#     # Get feature information
-#     metabolite_name = feature_data["Metabolite name"].astype(str).values
-#     msi = feature_data["MSI"].astype(str).values
-#     mz = feature_data["Average m/z"].astype(str).values
-#     rt = feature_data["Retention time (min)"].astype(str).values
-#     inchikey = feature_data["INCHIKEY"].astype(str).values
-#     polarity = feature_data["Polarity"].astype(str).values
-#     sample_average = feature_data["Average intensity"].astype(str).values
-#
-#     if polarity == "pos":
-#         polarity = "Positive ion mode"
-#     elif polarity == "neg":
-#         polarity = "Negative ion mode"
-#     elif polarity == "both":
-#         polarity = "Found in both modes"
-#
-#     # Header
-#     header = html.H3(children=feature)
-#
-#     # Get 2D structure from PubChem
-#     pubchem_structure = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/inchikey/" + inchikey[0] + "/PNG"
-#     structure = html.Img(src=pubchem_structure)
-#
-#     # Get PubChem query link
-#     pubchem_link = "https://pubchem.ncbi.nlm.nih.gov/#query=" + inchikey
-#
-#     # Create table rows with information
-#     table = html.Table(id="info-table", className="info-table", children=[
-#
-#         html.Tr(children=[
-#             html.Th("Metabolite"),
-#             html.Td(feature)]),
-#
-#         html.Tr(children=[
-#             html.Th("INCHIKEY"),
-#             html.Td(html.A(href=pubchem_link[0], children=inchikey, target="_blank"))]),
-#
-#         html.Tr(children=[
-#             html.Th("MSI"),
-#             html.Td(msi)]),
-#
-#         html.Tr(children=[
-#             html.Th("Average m/z"),
-#             html.Td(mz)]),
-#
-#         html.Tr(children=[
-#             html.Th("Average RT"),
-#             html.Td(rt)]),
-#
-#         html.Tr(children=[
-#             html.Th("Polarity"),
-#             html.Td(polarity)]),
-#
-#         html.Tr(children=[
-#             html.Th("Average intensity"),
-#             html.Td(sample_average)]),
-#     ])
-#
-#     container = html.Div(children=[header, structure, table])
-#
-#     # Get DataFrame with samples and intensities
-#     df_samples_only_copy = df_samples_only.copy()
-#     df_samples_only_copy.drop("Metabolite name", inplace=True, axis=1)
-#
-#     intensities = df_samples_only_copy.loc[
-#         df_samples_only["Metabolite name"] == metabolite_name[0]].squeeze().tolist()
-#
-#     # Create a DataFrame of intensity versus samples for clicked feature
-#     df_intensity_vs_sample = pd.DataFrame()
-#     df_intensity_vs_sample["Class"] = classes
-#     df_intensity_vs_sample["Sample"] = sample_ids
-#     df_intensity_vs_sample["Intensity"] = intensities
-#     df_intensity_vs_sample["Scientific Notation"] = ['{:.2e}'.format(x) for x in intensities]
-#
-#     # Update bar plot
-#     bar_plot = px.bar(df_intensity_vs_sample, title=metabolite_name[0], x="Sample", y="Intensity", color="Class",
-#                       text="Scientific Notation", hover_data=["Class", "Scientific Notation"])
-#     bar_plot.update_layout(transition_duration=500, clickmode="event",
-#                            xaxis=dict(rangeslider=dict(visible=True), autorange=True))
-#     bar_plot.update_xaxes(showticklabels=False)
-#     bar_plot.update_traces(textposition='outside')
-#
-#     return container, bar_plot
-
-
 if __name__ == "__main__":
 
-    # if sys.platform == "win32":
-    #     chrome_path = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
-    #     webbrowser.register('chrome', None, webbrowser.BackgroundBrowser(chrome_path))
-    #     webbrowser.get("chrome").open("http://127.0.0.1:8050/")
-    # elif sys.platform == "darwin":
-    #     webbrowser.get("chrome").open("http://127.0.0.1:8050/", new=1)
+    if sys.platform == "win32":
+        chrome_path = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
+        webbrowser.register('chrome', None, webbrowser.BackgroundBrowser(chrome_path))
+        webbrowser.get("chrome").open("http://127.0.0.1:8050/")
+    elif sys.platform == "darwin":
+        webbrowser.get("chrome").open("http://127.0.0.1:8050/", new=1)
 
     # Start Dash app
-    app.run_server(debug=True)
+    app.run_server(debug=False)
