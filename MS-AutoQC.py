@@ -9,12 +9,14 @@ study_loaded = {
     "QE 1": {
         "study_name": "",
         "study_file": "",
-        "drive_id": "1-0y1jUARBM1DwExjrhyl0WF3KRLFWHom"
+        "drive_id": "1-0y1jUARBM1DwExjrhyl0WF3KRLFWHom",
+        "ui_callback": False
     },
     "QE 2": {
         "study_name": "",
         "study_file": "",
-        "drive_id": "1-9unZeOHyTPYZScox5Wv9X0CxTWIE-Ih"
+        "drive_id": "1-9unZeOHyTPYZScox5Wv9X0CxTWIE-Ih",
+        "ui_callback": False
     },
 }
 
@@ -813,6 +815,82 @@ def populate_sample_tables(rt_plot):
     return get_samples("QE 2")
 
 
+@app.callback(Output("QE1-istd-rt-dropdown", "options"),
+              Output("QE1-istd-intensity-dropdown", "options"),
+              Output("QE2-istd-rt-dropdown", "options"),
+              Output("QE2-istd-intensity-dropdown", "options"),
+              Output("QE1-urine-intensity-dropdown", "options"),
+              Output("QE2-urine-intensity-dropdown", "options"),
+              Input("QE1-polarity-options", "value"),
+              Input("QE2-polarity-options", "value"), prevent_initial_call=True)
+def update_dropdowns(polarity_QE1, polarity_QE2):
+
+    """
+    Updates internal standard dropdown list with correct standards for corresponding polarity
+    """
+
+    neg_internal_standards = ["1_Methionine_d8", "1_Creatinine_d3", "1_CUDA", "1_Glutamine_d5", "1_Glutamic Acid_d3",
+                              "1_Arginine_d7", "1_Tryptophan d5", "1_Serine d3", "1_Hippuric acid d5"]
+
+    # QE 1
+    if polarity_QE1 == "neg":
+        QE1_istd_dropdown = neg_internal_standards
+        QE1_urine_dropdown = list(neg_urine_features_dict.keys())
+        study_loaded["QE 1"]["ui_callback"] = True
+
+    elif polarity_QE1 == "pos":
+        QE1_istd_dropdown = standards_list
+        QE1_urine_dropdown = list(pos_urine_features_dict.keys())
+        study_loaded["QE 1"]["ui_callback"] = True
+
+    # QE 2
+    if polarity_QE2 == "neg":
+        QE2_istd_dropdown = neg_internal_standards
+        QE1_urine_dropdown = list(neg_urine_features_dict.keys())
+        study_loaded["QE 2"]["ui_callback"] = True
+
+    elif polarity_QE2 == "pos":
+        QE2_istd_dropdown = standards_list
+        QE2_urine_dropdown = list(pos_urine_features_dict.keys())
+        study_loaded["QE 2"]["ui_callback"] = True
+
+    return QE1_istd_dropdown, QE1_istd_dropdown, QE2_istd_dropdown, QE2_istd_dropdown, QE1_urine_dropdown, QE2_urine_dropdown
+
+
+@app.callback(Output("QE1-polarity-options", "value"),
+              Input("QE1-istd-rt-dropdown", "value"),
+              Input("QE1-istd-intensity-dropdown", "value"),
+              Input("QE1-urine-intensity-dropdown", "value"),
+              Input("QE1-polarity-options", "value"), prevent_initial_call=True)
+def dropdown_callback_intermediate_for_QE1(dropdown1, dropdown2, dropdown3, polarity):
+
+    """
+    Helper function for setting the "ui_callback" key to True,
+    so that the populate_QE1_plots() function only re-download QC data
+    when a study is selected from the table, not when dropdowns are changed
+    """
+
+    study_loaded["QE 1"]["ui_callback"] = True
+    return polarity
+
+
+@app.callback(Output("QE2-polarity-options", "value"),
+              Input("QE2-istd-rt-dropdown", "value"),
+              Input("QE2-istd-intensity-dropdown", "value"),
+              Input("QE2-urine-intensity-dropdown", "value"),
+              Input("QE2-polarity-options", "value"), prevent_initial_call=True)
+def dropdown_callback_intermediate_for_QE2(dropdown1, dropdown2, dropdown3, polarity):
+
+    """
+    Helper function for setting the "ui_callback" key to True,
+    so that the populate_QE2_plots() function only re-download QC data
+    when a study is selected from the table, not when dropdowns are changed
+    """
+
+    study_loaded["QE 2"]["ui_callback"] = True
+    return polarity
+
+
 @app.callback(Output("QE1-istd-rt-plot", "figure"),
               Output("QE1-urine-rt-plot", "figure"),
               Output("QE1-istd-intensity-plot", "figure"),
@@ -834,9 +912,13 @@ def populate_QE1_plots(active_cell, table_data, polarity, scatter_plot_standards
         study_name = table_data[active_cell['row']][active_cell['column_id']]
 
         # Retrieve data for clicked study and store as a dictionary
-        files = get_data("QE 1", study_name)
-        study_loaded["QE 1"]["study_name"] = study_name
-        study_loaded["QE 1"]["study_file"] = files
+        if study_loaded["QE 1"]["study_name"] != study_name or study_loaded["QE 1"]["ui_callback"] == False:
+            files = get_data("QE 1", study_name)
+            study_loaded["QE 1"]["study_name"] = study_name
+            study_loaded["QE 1"]["study_file"] = files
+
+        elif study_loaded["QE 1"]["ui_callback"] == True:
+            files = study_loaded["QE 1"]["study_file"]
 
         # Get internal standards from QC DataFrames for RT scatter plot
         if polarity == "pos":
@@ -909,6 +991,8 @@ def populate_QE1_plots(active_cell, table_data, polarity, scatter_plot_standards
                                                   feature_name=urine_plot_feature,
                                                   polarity=polarity)
 
+            study_loaded["QE 1"]["ui_callback"] = False
+
             return istd_rt_plot, urine_rt_plot, istd_intensity_plot, urine_intensity_plot
 
         except Exception as error:
@@ -917,6 +1001,8 @@ def populate_QE1_plots(active_cell, table_data, polarity, scatter_plot_standards
 
     else:
         return dash.no_update
+
+    study_loaded["QE 1"]["ui_callback"] = False
 
 
 @app.callback(Output("QE2-istd-rt-plot", "figure"),
@@ -940,9 +1026,13 @@ def populate_QE2_plots(active_cell, table_data, polarity, scatter_plot_standards
         study_name = table_data[active_cell['row']][active_cell['column_id']]
 
         # Retrieve data for clicked study and store as a dictionary
-        files = get_data("QE 2", study_name)
-        study_loaded["QE 2"]["study_name"] = study_name
-        study_loaded["QE 2"]["study_file"] = files
+        if study_loaded["QE 2"]["study_name"] != study_name or study_loaded["QE 2"]["ui_callback"] == False:
+            files = get_data("QE 2", study_name)
+            study_loaded["QE 2"]["study_name"] = study_name
+            study_loaded["QE 2"]["study_file"] = files
+
+        elif study_loaded["QE 2"]["ui_callback"] == True:
+            files = study_loaded["QE 2"]["study_file"]
 
         # Get internal standards from QC DataFrames for RT scatter plot
         if polarity == "pos":
@@ -1014,6 +1104,8 @@ def populate_QE2_plots(active_cell, table_data, polarity, scatter_plot_standards
                                                   feature_name=urine_plot_feature,
                                                   polarity=polarity)
 
+            study_loaded["QE 2"]["ui_callback"] = False
+
             return istd_rt_plot, urine_rt_plot, istd_intensity_plot, urine_intensity_plot
 
         except Exception as error:
@@ -1023,38 +1115,7 @@ def populate_QE2_plots(active_cell, table_data, polarity, scatter_plot_standards
     else:
         return dash.no_update
 
-
-@app.callback(Output("QE1-istd-rt-dropdown", "options"),
-              Output("QE1-istd-intensity-dropdown", "options"),
-              Output("QE2-istd-rt-dropdown", "options"),
-              Output("QE2-istd-intensity-dropdown", "options"),
-              Output("QE1-urine-intensity-dropdown", "options"),
-              Output("QE2-urine-intensity-dropdown", "options"),
-              Input("QE1-polarity-options", "value"),
-              Input("QE2-polarity-options", "value"), prevent_initial_call=True)
-def update_dropdowns(polarity_QE1, polarity_QE2):
-
-    """
-    Updates internal standard dropdown list with correct standards for corresponding polarity
-    """
-
-    neg_internal_standards = ["1_Methionine_d8", "1_Creatinine_d3", "1_CUDA", "1_Glutamine_d5", "1_Glutamic Acid_d3",
-                              "1_Arginine_d7", "1_Tryptophan d5", "1_Serine d3", "1_Hippuric acid d5"]
-
-    QE1_istd_dropdown = standards_list
-    QE2_istd_dropdown = standards_list
-    QE1_urine_dropdown = list(pos_urine_features_dict.keys())
-    QE2_urine_dropdown = list(pos_urine_features_dict.keys())
-
-    if polarity_QE1 == "neg":
-        QE1_istd_dropdown = neg_internal_standards
-        QE1_urine_dropdown = list(neg_urine_features_dict.keys())
-
-    if polarity_QE2 == "neg":
-        QE2_istd_dropdown = neg_internal_standards
-        QE1_urine_dropdown = list(neg_urine_features_dict.keys())
-
-    return QE1_istd_dropdown, QE1_istd_dropdown, QE2_istd_dropdown, QE2_istd_dropdown, QE1_urine_dropdown, QE2_urine_dropdown
+    study_loaded["QE 2"]["ui_callback"] = False
 
 
 if __name__ == "__main__":
