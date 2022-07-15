@@ -1,3 +1,3 @@
 # MS-AutoQC
-An interactive QC dashboard for mass spectrometry data acquisition. Written in Python using Dash.
-<img width="1387" alt="Screen Shot 2022-06-26 at 6 41 48 PM" src="https://user-images.githubusercontent.com/7220175/175845090-dce75a10-75c4-40f9-9aa7-4b099a9ed10e.png">
+Realtime interactive dashboard for at-a-glance QC during mass spectrometry data acquisition.
+![MS-AutoQC](https://user-images.githubusercontent.com/7220175/179325830-ba4b1126-0da0-4ff4-8eac-0132da3f28fd.png)
