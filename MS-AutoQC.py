@@ -12,6 +12,7 @@ study_loaded = {
         "drive_id": "1-0y1jUARBM1DwExjrhyl0WF3KRLFWHom",
         "ui_callback": False,
         "clicked_feature": False,
+        "df_samples": ""
 },
     "QE 2": {
         "study_name": "",
@@ -19,6 +20,7 @@ study_loaded = {
         "drive_id": "1-9unZeOHyTPYZScox5Wv9X0CxTWIE-Ih",
         "ui_callback": False,
         "clicked_feature": False,
+        "df_samples": ""
     },
 }
 
@@ -26,6 +28,9 @@ standards_list = ["1_Methionine_d8", "1_1_Methylnicotinamide_d3", "1_Creatinine_
              "1_Acetylcarnitine_d3", "1_TMAO_d9", "1_Choline_d9", "1_Glutamine_d5", "1_CUDA", "1_Glutamic Acid_d3",
              "1_Arginine_d7", "1_Alanine_d3", "1_Valine d8", "1_Tryptophan d5", "1_Serine d3", "1_Lysine d8",
              "1_Phenylalanine d8", "1_Hippuric acid d5"]
+
+neg_internal_standards = ["1_Methionine_d8", "1_Creatinine_d3", "1_CUDA", "1_Glutamine_d5", "1_Glutamic Acid_d3",
+                          "1_Arginine_d7", "1_Tryptophan d5", "1_Serine d3", "1_Hippuric acid d5"]
 
 standards_dict = {
     "1_Methionine_d8": "Methionine d8",
@@ -310,7 +315,7 @@ app.layout = html.Div(className="app-layout", children=[
         dcc.Tabs(id="tabs", children=[
 
             # QC dashboard for QE 1
-            dcc.Tab(label="QE 1", children=[
+            dcc.Tab(label="Thermo QE 1", children=[
 
                 html.Div(id="QE1-table-container", className="table-container", style={"display": "none"}, children=[
 
@@ -388,7 +393,7 @@ app.layout = html.Div(className="app-layout", children=[
 
                         html.Div(className="plot-container", children=[
 
-                            # Dropdown for internal standard RT plot
+                            # Dropdown for selecting an internal standard for the RT vs. sample plot
                             dcc.Dropdown(
                                 id="QE1-istd-rt-dropdown",
                                 options=standards_list,
@@ -398,6 +403,17 @@ app.layout = html.Div(className="app-layout", children=[
                                        "width": "100%",
                                        "display": "inline-block"}
                             ),
+
+                            # Dropdown for filtering by sample for the RT vs. sample plot
+                            dcc.Dropdown(
+                                id="QE1-rt-plot-sample-dropdown",
+                                options=[],
+                                placeholder="Select samples...",
+                                style={"text-align": "left",
+                                       "height": "35px",
+                                       "width": "100%",
+                                       "display": "inline-block"},
+                                multi=True),
 
                             # Scatter plot of internal standard retention times in QE 1 samples
                             dcc.Graph(id="QE1-istd-rt-plot")
@@ -414,6 +430,17 @@ app.layout = html.Div(className="app-layout", children=[
                                        "height": "35px",
                                        "width": "100%",
                                        "display": "inline-block"}),
+
+                            # Dropdown for filtering by sample for the intensity vs. sample plot
+                            dcc.Dropdown(
+                                id="QE1-intensity-plot-sample-dropdown",
+                                options=[],
+                                placeholder="Select samples...",
+                                style={"text-align": "left",
+                                       "height": "35px",
+                                       "width": "100%",
+                                       "display": "inline-block"},
+                            multi=True),
 
                             # Bar plot of internal standard intensity in QE 1 samples
                             dcc.Graph(id="QE1-istd-intensity-plot")
@@ -452,7 +479,7 @@ app.layout = html.Div(className="app-layout", children=[
             ]),
 
             # QC dashboard for QE 2
-            dcc.Tab(label="QE 2", children=[
+            dcc.Tab(label="Thermo QE 2", children=[
 
                 html.Div(id="QE2-table-container", className="table-container", style={"display": "none"}, children=[
 
@@ -540,6 +567,17 @@ app.layout = html.Div(className="app-layout", children=[
                                        "display": "inline-block"},
                             ),
 
+                            # Dropdown for filtering by sample for the RT vs. sample plot
+                            dcc.Dropdown(
+                                id="QE2-rt-plot-sample-dropdown",
+                                options=[],
+                                placeholder="Select samples...",
+                                style={"text-align": "left",
+                                       "height": "35px",
+                                       "width": "100%",
+                                       "display": "inline-block"},
+                            multi=True),
+
                             # Scatter plot of internal standard retention times in QE 2 samples
                             dcc.Graph(id="QE2-istd-rt-plot")
                         ]),
@@ -555,6 +593,17 @@ app.layout = html.Div(className="app-layout", children=[
                                        "height": "35px",
                                        "width": "100%",
                                        "display": "inline-block"}),
+
+                            # Dropdown for filtering by sample for the intensity vs. sample plot
+                            dcc.Dropdown(
+                                id="QE2-intensity-plot-sample-dropdown",
+                                options=[],
+                                placeholder="Select samples...",
+                                style={"text-align": "left",
+                                       "height": "35px",
+                                       "width": "100%",
+                                       "display": "inline-block"},
+                            multi=True),
 
                             # Bar plot of internal standard intensity in QE 2 samples
                             dcc.Graph(id="QE2-istd-intensity-plot")
@@ -604,7 +653,7 @@ app.layout = html.Div(className="app-layout", children=[
                 html.H2("Construction in progress")
             ]),
 
-            dcc.Tab(label="timsTOF", children=[
+            dcc.Tab(label="Bruker timsTOF", children=[
                 # Construction TBD
                 html.H2("Construction in progress")
             ]),
@@ -697,23 +746,26 @@ def get_data(instrument, study_id):
         return "Data parsing error: " + str(error)
 
 
-def istd_scatter_plot(dataframe, x, y):
+def istd_scatter_plot(dataframe, samples, internal_standard):
 
     """
     Returns scatter plot figure of retention time vs. sample for internal standards
     """
 
-    y_min = retention_times_dict[y] - 0.1
-    y_max = retention_times_dict[y] + 0.1
+    samples = [sample + ": RT Info" for sample in samples]
+    df_filtered_by_samples = dataframe.loc[samples]
+
+    y_min = retention_times_dict[internal_standard] - 0.1
+    y_max = retention_times_dict[internal_standard] + 0.1
     # median_rt = dataframe[y].median()
 
-    istd_rt_plot = px.line(dataframe,
-                           title="Internal Standards RT – " + standards_dict[y],
-                           x=x,
-                           y=y,
+    istd_rt_plot = px.line(df_filtered_by_samples,
+                           title="Internal Standards RT – " + standards_dict[internal_standard],
+                           x=samples,
+                           y=internal_standard,
                            height=600,
                            markers=True,
-                           hover_name=x,
+                           hover_name=samples,
                            labels={"variable": "Internal Standard",
                                    "index": "Sample",
                                    "value": "Retention Time"},
@@ -726,21 +778,24 @@ def istd_scatter_plot(dataframe, x, y):
                                margin=dict(t=75, b=75))
     istd_rt_plot.update_xaxes(showticklabels=False, title="Sample")
     istd_rt_plot.update_yaxes(title="Retention time (min)", range=[y_min, y_max])
-    istd_rt_plot.add_hline(y=retention_times_dict[y], line_width=2, line_dash='dash')
+    istd_rt_plot.add_hline(y=retention_times_dict[internal_standard], line_width=2, line_dash='dash')
 
     return istd_rt_plot
 
 
-def istd_bar_plot(dataframe, x, y, text):
+def istd_bar_plot(dataframe, samples, internal_standard, text):
 
     """
     Returns bar plot figure of intensity vs. sample for internal standards
     """
 
-    istd_intensity_plot = px.bar(dataframe,
-                                 title="Internal Standards Intensity – " + standards_dict[y],
-                                 x=x,
-                                 y=y,
+    samples = [sample + ": Height" for sample in samples]
+    df_filtered_by_samples = dataframe.loc[samples]
+
+    istd_intensity_plot = px.bar(df_filtered_by_samples,
+                                 title="Internal Standards Intensity – " + standards_dict[internal_standard],
+                                 x=samples,
+                                 y=internal_standard,
                                  text=text,
                                  height=600)
     istd_intensity_plot.update_layout(showlegend=False,
@@ -880,6 +935,8 @@ def get_samples(instrument):
     df_samples["Sample"] = df_samples['Sample'].str.replace(": RT Info", "")
     df_samples.drop(columns=["Order"], inplace=True)
 
+    study_loaded[instrument]["df_samples"] = df_samples
+
     return df_samples.to_dict("records")
 
 
@@ -977,44 +1034,66 @@ def populate_sample_tables(rt_plot):
 
 @app.callback(Output("QE1-istd-rt-dropdown", "options"),
               Output("QE1-istd-intensity-dropdown", "options"),
-              Output("QE2-istd-rt-dropdown", "options"),
-              Output("QE2-istd-intensity-dropdown", "options"),
               Output("QE1-urine-intensity-dropdown", "options"),
-              Output("QE2-urine-intensity-dropdown", "options"),
+              Output("QE1-rt-plot-sample-dropdown", "options"),
+              Output("QE1-intensity-plot-sample-dropdown", "options"),
               Input("QE1-polarity-options", "value"),
-              Input("QE2-polarity-options", "value"), prevent_initial_call=True)
-def update_dropdowns(polarity_QE1, polarity_QE2):
+              Input("QE1-sample-table", "data"), prevent_initial_call=True)
+def update_QE1_dropdowns_on_polarity_change(polarity, table_data):
 
     """
-    Updates internal standard dropdown list with correct standards for corresponding polarity
+    Updates QE 1 dropdown lists with correct items for user-selected polarity
     """
 
-    neg_internal_standards = ["1_Methionine_d8", "1_Creatinine_d3", "1_CUDA", "1_Glutamine_d5", "1_Glutamic Acid_d3",
-                              "1_Arginine_d7", "1_Tryptophan d5", "1_Serine d3", "1_Hippuric acid d5"]
+    df_samples = study_loaded["QE 1"]["df_samples"]
 
-    # QE 1
-    if polarity_QE1 == "neg":
-        QE1_istd_dropdown = neg_internal_standards
-        QE1_urine_dropdown = list(neg_urine_features_dict.keys())
-        study_loaded["QE 1"]["ui_callback"] = True
+    if polarity == "neg":
+        istd_dropdown = neg_internal_standards
+        urine_dropdown = list(neg_urine_features_dict.keys())
+        df_samples = df_samples.loc[df_samples["Sample"].str.contains("Neg")]
+        sample_dropdown = df_samples["Sample"].tolist()
 
-    elif polarity_QE1 == "pos":
-        QE1_istd_dropdown = standards_list
-        QE1_urine_dropdown = list(pos_urine_features_dict.keys())
-        study_loaded["QE 1"]["ui_callback"] = True
+    elif polarity == "pos":
+        istd_dropdown = standards_list
+        urine_dropdown = list(pos_urine_features_dict.keys())
+        df_samples = df_samples.loc[df_samples["Sample"].str.contains("Pos")]
+        sample_dropdown = df_samples["Sample"].tolist()
 
-    # QE 2
-    if polarity_QE2 == "neg":
-        QE2_istd_dropdown = neg_internal_standards
-        QE2_urine_dropdown = list(neg_urine_features_dict.keys())
-        study_loaded["QE 2"]["ui_callback"] = True
+    study_loaded["QE 1"]["ui_callback"] = True
 
-    elif polarity_QE2 == "pos":
-        QE2_istd_dropdown = standards_list
-        QE2_urine_dropdown = list(pos_urine_features_dict.keys())
-        study_loaded["QE 2"]["ui_callback"] = True
+    return istd_dropdown, istd_dropdown, urine_dropdown, sample_dropdown, sample_dropdown
 
-    return QE1_istd_dropdown, QE1_istd_dropdown, QE2_istd_dropdown, QE2_istd_dropdown, QE1_urine_dropdown, QE2_urine_dropdown
+
+@app.callback(Output("QE2-istd-rt-dropdown", "options"),
+              Output("QE2-istd-intensity-dropdown", "options"),
+              Output("QE2-urine-intensity-dropdown", "options"),
+              Output("QE2-rt-plot-sample-dropdown", "options"),
+              Output("QE2-intensity-plot-sample-dropdown", "options"),
+              Input("QE2-polarity-options", "value"),
+              Input("QE2-sample-table", "data"), prevent_initial_call=True)
+def update_QE2_dropdowns_on_polarity_change(polarity, table_data):
+
+    """
+    Updates QE 2 dropdown lists with correct items for user-selected polarity
+    """
+
+    df_samples = study_loaded["QE 2"]["df_samples"]
+
+    if polarity == "neg":
+        istd_dropdown = neg_internal_standards
+        urine_dropdown = list(neg_urine_features_dict.keys())
+        df_samples = df_samples.loc[df_samples["Sample"].str.contains("Neg")]
+        sample_dropdown = df_samples["Sample"].tolist()
+
+    elif polarity == "pos":
+        istd_dropdown = standards_list
+        urine_dropdown = list(pos_urine_features_dict.keys())
+        df_samples = df_samples.loc[df_samples["Sample"].str.contains("Pos")]
+        sample_dropdown = df_samples["Sample"].tolist()
+
+    study_loaded["QE 2"]["ui_callback"] = True
+
+    return istd_dropdown, istd_dropdown, urine_dropdown, sample_dropdown, sample_dropdown
 
 
 @app.callback(Output("QE1-polarity-options", "value"),
@@ -1079,8 +1158,12 @@ def click_callback_intermediate_for_QE2(click_data):
               Input("QE1-polarity-options", "value"),
               Input("QE1-istd-rt-dropdown", "value"),
               Input("QE1-istd-intensity-dropdown", "value"),
-              Input("QE1-urine-intensity-dropdown", "value"), prevent_initial_call=True)
-def populate_QE1_plots(active_cell, table_data, polarity, scatter_plot_standard, bar_plot_standard, urine_plot_feature):
+              Input("QE1-urine-intensity-dropdown", "value"),
+              Input("QE1-urine-rt-plot", "clickData"),
+              Input("QE1-rt-plot-sample-dropdown", "value"),
+              Input("QE1-intensity-plot-sample-dropdown", "value"), prevent_initial_call=True)
+def populate_QE1_plots(active_cell, table_data, polarity, scatter_plot_standard, bar_plot_standard, urine_plot_feature,
+                       click_data, rt_plot_samples, intensity_plot_samples):
 
     """
     Dash callback for loading QE 1 instrument data into scatter and bar plots
@@ -1152,22 +1235,28 @@ def populate_QE1_plots(active_cell, table_data, polarity, scatter_plot_standard,
                 df_istd_rt[istd] = rt.astype(float)
                 # df_istd_rt[istd + "_diff"] = rt_diff
 
-            # Get list of samples and features from transposed DataFrames
+            # Get list of samples from transposed DataFrames
             samples = df_istd_rt.index.values.tolist()
             samples = [sample.replace(": RT Info", "") for sample in samples]
+
+            if not rt_plot_samples:
+                rt_plot_samples = samples
+
+            if not intensity_plot_samples:
+                intensity_plot_samples = samples
 
             try:
 
                 # Internal standards – retention time vs. sample
                 istd_rt_plot = istd_scatter_plot(dataframe=df_istd_rt,
-                                                 x=samples,
-                                                 y=scatter_plot_standard)
+                                                 samples=rt_plot_samples,
+                                                 internal_standard=scatter_plot_standard)
 
                 # Internal standards – intensity vs. sample
                 istd_intensity_plot = istd_bar_plot(dataframe=df_istd_intensity,
-                                                          x=df_istd_intensity.index,
-                                                          y=bar_plot_standard,
-                                                          text=samples)
+                                                    samples=intensity_plot_samples,
+                                                    internal_standard=bar_plot_standard,
+                                                    text=intensity_plot_samples)
 
                 # Urine features – retention time vs. feature
                 urine_rt_plot = urine_scatter_plot(study_name=study_name,
@@ -1210,8 +1299,11 @@ def populate_QE1_plots(active_cell, table_data, polarity, scatter_plot_standard,
               Input("QE2-istd-rt-dropdown", "value"),
               Input("QE2-istd-intensity-dropdown", "value"),
               Input("QE2-urine-intensity-dropdown", "value"),
-              Input("QE2-urine-rt-plot", "clickData"), prevent_initial_call=True)
-def populate_QE2_plots(active_cell, table_data, polarity, scatter_plot_standard, bar_plot_standard, urine_plot_feature, click_data):
+              Input("QE2-urine-rt-plot", "clickData"),
+              Input("QE2-rt-plot-sample-dropdown", "value"),
+              Input("QE2-intensity-plot-sample-dropdown", "value"), prevent_initial_call=True)
+def populate_QE2_plots(active_cell, table_data, polarity, scatter_plot_standard, bar_plot_standard, urine_plot_feature,
+                       click_data, rt_plot_samples, intensity_plot_samples):
 
     """
     Dash callback for loading QE 2 instrument data into scatter and bar plots
@@ -1283,21 +1375,28 @@ def populate_QE2_plots(active_cell, table_data, polarity, scatter_plot_standard,
                 df_istd_rt[istd] = rt.astype(float)
                 # df_istd_rt[istd + "_diff"] = rt_diff
 
+            # Get list of samples from transposed DataFrames
             samples = df_istd_rt.index.values.tolist()
             samples = [sample.replace(": RT Info", "") for sample in samples]
+
+            if not rt_plot_samples:
+                rt_plot_samples = samples
+
+            if not intensity_plot_samples:
+                intensity_plot_samples = samples
 
             try:
 
                 # Internal standards – retention time vs. sample
                 istd_rt_plot = istd_scatter_plot(dataframe=df_istd_rt,
-                                                 x=samples,
-                                                 y=scatter_plot_standard)
+                                                 samples=rt_plot_samples,
+                                                 internal_standard=scatter_plot_standard)
 
                 # Internal standards – intensity vs. sample
                 istd_intensity_plot = istd_bar_plot(dataframe=df_istd_intensity,
-                                                    x=df_istd_intensity.index,
-                                                    y=bar_plot_standard,
-                                                    text=samples)
+                                                    samples=intensity_plot_samples,
+                                                    internal_standard=bar_plot_standard,
+                                                    text=intensity_plot_samples)
 
                 # Urine features – retention time vs. feature
                 urine_rt_plot = urine_scatter_plot(study_name=study_name,
