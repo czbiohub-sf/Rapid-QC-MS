@@ -2,6 +2,7 @@ import os, sys, webbrowser
 import pandas as pd
 import plotly.express as px
 from dash import dash, dcc, html, dash_table, Input, Output, State
+import dash_bootstrap_components as dbc
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
 
@@ -261,17 +262,14 @@ neg_urine_features_dict = {
     "4-Hydroxyhippuric acid": "ZMHLUFWWWPBTIU-UHFFFAOYSA-N"
 }
 
-# Define styles for Dash app
-external_stylesheets = [
-    {
-        "href": "https://fonts.googleapis.com/css2?"
-                "family=Lato:wght@400;700&display=swap",
-        "rel": "stylesheet",
-    },
-]
+local_stylesheet = {
+    "href": "https://fonts.googleapis.com/css2?"
+            "family=Lato:wght@400;700&display=swap",
+    "rel": "stylesheet"
+}
 
 # Initialize Dash app
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+app = dash.Dash(__name__, external_stylesheets=[local_stylesheet, dbc.themes.BOOTSTRAP])
 app.title = "MS-AutoQC"
 
 # Authenticate with Google Drive
@@ -375,6 +373,10 @@ app.layout = html.Div(className="app-layout", children=[
                             {'if': {'filter_query': '{QC} = "Fail"'},
                                 'backgroundColor': '#F5B7B1',
                                 'font-weight': 'bold'
+                            },
+                            {'if': {'state': 'active'},
+                               'backgroundColor': 'rgba(0, 116, 217, 0.3)',
+                               'border': '1px solid rgb(0, 116, 217)'
                             }
                         ],
                         style_cell_conditional=[
@@ -504,6 +506,20 @@ app.layout = html.Div(className="app-layout", children=[
 
                 ]),
 
+                # Modal/dialog for sample information card
+                dbc.Modal(id="QE1-sample-info-modal", size="xl", centered=True, is_open=False, scrollable=True, children=[
+                    dbc.ModalHeader(dbc.ModalTitle(id="QE1-sample-modal-title"), close_button=True),
+                    dbc.ModalBody(id="QE1-sample-modal-body"),
+                    dbc.ModalFooter(
+                        dbc.Button(
+                            "Close",
+                            id="QE1-close-modal",
+                            className="ms-auto",
+                            n_clicks=0,
+                        )
+                    )]
+                          )
+
             ]),
 
             # QC dashboard for QE 2
@@ -566,7 +582,11 @@ app.layout = html.Div(className="app-layout", children=[
                             {'if': {'filter_query': '{QC} = "Fail"'},
                                 'backgroundColor': '#F5B7B1',
                                 'font-weight': 'bold'
-                            }
+                            },
+                            {'if': {'state': 'active'},
+                               'backgroundColor': 'rgba(0, 116, 217, 0.3)',
+                               'border': '1px solid rgb(0, 116, 217)'
+                             }
                         ],
                         style_cell_conditional=[
                             {'if': {'column_id': 'Sample'},
@@ -696,6 +716,20 @@ app.layout = html.Div(className="app-layout", children=[
 
                 ]),
 
+                # Modal/dialog for sample information card
+                dbc.Modal(id="QE2-sample-info-modal", size="xl", centered=True, is_open=False, scrollable=True, children=[
+                    dbc.ModalHeader(dbc.ModalTitle(id="QE2-sample-modal-title"), close_button=True),
+                    dbc.ModalBody(id="QE2-sample-modal-body"),
+                    dbc.ModalFooter(
+                        dbc.Button(
+                            "Close",
+                            id="QE2-close-modal",
+                            className="ms-auto",
+                            n_clicks=0,
+                        )
+                    )]
+                )
+
             ]),
 
             dcc.Tab(label="Fusion Lumos 1", children=[
@@ -773,6 +807,12 @@ def get_data(instrument, study_id):
             df_urine_rt_neg = pd.read_csv("urine_RT_" + chromatography + "_Neg.csv", index_col=False)
             df_urine_intensity_neg = pd.read_csv("urine_PeakHeight_" + chromatography + "_Neg.csv", index_col=False)
 
+            # Retrieve metadata and sequence files from bufferbox2
+            df_metadata = pd.read_csv(study_id + "_seq_MetaData.csv", index_col=False)
+            df_sequence = pd.read_csv(study_id + "_seq.csv", index_col=False)
+            df_sequence.columns = df_sequence.iloc[0]
+            df_sequence = df_sequence.drop(df_sequence.index[0])
+
         except Exception as error:
             return "Data retrieval error: " + str(error)
 
@@ -791,6 +831,8 @@ def get_data(instrument, study_id):
         files["urine_rt_neg"] = df_urine_rt_neg
         files["urine_intensity_pos"] = df_urine_intensity_pos
         files["urine_intensity_neg"] = df_urine_intensity_neg
+        files["sequence"] = df_sequence
+        files["metadata"] = df_metadata
 
         # Manipulate DataFrames for plot readiness
         for key in files.keys():
@@ -802,6 +844,61 @@ def get_data(instrument, study_id):
         return "Data parsing error: " + str(error)
 
 
+def generate_sample_metadata_dataframe(sample, instrument):
+
+    """
+    Creates a DataFrame for a single sample with m/z, RT, intensity and metadata info
+    """
+
+    if "pos" in sample.lower():
+        polarity = "pos"
+    elif "neg" in sample.lower():
+        polarity = "neg"
+
+    df_sample_istd = pd.DataFrame()
+    df_sample_info = pd.DataFrame()
+
+    df_istd_rt = study_loaded[instrument]["study_file"]["rt_" + polarity]
+    df_istd_delta_mz = study_loaded[instrument]["study_file"]["mz_" + polarity]
+    df_istd_intensity = study_loaded[instrument]["study_file"]["intensity_" + polarity]
+
+    df_sequence = study_loaded[instrument]["study_file"]["sequence"]
+    df_metadata = study_loaded[instrument]["study_file"]["metadata"]
+
+    df_sequence = df_sequence.loc[df_sequence["File Name"].astype(str) == sample]
+    df_metadata = df_metadata.loc[df_metadata["Filename"].astype(str) == sample]
+
+    internal_standards = df_istd_rt["Title"].astype(str).tolist()
+    retention_times = df_istd_rt[sample + ": RT Info"].astype(str).tolist()
+    intensities = df_istd_intensity[sample + ": Height"].fillna("0").astype(float).tolist()
+    mz_values = df_istd_delta_mz[sample + ": Precursor m/z Info"].astype(str).tolist()
+
+    df_sample_istd["Internal Standard"] = [x.replace("1_", "") for x in internal_standards]
+    df_sample_istd["m/z"] = [x.split(": ")[0] for x in mz_values]
+    df_sample_istd["RT"] = [x.split(": ")[0] for x in retention_times]
+    df_sample_istd["Intensity"] = ['{:.2e}'.format(x) for x in intensities]
+    df_sample_istd["Delta RT"] = [x.split(": ")[-1] for x in retention_times]
+    df_sample_istd["Delta m/z"] = [x.split(": ")[-1] for x in mz_values]
+
+    df_sample_info["Sample ID"] = df_sequence["L1 Study"].astype(str).values
+    df_sample_info["Position"] = df_sequence["Position"].astype(str).values
+    df_sample_info["Injection Volume"] = df_sequence["Inj Vol"].astype(str).values + " uL"
+    df_sample_info["Instrument Method"] = df_sequence["Instrument Method"].astype(str).values
+
+    if len(df_metadata) > 0:
+        df_sample_info["Species"] = df_metadata["Species"].astype(str).values
+        df_sample_info["Matrix"] = df_metadata["Matrix"].astype(str).values
+        df_sample_info["Growth-Harvest Conditions"] = df_metadata["Growth-Harvest Conditions"].astype(str).values
+        df_sample_info["Treatment"] = df_metadata["Treatment"].astype(str).values
+
+    df_sample_info = df_sample_info.append(df_sample_info.iloc[0])
+    df_sample_info.iloc[0] = df_sample_info.columns.tolist()
+    df_sample_info = df_sample_info.rename(index={0: "Sample Information"})
+    df_sample_info = df_sample_info.transpose()
+
+    return df_sample_istd, df_sample_info
+
+
 def load_istd_rt_plot(dataframe, samples, internal_standard):
 
     """
@@ -809,7 +906,7 @@ def load_istd_rt_plot(dataframe, samples, internal_standard):
     """
 
     samples = [sample + ": RT Info" for sample in samples]
-    samples = sorted(samples)
+    samples = sorted(samples, key=lambda x: str(x.split("_")[-1]))
     df_filtered_by_samples = dataframe.loc[samples]
 
     y_min = retention_times_dict[internal_standard] - 0.1
@@ -848,7 +945,7 @@ def load_istd_intensity_plot(dataframe, samples, internal_standard, text):
     """
 
     samples = [sample + ": Height" for sample in samples]
-    samples = sorted(samples)
+    samples = sorted(samples, key=lambda x: str(x.split("_")[-1]))
     df_filtered_by_samples = dataframe.loc[samples]
 
     fig = px.bar(df_filtered_by_samples,
@@ -878,7 +975,7 @@ def load_istd_delta_mz_plot(dataframe, samples, internal_standard):
     """
 
     samples = [sample + ": Precursor m/z Info" for sample in samples]
-    samples = sorted(samples)
+    samples = sorted(samples, key=lambda x: str(x.split("_")[-1]))
     df_filtered_by_samples = dataframe.loc[samples]
 
     fig = px.line(df_filtered_by_samples,
@@ -900,8 +997,7 @@ def load_istd_delta_mz_plot(dataframe, samples, internal_standard):
                       margin=dict(t=75, b=75))
     fig.update_xaxes(showticklabels=False, title="Sample")
     fig.update_yaxes(title="delta m/z", range=[-0.01, 0.01])
-    fig.add_hline(y=0, line_width=2, line_dash='dash')
-    fig.update_traces(hovertemplate='Sample: %{x} <br>Delta m/z: %{y} min<br>')
+    fig.update_traces(hovertemplate='Sample: %{x} <br>Delta m/z: %{y}<br>')
 
     return fig
 
@@ -997,8 +1093,8 @@ def get_samples(instrument):
     """
 
     files = study_loaded[instrument]["study_file"]
-    pass_fail_list = []
 
+    # Get list of sample names in both polarities
     df_pos = files["rt_pos"]
     df_neg = files["rt_neg"]
 
@@ -1006,7 +1102,12 @@ def get_samples(instrument):
     neg_samples = df_neg.columns.tolist()
     pos_samples.remove("Title")
     neg_samples.remove("Title")
+
     samples = pos_samples + neg_samples
+
+    # Determine whether a sample passed or failed QC checks
+    # Currently, a QC fail is defined as a sample missing 4 or more internal standards
+    pass_fail_list = []
 
     for column in pos_samples:
         if (df_pos[column] == 0).sum() >= 4:
@@ -1020,17 +1121,20 @@ def get_samples(instrument):
         else:
             pass_fail_list.append("Pass")
 
+    # Create DataFrame for sample information
     df_samples = pd.DataFrame()
     df_samples["Sample"] = samples
     df_samples["Order"] = df_samples["Sample"].str.split("_").str[-1]
     df_samples["QC"] = pass_fail_list
-    df_samples.sort_values(by="Order", ascending=False, inplace=True)
 
+    df_samples.sort_values(by="Order", ascending=False, inplace=True)
     df_samples["Sample"] = df_samples['Sample'].str.replace(": RT Info", "")
     df_samples.drop(columns=["Order"], inplace=True)
 
+    # Store sample DataFrame in local instrument dictionary
     study_loaded[instrument]["df_samples"] = df_samples
 
+    # Return sample dictionary for sample table
     return df_samples.to_dict("records")
 
 
@@ -1127,6 +1231,7 @@ def populate_sample_tables(rt_plot):
 
 
 @app.callback(Output("QE1-istd-rt-dropdown", "options"),
+              Output("QE1-istd-mz-dropdown", "options"),
               Output("QE1-istd-intensity-dropdown", "options"),
               Output("QE1-urine-intensity-dropdown", "options"),
               Output("QE1-rt-plot-sample-dropdown", "options"),
@@ -1156,11 +1261,12 @@ def update_QE1_dropdowns_on_polarity_change(polarity, table_data):
 
     study_loaded["QE 1"]["ui_callback"] = True
 
-    return istd_dropdown, istd_dropdown, urine_dropdown, sample_dropdown, sample_dropdown, sample_dropdown
+    return istd_dropdown, istd_dropdown, istd_dropdown, urine_dropdown, sample_dropdown, sample_dropdown, sample_dropdown
 
 
 @app.callback(Output("QE2-istd-rt-dropdown", "options"),
               Output("QE2-istd-intensity-dropdown", "options"),
+              Output("QE2-istd-mz-dropdown", "options"),
               Output("QE2-urine-intensity-dropdown", "options"),
               Output("QE2-rt-plot-sample-dropdown", "options"),
               Output("QE2-mz-plot-sample-dropdown", "options"),
@@ -1189,7 +1295,7 @@ def update_QE2_dropdowns_on_polarity_change(polarity, table_data):
 
     study_loaded["QE 2"]["ui_callback"] = True
 
-    return istd_dropdown, istd_dropdown, urine_dropdown, sample_dropdown, sample_dropdown, sample_dropdown
+    return istd_dropdown, istd_dropdown, istd_dropdown, urine_dropdown, sample_dropdown, sample_dropdown, sample_dropdown
 
 
 @app.callback(Output("QE1-polarity-options", "value"),
@@ -1570,6 +1676,76 @@ def populate_QE2_plots(active_cell, table_data, polarity, rt_plot_standard, inte
         return dash.no_update
 
     study_loaded["QE 2"]["ui_callback"] = False
+
+
+@app.callback(Output("QE1-sample-info-modal", "is_open"),
+              Output("QE1-sample-modal-title", "children"),
+              Output("QE1-sample-modal-body", "children"),
+              Input("QE1-close-modal", "n_clicks"),
+              State("QE1-sample-info-modal", "is_open"),
+              Input("QE1-sample-table", "active_cell"),
+              State("QE1-sample-table", "data"), prevent_initial_call=True)
+def toggle_sample_card_for_QE1(close_button, is_open, active_cell, table_data):
+
+    """
+    Opens information modal when a sample is clicked from the sample table
+    """
+
+    # Get selected sample
+    if active_cell:
+        clicked_sample = table_data[active_cell['row']][active_cell['column_id']]
+
+    # Generate DataFrames with iSTD and metadata info for selected sample
+    df_sample_istd, df_sample_info = generate_sample_metadata_dataframe(clicked_sample, "QE 1")
+
+    # Create tables from DataFrames
+    metadata_table = dbc.Table.from_dataframe(df_sample_info, striped=True, bordered=True, hover=True)
+    istd_table = dbc.Table.from_dataframe(df_sample_istd, striped=True, bordered=True, hover=True)
+
+    # Add tables to sample information modal
+    title = clicked_sample
+    body = html.Div(children=[metadata_table, istd_table])
+
+    # Toggle modal
+    if is_open:
+        return False, title, body
+    else:
+        return True, title, body
+
+
+@app.callback(Output("QE2-sample-info-modal", "is_open"),
+              Output("QE2-sample-modal-title", "children"),
+              Output("QE2-sample-modal-body", "children"),
+              Input("QE2-close-modal", "n_clicks"),
+              State("QE2-sample-info-modal", "is_open"),
+              Input("QE2-sample-table", "active_cell"),
+              State("QE2-sample-table", "data"), prevent_initial_call=True)
+def toggle_sample_card_for_QE2(close_button, is_open, active_cell, table_data):
+
+    """
+    Opens information modal when a sample is clicked from the sample table
+    """
+
+    # Get selected sample
+    if active_cell:
+        clicked_sample = table_data[active_cell['row']][active_cell['column_id']]
+
+    # Generate DataFrames with iSTD and metadata info for selected sample
+    df_sample_istd, df_sample_info = generate_sample_metadata_dataframe(clicked_sample, "QE 2")
+
+    # Create tables from DataFrames
+    metadata_table = dbc.Table.from_dataframe(df_sample_info, striped=True, bordered=True, hover=True)
+    istd_table = dbc.Table.from_dataframe(df_sample_istd, striped=True, bordered=True, hover=True)
+
+    # Add tables to sample information modal
+    title = clicked_sample
+    body = html.Div(children=[metadata_table, istd_table])
+
+    # Toggle modal
+    if is_open:
+        return False, title, body
+    else:
+        return True, title, body
 
 
 if __name__ == "__main__":
