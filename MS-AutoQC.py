@@ -6,6 +6,7 @@ import dash_bootstrap_components as dbc
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
 
+# Local resources for plots
 study_loaded = {
     "QE 1": {
         "study_name": "",
@@ -375,7 +376,8 @@ def serve_layout():
                             style_data={"whiteSpace": "normal",
                                         "textOverflow": "ellipsis",
                                         "maxWidth": 0},
-                            style_table={"overflowY": "auto"},
+                            style_table={"height": "473px",
+                                         "overflowY": "auto"},
                             style_data_conditional=[
                                 {'if': {'filter_query': '{QC} = "Fail"'},
                                     'backgroundColor': '#F5B7B1',
@@ -586,7 +588,8 @@ def serve_layout():
                             style_data={"whiteSpace": "normal",
                                         "textOverflow": "ellipsis",
                                         "maxWidth": 0},
-                            style_table={"overflowY": "auto"},
+                            style_table={"height": "473px",
+                                         "overflowY": "auto"},
                             style_data_conditional=[
                                 {'if': {'filter_query': '{QC} = "Fail"'},
                                     'backgroundColor': '#F5B7B1',
@@ -832,18 +835,14 @@ def get_data(instrument, study_id):
         files["rt_neg"] = df_rt_neg
         files["intensity_pos"] = df_intensity_pos
         files["intensity_neg"] = df_intensity_neg
+        files["sequence"] = df_sequence
+        files["metadata"] = df_metadata
         files["urine_mz_pos"] = df_urine_mz_pos
         files["urine_mz_neg"] = df_urine_mz_neg
         files["urine_rt_pos"] = df_urine_rt_pos
         files["urine_rt_neg"] = df_urine_rt_neg
         files["urine_intensity_pos"] = df_urine_intensity_pos
         files["urine_intensity_neg"] = df_urine_intensity_neg
-        files["sequence"] = df_sequence
-        files["metadata"] = df_metadata
-
-        # Manipulate DataFrames for plot readiness
-        for key in files.keys():
-            files[key] = files[key].fillna(0)
 
         return files
 
@@ -1459,15 +1458,15 @@ def populate_QE1_plots(active_cell, table_data, polarity, rt_plot_standard, inte
 
             # Split text in internal standard dataframes
             for istd in internal_standards:
-
+                
                 # Splitting text for RT data
-                rt = df_istd_rt[istd].astype(str).str.split(": ").str[0]
-                rt_diff = df_istd_rt[istd].astype(str).str.split(": ").str[1]
+                rt = df_istd_rt[istd].str.split(": ").str[0]
+                rt_diff = df_istd_rt[istd].str.split(": ").str[1]
                 df_istd_rt[istd] = rt.astype(float)
 
                 # Splitting text for m/z data
-                mz = df_istd_mz[istd].astype(str).str.split(": ").str[0]
-                delta_mz = df_istd_mz[istd].astype(str).str.split(": ").str[1]
+                mz = df_istd_mz[istd].str.split(": ").str[0]
+                delta_mz = df_istd_mz[istd].str.split(": ").str[1]
                 df_istd_mz[istd] = delta_mz.astype(float)
 
             # Get list of samples from transposed DataFrames
@@ -1624,13 +1623,13 @@ def populate_QE2_plots(active_cell, table_data, polarity, rt_plot_standard, inte
             for istd in internal_standards:
 
                 # Splitting text for RT data
-                rt = df_istd_rt[istd].astype(str).str.split(": ").str[0]
-                rt_diff = df_istd_rt[istd].astype(str).str.split(": ").str[1]
+                rt = df_istd_rt[istd].str.split(": ").str[0]
+                rt_diff = df_istd_rt[istd].str.split(": ").str[1]
                 df_istd_rt[istd] = rt.astype(float)
 
                 # Splitting text for m/z data
-                mz = df_istd_mz[istd].astype(str).str.split(": ").str[0]
-                delta_mz = df_istd_mz[istd].astype(str).str.split(": ").str[1]
+                mz = df_istd_mz[istd].str.split(": ").str[0]
+                delta_mz = df_istd_mz[istd].str.split(": ").str[1]
                 df_istd_mz[istd] = delta_mz.astype(float)
 
             # Get list of samples from transposed DataFrames
