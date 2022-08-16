@@ -31,6 +31,8 @@
 .all-plots-container {
     float: left;
     width: 70%;
+    /* height: calc(100vh - 75px);
+    overflow-y: auto; */
 }
 
 .istd-plot-div {

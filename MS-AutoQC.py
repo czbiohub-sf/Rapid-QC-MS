@@ -11,6 +11,10 @@ study_loaded = {
     "QE 1": {
         "study_name": "",
         "study_file": "",
+        "chromatography": "",
+        "pos_internal_standards": "",
+        "neg_internal_standards": "",
+        "retention_times_dict": "",
         "drive_id": "1-0y1jUARBM1DwExjrhyl0WF3KRLFWHom",
         "ui_callback": False,
         "clicked_feature": False,
@@ -19,20 +23,16 @@ study_loaded = {
     "QE 2": {
         "study_name": "",
         "study_file": "",
+        "chromatography": "",
+        "pos_internal_standards": "",
+        "neg_internal_standards": "",
+        "retention_times_dict": "",
         "drive_id": "1-9unZeOHyTPYZScox5Wv9X0CxTWIE-Ih",
         "ui_callback": False,
         "clicked_feature": False,
         "df_samples": ""
     },
 }
-
-standards_list = ["1_Methionine_d8", "1_1_Methylnicotinamide_d3", "1_Creatinine_d3", "1_Carnitine_d3",
-             "1_Acetylcarnitine_d3", "1_TMAO_d9", "1_Choline_d9", "1_Glutamine_d5", "1_CUDA", "1_Glutamic Acid_d3",
-             "1_Arginine_d7", "1_Alanine_d3", "1_Valine d8", "1_Tryptophan d5", "1_Serine d3", "1_Lysine d8",
-             "1_Phenylalanine d8", "1_Hippuric acid d5"]
-
-neg_internal_standards = ["1_Methionine_d8", "1_Creatinine_d3", "1_CUDA", "1_Glutamine_d5", "1_Glutamic Acid_d3",
-                          "1_Arginine_d7", "1_Tryptophan d5", "1_Serine d3", "1_Hippuric acid d5"]
 
 standards_dict = {
     "1_Methionine_d8": "Methionine d8",
@@ -55,7 +55,23 @@ standards_dict = {
     "1_Hippuric acid d5": "Hippuric acid d5"
 }
 
-retention_times_dict = {
+standards_list = ["1_Methionine_d8", "1_1_Methylnicotinamide_d3", "1_Creatinine_d3", "1_Carnitine_d3",
+             "1_Acetylcarnitine_d3", "1_TMAO_d9", "1_Choline_d9", "1_Glutamine_d5", "1_CUDA", "1_Glutamic Acid_d3",
+             "1_Arginine_d7", "1_Alanine_d3", "1_Valine d8", "1_Tryptophan d5", "1_Serine d3", "1_Lysine d8",
+             "1_Phenylalanine d8", "1_Hippuric acid d5"]
+
+pos_internal_standards_HILIC = standards_list
+
+neg_internal_standards_HILIC = ["1_Methionine_d8", "1_Creatinine_d3", "1_CUDA", "1_Glutamine_d5", "1_Glutamic Acid_d3",
+                                "1_Arginine_d7", "1_Tryptophan d5", "1_Serine d3", "1_Hippuric acid d5"]
+
+pos_internal_standards_C18 = ["1_Acetylcarnitine_d3", "1_CUDA", "1_Valine d8", "1_Tryptophan d5",
+                              "1_Phenylalanine d8", "1_Hippuric acid d5"]
+
+neg_internal_standards_C18 = ["1_CUDA", "1_Glutamine_d5", "1_Glutamic Acid_d3", "1_Phenylalanine_d8",
+                              "1_Tryptophan d5", "1_Hippuric acid d5"]
+
+retention_times_HILIC = {
     "1_Methionine_d8": 7.479,
     "1_1_Methylnicotinamide_d3": 6.217,
     "1_Creatinine_d3": 4.908,
@@ -74,6 +90,17 @@ retention_times_dict = {
     "1_Lysine d8": 9.578,
     "1_Phenylalanine d8": 6.92,
     "1_Hippuric acid d5": 3.011
+}
+
+retention_times_C18 = {
+    "1_Acetylcarnitine_d3": 1.388,
+    "1_CUDA": 7.798,
+    "1_Glutamine_d5": 0.99,
+    "1_Glutamic Acid_d3": 1.014,
+    "1_Valine d8": 1.259,
+    "1_Tryptophan d5": 3.303,
+    "1_Phenylalanine d8": 2.827,
+    "1_Hippuric acid d5": 3.952
 }
 
 pos_urine_features_dict = {
@@ -303,10 +330,12 @@ istd_colors = {"1_Methionine_d8": "rgb(150, 222, 209)",
 # Create Dash app layout
 def serve_layout():
 
+    # Clear instrument dictionary data
+    elements_to_clear = ["study_name", "chromatography", "study_file", "df_samples", "pos_internal_standards",
+                     "neg_internal_standards"]
     for instrument in ["QE 1", "QE 2"]:
-        study_loaded[instrument]["study_name"] = ""
-        study_loaded[instrument]["study_file"] = ""
-        study_loaded[instrument]["df_samples"] = ""
+        for key in elements_to_clear:
+            study_loaded[instrument][key] = ""
 
     return html.Div(className="app-layout", children=[
 
@@ -371,6 +400,7 @@ def serve_layout():
                                         "fontSize": "15px",
                                         "fontFamily": "sans-serif",
                                         "lineHeight": "25px",
+                                        "whiteSpace": "normal",
                                         "padding": "10px",
                                         "borderRadius": "5px"},
                             style_data={"whiteSpace": "normal",
@@ -400,7 +430,7 @@ def serve_layout():
                     ]),
 
                     # Data container for QE 1 plots
-                    html.Div(id="QE1-plot-container", className="all-plots-container", children=[
+                    html.Div(id="QE1-plot-container", className="all-plots-container", style={"display": "none"}, children=[
 
                         html.Div(className="istd-plot-div", children=[
 
@@ -582,6 +612,7 @@ def serve_layout():
                             style_cell={"textAlign": "left",
                                         "fontSize": "15px",
                                         "fontFamily": "sans-serif",
+                                        # "whiteSpace": "normal",
                                         "lineHeight": "25px",
                                         "padding": "10px",
                                         "borderRadius": "5px"},
@@ -612,7 +643,7 @@ def serve_layout():
                     ]),
 
                     # Data container for QE 2 plots
-                    html.Div(id="QE2-plot-container", className="all-plots-container", children=[
+                    html.Div(id="QE2-plot-container", className="all-plots-container", style={"display": "none"}, children=[
 
                         html.Div(className="istd-plot-div", children=[
 
@@ -789,17 +820,28 @@ def get_data(instrument, study_id):
             file.GetContentFile(file["title"])
 
         # Set chromatography (if it hasn't already been set)
-        if chromatography == "":
+        if chromatography == "" and "urine" not in file["title"]:
+
             if "HILIC" in file["title"]:
+                study_loaded[instrument]["chromatography"] = "HILIC"
+                study_loaded[instrument]["pos_internal_standards"] = pos_internal_standards_HILIC
+                study_loaded[instrument]["neg_internal_standards"] = neg_internal_standards_HILIC
+                study_loaded[instrument]["retention_times_dict"] = retention_times_HILIC
                 chromatography = "HILIC"
+
             elif "C18" in file["title"]:
+                study_loaded[instrument]["chromatography"] = "C18"
+                study_loaded[instrument]["pos_internal_standards"] = pos_internal_standards_C18
+                study_loaded[instrument]["neg_internal_standards"] = neg_internal_standards_C18
+                study_loaded[instrument]["retention_times_dict"] = retention_times_C18
                 chromatography = "C18"
+
             elif "Lipidomics" in file["title"]:
+                study_loaded[instrument]["chromatography"] = "Lipidomics"
                 chromatography = "Lipidomics"
 
     # Overarching try/catch
     try:
-
         # Parse data into pandas DataFrames
         try:
             # Retrieve m/z, RT, and peak height .csv files from bufferbox2
@@ -906,7 +948,7 @@ def generate_sample_metadata_dataframe(sample, instrument):
     return df_sample_istd, df_sample_info
 
 
-def load_istd_rt_plot(dataframe, samples, internal_standard):
+def load_istd_rt_plot(dataframe, samples, internal_standard, retention_times_dict):
 
     """
     Returns scatter plot figure of retention time vs. sample for internal standards
@@ -1117,13 +1159,13 @@ def get_samples(instrument):
     pass_fail_list = []
 
     for column in pos_samples:
-        if (df_pos[column] == 0).sum() >= 4:
+        if df_pos[column].isnull().sum() >= 4:
             pass_fail_list.append("Fail")
         else:
             pass_fail_list.append("Pass")
 
     for column in neg_samples:
-        if (df_neg[column] == 0).sum() >= 4:
+        if df_neg[column].isnull().sum() >= 4:
             pass_fail_list.append("Fail")
         else:
             pass_fail_list.append("Pass")
@@ -1190,8 +1232,10 @@ def loading_data_feedback(active_cell_QE1, table_data_QE1, active_cell_QE2, tabl
               Output("QE2-table", "data"),
               Output("QE1-table-container", "style"),
               Output("QE2-table-container", "style"),
+              Output("QE1-plot-container", "style"),
+              Output("QE2-plot-container", "style"),
               Input("header", "children"))
-def populate_instrument_tables(placeholder_input):
+def populate_study_table(placeholder_input):
 
     """
     Dash callback for populating tables with list of past/active instrument runs
@@ -1213,15 +1257,17 @@ def populate_instrument_tables(placeholder_input):
         if study not in list_of_QE2_studies and "urine" not in file["title"]:
             list_of_QE2_studies.append(study)
 
-    data_for_QE1 = [{"Past / Active Studies": study} for study in list_of_QE1_studies]
-    data_for_QE2 = [{"Past / Active Studies": study} for study in list_of_QE2_studies]
+    studies_on_QE1 = [{"Past / Active Studies": study} for study in list_of_QE1_studies]
+    studies_on_QE2 = [{"Past / Active Studies": study} for study in list_of_QE2_studies]
 
     if list_of_QE1_studies == []:
-        data_for_QE1 = [{"Past / Active Studies": "No studies found"}]
+        studies_on_QE1 = [{"Past / Active Studies": "No studies found"}]
     if list_of_QE2_studies == []:
-        data_for_QE1 = [{"Past / Active Studies": "No studies found"}]
+        studies_on_QE2 = [{"Past / Active Studies": "No studies found"}]
 
-    return data_for_QE1, data_for_QE2, {"display": "block"}, {"display": "block"}
+    display_div = {"display": "block"}
+
+    return studies_on_QE1, studies_on_QE2, display_div, display_div, display_div, display_div
 
 
 @app.callback(Output("QE1-sample-table", "data"),
@@ -1264,13 +1310,13 @@ def update_QE1_dropdowns_on_polarity_change(polarity, table_data):
     df_samples = study_loaded["QE 1"]["df_samples"]
 
     if polarity == "neg":
-        istd_dropdown = neg_internal_standards
+        istd_dropdown = study_loaded["QE 1"]["neg_internal_standards"]
         urine_dropdown = list(neg_urine_features_dict.keys())
         df_samples = df_samples.loc[df_samples["Sample"].str.contains("Neg")]
         sample_dropdown = df_samples["Sample"].tolist()
 
     elif polarity == "pos":
-        istd_dropdown = standards_list
+        istd_dropdown = study_loaded["QE 1"]["pos_internal_standards"]
         urine_dropdown = list(pos_urine_features_dict.keys())
         df_samples = df_samples.loc[df_samples["Sample"].str.contains("Pos")]
         sample_dropdown = df_samples["Sample"].tolist()
@@ -1298,13 +1344,13 @@ def update_QE2_dropdowns_on_polarity_change(polarity, table_data):
     df_samples = study_loaded["QE 2"]["df_samples"]
 
     if polarity == "neg":
-        istd_dropdown = neg_internal_standards
+        istd_dropdown = study_loaded["QE 2"]["neg_internal_standards"]
         urine_dropdown = list(neg_urine_features_dict.keys())
         df_samples = df_samples.loc[df_samples["Sample"].str.contains("Neg")]
         sample_dropdown = df_samples["Sample"].tolist()
 
     elif polarity == "pos":
-        istd_dropdown = standards_list
+        istd_dropdown = study_loaded["QE 2"]["pos_internal_standards"]
         urine_dropdown = list(pos_urine_features_dict.keys())
         df_samples = df_samples.loc[df_samples["Sample"].str.contains("Pos")]
         sample_dropdown = df_samples["Sample"].tolist()
@@ -1392,6 +1438,8 @@ def populate_QE1_plots(active_cell, table_data, polarity, rt_plot_standard, inte
     Dash callback for loading QE 1 instrument data into scatter and bar plots
     """
 
+    instrument = "QE 1"
+
     # If a study was selected
     if active_cell:
 
@@ -1401,13 +1449,18 @@ def populate_QE1_plots(active_cell, table_data, polarity, rt_plot_standard, inte
         if study_name != "No studies found":
 
             # Retrieve data for clicked study and store as a dictionary
-            if study_loaded["QE 1"]["study_name"] != study_name or study_loaded["QE 1"]["ui_callback"] == False:
-                files = get_data("QE 1", study_name)
-                study_loaded["QE 1"]["study_name"] = study_name
-                study_loaded["QE 1"]["study_file"] = files
+            if study_loaded[instrument]["study_name"] != study_name or study_loaded[instrument]["ui_callback"] == False:
+                files = get_data(instrument, study_name)
+                study_loaded[instrument]["study_name"] = study_name
+                study_loaded[instrument]["study_file"] = files
 
-            elif study_loaded["QE 1"]["ui_callback"] == True or study_loaded["QE 1"]["clicked_feature"] == True:
-                files = study_loaded["QE 1"]["study_file"]
+            elif study_loaded[instrument]["ui_callback"] == True or study_loaded[instrument]["clicked_feature"] == True:
+                files = study_loaded[instrument]["study_file"]
+
+            print(files)
+
+            # Get retention times
+            retention_times_dict = study_loaded[instrument]["retention_times_dict"]
 
             # Get internal standards from QC DataFrames for RT scatter plot
             if polarity == "pos":
@@ -1431,12 +1484,12 @@ def populate_QE1_plots(active_cell, table_data, polarity, rt_plot_standard, inte
             if not urine_plot_feature:
                 urine_plot_feature = list(urine_features_dict.keys())[0]
 
-            if urine_plot_feature and study_loaded["QE 1"]["ui_callback"] == True:
-                study_loaded["QE 1"]["ui_callback"] == False
+            if urine_plot_feature and study_loaded[instrument]["ui_callback"] == True:
+                study_loaded[instrument]["ui_callback"] == False
 
-            if click_data and study_loaded["QE 1"]["clicked_feature"] == True:
+            if click_data and study_loaded[instrument]["clicked_feature"] == True:
                 urine_plot_feature = click_data["points"][0]["hovertext"]
-                study_loaded["QE 1"]["clicked_feature"] = False
+                study_loaded[instrument]["clicked_feature"] = False
 
             # Prepare DataFrames for plotting
             df_istd_rt = files["rt_" + polarity]
@@ -1487,7 +1540,8 @@ def populate_QE1_plots(active_cell, table_data, polarity, rt_plot_standard, inte
                 # Internal standards – retention time vs. sample
                 istd_rt_plot = load_istd_rt_plot(dataframe=df_istd_rt,
                                                  samples=rt_plot_samples,
-                                                 internal_standard=rt_plot_standard)
+                                                 internal_standard=rt_plot_standard,
+                                                 retention_times_dict=retention_times_dict)
 
                 # Internal standards – intensity vs. sample
                 istd_intensity_plot = load_istd_intensity_plot(dataframe=df_istd_intensity,
@@ -1513,7 +1567,7 @@ def populate_QE1_plots(active_cell, table_data, polarity, rt_plot_standard, inte
                                                                  feature_name=urine_plot_feature,
                                                                  polarity=polarity)
 
-                study_loaded["QE 1"]["ui_callback"] = False
+                study_loaded[instrument]["ui_callback"] = False
 
                 return istd_rt_plot, istd_intensity_plot, istd_delta_mz_plot, \
                        urine_feature_plot, urine_benchmark_plot, urine_plot_feature
@@ -1528,7 +1582,7 @@ def populate_QE1_plots(active_cell, table_data, polarity, rt_plot_standard, inte
     else:
         return dash.no_update
 
-    study_loaded["QE 1"]["ui_callback"] = False
+    study_loaded[instrument]["ui_callback"] = False
 
 
 @app.callback(Output("QE2-istd-rt-plot", "figure"),
@@ -1555,6 +1609,8 @@ def populate_QE2_plots(active_cell, table_data, polarity, rt_plot_standard, inte
     Dash callback for loading QE 2 instrument data into scatter and bar plots
     """
 
+    instrument = "QE 2"
+
     # If a study was selected
     if active_cell:
 
@@ -1564,13 +1620,13 @@ def populate_QE2_plots(active_cell, table_data, polarity, rt_plot_standard, inte
         if study_name != "No studies found":
 
             # Retrieve data for clicked study and store as a dictionary
-            if study_loaded["QE 2"]["study_name"] != study_name or study_loaded["QE 2"]["ui_callback"] == False:
-                files = get_data("QE 2", study_name)
-                study_loaded["QE 2"]["study_name"] = study_name
-                study_loaded["QE 2"]["study_file"] = files
+            if study_loaded[instrument]["study_name"] != study_name or study_loaded[instrument]["ui_callback"] == False:
+                files = get_data(instrument, study_name)
+                study_loaded[instrument]["study_name"] = study_name
+                study_loaded[instrument]["study_file"] = files
 
-            elif study_loaded["QE 2"]["ui_callback"] == True or study_loaded["QE 2"]["clicked_feature"] == True:
-                files = study_loaded["QE 2"]["study_file"]
+            elif study_loaded[instrument]["ui_callback"] == True or study_loaded[instrument]["clicked_feature"] == True:
+                files = study_loaded[instrument]["study_file"]
 
             # Get internal standards from QC DataFrames for RT scatter plot
             if polarity == "pos":
@@ -1579,6 +1635,9 @@ def populate_QE2_plots(active_cell, table_data, polarity, rt_plot_standard, inte
             elif polarity == "neg":
                 internal_standards = files["rt_neg"]["Title"].astype(str).tolist()
                 urine_features_dict = neg_urine_features_dict
+
+            # Get retention times
+            retention_times_dict = study_loaded[instrument]["retention_times_dict"]
 
             # Set initial dropdown values when none are selected
             if not rt_plot_standard:
@@ -1594,12 +1653,12 @@ def populate_QE2_plots(active_cell, table_data, polarity, rt_plot_standard, inte
             if not urine_plot_feature:
                 urine_plot_feature = list(urine_features_dict.keys())[0]
 
-            if urine_plot_feature and study_loaded["QE 2"]["ui_callback"] == True:
-                study_loaded["QE 2"]["ui_callback"] == False
+            if urine_plot_feature and study_loaded[instrument]["ui_callback"] == True:
+                study_loaded[instrument]["ui_callback"] == False
 
-            if click_data and study_loaded["QE 2"]["clicked_feature"] == True:
+            if click_data and study_loaded[instrument]["clicked_feature"] == True:
                 urine_plot_feature = click_data["points"][0]["hovertext"]
-                study_loaded["QE 2"]["clicked_feature"] = False
+                study_loaded[instrument]["clicked_feature"] = False
 
             # Prepare DataFrames for plotting
             df_istd_rt = files["rt_" + polarity]
@@ -1650,7 +1709,8 @@ def populate_QE2_plots(active_cell, table_data, polarity, rt_plot_standard, inte
                 # Internal standards – retention time vs. sample
                 istd_rt_plot = load_istd_rt_plot(dataframe=df_istd_rt,
                                                  samples=rt_plot_samples,
-                                                 internal_standard=rt_plot_standard)
+                                                 internal_standard=rt_plot_standard,
+                                                 retention_times_dict=retention_times_dict)
 
                 # Internal standards – intensity vs. sample
                 istd_intensity_plot = load_istd_intensity_plot(dataframe=df_istd_intensity,
@@ -1676,7 +1736,7 @@ def populate_QE2_plots(active_cell, table_data, polarity, rt_plot_standard, inte
                                                                  feature_name=urine_plot_feature,
                                                                  polarity=polarity)
 
-                study_loaded["QE 2"]["ui_callback"] = False
+                study_loaded[instrument]["ui_callback"] = False
 
                 return istd_rt_plot, istd_intensity_plot, istd_delta_mz_plot, \
                        urine_feature_plot, urine_benchmark_plot, urine_plot_feature
@@ -1691,7 +1751,7 @@ def populate_QE2_plots(active_cell, table_data, polarity, rt_plot_standard, inte
     else:
         return dash.no_update
 
-    study_loaded["QE 2"]["ui_callback"] = False
+    study_loaded[instrument]["ui_callback"] = False
 
 
 @app.callback(Output("QE1-sample-info-modal", "is_open"),
