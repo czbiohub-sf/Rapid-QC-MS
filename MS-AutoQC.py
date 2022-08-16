@@ -297,7 +297,8 @@ local_stylesheet = {
 }
 
 # Initialize Dash app
-app = dash.Dash(__name__, external_stylesheets=[local_stylesheet, dbc.themes.BOOTSTRAP])
+app = dash.Dash(__name__, external_stylesheets=[local_stylesheet, dbc.themes.BOOTSTRAP],
+                meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}])
 app.title = "MS-AutoQC"
 
 # Authenticate with Google Drive
@@ -330,6 +331,8 @@ istd_colors = {"1_Methionine_d8": "rgb(150, 222, 209)",
 # Create Dash app layout
 def serve_layout():
 
+    biohub_logo = "https://user-images.githubusercontent.com/7220175/184942387-0acf5deb-d81e-4962-ab27-05b453c7a688.png"
+
     # Clear instrument dictionary data
     elements_to_clear = ["study_name", "chromatography", "study_file", "df_samples", "pos_internal_standards",
                      "neg_internal_standards"]
@@ -339,10 +342,25 @@ def serve_layout():
 
     return html.Div(className="app-layout", children=[
 
+        # Navigation bar
+        dbc.Navbar(
+            dbc.Container(style={"height": "50px"}, children=[
+                html.A(
+                    # Use row and col to control vertical alignment of logo / brand
+                    dbc.Row([
+                        dbc.Col(html.Img(src=biohub_logo, height="30px")),
+                        dbc.Col(dbc.NavbarBrand(id="header", children="MS-AutoQC", className="ms-2")),
+                    ], align="center", className="g-0",
+                ),
+                href="https://biohub.org",
+                style={"textDecoration": "none"},
+            )]), color="dark", dark=True,
+        ),
+
         # Header
-        html.Div(id="header", className="header", children=[
-            html.H1(id="header-text", children="MS-AutoQC")
-        ]),
+        # html.Div(id="header", children=[
+        #     html.H1(id="header-text")
+        # ]),
 
         # App layout
         html.Div(className="page", children=[
@@ -374,23 +392,34 @@ def serve_layout():
                                     'if': {
                                         'state': 'active'
                                     },
-                                   'backgroundColor': 'rgba(0, 116, 217, 0.3)',
-                                   'border': '1px solid rgb(0, 116, 217)'
-                                }]
-                            ),
+                                   'backgroundColor': 'rgba(0, 123, 255, 0.3)',
+                                   'border': '1px solid rgb(0, 123, 255)'
+                                }],
+                            style_cell_conditional=[
+                                {'if': {'column_id': 'Study'},
+                                    'width': '50%'},
+                                {'if': {'column_id': 'Type'},
+                                    'width': '25%'},
+                                {'if': {'column_id': 'Status'},
+                                    'width': '25%'}
+                            ]
+                        ),
 
                         # Polarity filtering options
-                        dcc.RadioItems(
-                            id="QE1-polarity-options",
-                            options=[
-                                {"label": "Positive Mode", "value": "pos"},
-                                {"label": "Negative Mode", "value": "neg"}],
-                            value="pos",
-                            style={"margin-top": "30px",
-                                   "text-align": "center",
-                                   "width": "100%"},
-                            inputStyle={"margin-left": "15px",
-                                        "margin-right": "5px"}),
+                        html.Div(dbc.Row(dbc.Col(
+                            html.Div(className="radio-group", children=[
+                                dbc.RadioItems(
+                                    id="QE1-polarity-options",
+                                    className="btn-group",
+                                    inputClassName="btn-check",
+                                    labelClassName="btn btn-outline-primary",
+                                    inputCheckedClassName="active",
+                                    options=[
+                                        {"label": "Positive Mode", "value": "pos"},
+                                        {"label": "Negative Mode", "value": "neg"}],
+                                    value="pos"
+                                ),
+                            ]), width=8), justify="center")),
 
                         # Table of samples run for a particular study
                         dash_table.DataTable(id="QE1-sample-table", page_action="none",
@@ -414,8 +443,8 @@ def serve_layout():
                                     'font-weight': 'bold'
                                 },
                                 {'if': {'state': 'active'},
-                                   'backgroundColor': 'rgba(0, 116, 217, 0.3)',
-                                   'border': '1px solid rgb(0, 116, 217)'
+                                   'backgroundColor': 'rgba(0, 123, 255, 0.3)',
+                                   'border': '1px solid rgb(0, 123, 255)'
                                 }
                             ],
                             style_cell_conditional=[
@@ -587,23 +616,34 @@ def serve_layout():
                                     'if': {
                                         'state': 'active'
                                     },
-                                   'backgroundColor': 'rgba(0, 116, 217, 0.3)',
-                                   'border': '1px solid rgb(0, 116, 217)'
-                                }]
+                                   'backgroundColor': 'rgba(0, 123, 255, 0.3)',
+                                   'border': '1px solid rgb(0, 123, 255)'
+                                }],
+                             style_cell_conditional=[
+                                {'if': {'column_id': 'Study'},
+                                    'width': '50%'},
+                                {'if': {'column_id': 'Type'},
+                                    'width': '25%'},
+                                {'if': {'column_id': 'Type'},
+                                    'width': '25%'}
+                             ]
                          ),
 
                         # Polarity filtering options
-                        dcc.RadioItems(
-                            id="QE2-polarity-options",
-                            options=[
-                                {"label": "Positive Mode", "value": "pos"},
-                                {"label": "Negative Mode", "value": "neg"}],
-                            value="pos",
-                            style={"margin-top": "30px",
-                                   "text-align": "center",
-                                   "width": "100%"},
-                            inputStyle={"margin-left": "15px",
-                                        "margin-right": "5px"}),
+                        html.Div(dbc.Row(dbc.Col(
+                            html.Div(className="radio-group", children=[
+                                dbc.RadioItems(
+                                    id="QE2-polarity-options",
+                                    className="btn-group",
+                                    inputClassName="btn-check",
+                                    labelClassName="btn btn-outline-primary",
+                                    labelCheckedClassName="active",
+                                    options=[
+                                        {"label": "Positive Mode", "value": "pos"},
+                                        {"label": "Negative Mode", "value": "neg"}],
+                                    value="pos"
+                                ),
+                            ]), width=8), justify="center")),
 
                         # Table of samples run for a particular study
                         dash_table.DataTable(id="QE2-sample-table", page_action="none",
@@ -627,8 +667,8 @@ def serve_layout():
                                     'font-weight': 'bold'
                                 },
                                 {'if': {'state': 'active'},
-                                   'backgroundColor': 'rgba(0, 116, 217, 0.3)',
-                                   'border': '1px solid rgb(0, 116, 217)'
+                                   'backgroundColor': 'rgba(0, 123, 255, 0.4)',
+                                   'border': '1px solid rgb(0, 123, 255)'
                                  }
                             ],
                             style_cell_conditional=[
@@ -820,7 +860,7 @@ def get_data(instrument, study_id):
             file.GetContentFile(file["title"])
 
         # Set chromatography (if it hasn't already been set)
-        if chromatography == "" and "urine" not in file["title"]:
+        if chromatography == "" and study_id in file["title"]:
 
             if "HILIC" in file["title"]:
                 study_loaded[instrument]["chromatography"] = "HILIC"
@@ -1196,7 +1236,7 @@ def get_samples(instrument):
     return df_samples.to_dict("records")
 
 
-@app.callback(Output("header-text", "children"),
+@app.callback(Output("header", "children"),
               Input("QE1-table", "active_cell"),
               State("QE1-table", "data"),
               Input("QE2-table", "active_cell"),
@@ -1234,40 +1274,61 @@ def loading_data_feedback(active_cell_QE1, table_data_QE1, active_cell_QE2, tabl
               Output("QE2-table-container", "style"),
               Output("QE1-plot-container", "style"),
               Output("QE2-plot-container", "style"),
-              Input("header", "children"))
+              Input("header", "children"), suppress_callback_exceptions=True)
 def populate_study_table(placeholder_input):
 
     """
     Dash callback for populating tables with list of past/active instrument runs
     """
 
-    list_of_QE1_studies = []
-    list_of_QE2_studies = []
+    df_studies_QE1 = pd.DataFrame()
+    df_studies_QE2 = pd.DataFrame()
+
+    QE1_studies = {
+        "Study": [],
+        "Type": [],
+        "Status": []
+    }
+
+    QE2_studies = {
+        "Study": [],
+        "Type": [],
+        "Status": []
+    }
 
     QE1_files = drive.ListFile({'q': "'" + study_loaded["QE 1"]["drive_id"] + "' in parents and trashed=false"}).GetList()
     QE2_files = drive.ListFile({'q': "'" + study_loaded["QE 2"]["drive_id"] + "' in parents and trashed=false"}).GetList()
 
     for file in QE1_files:
-        study = file["title"].split("_")[0]
-        if study not in list_of_QE1_studies and "urine" not in file["title"]:
-            list_of_QE1_studies.append(study)
+        if "RT" in file["title"] and "Pos" in file["title"] and "urine" not in file["title"]:
+            QE1_studies["Study"].append(file["title"].split("_")[0])
+            QE1_studies["Type"].append(file["title"].split("_")[2])
+            QE1_studies["Status"].append("Complete")
 
     for file in QE2_files:
-        study = file["title"].split("_")[0]
-        if study not in list_of_QE2_studies and "urine" not in file["title"]:
-            list_of_QE2_studies.append(study)
+        if "RT" in file["title"] and "Pos" in file["title"] and "urine" not in file["title"]:
+            QE2_studies["Study"].append(file["title"].split("_")[0])
+            QE2_studies["Type"].append(file["title"].split("_")[2])
+            QE2_studies["Status"].append("Complete")
 
-    studies_on_QE1 = [{"Past / Active Studies": study} for study in list_of_QE1_studies]
-    studies_on_QE2 = [{"Past / Active Studies": study} for study in list_of_QE2_studies]
+    df_studies_QE1["Study"] = QE1_studies["Study"]
+    df_studies_QE1["Type"] = QE1_studies["Type"]
+    df_studies_QE1["Status"] = QE1_studies["Status"]
+    QE1_studies = df_studies_QE1.to_dict("records")
 
-    if list_of_QE1_studies == []:
-        studies_on_QE1 = [{"Past / Active Studies": "No studies found"}]
-    if list_of_QE2_studies == []:
-        studies_on_QE2 = [{"Past / Active Studies": "No studies found"}]
+    df_studies_QE2["Study"] = QE2_studies["Study"]
+    df_studies_QE2["Type"] = QE2_studies["Type"]
+    df_studies_QE2["Status"] = QE2_studies["Status"]
+    QE2_studies = df_studies_QE2.to_dict("records")
+
+    # if QE1_studies == []:
+    #     studies_on_QE1 = [{"Past / Active Studies": "No studies found"}]
+    # if QE2_studies == []:
+    #     studies_on_QE2 = [{"Past / Active Studies": "No studies found"}]
 
     display_div = {"display": "block"}
 
-    return studies_on_QE1, studies_on_QE2, display_div, display_div, display_div, display_div
+    return QE1_studies, QE2_studies, display_div, display_div, display_div, display_div
 
 
 @app.callback(Output("QE1-sample-table", "data"),
@@ -1456,8 +1517,6 @@ def populate_QE1_plots(active_cell, table_data, polarity, rt_plot_standard, inte
 
             elif study_loaded[instrument]["ui_callback"] == True or study_loaded[instrument]["clicked_feature"] == True:
                 files = study_loaded[instrument]["study_file"]
-
-            print(files)
 
             # Get retention times
             retention_times_dict = study_loaded[instrument]["retention_times_dict"]
@@ -1757,6 +1816,7 @@ def populate_QE2_plots(active_cell, table_data, polarity, rt_plot_standard, inte
 @app.callback(Output("QE1-sample-info-modal", "is_open"),
               Output("QE1-sample-modal-title", "children"),
               Output("QE1-sample-modal-body", "children"),
+              Output("QE1-sample-table", "active_cell"),
               Input("QE1-close-modal", "n_clicks"),
               State("QE1-sample-info-modal", "is_open"),
               Input("QE1-sample-table", "active_cell"),
@@ -1784,14 +1844,15 @@ def toggle_sample_card_for_QE1(close_button, is_open, active_cell, table_data):
 
     # Toggle modal
     if is_open:
-        return False, title, body
+        return False, title, body, None
     else:
-        return True, title, body
+        return True, title, body, None
 
 
 @app.callback(Output("QE2-sample-info-modal", "is_open"),
               Output("QE2-sample-modal-title", "children"),
               Output("QE2-sample-modal-body", "children"),
+              Output("QE2-sample-table", "active_cell"),
               Input("QE2-close-modal", "n_clicks"),
               State("QE2-sample-info-modal", "is_open"),
               Input("QE2-sample-table", "active_cell"),
@@ -1819,9 +1880,9 @@ def toggle_sample_card_for_QE2(close_button, is_open, active_cell, table_data):
 
     # Toggle modal
     if is_open:
-        return False, title, body
+        return False, title, body, None
     else:
-        return True, title, body
+        return True, title, body, None
 
 
 if __name__ == "__main__":
