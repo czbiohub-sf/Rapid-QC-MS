@@ -296,6 +296,17 @@ local_stylesheet = {
     "rel": "stylesheet"
 }
 
+bootstrap_colors = {
+    "blue": "rgb(0, 123, 255)",
+    "red": "rgb(220, 53, 69)",
+    "green": "rgb(40, 167, 69)",
+    "yellow": "rgb(255, 193, 7)",
+    "blue-low-opacity": "rgba(0, 123, 255, 0.4)",
+    "red-low-opacity": "rgba(220, 53, 69, 0.4)",
+    "green-low-opacity": "rgba(40, 167, 69, 0.4)",
+    "yellow-low-opacity": "rgba(255, 193, 7, 0.4)"
+}
+
 # Initialize Dash app
 app = dash.Dash(__name__, external_stylesheets=[local_stylesheet, dbc.themes.BOOTSTRAP],
                 meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}])
@@ -374,7 +385,7 @@ def serve_layout():
 
                         # Table of past/active studies that were run on QE 1
                         dash_table.DataTable(id="QE1-table", page_action="none",
-                            fixed_rows={'headers': True},
+                            fixed_rows={"headers": True},
                             cell_selectable=True,
                             style_cell={"textAlign": "left",
                                         "fontSize": "15px",
@@ -389,24 +400,24 @@ def serve_layout():
                                         "overflowY": "auto"},
                             style_data_conditional=[
                                 {
-                                    'if': {
-                                        'state': 'active'
+                                    "if": {
+                                        "state": "active"
                                     },
-                                   'backgroundColor': 'rgba(0, 123, 255, 0.3)',
-                                   'border': '1px solid rgb(0, 123, 255)'
+                                   "backgroundColor": bootstrap_colors["blue-low-opacity"],
+                                   "border": "1px solid " + bootstrap_colors["blue"]
                                 }],
                             style_cell_conditional=[
-                                {'if': {'column_id': 'Study'},
-                                    'width': '50%'},
-                                {'if': {'column_id': 'Type'},
-                                    'width': '25%'},
-                                {'if': {'column_id': 'Status'},
-                                    'width': '25%'}
+                                {"if": {"column_id": "Study"},
+                                    "width": "50%"},
+                                {"if": {"column_id": "Type"},
+                                    "width": "25%"},
+                                {"if": {"column_id": "Status"},
+                                    "width": "25%"}
                             ]
                         ),
 
                         # Polarity filtering options
-                        html.Div(dbc.Row(dbc.Col(
+                        html.Div(className="radio-group-container", children=[
                             html.Div(className="radio-group", children=[
                                 dbc.RadioItems(
                                     id="QE1-polarity-options",
@@ -419,11 +430,11 @@ def serve_layout():
                                         {"label": "Negative Mode", "value": "neg"}],
                                     value="pos"
                                 ),
-                            ]), width=8), justify="center")),
+                            ])]),
 
                         # Table of samples run for a particular study
                         dash_table.DataTable(id="QE1-sample-table", page_action="none",
-                            fixed_rows={'headers': True},
+                            fixed_rows={"headers": True},
                             # cell_selectable=True,
                             style_cell={"textAlign": "left",
                                         "fontSize": "15px",
@@ -438,22 +449,22 @@ def serve_layout():
                             style_table={"height": "473px",
                                          "overflowY": "auto"},
                             style_data_conditional=[
-                                {'if': {'filter_query': '{QC} = "Fail"'},
-                                    'backgroundColor': '#F5B7B1',
-                                    'font-weight': 'bold'
+                                {"if": {"filter_query": "{QC} = 'Fail'"},
+                                    "backgroundColor": bootstrap_colors["red-low-opacity"],
+                                    "font-weight": "bold"
                                 },
-                                {'if': {'state': 'active'},
-                                   'backgroundColor': 'rgba(0, 123, 255, 0.3)',
-                                   'border': '1px solid rgb(0, 123, 255)'
+                                {"if": {"state": "active"},
+                                   "backgroundColor": bootstrap_colors["blue-low-opacity"],
+                                   "border": "1px solid " + bootstrap_colors["blue"]
                                 }
                             ],
                             style_cell_conditional=[
-                                {'if': {'column_id': 'Sample'},
-                                    'width': '65%'},
-                                {'if': {'column_id': 'Position'},
-                                    'width': '20%'},
-                                {'if': {'column_id': 'QC'},
-                                    'width': '15%'},
+                                {"if": {"column_id": "Sample"},
+                                    "width": "65%"},
+                                {"if": {"column_id": "Position"},
+                                    "width": "20%"},
+                                {"if": {"column_id": "QC"},
+                                    "width": "15%"},
                              ]
                         )
                     ]),
@@ -588,7 +599,13 @@ def serve_layout():
                                 n_clicks=0,
                             )
                         )]
-                              )
+                    ),
+
+                    # Modal/dialog for alerting user that data is loading
+                    dbc.Modal(id="QE1-loading-modal", size="md", centered=True, is_open=False, scrollable=True, children=[
+                        dbc.ModalHeader(dbc.ModalTitle(id="QE1-loading-modal-title")),
+                        dbc.ModalBody(id="QE1-loading-modal-body")
+                  ]),
 
                 ]),
 
@@ -599,7 +616,7 @@ def serve_layout():
 
                         # Table of past/active studies that were run on QE 2
                         dash_table.DataTable(id="QE2-table", page_action="none",
-                             fixed_rows={'headers': True},
+                             fixed_rows={"headers": True},
                              cell_selectable=True,
                              style_cell={"textAlign": "left",
                                          "fontSize": "15px",
@@ -613,41 +630,41 @@ def serve_layout():
                              style_table={"max-height": "285px",
                                           "overflowY": "auto"},
                              style_data_conditional=[{
-                                    'if': {
-                                        'state': 'active'
+                                    "if": {
+                                        "state": "active"
                                     },
-                                   'backgroundColor': 'rgba(0, 123, 255, 0.3)',
-                                   'border': '1px solid rgb(0, 123, 255)'
+                                   "backgroundColor": bootstrap_colors["blue-low-opacity"],
+                                   "border": "1px solid " + bootstrap_colors["blue"]
                                 }],
                              style_cell_conditional=[
-                                {'if': {'column_id': 'Study'},
-                                    'width': '50%'},
-                                {'if': {'column_id': 'Type'},
-                                    'width': '25%'},
-                                {'if': {'column_id': 'Type'},
-                                    'width': '25%'}
+                                {"if": {"column_id": "Study"},
+                                    "width": "50%"},
+                                {"if": {"column_id": "Type"},
+                                    "width": "25%"},
+                                {"if": {"column_id": "Type"},
+                                    "width": "25%"}
                              ]
                          ),
 
                         # Polarity filtering options
-                        html.Div(dbc.Row(dbc.Col(
+                        html.Div(className="radio-group-container", children=[
                             html.Div(className="radio-group", children=[
                                 dbc.RadioItems(
                                     id="QE2-polarity-options",
                                     className="btn-group",
                                     inputClassName="btn-check",
                                     labelClassName="btn btn-outline-primary",
-                                    labelCheckedClassName="active",
+                                    inputCheckedClassName="active",
                                     options=[
                                         {"label": "Positive Mode", "value": "pos"},
                                         {"label": "Negative Mode", "value": "neg"}],
                                     value="pos"
                                 ),
-                            ]), width=8), justify="center")),
+                            ])]),
 
                         # Table of samples run for a particular study
                         dash_table.DataTable(id="QE2-sample-table", page_action="none",
-                            fixed_rows={'headers': True},
+                            fixed_rows={"headers": True},
                             # cell_selectable=True,
                             style_cell={"textAlign": "left",
                                         "fontSize": "15px",
@@ -662,22 +679,22 @@ def serve_layout():
                             style_table={"height": "473px",
                                          "overflowY": "auto"},
                             style_data_conditional=[
-                                {'if': {'filter_query': '{QC} = "Fail"'},
-                                    'backgroundColor': '#F5B7B1',
-                                    'font-weight': 'bold'
+                                {"if": {"filter_query": "{QC} = 'Fail'"},
+                                    "backgroundColor": bootstrap_colors["red-low-opacity"],
+                                    "font-weight": "bold"
                                 },
-                                {'if': {'state': 'active'},
-                                   'backgroundColor': 'rgba(0, 123, 255, 0.4)',
-                                   'border': '1px solid rgb(0, 123, 255)'
+                                {"if": {"state": "active"},
+                                   "backgroundColor": bootstrap_colors["blue-low-opacity"],
+                                   "border": "1px solid " + bootstrap_colors["blue"]
                                  }
                             ],
                             style_cell_conditional=[
-                                {'if': {'column_id': 'Sample'},
-                                 'width': '65%'},
-                                {'if': {'column_id': 'Position'},
-                                 'width': '20%'},
-                                {'if': {'column_id': 'QC'},
-                                 'width': '15%'},
+                                {"if": {"column_id": "Sample"},
+                                 "width": "65%"},
+                                {"if": {"column_id": "Position"},
+                                 "width": "20%"},
+                                {"if": {"column_id": "QC"},
+                                 "width": "15%"},
                             ]
                         )
                     ]),
@@ -815,6 +832,12 @@ def serve_layout():
                         )]
                     ),
 
+                    # Modal/dialog for alerting user that data is loading
+                    dbc.Modal(id="QE2-loading-modal", size="md", centered=True, is_open=False, scrollable=True, children=[
+                        dbc.ModalHeader(dbc.ModalTitle(id="QE2-loading-modal-title")),
+                        dbc.ModalBody(id="QE2-loading-modal-body")
+                    ]),
+
                     html.Div(id="placeholder-one", children=""),
                     html.Div(id="placeholder-two", children=""),
 
@@ -851,7 +874,7 @@ def get_data(instrument, study_id):
     os.chdir(files_directory)
 
     # Auto-iterate through all QC files for the particular study in Google Drive
-    file_list = drive.ListFile({'q': "'" + study_loaded[instrument]["drive_id"] + "' in parents and trashed=false"}).GetList()
+    file_list = drive.ListFile({"q": "'" + study_loaded[instrument]["drive_id"] + "' in parents and trashed=false"}).GetList()
 
     for file in file_list:
 
@@ -964,7 +987,7 @@ def generate_sample_metadata_dataframe(sample, instrument):
     df_sample_istd["Internal Standard"] = [x.replace("1_", "") for x in internal_standards]
     df_sample_istd["m/z"] = [x.split(": ")[0] for x in mz_values]
     df_sample_istd["RT"] = [x.split(": ")[0] for x in retention_times]
-    df_sample_istd["Intensity"] = ['{:.2e}'.format(x) for x in intensities]
+    df_sample_istd["Intensity"] = ["{:.2e}".format(x) for x in intensities]
     df_sample_istd["Delta RT"] = [x.split(": ")[-1] for x in retention_times]
     df_sample_istd["Delta m/z"] = [x.split(": ")[-1] for x in mz_values]
 
@@ -1021,8 +1044,8 @@ def load_istd_rt_plot(dataframe, samples, internal_standard, retention_times_dic
                      margin=dict(t=75, b=75))
     fig.update_xaxes(showticklabels=False, title="Sample")
     fig.update_yaxes(title="Retention time (min)", range=[y_min, y_max])
-    fig.add_hline(y=retention_times_dict[internal_standard], line_width=2, line_dash='dash')
-    fig.update_traces(hovertemplate='Sample: %{x} <br>Retention Time: %{y} min<br>')
+    fig.add_hline(y=retention_times_dict[internal_standard], line_width=2, line_dash="dash")
+    fig.update_traces(hovertemplate="Sample: %{x} <br>Retention Time: %{y} min<br>")
 
     return fig
 
@@ -1051,8 +1074,8 @@ def load_istd_intensity_plot(dataframe, samples, internal_standard, text):
                       margin=dict(t=75, b=75))
     fig.update_xaxes(showticklabels=False, title="Sample")
     fig.update_yaxes(title="Intensity")
-    fig.update_traces(textposition='outside',
-                      hovertemplate='Sample: %{x} <br>Intensity: %{y:.2e}<br>')
+    fig.update_traces(textposition="outside",
+                      hovertemplate="Sample: %{x} <br>Intensity: %{y:.2e}<br>")
 
     return fig
 
@@ -1086,7 +1109,7 @@ def load_istd_delta_mz_plot(dataframe, samples, internal_standard):
                       margin=dict(t=75, b=75))
     fig.update_xaxes(showticklabels=False, title="Sample")
     fig.update_yaxes(title="delta m/z", range=[-0.01, 0.01])
-    fig.update_traces(hovertemplate='Sample: %{x} <br>Delta m/z: %{y}<br>')
+    fig.update_traces(hovertemplate="Sample: %{x} <br>Delta m/z: %{y}<br>")
 
     return fig
 
@@ -1136,7 +1159,7 @@ def load_urine_feature_plot(study_name, df_rt, df_mz, df_intensity, urine_featur
                       margin=dict(t=75, b=75))
     fig.update_xaxes(title="Retention time (min)")
     fig.update_yaxes(title="Precursor m/z")
-    fig.update_traces(marker={'size': 30})
+    fig.update_traces(marker={"size": 30})
 
     return fig
 
@@ -1153,7 +1176,7 @@ def load_urine_benchmark_plot(dataframe, study, feature_name, polarity):
         inchikey = neg_urine_features_dict[feature_name]
 
     intensities = dataframe[inchikey].astype(float).values.tolist()
-    intensities = ['{:.2e}'.format(x) for x in intensities]
+    intensities = ["{:.2e}".format(x) for x in intensities]
 
     fig = px.bar(dataframe,
                  x=study,
@@ -1169,8 +1192,8 @@ def load_urine_benchmark_plot(dataframe, study, feature_name, polarity):
                       margin=dict(t=75, b=75))
     fig.update_xaxes(title="Study")
     fig.update_yaxes(title="Intensity")
-    fig.update_traces(textposition='outside',
-                      hovertemplate=f'{feature_name}' + '<br>Study: %{x} <br>Intensity: %{text}<br>')
+    fig.update_traces(textposition="outside",
+                      hovertemplate=f"{feature_name}" + "<br>Study: %{x} <br>Intensity: %{text}<br>")
 
     return fig
 
@@ -1236,14 +1259,22 @@ def get_samples(instrument):
     return df_samples.to_dict("records")
 
 
-@app.callback(Output("header", "children"),
+@app.callback(Output("QE1-loading-modal", "is_open"),
+              Output("QE1-loading-modal-title", "children"),
+              Output("QE1-loading-modal-body", "children"),
+              Output("QE2-loading-modal", "is_open"),
+              Output("QE2-loading-modal-title", "children"),
+              Output("QE2-loading-modal-body", "children"),
               Input("QE1-table", "active_cell"),
               State("QE1-table", "data"),
               Input("QE2-table", "active_cell"),
               State("QE2-table", "data"),
               Input("QE1-sample-table", "data"),
-              Input("QE2-sample-table", "data"), prevent_initial_call=True)
-def loading_data_feedback(active_cell_QE1, table_data_QE1, active_cell_QE2, table_data_QE2, placeholder_input_1, placeholder_input_2):
+              Input("QE2-sample-table", "data"),
+              State("QE1-loading-modal", "is_open"),
+              State("QE2-loading-modal", "is_open"), prevent_initial_call=True)
+def loading_data_feedback(active_cell_QE1, table_data_QE1, active_cell_QE2, table_data_QE2,
+                          placeholder_input_1, placeholder_input_2, modal_is_open_QE1, modal_is_open_QE2):
 
     """
     Dash callback for providing user feedback when retrieving data from Google Drive
@@ -1251,21 +1282,27 @@ def loading_data_feedback(active_cell_QE1, table_data_QE1, active_cell_QE2, tabl
 
     study_name_QE1 = study_loaded["QE 1"]["study_name"]
     study_name_QE2 = study_loaded["QE 2"]["study_name"]
-    header = "MS-AutoQC"
 
     if active_cell_QE1:
-        if table_data_QE1[active_cell_QE1['row']][active_cell_QE1['column_id']] != study_name_QE1:
-            header = "Loading data..."
+        if table_data_QE1[active_cell_QE1["row"]][active_cell_QE1["column_id"]] != study_name_QE1:
+            study_name = table_data_QE1[active_cell_QE1["row"]][active_cell_QE1["column_id"]]
+            loading_on = "QE 1"
         else:
-            header = "MS-AutoQC"
+            if modal_is_open_QE1:
+                return False, None, None, False, None, None
 
     if active_cell_QE2:
-        if table_data_QE2[active_cell_QE2['row']][active_cell_QE2['column_id']] != study_name_QE2:
-            header = "Loading data..."
+        if table_data_QE2[active_cell_QE2["row"]][active_cell_QE2["column_id"]] != study_name_QE2:
+            study_name = table_data_QE2[active_cell_QE2["row"]][active_cell_QE2["column_id"]]
+            loading_on = "QE 2"
         else:
-            header = "MS-AutoQC"
+            if modal_is_open_QE2:
+                return False, None, None, False, None, None
 
-    return header
+    if loading_on == "QE 1":
+        return True, "Loading QC results for " + study_name, "This may take a few seconds...", False, None, None
+    elif loading_on == "QE 2":
+        return False, None, None, True, "Loading QC results for " + study_name, "This may take a few seconds..."
 
 
 @app.callback(Output("QE1-table", "data"),
@@ -1296,8 +1333,8 @@ def populate_study_table(placeholder_input):
         "Status": []
     }
 
-    QE1_files = drive.ListFile({'q': "'" + study_loaded["QE 1"]["drive_id"] + "' in parents and trashed=false"}).GetList()
-    QE2_files = drive.ListFile({'q': "'" + study_loaded["QE 2"]["drive_id"] + "' in parents and trashed=false"}).GetList()
+    QE1_files = drive.ListFile({"q": "'" + study_loaded["QE 1"]["drive_id"] + "' in parents and trashed=false"}).GetList()
+    QE2_files = drive.ListFile({"q": "'" + study_loaded["QE 2"]["drive_id"] + "' in parents and trashed=false"}).GetList()
 
     for file in QE1_files:
         if "RT" in file["title"] and "Pos" in file["title"] and "urine" not in file["title"]:
@@ -1505,7 +1542,7 @@ def populate_QE1_plots(active_cell, table_data, polarity, rt_plot_standard, inte
     if active_cell:
 
         # Get name of clicked study from table
-        study_name = table_data[active_cell['row']][active_cell['column_id']]
+        study_name = table_data[active_cell["row"]][active_cell["column_id"]]
 
         if study_name != "No studies found":
 
@@ -1570,7 +1607,7 @@ def populate_QE1_plots(active_cell, table_data, polarity, rt_plot_standard, inte
 
             # Split text in internal standard dataframes
             for istd in internal_standards:
-                
+
                 # Splitting text for RT data
                 rt = df_istd_rt[istd].str.split(": ").str[0]
                 rt_diff = df_istd_rt[istd].str.split(": ").str[1]
@@ -1674,7 +1711,7 @@ def populate_QE2_plots(active_cell, table_data, polarity, rt_plot_standard, inte
     if active_cell:
 
         # Get name of clicked study from table
-        study_name = table_data[active_cell['row']][active_cell['column_id']]
+        study_name = table_data[active_cell["row"]][active_cell["column_id"]]
 
         if study_name != "No studies found":
 
@@ -1829,7 +1866,7 @@ def toggle_sample_card_for_QE1(close_button, is_open, active_cell, table_data):
 
     # Get selected sample
     if active_cell:
-        clicked_sample = table_data[active_cell['row']][active_cell['column_id']]
+        clicked_sample = table_data[active_cell["row"]][active_cell["column_id"]]
 
     # Generate DataFrames with iSTD and metadata info for selected sample
     df_sample_istd, df_sample_info = generate_sample_metadata_dataframe(clicked_sample, "QE 1")
@@ -1865,7 +1902,7 @@ def toggle_sample_card_for_QE2(close_button, is_open, active_cell, table_data):
 
     # Get selected sample
     if active_cell:
-        clicked_sample = table_data[active_cell['row']][active_cell['column_id']]
+        clicked_sample = table_data[active_cell["row"]][active_cell["column_id"]]
 
     # Generate DataFrames with iSTD and metadata info for selected sample
     df_sample_istd, df_sample_info = generate_sample_metadata_dataframe(clicked_sample, "QE 2")
@@ -1889,7 +1926,7 @@ if __name__ == "__main__":
 
     # if sys.platform == "win32":
     #     chrome_path = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
-    #     webbrowser.register('chrome', None, webbrowser.BackgroundBrowser(chrome_path))
+    #     webbrowser.register("chrome", None, webbrowser.BackgroundBrowser(chrome_path))
     #     webbrowser.get("chrome").open("http://127.0.0.1:8050/")
     # elif sys.platform == "darwin":
     #     webbrowser.get("chrome").open("http://127.0.0.1:8050/", new=1)

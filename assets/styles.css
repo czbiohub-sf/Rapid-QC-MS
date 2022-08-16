@@ -69,9 +69,15 @@ h2 {
 }
 
 /* Radio items */
+.radio-group-container {
+    width: 100%;
+    text-align: center;
+}
+
 .radio-group .form-check {
     margin-top: 30px;
     padding-left: 0;
+    display: inline-block;
 }
 
 .radio-group .btn-group > .form-check:not(:last-child) > .btn {
