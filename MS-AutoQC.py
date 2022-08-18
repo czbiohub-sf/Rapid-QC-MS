@@ -907,7 +907,7 @@ def get_data(instrument, study_id):
         study_loaded[instrument][key] = ""
 
     # Save .csv files in folder
-    files_directory = current_directory + "/qc_files"
+    files_directory = current_directory + "/qc_files/" + instrument
     if not os.path.exists(files_directory):
         os.makedirs(files_directory)
     os.chdir(files_directory)
@@ -1181,7 +1181,6 @@ def load_urine_feature_plot(study_name, df_rt, df_mz, df_intensity, urine_featur
     df_intensity = df_intensity.fillna(0)
     urine_df["Percent CV"] = (df_intensity.iloc[:, 1:].astype(float).std(axis=1) / df_intensity.iloc[:, 1:].astype(float).mean(axis=1)) * 100
     urine_df["Percent CV"] = urine_df["Percent CV"].fillna(0)
-    print(urine_df["Percent CV"])
 
     plasma = px.colors.sequential.Plasma
     colorscale = [
@@ -2043,18 +2042,37 @@ def populate_QE2_plots(active_cell, table_data, polarity, rt_plot_standard, inte
               Output("QE1-sample-modal-title", "children"),
               Output("QE1-sample-modal-body", "children"),
               Output("QE1-sample-table", "active_cell"),
+              Output("QE1-istd-rt-plot", "clickData"),
+              Output("QE1-istd-intensity-plot", "clickData"),
+              Output("QE1-istd-mz-plot", "clickData"),
               State("QE1-sample-info-modal", "is_open"),
               Input("QE1-sample-table", "active_cell"),
-              State("QE1-sample-table", "data"), prevent_initial_call=True)
-def toggle_sample_card_for_QE1(is_open, active_cell, table_data):
+              State("QE1-sample-table", "data"),
+              Input("QE1-istd-rt-plot", "clickData"),
+              Input("QE1-istd-intensity-plot", "clickData"),
+              Input("QE1-istd-mz-plot", "clickData"), prevent_initial_call=True)
+def toggle_sample_card_for_QE1(is_open, active_cell, table_data, rt_click, intensity_click, mz_click):
 
     """
     Opens information modal when a sample is clicked from the sample table
     """
 
-    # Get selected sample
+    # Get selected sample from table
     if active_cell:
         clicked_sample = table_data[active_cell["row"]][active_cell["column_id"]]
+
+    # Get selected sample from plots
+    if rt_click:
+        clicked_sample = rt_click["points"][0]["x"]
+        clicked_sample = clicked_sample.replace(": RT Info", "")
+
+    if intensity_click:
+        clicked_sample = intensity_click["points"][0]["x"]
+        clicked_sample = clicked_sample.replace(": Height", "")
+
+    if mz_click:
+        clicked_sample = mz_click["points"][0]["x"]
+        clicked_sample = clicked_sample.replace(": Precursor m/z Info", "")
 
     # Generate DataFrames with iSTD and metadata info for selected sample
     df_sample_istd, df_sample_info = generate_sample_metadata_dataframe(clicked_sample, "QE 1")
@@ -2069,19 +2087,25 @@ def toggle_sample_card_for_QE1(is_open, active_cell, table_data):
 
     # Toggle modal
     if is_open:
-        return False, title, body, None
+        return False, title, body, None, None, None, None
     else:
-        return True, title, body, None
+        return True, title, body, None, None, None, None
 
 
 @app.callback(Output("QE2-sample-info-modal", "is_open"),
               Output("QE2-sample-modal-title", "children"),
               Output("QE2-sample-modal-body", "children"),
               Output("QE2-sample-table", "active_cell"),
+              Output("QE2-istd-rt-plot", "clickData"),
+              Output("QE2-istd-intensity-plot", "clickData"),
+              Output("QE2-istd-mz-plot", "clickData"),
               State("QE2-sample-info-modal", "is_open"),
               Input("QE2-sample-table", "active_cell"),
-              State("QE2-sample-table", "data"), prevent_initial_call=True)
-def toggle_sample_card_for_QE2(is_open, active_cell, table_data):
+              State("QE2-sample-table", "data"),
+              Input("QE2-istd-rt-plot", "clickData"),
+              Input("QE2-istd-intensity-plot", "clickData"),
+              Input("QE2-istd-mz-plot", "clickData"), prevent_initial_call=True)
+def toggle_sample_card_for_QE2(is_open, active_cell, table_data, rt_click, intensity_click, mz_click):
 
     """
     Opens information modal when a sample is clicked from the sample table
@@ -2090,6 +2114,19 @@ def toggle_sample_card_for_QE2(is_open, active_cell, table_data):
     # Get selected sample
     if active_cell:
         clicked_sample = table_data[active_cell["row"]][active_cell["column_id"]]
+
+    # Get selected sample from plots
+    if rt_click:
+        clicked_sample = rt_click["points"][0]["x"]
+        clicked_sample = clicked_sample.replace(": RT Info", "")
+
+    if intensity_click:
+        clicked_sample = intensity_click["points"][0]["x"]
+        clicked_sample = clicked_sample.replace(": Height", "")
+
+    if mz_click:
+        clicked_sample = mz_click["points"][0]["x"]
+        clicked_sample = clicked_sample.replace(": Precursor m/z Info", "")
 
     # Generate DataFrames with iSTD and metadata info for selected sample
     df_sample_istd, df_sample_info = generate_sample_metadata_dataframe(clicked_sample, "QE 2")
@@ -2104,19 +2141,19 @@ def toggle_sample_card_for_QE2(is_open, active_cell, table_data):
 
     # Toggle modal
     if is_open:
-        return False, title, body, None
+        return False, title, body, None, None, None, None
     else:
-        return True, title, body, None
+        return True, title, body, None, None, None, None
 
 
 if __name__ == "__main__":
 
-    # if sys.platform == "win32":
-    #     chrome_path = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
-    #     webbrowser.register("chrome", None, webbrowser.BackgroundBrowser(chrome_path))
-    #     webbrowser.get("chrome").open("http://127.0.0.1:8050/")
-    # elif sys.platform == "darwin":
-    #     webbrowser.get("chrome").open("http://127.0.0.1:8050/", new=1)
+    if sys.platform == "win32":
+        chrome_path = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
+        webbrowser.register("chrome", None, webbrowser.BackgroundBrowser(chrome_path))
+        webbrowser.get("chrome").open("http://127.0.0.1:8050/")
+    elif sys.platform == "darwin":
+        webbrowser.get("chrome").open("http://127.0.0.1:8050/", new=1)
 
     # Start Dash app
     app.run_server(debug=True)
