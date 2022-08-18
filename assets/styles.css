@@ -6,8 +6,8 @@
 
 .page {
     margin-top: 2%;
-    margin-left: 5%;
-    margin-right: 5%;
+    margin-left: 7%;
+    margin-right: 7%;
 }
 
 /* Header */
@@ -43,7 +43,7 @@
 .all-plots-container {
     float: left;
     width: 70%;
-    /* height: calc(100vh - 75px);
+    /* height: calc(100vh - 100px);
     overflow-y: auto; */
 }
 

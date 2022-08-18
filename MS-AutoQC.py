@@ -317,7 +317,10 @@ gauth = GoogleAuth()
 drive = GoogleDrive(gauth)
 
 # Get directory for files
-current_directory =  os.getcwd()
+current_directory = os.getcwd()
+
+# Define client secrets file
+GoogleAuth.DEFAULT_SETTINGS['client_config_file'] = current_directory + "/assets/client_secrets.json"
 
 # Color mapping for internal standards and urine features
 istd_colors = {"1_Methionine_d8": "rgb(150, 222, 209)",
@@ -430,7 +433,27 @@ def serve_layout():
                                         {"label": "Negative Mode", "value": "neg"}],
                                     value="pos"
                                 ),
-                            ])]),
+                            ])
+                        ]),
+
+                        # Sample / blank / pool / treatment filtering options
+                        html.Div(className="radio-group-container", children=[
+                            html.Div(className="radio-group", children=[
+                                dbc.RadioItems(
+                                    id="QE1-sample-filtering-options",
+                                    className="btn-group",
+                                    inputClassName="btn-check",
+                                    labelClassName="btn btn-outline-primary",
+                                    inputCheckedClassName="active",
+                                    options=[
+                                        {"label": "All", "value": "all"},
+                                        {"label": "Samples", "value": "samples"},
+                                        {"label": "Pools", "value": "pools"},
+                                        {"label": "Blanks", "value": "blanks"}],
+                                    value="all"
+                                ),
+                            ])
+                        ]),
 
                         # Table of samples run for a particular study
                         dash_table.DataTable(id="QE1-sample-table", page_action="none",
@@ -452,6 +475,9 @@ def serve_layout():
                                 {"if": {"filter_query": "{QC} = 'Fail'"},
                                     "backgroundColor": bootstrap_colors["red-low-opacity"],
                                     "font-weight": "bold"
+                                },
+                                {"if": {"filter_query": "{QC} = 'Check'"},
+                                    "backgroundColor": bootstrap_colors["yellow-low-opacity"]
                                 },
                                 {"if": {"state": "active"},
                                    "backgroundColor": bootstrap_colors["blue-low-opacity"],
@@ -590,22 +616,14 @@ def serve_layout():
                     # Modal/dialog for sample information card
                     dbc.Modal(id="QE1-sample-info-modal", size="xl", centered=True, is_open=False, scrollable=True, children=[
                         dbc.ModalHeader(dbc.ModalTitle(id="QE1-sample-modal-title"), close_button=True),
-                        dbc.ModalBody(id="QE1-sample-modal-body"),
-                        dbc.ModalFooter(
-                            dbc.Button(
-                                "Close",
-                                id="QE1-close-modal",
-                                className="ms-auto",
-                                n_clicks=0,
-                            )
-                        )]
-                    ),
+                        dbc.ModalBody(id="QE1-sample-modal-body")
+                    ]),
 
                     # Modal/dialog for alerting user that data is loading
                     dbc.Modal(id="QE1-loading-modal", size="md", centered=True, is_open=False, scrollable=True, children=[
-                        dbc.ModalHeader(dbc.ModalTitle(id="QE1-loading-modal-title")),
+                        dbc.ModalHeader(dbc.ModalTitle(id="QE1-loading-modal-title"), close_button=False),
                         dbc.ModalBody(id="QE1-loading-modal-body")
-                  ]),
+                    ]),
 
                 ]),
 
@@ -660,7 +678,27 @@ def serve_layout():
                                         {"label": "Negative Mode", "value": "neg"}],
                                     value="pos"
                                 ),
-                            ])]),
+                            ])
+                        ]),
+
+                        # Sample / blank / pool / treatment filtering options
+                        html.Div(className="radio-group-container", children=[
+                            html.Div(className="radio-group", children=[
+                                dbc.RadioItems(
+                                    id="QE2-sample-filtering-options",
+                                    className="btn-group",
+                                    inputClassName="btn-check",
+                                    labelClassName="btn btn-outline-primary",
+                                    inputCheckedClassName="active",
+                                    options=[
+                                        {"label": "All", "value": "all"},
+                                        {"label": "Samples", "value": "samples"},
+                                        {"label": "Pools", "value": "pools"},
+                                        {"label": "Blanks", "value": "blanks"}],
+                                    value="all"
+                                ),
+                            ])
+                        ]),
 
                         # Table of samples run for a particular study
                         dash_table.DataTable(id="QE2-sample-table", page_action="none",
@@ -682,6 +720,9 @@ def serve_layout():
                                 {"if": {"filter_query": "{QC} = 'Fail'"},
                                     "backgroundColor": bootstrap_colors["red-low-opacity"],
                                     "font-weight": "bold"
+                                },
+                                {"if": {"filter_query": "{QC} = 'Check'"},
+                                    "backgroundColor": bootstrap_colors["yellow-low-opacity"]
                                 },
                                 {"if": {"state": "active"},
                                    "backgroundColor": bootstrap_colors["blue-low-opacity"],
@@ -822,19 +863,11 @@ def serve_layout():
                     dbc.Modal(id="QE2-sample-info-modal", size="xl", centered=True, is_open=False, scrollable=True, children=[
                         dbc.ModalHeader(dbc.ModalTitle(id="QE2-sample-modal-title"), close_button=True),
                         dbc.ModalBody(id="QE2-sample-modal-body"),
-                        dbc.ModalFooter(
-                            dbc.Button(
-                                "Close",
-                                id="QE2-close-modal",
-                                className="ms-auto",
-                                n_clicks=0,
-                            )
-                        )]
-                    ),
+                    ]),
 
                     # Modal/dialog for alerting user that data is loading
                     dbc.Modal(id="QE2-loading-modal", size="md", centered=True, is_open=False, scrollable=True, children=[
-                        dbc.ModalHeader(dbc.ModalTitle(id="QE2-loading-modal-title")),
+                        dbc.ModalHeader(dbc.ModalTitle(id="QE2-loading-modal-title"), close_button=False),
                         dbc.ModalBody(id="QE2-loading-modal-body")
                     ]),
 
@@ -866,6 +899,12 @@ def get_data(instrument, study_id):
     """
 
     chromatography = ""
+
+    # Clear instrument dictionary data
+    elements_to_clear = ["study_name", "chromatography", "study_file", "df_samples", "pos_internal_standards",
+                     "neg_internal_standards"]
+    for key in elements_to_clear:
+        study_loaded[instrument][key] = ""
 
     # Save .csv files in folder
     files_directory = current_directory + "/qc_files"
@@ -1017,8 +1056,8 @@ def load_istd_rt_plot(dataframe, samples, internal_standard, retention_times_dic
     Returns scatter plot figure of retention time vs. sample for internal standards
     """
 
+    # samples = sorted(samples, key=lambda x: str(x.split("_")[-1]))
     samples = [sample + ": RT Info" for sample in samples]
-    samples = sorted(samples, key=lambda x: str(x.split("_")[-1]))
     df_filtered_by_samples = dataframe.loc[samples]
 
     y_min = retention_times_dict[internal_standard] - 0.1
@@ -1050,21 +1089,30 @@ def load_istd_rt_plot(dataframe, samples, internal_standard, retention_times_dic
     return fig
 
 
-def load_istd_intensity_plot(dataframe, samples, internal_standard, text):
+def load_istd_intensity_plot(dataframe, samples, internal_standard, text, treatments):
 
     """
     Returns bar plot figure of intensity vs. sample for internal standards
     """
 
+    print(samples)
+
+    # samples = sorted(samples, key=lambda x: str(x.split("_")[-1]))
     samples = [sample + ": Height" for sample in samples]
-    samples = sorted(samples, key=lambda x: str(x.split("_")[-1]))
     df_filtered_by_samples = dataframe.loc[samples]
+
+    if treatments:
+        if len(treatments) == len(df_filtered_by_samples):
+            df_filtered_by_samples["Treatment"] = treatments
+    else:
+        df_filtered_by_samples["Treatment"] = " "
 
     fig = px.bar(df_filtered_by_samples,
                  title="Internal Standards Intensity – " + standards_dict[internal_standard],
                  x=samples,
                  y=internal_standard,
                  text=text,
+                 color=df_filtered_by_samples["Treatment"],
                  height=600)
     fig.update_layout(showlegend=False,
                       transition_duration=500,
@@ -1074,8 +1122,7 @@ def load_istd_intensity_plot(dataframe, samples, internal_standard, text):
                       margin=dict(t=75, b=75))
     fig.update_xaxes(showticklabels=False, title="Sample")
     fig.update_yaxes(title="Intensity")
-    fig.update_traces(textposition="outside",
-                      hovertemplate="Sample: %{x} <br>Intensity: %{y:.2e}<br>")
+    fig.update_traces(textposition="outside", hovertemplate="Sample: %{x}<br> Intensity: %{y:.2e}<br>")
 
     return fig
 
@@ -1086,8 +1133,8 @@ def load_istd_delta_mz_plot(dataframe, samples, internal_standard):
     Returns scatter plot figure of delta m/z vs. sample for internal standards
     """
 
+    # samples = sorted(samples, key=lambda x: str(x.split("_")[-1]))
     samples = [sample + ": Precursor m/z Info" for sample in samples]
-    samples = sorted(samples, key=lambda x: str(x.split("_")[-1]))
     df_filtered_by_samples = dataframe.loc[samples]
 
     fig = px.line(df_filtered_by_samples,
@@ -1224,12 +1271,16 @@ def get_samples(instrument):
     for column in pos_samples:
         if df_pos[column].isnull().sum() >= 4:
             pass_fail_list.append("Fail")
+        elif df_pos[column].isnull().sum() == 3:
+            pass_fail_list.append("Check")
         else:
             pass_fail_list.append("Pass")
 
     for column in neg_samples:
         if df_neg[column].isnull().sum() >= 4:
             pass_fail_list.append("Fail")
+        elif df_neg[column].isnull().sum() == 3:
+            pass_fail_list.append("Check")
         else:
             pass_fail_list.append("Pass")
 
@@ -1280,6 +1331,8 @@ def loading_data_feedback(active_cell_QE1, table_data_QE1, active_cell_QE2, tabl
     Dash callback for providing user feedback when retrieving data from Google Drive
     """
 
+    loading_on = ""
+    study_name = ""
     study_name_QE1 = study_loaded["QE 1"]["study_name"]
     study_name_QE2 = study_loaded["QE 2"]["study_name"]
 
@@ -1299,10 +1352,16 @@ def loading_data_feedback(active_cell_QE1, table_data_QE1, active_cell_QE2, tabl
             if modal_is_open_QE2:
                 return False, None, None, False, None, None
 
+    title = html.Div([
+        html.Div(children=[dbc.Spinner(color="primary"), " Loading QC results for " + study_name])
+    ])
+
+    body = "This may take a few seconds..."
+
     if loading_on == "QE 1":
-        return True, "Loading QC results for " + study_name, "This may take a few seconds...", False, None, None
+        return True, title, body, False, None, None
     elif loading_on == "QE 2":
-        return False, None, None, True, "Loading QC results for " + study_name, "This may take a few seconds..."
+        return False, None, None, True, title, body
 
 
 @app.callback(Output("QE1-table", "data"),
@@ -1512,6 +1571,104 @@ def click_callback_intermediate_for_QE2(click_data):
     return ""
 
 
+@app.callback(Output("QE1-rt-plot-sample-dropdown", "value"),
+              Output("QE1-mz-plot-sample-dropdown", "value"),
+              Output("QE1-intensity-plot-sample-dropdown", "value"),
+              Input("QE1-sample-filtering-options", "value"),
+              Input("QE1-polarity-options", "value"), prevent_initial_call=True)
+def apply_sample_filter_to_QE1_plots(filter, polarity):
+
+    """
+    Apply sample filter to internal standard plots, options are:
+    1. All samples
+    2. Filter by samples only
+    3. Filter by treatments / classes
+    4. Filter by pools
+    5. Filter by blanks
+    """
+
+    # Hmmm...
+    if polarity == "pos":
+        polarity = "Pos"
+    elif polarity == "neg":
+        polarity = "Neg"
+
+    # Get complete list of samples (including blanks + pools) in polarity
+    df_samples = study_loaded["QE 1"]["df_samples"]
+    df_samples = df_samples.loc[df_samples["Sample"].str.contains(polarity)]
+    sample_list = df_samples["Sample"].tolist()
+
+    # Return all samples, blanks, and pools
+    if filter == "all":
+        return [], [], []
+
+    # Return samples only
+    elif filter == "samples":
+        df_metadata = study_loaded["QE 1"]["study_file"]["metadata"]
+        df_metadata = df_metadata.loc[df_metadata["Filename"].isin(sample_list)]
+        samples_only = df_metadata["Filename"].tolist()
+        return samples_only, samples_only, samples_only
+
+    # Return pools only
+    elif filter == "pools":
+        pools = [sample for sample in sample_list if "QC" in sample]
+        return pools, pools, pools
+
+    # Return blanks only
+    elif filter == "blanks":
+        blanks = [sample for sample in sample_list if "BK" in sample]
+        return blanks, blanks, blanks
+
+
+@app.callback(Output("QE2-rt-plot-sample-dropdown", "value"),
+              Output("QE2-mz-plot-sample-dropdown", "value"),
+              Output("QE2-intensity-plot-sample-dropdown", "value"),
+              Input("QE2-sample-filtering-options", "value"),
+              Input("QE2-polarity-options", "value"), prevent_initial_call=True)
+def apply_sample_filter_to_QE2_plots(filter, polarity):
+
+    """
+    Apply sample filter to internal standard plots, options are:
+    1. All samples
+    2. Filter by samples only
+    3. Filter by treatments / classes
+    4. Filter by pools
+    5. Filter by blanks
+    """
+
+    # Hmmm...
+    if polarity == "pos":
+        polarity = "Pos"
+    elif polarity == "neg":
+        polarity = "Neg"
+
+    # Get complete list of samples (including blanks + pools) in polarity
+    df_samples = study_loaded["QE 2"]["df_samples"]
+    df_samples = df_samples.loc[df_samples["Sample"].str.contains(polarity)]
+    sample_list = df_samples["Sample"].tolist()
+
+    # Return all samples, blanks, and pools
+    if filter == "all":
+        return [], [], []
+
+    # Return samples only
+    elif filter == "samples":
+        df_metadata = study_loaded["QE 2"]["study_file"]["metadata"]
+        df_metadata = df_metadata.loc[df_metadata["Filename"].isin(sample_list)]
+        samples_only = df_metadata["Filename"].tolist()
+        return samples_only, samples_only, samples_only
+
+    # Return pools only
+    elif filter == "pools":
+        pools = [sample for sample in sample_list if "QC" in sample]
+        return pools, pools, pools
+
+    # Return blanks only
+    elif filter == "blanks":
+        blanks = [sample for sample in sample_list if "BK" in sample]
+        return blanks, blanks, blanks
+
+
 @app.callback(Output("QE1-istd-rt-plot", "figure"),
               Output("QE1-istd-intensity-plot", "figure"),
               Output("QE1-istd-mz-plot", "figure"),
@@ -1538,6 +1695,7 @@ def populate_QE1_plots(active_cell, table_data, polarity, rt_plot_standard, inte
 
     instrument = "QE 1"
 
+
     # If a study was selected
     if active_cell:
 
@@ -1551,12 +1709,18 @@ def populate_QE1_plots(active_cell, table_data, polarity, rt_plot_standard, inte
                 files = get_data(instrument, study_name)
                 study_loaded[instrument]["study_name"] = study_name
                 study_loaded[instrument]["study_file"] = files
+                rt_plot_samples = []
+                intensity_plot_samples = []
+                mz_plot_samples = []
 
             elif study_loaded[instrument]["ui_callback"] == True or study_loaded[instrument]["clicked_feature"] == True:
                 files = study_loaded[instrument]["study_file"]
 
             # Get retention times
             retention_times_dict = study_loaded[instrument]["retention_times_dict"]
+
+            # Get metadata DataFrame
+            df_metadata = files["metadata"]
 
             # Get internal standards from QC DataFrames for RT scatter plot
             if polarity == "pos":
@@ -1627,12 +1791,18 @@ def populate_QE1_plots(active_cell, table_data, polarity, rt_plot_standard, inte
 
             if not intensity_plot_samples:
                 intensity_plot_samples = samples
+                treatments = []
+            else:
+                df_metadata = df_metadata.loc[df_metadata["Filename"].isin(intensity_plot_samples)]
+                df_metadata = df_metadata.sort_values(by=["Treatment"])
+                treatments = df_metadata["Treatment"].tolist()
+                if len(df_metadata) == len(intensity_plot_samples):
+                    intensity_plot_samples = df_metadata["Filename"].tolist()
 
             if not mz_plot_samples:
                 mz_plot_samples = samples
 
             try:
-
                 # Internal standards – retention time vs. sample
                 istd_rt_plot = load_istd_rt_plot(dataframe=df_istd_rt,
                                                  samples=rt_plot_samples,
@@ -1643,7 +1813,8 @@ def populate_QE1_plots(active_cell, table_data, polarity, rt_plot_standard, inte
                 istd_intensity_plot = load_istd_intensity_plot(dataframe=df_istd_intensity,
                                                               samples=intensity_plot_samples,
                                                               internal_standard=intensity_plot_standard,
-                                                              text=intensity_plot_samples)
+                                                              text=intensity_plot_samples,
+                                                              treatments=treatments)
 
                 # Internal standards – delta m/z vs. sample
                 istd_delta_mz_plot = load_istd_delta_mz_plot(dataframe=df_istd_mz,
@@ -1720,6 +1891,9 @@ def populate_QE2_plots(active_cell, table_data, polarity, rt_plot_standard, inte
                 files = get_data(instrument, study_name)
                 study_loaded[instrument]["study_name"] = study_name
                 study_loaded[instrument]["study_file"] = files
+                rt_plot_samples = []
+                intensity_plot_samples = []
+                mz_plot_samples = []
 
             elif study_loaded[instrument]["ui_callback"] == True or study_loaded[instrument]["clicked_feature"] == True:
                 files = study_loaded[instrument]["study_file"]
@@ -1796,12 +1970,18 @@ def populate_QE2_plots(active_cell, table_data, polarity, rt_plot_standard, inte
 
             if not intensity_plot_samples:
                 intensity_plot_samples = samples
+                treatments = []
+            else:
+                df_metadata = df_metadata.loc[df_metadata["Filename"].isin(intensity_plot_samples)]
+                df_metadata = df_metadata.sort_values(by=["Treatment"])
+                treatments = df_metadata["Treatment"].tolist()
+                if len(df_metadata) == len(intensity_plot_samples):
+                    intensity_plot_samples = df_metadata["Filename"].tolist()
 
             if not mz_plot_samples:
                 mz_plot_samples = samples
 
             try:
-
                 # Internal standards – retention time vs. sample
                 istd_rt_plot = load_istd_rt_plot(dataframe=df_istd_rt,
                                                  samples=rt_plot_samples,
@@ -1812,7 +1992,8 @@ def populate_QE2_plots(active_cell, table_data, polarity, rt_plot_standard, inte
                 istd_intensity_plot = load_istd_intensity_plot(dataframe=df_istd_intensity,
                                                                samples=intensity_plot_samples,
                                                                internal_standard=intensity_plot_standard,
-                                                               text=intensity_plot_samples)
+                                                               text=intensity_plot_samples,
+                                                               treatments=treatments)
 
                 # Internal standards – delta m/z vs. sample
                 istd_delta_mz_plot = load_istd_delta_mz_plot(dataframe=df_istd_mz,
@@ -1854,11 +2035,10 @@ def populate_QE2_plots(active_cell, table_data, polarity, rt_plot_standard, inte
               Output("QE1-sample-modal-title", "children"),
               Output("QE1-sample-modal-body", "children"),
               Output("QE1-sample-table", "active_cell"),
-              Input("QE1-close-modal", "n_clicks"),
               State("QE1-sample-info-modal", "is_open"),
               Input("QE1-sample-table", "active_cell"),
               State("QE1-sample-table", "data"), prevent_initial_call=True)
-def toggle_sample_card_for_QE1(close_button, is_open, active_cell, table_data):
+def toggle_sample_card_for_QE1(is_open, active_cell, table_data):
 
     """
     Opens information modal when a sample is clicked from the sample table
@@ -1890,11 +2070,10 @@ def toggle_sample_card_for_QE1(close_button, is_open, active_cell, table_data):
               Output("QE2-sample-modal-title", "children"),
               Output("QE2-sample-modal-body", "children"),
               Output("QE2-sample-table", "active_cell"),
-              Input("QE2-close-modal", "n_clicks"),
               State("QE2-sample-info-modal", "is_open"),
               Input("QE2-sample-table", "active_cell"),
               State("QE2-sample-table", "data"), prevent_initial_call=True)
-def toggle_sample_card_for_QE2(close_button, is_open, active_cell, table_data):
+def toggle_sample_card_for_QE2(is_open, active_cell, table_data):
 
     """
     Opens information modal when a sample is clicked from the sample table
