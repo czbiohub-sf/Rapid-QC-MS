@@ -1095,8 +1095,6 @@ def load_istd_intensity_plot(dataframe, samples, internal_standard, text, treatm
     Returns bar plot figure of intensity vs. sample for internal standards
     """
 
-    print(samples)
-
     # samples = sorted(samples, key=lambda x: str(x.split("_")[-1]))
     samples = [sample + ": Height" for sample in samples]
     df_filtered_by_samples = dataframe.loc[samples]
@@ -1179,12 +1177,18 @@ def load_urine_feature_plot(study_name, df_rt, df_mz, df_intensity, urine_featur
     urine_df["Retention time (min)"] = df_rt[study_name + ":RT (min)"]
     urine_df["Intensity"] = df_intensity[study_name + ":Height"]
 
+    # Get standard deviation of feature intensities
+    df_intensity = df_intensity.fillna(0)
+    urine_df["Percent CV"] = (df_intensity.iloc[:, 1:].astype(float).std(axis=1) / df_intensity.iloc[:, 1:].astype(float).mean(axis=1)) * 100
+    urine_df["Percent CV"] = urine_df["Percent CV"].fillna(0)
+    print(urine_df["Percent CV"])
+
     plasma = px.colors.sequential.Plasma
     colorscale = [
         [0, plasma[0]],
-        [1. / 1000000, plasma[2]],
-        [1. / 10000, plasma[4]],
-        [1. / 100, plasma[7]],
+        [1. / 100000, plasma[2]],
+        [1. / 1000, plasma[4]],
+        [1. / 10, plasma[7]],
         [1., plasma[9]],
     ]
 
@@ -1194,7 +1198,7 @@ def load_urine_feature_plot(study_name, df_rt, df_mz, df_intensity, urine_featur
                      y="Precursor m/z",
                      height=600,
                      hover_name="Metabolite name",
-                     color="Intensity",
+                     color="Percent CV",
                      color_continuous_scale=colorscale,
                      labels={"Retention time (min)": "Retention time (min)",
                              "Precursor m/z": "Precursor m/z",
@@ -1379,6 +1383,7 @@ def populate_study_table(placeholder_input):
 
     df_studies_QE1 = pd.DataFrame()
     df_studies_QE2 = pd.DataFrame()
+    df_metadata = pd.DataFrame()
 
     QE1_studies = {
         "Study": [],
@@ -1395,6 +1400,7 @@ def populate_study_table(placeholder_input):
     QE1_files = drive.ListFile({"q": "'" + study_loaded["QE 1"]["drive_id"] + "' in parents and trashed=false"}).GetList()
     QE2_files = drive.ListFile({"q": "'" + study_loaded["QE 2"]["drive_id"] + "' in parents and trashed=false"}).GetList()
 
+    # Get study name and chromatography
     for file in QE1_files:
         if "RT" in file["title"] and "Pos" in file["title"] and "urine" not in file["title"]:
             QE1_studies["Study"].append(file["title"].split("_")[0])
@@ -1695,7 +1701,6 @@ def populate_QE1_plots(active_cell, table_data, polarity, rt_plot_standard, inte
 
     instrument = "QE 1"
 
-
     # If a study was selected
     if active_cell:
 
@@ -1898,6 +1903,12 @@ def populate_QE2_plots(active_cell, table_data, polarity, rt_plot_standard, inte
             elif study_loaded[instrument]["ui_callback"] == True or study_loaded[instrument]["clicked_feature"] == True:
                 files = study_loaded[instrument]["study_file"]
 
+            # Get retention times
+            retention_times_dict = study_loaded[instrument]["retention_times_dict"]
+
+            # Get metadata DataFrame
+            df_metadata = files["metadata"]
+
             # Get internal standards from QC DataFrames for RT scatter plot
             if polarity == "pos":
                 internal_standards = files["rt_pos"]["Title"].astype(str).tolist()
@@ -1905,9 +1916,6 @@ def populate_QE2_plots(active_cell, table_data, polarity, rt_plot_standard, inte
             elif polarity == "neg":
                 internal_standards = files["rt_neg"]["Title"].astype(str).tolist()
                 urine_features_dict = neg_urine_features_dict
-
-            # Get retention times
-            retention_times_dict = study_loaded[instrument]["retention_times_dict"]
 
             # Set initial dropdown values when none are selected
             if not rt_plot_standard:
