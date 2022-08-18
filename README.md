@@ -1,3 +1,4 @@
 # MS-AutoQC
 Realtime interactive dashboard for at-a-glance QC during mass spectrometry data acquisition.
-![MS-AutoQC](https://user-images.githubusercontent.com/7220175/179325830-ba4b1126-0da0-4ff4-8eac-0132da3f28fd.png)
+<br/><br/>
+<img width="1512" alt="Screen Shot 2022-08-18 at 2 29 50 PM" src="https://user-images.githubusercontent.com/7220175/185498581-e4f34d3c-5caa-4d88-8e32-d755a1e92546.png">
