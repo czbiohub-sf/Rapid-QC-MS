@@ -1183,7 +1183,7 @@ def load_urine_feature_plot(study_name, df_rt, df_mz, df_intensity, urine_featur
     df_intensity = df_intensity.fillna(0)
     feature_intensity_from_study = df_intensity.iloc[:, -1].astype(float)
     average_intensity_in_studies = df_intensity.iloc[:, 1:].astype(float).mean(axis=1)
-    urine_df["% Change"] = ((feature_intensity_from_study - average_intensity_in_studies) / average_intensity_in_studies) * 100
+    urine_df["% Change"] = ((feature_intensity_from_study - average_intensity_in_studies).abs() / average_intensity_in_studies) * 100
     urine_df["% Change"] = urine_df["% Change"].fillna(0)
 
     # plasma = px.colors.sequential.Plasma
@@ -2152,12 +2152,12 @@ def toggle_sample_card_for_QE2(is_open, active_cell, table_data, rt_click, inten
 
 if __name__ == "__main__":
 
-    # if sys.platform == "win32":
-    #     chrome_path = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
-    #     webbrowser.register("chrome", None, webbrowser.BackgroundBrowser(chrome_path))
-    #     webbrowser.get("chrome").open("http://127.0.0.1:8050/")
-    # elif sys.platform == "darwin":
-    #     webbrowser.get("chrome").open("http://127.0.0.1:8050/", new=1)
+    if sys.platform == "win32":
+        chrome_path = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
+        webbrowser.register("chrome", None, webbrowser.BackgroundBrowser(chrome_path))
+        webbrowser.get("chrome").open("http://127.0.0.1:8050/")
+    elif sys.platform == "darwin":
+        webbrowser.get("chrome").open("http://127.0.0.1:8050/", new=1)
 
     # Start Dash app
-    app.run_server(debug=True)
+    app.run_server(debug=False)
