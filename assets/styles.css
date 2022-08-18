@@ -8,6 +8,7 @@
     margin-top: 2%;
     margin-left: 7%;
     margin-right: 7%;
+    margin-bottom: 0%;
 }
 
 /* Header */
@@ -28,6 +29,8 @@
     float: left;
     margin-right: 2%;
     width: 28%;
+    height: calc(100vh - 200px);
+    overflow-y: auto;
 }
 
 .dash-spreadsheet.dash-freeze-top, .dash-spreadsheet.dash-virtualized {
@@ -43,7 +46,7 @@
 .all-plots-container {
     float: left;
     width: 70%;
-    height: 100vh;
+    height: calc(100vh - 200px);
     overflow-y: auto;
 }
 
