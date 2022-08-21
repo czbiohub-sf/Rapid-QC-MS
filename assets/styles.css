@@ -17,10 +17,11 @@ html {
     line-height: 20px;
 }
 
-.page {
+/* Tabs */
+.instrument-tabs {
     margin-top: 2%;
-    margin-left: 7%;
-    margin-right: 7%;
+    /* margin-left: 7%;
+    margin-right: 7%; */
 }
 
 /* Header */
@@ -40,7 +41,7 @@ html {
 .table-container {
     float: left;
     margin-right: 2%;
-    width: 28%;
+    width: 100%;
     height: calc(100vh - 200px);
     overflow-y: scroll;
 }
@@ -57,7 +58,7 @@ html {
 /* Plots and plot container */
 .all-plots-container {
     float: left;
-    width: 70%;
+    width: 100%;
     height: calc(100vh - 200px);
     overflow-y: scroll;
 }

@@ -56,508 +56,528 @@ def serve_layout():
         # App layout
         html.Div(className="page", children=[
 
-            dcc.Tabs(id="tabs", children=[
+            dbc.Row(justify="center", children=[
 
-                # QC dashboard for QE 1
-                dcc.Tab(label="Thermo QE 1", children=[
+                dbc.Col(width=11, children=[
 
-                    html.Div(id="QE1-table-container", className="table-container", style={"display": "none"}, children=[
+                    dcc.Tabs(id="tabs", className="instrument-tabs", children=[
 
-                        # Table of past/active studies that were run on QE 1
-                        dash_table.DataTable(id="QE1-table", page_action="none",
-                            fixed_rows={"headers": True},
-                            cell_selectable=True,
-                            style_cell={"textAlign": "left",
-                                        "fontSize": "15px",
-                                        "fontFamily": "sans-serif",
-                                        "lineHeight": "25px",
-                                        "padding": "10px",
-                                        "borderRadius": "5px"},
-                            style_data={"whiteSpace": "normal",
-                                        "textOverflow": "ellipsis",
-                                        "maxWidth": 0},
-                            style_table={"max-height": "285px",
-                                        "overflowY": "auto"},
-                            style_data_conditional=[
-                                {
-                                    "if": {
-                                        "state": "active"
-                                    },
-                                   "backgroundColor": bootstrap_colors["blue-low-opacity"],
-                                   "border": "1px solid " + bootstrap_colors["blue"]
-                                }],
-                            style_cell_conditional=[
-                                {"if": {"column_id": "Study"},
-                                    "width": "50%"},
-                                {"if": {"column_id": "Type"},
-                                    "width": "25%"},
-                                {"if": {"column_id": "Status"},
-                                    "width": "25%"}
-                            ]
-                        ),
+                        # QC dashboard for QE 1
+                        dcc.Tab(label="Thermo QE 1", children=[
 
-                        # Polarity filtering options
-                        html.Div(className="radio-group-container", children=[
-                            html.Div(className="radio-group", children=[
-                                dbc.RadioItems(
-                                    id="QE1-polarity-options",
-                                    className="btn-group",
-                                    inputClassName="btn-check",
-                                    labelClassName="btn btn-outline-primary",
-                                    inputCheckedClassName="active",
-                                    options=[
-                                        {"label": "Positive Mode", "value": "pos"},
-                                        {"label": "Negative Mode", "value": "neg"}],
-                                    value="pos"
-                                ),
-                            ])
+                            dbc.Row(justify="center", children=[
+
+                                dbc.Col(width=12, lg=4, children=[
+
+                                    html.Div(id="QE1-table-container", className="table-container", style={"display": "none"}, children=[
+
+                                        # Table of past/active studies that were run on QE 1
+                                        dash_table.DataTable(id="QE1-table", page_action="none",
+                                            fixed_rows={"headers": True},
+                                            cell_selectable=True,
+                                            style_cell={"textAlign": "left",
+                                                        "fontSize": "15px",
+                                                        "fontFamily": "sans-serif",
+                                                        "lineHeight": "25px",
+                                                        "padding": "10px",
+                                                        "borderRadius": "5px"},
+                                            style_data={"whiteSpace": "normal",
+                                                        "textOverflow": "ellipsis",
+                                                        "maxWidth": 0},
+                                            style_table={"max-height": "285px",
+                                                        "overflowY": "auto"},
+                                            style_data_conditional=[
+                                                {
+                                                    "if": {
+                                                        "state": "active"
+                                                    },
+                                                   "backgroundColor": bootstrap_colors["blue-low-opacity"],
+                                                   "border": "1px solid " + bootstrap_colors["blue"]
+                                                }],
+                                            style_cell_conditional=[
+                                                {"if": {"column_id": "Study"},
+                                                    "width": "50%"},
+                                                {"if": {"column_id": "Type"},
+                                                    "width": "25%"},
+                                                {"if": {"column_id": "Status"},
+                                                    "width": "25%"}
+                                            ]
+                                        ),
+
+                                        # Polarity filtering options
+                                        html.Div(className="radio-group-container", children=[
+                                            html.Div(className="radio-group", children=[
+                                                dbc.RadioItems(
+                                                    id="QE1-polarity-options",
+                                                    className="btn-group",
+                                                    inputClassName="btn-check",
+                                                    labelClassName="btn btn-outline-primary",
+                                                    inputCheckedClassName="active",
+                                                    options=[
+                                                        {"label": "Positive Mode", "value": "pos"},
+                                                        {"label": "Negative Mode", "value": "neg"}],
+                                                    value="pos"
+                                                ),
+                                            ])
+                                        ]),
+
+                                        # Sample / blank / pool / treatment filtering options
+                                        html.Div(className="radio-group-container", children=[
+                                            html.Div(className="radio-group", children=[
+                                                dbc.RadioItems(
+                                                    id="QE1-sample-filtering-options",
+                                                    className="btn-group",
+                                                    inputClassName="btn-check",
+                                                    labelClassName="btn btn-outline-primary",
+                                                    inputCheckedClassName="active",
+                                                    options=[
+                                                        {"label": "All", "value": "all"},
+                                                        {"label": "Samples", "value": "samples"},
+                                                        {"label": "Pools", "value": "pools"},
+                                                        {"label": "Blanks", "value": "blanks"}],
+                                                    value="all"
+                                                ),
+                                            ])
+                                        ]),
+
+                                        # Table of samples run for a particular study
+                                        dash_table.DataTable(id="QE1-sample-table", page_action="none",
+                                            fixed_rows={"headers": True},
+                                            # cell_selectable=True,
+                                            style_cell={"textAlign": "left",
+                                                        "fontSize": "15px",
+                                                        "fontFamily": "sans-serif",
+                                                        "lineHeight": "25px",
+                                                        "whiteSpace": "normal",
+                                                        "padding": "10px",
+                                                        "borderRadius": "5px"},
+                                            style_data={"whiteSpace": "normal",
+                                                        "textOverflow": "ellipsis",
+                                                        "maxWidth": 0},
+                                            style_table={"height": "475px",
+                                                         "overflowY": "auto"},
+                                            style_data_conditional=[
+                                                {"if": {"filter_query": "{QC} = 'Fail'"},
+                                                    "backgroundColor": bootstrap_colors["red-low-opacity"],
+                                                    "font-weight": "bold"
+                                                },
+                                                {"if": {"filter_query": "{QC} = 'Check'"},
+                                                    "backgroundColor": bootstrap_colors["yellow-low-opacity"]
+                                                },
+                                                {"if": {"state": "active"},
+                                                   "backgroundColor": bootstrap_colors["blue-low-opacity"],
+                                                   "border": "1px solid " + bootstrap_colors["blue"]
+                                                }
+                                            ],
+                                            style_cell_conditional=[
+                                                {"if": {"column_id": "Sample"},
+                                                    "width": "65%"},
+                                                {"if": {"column_id": "Position"},
+                                                    "width": "20%"},
+                                                {"if": {"column_id": "QC"},
+                                                    "width": "15%"},
+                                             ]
+                                        )
+                                    ]),
+                                ]),
+
+                                dbc.Col(width=12, lg=8, children=[
+
+                                    # Data container for QE 1 plots
+                                    html.Div(id="QE1-plot-container", className="all-plots-container", style={"display": "none"}, children=[
+
+                                        html.Div(className="istd-plot-div", children=[
+
+                                            html.Div(className="plot-container", children=[
+
+                                                # Dropdown for selecting an internal standard for the RT vs. sample plot
+                                                dcc.Dropdown(
+                                                    id="QE1-istd-rt-dropdown",
+                                                    options=standards_list,
+                                                    placeholder="Select internal standards...",
+                                                    style={"text-align": "left",
+                                                           "height": "35px",
+                                                           "width": "100%",
+                                                           "display": "inline-block"}
+                                                ),
+
+                                                # Dropdown for filtering by sample for the RT vs. sample plot
+                                                dcc.Dropdown(
+                                                    id="QE1-rt-plot-sample-dropdown",
+                                                    options=[],
+                                                    placeholder="Select samples...",
+                                                    style={"text-align": "left",
+                                                           "height": "35px",
+                                                           "width": "100%",
+                                                           "display": "inline-block"},
+                                                    multi=True),
+
+                                                # Scatter plot of internal standard retention times in QE 1 samples
+                                                dcc.Graph(id="QE1-istd-rt-plot")
+                                            ]),
+
+                                            html.Div(className="plot-container", children=[
+
+                                                # Dropdown for internal standard intensity plot
+                                                dcc.Dropdown(
+                                                    id="QE1-istd-intensity-dropdown",
+                                                    options=standards_list,
+                                                    placeholder="Select internal standard...",
+                                                    style={"text-align": "left",
+                                                           "height": "35px",
+                                                           "width": "100%",
+                                                           "display": "inline-block"}),
+
+                                                # Dropdown for filtering by sample for the intensity vs. sample plot
+                                                dcc.Dropdown(
+                                                    id="QE1-intensity-plot-sample-dropdown",
+                                                    options=[],
+                                                    placeholder="Select samples...",
+                                                    style={"text-align": "left",
+                                                           "height": "35px",
+                                                           "width": "100%",
+                                                           "display": "inline-block"},
+                                                multi=True),
+
+                                                # Bar plot of internal standard intensity in QE 1 samples
+                                                dcc.Graph(id="QE1-istd-intensity-plot")
+                                            ]),
+
+                                            html.Div(className="plot-container", children=[
+
+                                                # Dropdown for internal standard delta m/z plot
+                                                dcc.Dropdown(
+                                                    id="QE1-istd-mz-dropdown",
+                                                    options=standards_list,
+                                                    placeholder="Select internal standards...",
+                                                    style={"text-align": "left",
+                                                           "height": "35px",
+                                                           "width": "100%",
+                                                           "display": "inline-block"},
+                                                ),
+
+                                                # Dropdown for filtering by sample for the delta m/z vs. sample plot
+                                                dcc.Dropdown(
+                                                    id="QE1-mz-plot-sample-dropdown",
+                                                    options=[],
+                                                    placeholder="Select samples...",
+                                                    style={"text-align": "left",
+                                                           "height": "35px",
+                                                           "width": "100%",
+                                                           "display": "inline-block"},
+                                                    multi=True),
+
+                                                # Scatter plot of internal standard delta m/z vs. samples
+                                                dcc.Graph(id="QE1-istd-mz-plot")
+                                            ]),
+
+                                        ]),
+
+                                        html.Div(className="urine-plot-div", children=[
+
+                                            # Scatter plot of QC urine feature retention times from QE 1
+                                            html.Div(className="plot-container", children=[
+                                                dcc.Graph(id="QE1-urine-rt-plot")
+                                            ]),
+
+                                            # Bar plot of QC urine feature peak heights from QE 1
+                                            html.Div(className="plot-container", children=[
+
+                                                # Dropdown for urine feature intensity plot
+                                                dcc.Dropdown(
+                                                    id="QE1-urine-intensity-dropdown",
+                                                    options=list(get_pos_urine_features_dict().keys()),
+                                                    placeholder="Select urine feature...",
+                                                    style={"text-align": "left",
+                                                           "height": "35px",
+                                                           "width": "100%",
+                                                           "display": "inline-block"}
+                                                ),
+
+                                                dcc.Graph(id="QE1-urine-intensity-plot", animate=False)
+                                            ])
+                                        ])
+                                    ]),
+                                ]),
+
+                                # Modal/dialog for sample information card
+                                dbc.Modal(id="QE1-sample-info-modal", size="xl", centered=True, is_open=False,
+                                    scrollable=True, children=[
+                                        dbc.ModalHeader(dbc.ModalTitle(id="QE1-sample-modal-title"), close_button=True),
+                                        dbc.ModalBody(id="QE1-sample-modal-body")
+                                ]),
+
+                                # Modal/dialog for alerting user that data is loading
+                                dbc.Modal(id="QE1-loading-modal", size="md", centered=True, is_open=False, scrollable=True,
+                                    keyboard=False, backdrop="static", children=[
+                                        dbc.ModalHeader(dbc.ModalTitle(id="QE1-loading-modal-title"), close_button=False),
+                                        dbc.ModalBody(id="QE1-loading-modal-body")
+                                ]),
+                            ]),
                         ]),
 
-                        # Sample / blank / pool / treatment filtering options
-                        html.Div(className="radio-group-container", children=[
-                            html.Div(className="radio-group", children=[
-                                dbc.RadioItems(
-                                    id="QE1-sample-filtering-options",
-                                    className="btn-group",
-                                    inputClassName="btn-check",
-                                    labelClassName="btn btn-outline-primary",
-                                    inputCheckedClassName="active",
-                                    options=[
-                                        {"label": "All", "value": "all"},
-                                        {"label": "Samples", "value": "samples"},
-                                        {"label": "Pools", "value": "pools"},
-                                        {"label": "Blanks", "value": "blanks"}],
-                                    value="all"
-                                ),
-                            ])
+                        # QC dashboard for QE 2
+                        dcc.Tab(label="Thermo QE 2", children=[
+
+                            dbc.Row(justify="center", children=[
+
+                                dbc.Col(width=12, lg=4, children=[
+
+                                    html.Div(id="QE2-table-container", className="table-container", style={"display": "none"}, children=[
+
+                                        # Table of past/active studies that were run on QE 2
+                                        dash_table.DataTable(id="QE2-table", page_action="none",
+                                             fixed_rows={"headers": True},
+                                             cell_selectable=True,
+                                             style_cell={"textAlign": "left",
+                                                         "fontSize": "15px",
+                                                         "fontFamily": "sans-serif",
+                                                         "lineHeight": "25px",
+                                                         "padding": "10px",
+                                                         "borderRadius": "5px"},
+                                             style_data={"whiteSpace": "normal",
+                                                         "textOverflow": "ellipsis",
+                                                         "maxWidth": 0},
+                                             style_table={"max-height": "285px",
+                                                          "overflowY": "auto"},
+                                             style_data_conditional=[{
+                                                    "if": {
+                                                        "state": "active"
+                                                    },
+                                                   "backgroundColor": bootstrap_colors["blue-low-opacity"],
+                                                   "border": "1px solid " + bootstrap_colors["blue"]
+                                                }],
+                                             style_cell_conditional=[
+                                                {"if": {"column_id": "Study"},
+                                                    "width": "50%"},
+                                                {"if": {"column_id": "Type"},
+                                                    "width": "25%"},
+                                                {"if": {"column_id": "Type"},
+                                                    "width": "25%"}
+                                             ]
+                                         ),
+
+                                        # Polarity filtering options
+                                        html.Div(className="radio-group-container", children=[
+                                            html.Div(className="radio-group", children=[
+                                                dbc.RadioItems(
+                                                    id="QE2-polarity-options",
+                                                    className="btn-group",
+                                                    inputClassName="btn-check",
+                                                    labelClassName="btn btn-outline-primary",
+                                                    inputCheckedClassName="active",
+                                                    options=[
+                                                        {"label": "Positive Mode", "value": "pos"},
+                                                        {"label": "Negative Mode", "value": "neg"}],
+                                                    value="pos"
+                                                ),
+                                            ])
+                                        ]),
+
+                                        # Sample / blank / pool / treatment filtering options
+                                        html.Div(className="radio-group-container", children=[
+                                            html.Div(className="radio-group", children=[
+                                                dbc.RadioItems(
+                                                    id="QE2-sample-filtering-options",
+                                                    className="btn-group",
+                                                    inputClassName="btn-check",
+                                                    labelClassName="btn btn-outline-primary",
+                                                    inputCheckedClassName="active",
+                                                    options=[
+                                                        {"label": "All", "value": "all"},
+                                                        {"label": "Samples", "value": "samples"},
+                                                        {"label": "Pools", "value": "pools"},
+                                                        {"label": "Blanks", "value": "blanks"}],
+                                                    value="all"
+                                                ),
+                                            ])
+                                        ]),
+
+                                        # Table of samples run for a particular study
+                                        dash_table.DataTable(id="QE2-sample-table", page_action="none",
+                                            fixed_rows={"headers": True},
+                                            # cell_selectable=True,
+                                            style_cell={"textAlign": "left",
+                                                        "fontSize": "15px",
+                                                        "fontFamily": "sans-serif",
+                                                        # "whiteSpace": "normal",
+                                                        "lineHeight": "25px",
+                                                        "padding": "10px",
+                                                        "borderRadius": "5px"},
+                                            style_data={"whiteSpace": "normal",
+                                                        "textOverflow": "ellipsis",
+                                                        "maxWidth": 0},
+                                            style_table={"height": "475px",
+                                                         "overflowY": "auto"},
+                                            style_data_conditional=[
+                                                {"if": {"filter_query": "{QC} = 'Fail'"},
+                                                    "backgroundColor": bootstrap_colors["red-low-opacity"],
+                                                    "font-weight": "bold"
+                                                },
+                                                {"if": {"filter_query": "{QC} = 'Check'"},
+                                                    "backgroundColor": bootstrap_colors["yellow-low-opacity"]
+                                                },
+                                                {"if": {"state": "active"},
+                                                   "backgroundColor": bootstrap_colors["blue-low-opacity"],
+                                                   "border": "1px solid " + bootstrap_colors["blue"]
+                                                 }
+                                            ],
+                                            style_cell_conditional=[
+                                                {"if": {"column_id": "Sample"},
+                                                 "width": "65%"},
+                                                {"if": {"column_id": "Position"},
+                                                 "width": "20%"},
+                                                {"if": {"column_id": "QC"},
+                                                 "width": "15%"},
+                                            ]
+                                        )
+                                    ]),
+                                ]),
+
+                                dbc.Col(width=12, lg=8, children=[
+
+                                    # Data container for QE 2 plots
+                                    html.Div(id="QE2-plot-container", className="all-plots-container", style={"display": "none"}, children=[
+
+                                        html.Div(className="istd-plot-div", children=[
+
+                                            html.Div(className="plot-container", children=[
+
+                                                # Dropdown for internal standard RT plot
+                                                dcc.Dropdown(
+                                                    id="QE2-istd-rt-dropdown",
+                                                    options=standards_list,
+                                                    placeholder="Select internal standards...",
+                                                    style={"text-align": "left",
+                                                           "height": "35px",
+                                                           "width": "100%",
+                                                           "display": "inline-block"},
+                                                ),
+
+                                                # Dropdown for filtering by sample for the RT vs. sample plot
+                                                dcc.Dropdown(
+                                                    id="QE2-rt-plot-sample-dropdown",
+                                                    options=[],
+                                                    placeholder="Select samples...",
+                                                    style={"text-align": "left",
+                                                           "height": "35px",
+                                                           "width": "100%",
+                                                           "display": "inline-block"},
+                                                multi=True),
+
+                                                # Scatter plot of internal standard retention times in QE 2 samples
+                                                dcc.Graph(id="QE2-istd-rt-plot")
+                                            ]),
+
+                                            html.Div(className="plot-container", children=[
+
+                                                # Dropdown for internal standard intensity plot
+                                                dcc.Dropdown(
+                                                    id="QE2-istd-intensity-dropdown",
+                                                    options=standards_list,
+                                                    placeholder="Select internal standard...",
+                                                    style={"text-align": "left",
+                                                           "height": "35px",
+                                                           "width": "100%",
+                                                           "display": "inline-block"}),
+
+                                                # Dropdown for filtering by sample for the intensity vs. sample plot
+                                                dcc.Dropdown(
+                                                    id="QE2-intensity-plot-sample-dropdown",
+                                                    options=[],
+                                                    placeholder="Select samples...",
+                                                    style={"text-align": "left",
+                                                           "height": "35px",
+                                                           "width": "100%",
+                                                           "display": "inline-block"},
+                                                multi=True),
+
+                                                # Bar plot of internal standard intensity in QE 2 samples
+                                                dcc.Graph(id="QE2-istd-intensity-plot")
+                                            ]),
+
+                                            html.Div(className="plot-container", children=[
+
+                                                # Dropdown for internal standard delta m/z plot
+                                                dcc.Dropdown(
+                                                    id="QE2-istd-mz-dropdown",
+                                                    options=standards_list,
+                                                    placeholder="Select internal standards...",
+                                                    style={"text-align": "left",
+                                                           "height": "35px",
+                                                           "width": "100%",
+                                                           "display": "inline-block"},
+                                                ),
+
+                                                # Dropdown for filtering by sample for the delta m/z vs. sample plot
+                                                dcc.Dropdown(
+                                                    id="QE2-mz-plot-sample-dropdown",
+                                                    options=[],
+                                                    placeholder="Select samples...",
+                                                    style={"text-align": "left",
+                                                           "height": "35px",
+                                                           "width": "100%",
+                                                           "display": "inline-block"},
+                                                multi=True),
+
+                                                # Scatter plot of internal standard delta m/z vs. samples
+                                                dcc.Graph(id="QE2-istd-mz-plot")
+                                            ]),
+
+                                        ]),
+
+                                        html.Div(className="urine-plot-div", children=[
+
+                                            # Scatter plot of QC urine feature retention times from QE 2
+                                            html.Div(className="plot-container", children=[
+                                                dcc.Graph(id="QE2-urine-rt-plot")
+                                            ]),
+
+                                            # Bar plot of QC urine feature peak heights from QE 2
+                                            html.Div(className="plot-container", children=[
+
+                                                # Dropdown for urine feature intensity plot
+                                                dcc.Dropdown(
+                                                    id="QE2-urine-intensity-dropdown",
+                                                    options=list(get_pos_urine_features_dict().keys()),
+                                                    placeholder="Select urine feature...",
+                                                    style={"text-align": "left",
+                                                           "height": "35px",
+                                                           "width": "100%",
+                                                           "display": "inline-block"}
+                                                ),
+
+                                                dcc.Graph(id="QE2-urine-intensity-plot", animate=False)
+                                            ])
+                                        ]),
+                                    ]),
+                                ]),
+
+                                # Modal/dialog for sample information card
+                                dbc.Modal(id="QE2-sample-info-modal", size="xl", centered=True, is_open=False,
+                                    scrollable=True, children=[
+                                        dbc.ModalHeader(dbc.ModalTitle(id="QE2-sample-modal-title"), close_button=True),
+                                        dbc.ModalBody(id="QE2-sample-modal-body"),
+                                ]),
+
+                                # Modal/dialog for alerting user that data is loading
+                                dbc.Modal(id="QE2-loading-modal", size="md", centered=True, is_open=False,
+                                    scrollable=True, keyboard=False, backdrop="static", children=[
+                                        dbc.ModalHeader(dbc.ModalTitle(id="QE2-loading-modal-title"), close_button=False),
+                                        dbc.ModalBody(id="QE2-loading-modal-body")
+                                ]),
+                            ]),
                         ]),
 
-                        # Table of samples run for a particular study
-                        dash_table.DataTable(id="QE1-sample-table", page_action="none",
-                            fixed_rows={"headers": True},
-                            # cell_selectable=True,
-                            style_cell={"textAlign": "left",
-                                        "fontSize": "15px",
-                                        "fontFamily": "sans-serif",
-                                        "lineHeight": "25px",
-                                        "whiteSpace": "normal",
-                                        "padding": "10px",
-                                        "borderRadius": "5px"},
-                            style_data={"whiteSpace": "normal",
-                                        "textOverflow": "ellipsis",
-                                        "maxWidth": 0},
-                            style_table={"height": "475px",
-                                         "overflowY": "auto"},
-                            style_data_conditional=[
-                                {"if": {"filter_query": "{QC} = 'Fail'"},
-                                    "backgroundColor": bootstrap_colors["red-low-opacity"],
-                                    "font-weight": "bold"
-                                },
-                                {"if": {"filter_query": "{QC} = 'Check'"},
-                                    "backgroundColor": bootstrap_colors["yellow-low-opacity"]
-                                },
-                                {"if": {"state": "active"},
-                                   "backgroundColor": bootstrap_colors["blue-low-opacity"],
-                                   "border": "1px solid " + bootstrap_colors["blue"]
-                                }
-                            ],
-                            style_cell_conditional=[
-                                {"if": {"column_id": "Sample"},
-                                    "width": "65%"},
-                                {"if": {"column_id": "Position"},
-                                    "width": "20%"},
-                                {"if": {"column_id": "QC"},
-                                    "width": "15%"},
-                             ]
-                        )
-                    ]),
+                        dcc.Tab(label="Fusion Lumos 1", children=[]),
 
-                    # Data container for QE 1 plots
-                    html.Div(id="QE1-plot-container", className="all-plots-container", style={"display": "none"}, children=[
+                        dcc.Tab(label="Fusion Lumos 2", children=[]),
 
-                        html.Div(className="istd-plot-div", children=[
+                        dcc.Tab(label="Bruker timsTOF", children=[]),
 
-                            html.Div(className="plot-container", children=[
-
-                                # Dropdown for selecting an internal standard for the RT vs. sample plot
-                                dcc.Dropdown(
-                                    id="QE1-istd-rt-dropdown",
-                                    options=standards_list,
-                                    placeholder="Select internal standards...",
-                                    style={"text-align": "left",
-                                           "height": "35px",
-                                           "width": "100%",
-                                           "display": "inline-block"}
-                                ),
-
-                                # Dropdown for filtering by sample for the RT vs. sample plot
-                                dcc.Dropdown(
-                                    id="QE1-rt-plot-sample-dropdown",
-                                    options=[],
-                                    placeholder="Select samples...",
-                                    style={"text-align": "left",
-                                           "height": "35px",
-                                           "width": "100%",
-                                           "display": "inline-block"},
-                                    multi=True),
-
-                                # Scatter plot of internal standard retention times in QE 1 samples
-                                dcc.Graph(id="QE1-istd-rt-plot")
-                            ]),
-
-                            html.Div(className="plot-container", children=[
-
-                                # Dropdown for internal standard intensity plot
-                                dcc.Dropdown(
-                                    id="QE1-istd-intensity-dropdown",
-                                    options=standards_list,
-                                    placeholder="Select internal standard...",
-                                    style={"text-align": "left",
-                                           "height": "35px",
-                                           "width": "100%",
-                                           "display": "inline-block"}),
-
-                                # Dropdown for filtering by sample for the intensity vs. sample plot
-                                dcc.Dropdown(
-                                    id="QE1-intensity-plot-sample-dropdown",
-                                    options=[],
-                                    placeholder="Select samples...",
-                                    style={"text-align": "left",
-                                           "height": "35px",
-                                           "width": "100%",
-                                           "display": "inline-block"},
-                                multi=True),
-
-                                # Bar plot of internal standard intensity in QE 1 samples
-                                dcc.Graph(id="QE1-istd-intensity-plot")
-                            ]),
-
-                            html.Div(className="plot-container", children=[
-
-                                # Dropdown for internal standard delta m/z plot
-                                dcc.Dropdown(
-                                    id="QE1-istd-mz-dropdown",
-                                    options=standards_list,
-                                    placeholder="Select internal standards...",
-                                    style={"text-align": "left",
-                                           "height": "35px",
-                                           "width": "100%",
-                                           "display": "inline-block"},
-                                ),
-
-                                # Dropdown for filtering by sample for the delta m/z vs. sample plot
-                                dcc.Dropdown(
-                                    id="QE1-mz-plot-sample-dropdown",
-                                    options=[],
-                                    placeholder="Select samples...",
-                                    style={"text-align": "left",
-                                           "height": "35px",
-                                           "width": "100%",
-                                           "display": "inline-block"},
-                                    multi=True),
-
-                                # Scatter plot of internal standard delta m/z vs. samples
-                                dcc.Graph(id="QE1-istd-mz-plot")
-                            ]),
-
-                        ]),
-
-                        html.Div(className="urine-plot-div", children=[
-
-                            # Scatter plot of QC urine feature retention times from QE 1
-                            html.Div(className="plot-container", children=[
-                                dcc.Graph(id="QE1-urine-rt-plot")
-                            ]),
-
-                            # Bar plot of QC urine feature peak heights from QE 1
-                            html.Div(className="plot-container", children=[
-
-                                # Dropdown for urine feature intensity plot
-                                dcc.Dropdown(
-                                    id="QE1-urine-intensity-dropdown",
-                                    options=list(get_pos_urine_features_dict().keys()),
-                                    placeholder="Select urine feature...",
-                                    style={"text-align": "left",
-                                           "height": "35px",
-                                           "width": "100%",
-                                           "display": "inline-block"}
-                                ),
-
-                                dcc.Graph(id="QE1-urine-intensity-plot", animate=False)
-                            ])
-
-                        ])
-
-                    ]),
-
-                    # Modal/dialog for sample information card
-                    dbc.Modal(id="QE1-sample-info-modal", size="xl", centered=True, is_open=False, scrollable=True, children=[
-                        dbc.ModalHeader(dbc.ModalTitle(id="QE1-sample-modal-title"), close_button=True),
-                        dbc.ModalBody(id="QE1-sample-modal-body")
-                    ]),
-
-                    # Modal/dialog for alerting user that data is loading
-                    dbc.Modal(id="QE1-loading-modal", size="md", centered=True, is_open=False, scrollable=True,
-                              keyboard=False, backdrop="static", children=[
-                        dbc.ModalHeader(dbc.ModalTitle(id="QE1-loading-modal-title"), close_button=False),
-                        dbc.ModalBody(id="QE1-loading-modal-body")
                     ]),
 
                 ]),
-
-                # QC dashboard for QE 2
-                dcc.Tab(label="Thermo QE 2", children=[
-
-                    html.Div(id="QE2-table-container", className="table-container", style={"display": "none"}, children=[
-
-                        # Table of past/active studies that were run on QE 2
-                        dash_table.DataTable(id="QE2-table", page_action="none",
-                             fixed_rows={"headers": True},
-                             cell_selectable=True,
-                             style_cell={"textAlign": "left",
-                                         "fontSize": "15px",
-                                         "fontFamily": "sans-serif",
-                                         "lineHeight": "25px",
-                                         "padding": "10px",
-                                         "borderRadius": "5px"},
-                             style_data={"whiteSpace": "normal",
-                                         "textOverflow": "ellipsis",
-                                         "maxWidth": 0},
-                             style_table={"max-height": "285px",
-                                          "overflowY": "auto"},
-                             style_data_conditional=[{
-                                    "if": {
-                                        "state": "active"
-                                    },
-                                   "backgroundColor": bootstrap_colors["blue-low-opacity"],
-                                   "border": "1px solid " + bootstrap_colors["blue"]
-                                }],
-                             style_cell_conditional=[
-                                {"if": {"column_id": "Study"},
-                                    "width": "50%"},
-                                {"if": {"column_id": "Type"},
-                                    "width": "25%"},
-                                {"if": {"column_id": "Type"},
-                                    "width": "25%"}
-                             ]
-                         ),
-
-                        # Polarity filtering options
-                        html.Div(className="radio-group-container", children=[
-                            html.Div(className="radio-group", children=[
-                                dbc.RadioItems(
-                                    id="QE2-polarity-options",
-                                    className="btn-group",
-                                    inputClassName="btn-check",
-                                    labelClassName="btn btn-outline-primary",
-                                    inputCheckedClassName="active",
-                                    options=[
-                                        {"label": "Positive Mode", "value": "pos"},
-                                        {"label": "Negative Mode", "value": "neg"}],
-                                    value="pos"
-                                ),
-                            ])
-                        ]),
-
-                        # Sample / blank / pool / treatment filtering options
-                        html.Div(className="radio-group-container", children=[
-                            html.Div(className="radio-group", children=[
-                                dbc.RadioItems(
-                                    id="QE2-sample-filtering-options",
-                                    className="btn-group",
-                                    inputClassName="btn-check",
-                                    labelClassName="btn btn-outline-primary",
-                                    inputCheckedClassName="active",
-                                    options=[
-                                        {"label": "All", "value": "all"},
-                                        {"label": "Samples", "value": "samples"},
-                                        {"label": "Pools", "value": "pools"},
-                                        {"label": "Blanks", "value": "blanks"}],
-                                    value="all"
-                                ),
-                            ])
-                        ]),
-
-                        # Table of samples run for a particular study
-                        dash_table.DataTable(id="QE2-sample-table", page_action="none",
-                            fixed_rows={"headers": True},
-                            # cell_selectable=True,
-                            style_cell={"textAlign": "left",
-                                        "fontSize": "15px",
-                                        "fontFamily": "sans-serif",
-                                        # "whiteSpace": "normal",
-                                        "lineHeight": "25px",
-                                        "padding": "10px",
-                                        "borderRadius": "5px"},
-                            style_data={"whiteSpace": "normal",
-                                        "textOverflow": "ellipsis",
-                                        "maxWidth": 0},
-                            style_table={"height": "475px",
-                                         "overflowY": "auto"},
-                            style_data_conditional=[
-                                {"if": {"filter_query": "{QC} = 'Fail'"},
-                                    "backgroundColor": bootstrap_colors["red-low-opacity"],
-                                    "font-weight": "bold"
-                                },
-                                {"if": {"filter_query": "{QC} = 'Check'"},
-                                    "backgroundColor": bootstrap_colors["yellow-low-opacity"]
-                                },
-                                {"if": {"state": "active"},
-                                   "backgroundColor": bootstrap_colors["blue-low-opacity"],
-                                   "border": "1px solid " + bootstrap_colors["blue"]
-                                 }
-                            ],
-                            style_cell_conditional=[
-                                {"if": {"column_id": "Sample"},
-                                 "width": "65%"},
-                                {"if": {"column_id": "Position"},
-                                 "width": "20%"},
-                                {"if": {"column_id": "QC"},
-                                 "width": "15%"},
-                            ]
-                        )
-                    ]),
-
-                    # Data container for QE 2 plots
-                    html.Div(id="QE2-plot-container", className="all-plots-container", style={"display": "none"}, children=[
-
-                        html.Div(className="istd-plot-div", children=[
-
-                            html.Div(className="plot-container", children=[
-
-                                # Dropdown for internal standard RT plot
-                                dcc.Dropdown(
-                                    id="QE2-istd-rt-dropdown",
-                                    options=standards_list,
-                                    placeholder="Select internal standards...",
-                                    style={"text-align": "left",
-                                           "height": "35px",
-                                           "width": "100%",
-                                           "display": "inline-block"},
-                                ),
-
-                                # Dropdown for filtering by sample for the RT vs. sample plot
-                                dcc.Dropdown(
-                                    id="QE2-rt-plot-sample-dropdown",
-                                    options=[],
-                                    placeholder="Select samples...",
-                                    style={"text-align": "left",
-                                           "height": "35px",
-                                           "width": "100%",
-                                           "display": "inline-block"},
-                                multi=True),
-
-                                # Scatter plot of internal standard retention times in QE 2 samples
-                                dcc.Graph(id="QE2-istd-rt-plot")
-                            ]),
-
-                            html.Div(className="plot-container", children=[
-
-                                # Dropdown for internal standard intensity plot
-                                dcc.Dropdown(
-                                    id="QE2-istd-intensity-dropdown",
-                                    options=standards_list,
-                                    placeholder="Select internal standard...",
-                                    style={"text-align": "left",
-                                           "height": "35px",
-                                           "width": "100%",
-                                           "display": "inline-block"}),
-
-                                # Dropdown for filtering by sample for the intensity vs. sample plot
-                                dcc.Dropdown(
-                                    id="QE2-intensity-plot-sample-dropdown",
-                                    options=[],
-                                    placeholder="Select samples...",
-                                    style={"text-align": "left",
-                                           "height": "35px",
-                                           "width": "100%",
-                                           "display": "inline-block"},
-                                multi=True),
-
-                                # Bar plot of internal standard intensity in QE 2 samples
-                                dcc.Graph(id="QE2-istd-intensity-plot")
-                            ]),
-
-                            html.Div(className="plot-container", children=[
-
-                                # Dropdown for internal standard delta m/z plot
-                                dcc.Dropdown(
-                                    id="QE2-istd-mz-dropdown",
-                                    options=standards_list,
-                                    placeholder="Select internal standards...",
-                                    style={"text-align": "left",
-                                           "height": "35px",
-                                           "width": "100%",
-                                           "display": "inline-block"},
-                                ),
-
-                                # Dropdown for filtering by sample for the delta m/z vs. sample plot
-                                dcc.Dropdown(
-                                    id="QE2-mz-plot-sample-dropdown",
-                                    options=[],
-                                    placeholder="Select samples...",
-                                    style={"text-align": "left",
-                                           "height": "35px",
-                                           "width": "100%",
-                                           "display": "inline-block"},
-                                multi=True),
-
-                                # Scatter plot of internal standard delta m/z vs. samples
-                                dcc.Graph(id="QE2-istd-mz-plot")
-                            ]),
-
-                        ]),
-
-                        html.Div(className="urine-plot-div", children=[
-
-                            # Scatter plot of QC urine feature retention times from QE 2
-                            html.Div(className="plot-container", children=[
-                                dcc.Graph(id="QE2-urine-rt-plot")
-                            ]),
-
-                            # Bar plot of QC urine feature peak heights from QE 2
-                            html.Div(className="plot-container", children=[
-
-                                # Dropdown for urine feature intensity plot
-                                dcc.Dropdown(
-                                    id="QE2-urine-intensity-dropdown",
-                                    options=list(get_pos_urine_features_dict().keys()),
-                                    placeholder="Select urine feature...",
-                                    style={"text-align": "left",
-                                           "height": "35px",
-                                           "width": "100%",
-                                           "display": "inline-block"}
-                                ),
-
-                                dcc.Graph(id="QE2-urine-intensity-plot", animate=False)
-
-                            ])
-
-                        ]),
-
-                    ]),
-
-                    # Modal/dialog for sample information card
-                    dbc.Modal(id="QE2-sample-info-modal", size="xl", centered=True, is_open=False, scrollable=True, children=[
-                        dbc.ModalHeader(dbc.ModalTitle(id="QE2-sample-modal-title"), close_button=True),
-                        dbc.ModalBody(id="QE2-sample-modal-body"),
-                    ]),
-
-                    # Modal/dialog for alerting user that data is loading
-                    dbc.Modal(id="QE2-loading-modal", size="md", centered=True, is_open=False, scrollable=True,
-                              keyboard=False, backdrop="static", children=[
-                        dbc.ModalHeader(dbc.ModalTitle(id="QE2-loading-modal-title"), close_button=False),
-                        dbc.ModalBody(id="QE2-loading-modal-body")
-                    ]),
-
-                ]),
-
-                dcc.Tab(label="Fusion Lumos 1", children=[]),
-
-                dcc.Tab(label="Fusion Lumos 2", children=[]),
-
-                dcc.Tab(label="Bruker timsTOF", children=[]),
-
             ]),
 
             # Storage of all necessary DataFrames in dcc.Store objects
