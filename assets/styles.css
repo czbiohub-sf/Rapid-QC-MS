@@ -1,4 +1,17 @@
 /* App layout */
+html {
+    overflow: scroll;
+    overflow-x: hidden;
+}
+::-webkit-scrollbar {
+    width: 0;  /* Remove scrollbar space */
+    background: transparent;  /* Optional: just make scrollbar invisible */
+}
+
+::-webkit-scrollbar-thumb {
+    background: #FF0000;
+}
+
 .app-layout {
     font-family: sans-serif;
     line-height: 20px;
@@ -8,7 +21,6 @@
     margin-top: 2%;
     margin-left: 7%;
     margin-right: 7%;
-    margin-bottom: 0%;
 }
 
 /* Header */
@@ -30,7 +42,7 @@
     margin-right: 2%;
     width: 28%;
     height: calc(100vh - 200px);
-    overflow-y: auto;
+    overflow-y: scroll;
 }
 
 .dash-spreadsheet.dash-freeze-top, .dash-spreadsheet.dash-virtualized {
@@ -47,7 +59,7 @@
     float: left;
     width: 70%;
     height: calc(100vh - 200px);
-    overflow-y: auto;
+    overflow-y: scroll;
 }
 
 .istd-plot-div {
