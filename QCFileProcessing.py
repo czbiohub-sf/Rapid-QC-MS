@@ -393,16 +393,16 @@ def get_samples(df_pos, df_neg, df_sequence):
     for column in pos_samples:
         if df_pos[column].isnull().sum() >= 4:
             pass_fail_list.append("Fail")
-        elif df_pos[column].isnull().sum() == 3:
-            pass_fail_list.append("Check")
+        # elif df_pos[column].isnull().sum() == 3:
+        #     pass_fail_list.append("Check")
         else:
             pass_fail_list.append("Pass")
 
     for column in neg_samples:
         if df_neg[column].isnull().sum() >= 4:
             pass_fail_list.append("Fail")
-        elif df_neg[column].isnull().sum() == 3:
-            pass_fail_list.append("Check")
+        # elif df_neg[column].isnull().sum() == 3:
+        #     pass_fail_list.append("Check")
         else:
             pass_fail_list.append("Pass")
 
@@ -604,7 +604,7 @@ def load_urine_feature_plot(study_name, df_rt, df_mz, df_intensity, urine_featur
 
     # Get standard deviation of feature intensities
     df_intensity = df_intensity.fillna(0)
-    feature_intensity_from_study = df_intensity.iloc[:, -1].astype(float)
+    feature_intensity_from_study = df_intensity.loc[:, study_name + ":Height"].astype(float)
     average_intensity_in_studies = df_intensity.iloc[:, 1:].astype(float).mean(axis=1)
     urine_df["% Change"] = ((feature_intensity_from_study - average_intensity_in_studies).abs() / average_intensity_in_studies) * 100
     urine_df["% Change"] = urine_df["% Change"].fillna(0)
