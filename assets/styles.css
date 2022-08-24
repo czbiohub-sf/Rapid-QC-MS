@@ -3,6 +3,7 @@ html {
     overflow: scroll;
     overflow-x: hidden;
 }
+
 ::-webkit-scrollbar {
     width: 0;  /* Remove scrollbar space */
     background: transparent;  /* Optional: just make scrollbar invisible */
@@ -15,6 +16,7 @@ html {
 .app-layout {
     font-family: sans-serif;
     line-height: 20px;
+    /* border: black 1px solid; */
 }
 
 /* Tabs */
@@ -25,11 +27,6 @@ html {
 }
 
 /* Header */
-.header {
-    margin-top: 2%;
-    margin-bottom: 2%;
-}
-
 .header h1 {
     font-size: 40px;
     padding-top: 10px;

@@ -48,11 +48,6 @@ def serve_layout():
             )]), color="dark", dark=True,
         ),
 
-        # Header
-        # html.Div(id="header", children=[
-        #     html.H1(id="header-text")
-        # ]),
-
         # App layout
         html.Div(className="page", children=[
 
@@ -1568,4 +1563,4 @@ if __name__ == "__main__":
     #     webbrowser.get("chrome").open("http://127.0.0.1:8050/", new=1)
 
     # Start Dash app
-    app.run_server(debug=True)
+    app.run_server(debug=False)
