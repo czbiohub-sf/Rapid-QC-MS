@@ -57,6 +57,8 @@ pos_internal_standards_C18 = ["1_Acetylcarnitine_d3", "1_CUDA", "1_Valine d8", "
 neg_internal_standards_C18 = ["1_CUDA", "1_Glutamine_d5", "1_Glutamic Acid_d3", "1_Phenylalanine_d8",
                               "1_Tryptophan d5", "1_Hippuric acid d5"]
 
+internal_standards_lipids = ["1_CUDA"]
+
 retention_times_HILIC = {
     "1_Methionine_d8": 7.479,
     "1_1_Methylnicotinamide_d3": 6.217,
@@ -87,6 +89,14 @@ retention_times_C18 = {
     "1_Tryptophan d5": 3.303,
     "1_Phenylalanine d8": 2.827,
     "1_Hippuric acid d5": 3.952
+}
+
+retention_times_lipids_pos = {
+    "1_CUDA": 0.99,
+}
+
+retention_times_lipids_neg = {
+    "1_CUDA": 0.56,
 }
 
 pos_urine_features_dict = {
@@ -323,8 +333,11 @@ def get_data(instrument, study_id):
                 study_resources["neg_internal_standards"] = neg_internal_standards_C18
                 study_resources["retention_times_dict"] = retention_times_C18
 
-            elif "Lipidomics" in file["title"]:
-                study_resources["chromatography"] = "Lipidomics"
+            elif "Lipids" in file["title"]:
+                study_resources["chromatography"] = "Lipids"
+                study_resources["pos_internal_standards"] = internal_standards_lipids
+                study_resources["neg_internal_standards"] = internal_standards_lipids
+                study_resources["retention_times_dict"] = retention_times_lipids_pos
 
     chromatography = study_resources["chromatography"]
 
@@ -546,7 +559,7 @@ def load_istd_intensity_plot(dataframe, samples, internal_standard, text, treatm
                       margin=dict(t=75, b=75))
     fig.update_xaxes(showticklabels=False, title="Sample")
     fig.update_yaxes(title="Intensity")
-    fig.update_traces(textposition="outside", hovertemplate="Sample: %{x}<br> Intensity: %{y:.2e}<br>")
+    fig.update_traces(textposition="outside", hovertemplate="Sample: %{x}<br>Intensity: %{y:.2e}<br>")
 
     return fig
 
@@ -596,6 +609,7 @@ def load_urine_feature_plot(study_name, df_rt, df_mz, df_intensity, urine_featur
     inchikey_list = df_mz["InChIKey"].tolist()
     metabolite_list = [inverted_dict[inchikey] for inchikey in inchikey_list]
 
+    # Rename columns
     urine_df["Metabolite name"] = metabolite_list
     urine_df["INCHIKEY"] = df_mz["InChIKey"]
     urine_df["Precursor m/z"] = df_mz[study_name + ":Precursor m/z"]
@@ -606,17 +620,21 @@ def load_urine_feature_plot(study_name, df_rt, df_mz, df_intensity, urine_featur
     df_intensity = df_intensity.fillna(0)
     feature_intensity_from_study = df_intensity.loc[:, study_name + ":Height"].astype(float)
     average_intensity_in_studies = df_intensity.iloc[:, 1:].astype(float).mean(axis=1)
-    urine_df["% Change"] = ((feature_intensity_from_study - average_intensity_in_studies).abs() / average_intensity_in_studies) * 100
-    urine_df["% Change"] = urine_df["% Change"].fillna(0)
+    urine_df["% Change"] = ((feature_intensity_from_study - average_intensity_in_studies) / average_intensity_in_studies) * 100
 
-    # plasma = px.colors.sequential.Plasma
-    # colorscale = [
-    #     [0, plasma[0]],
-    #     [1. / 100000, plasma[2]],
-    #     [1. / 1000, plasma[4]],
-    #     [1. / 10, plasma[7]],
-    #     [1., plasma[9]],
-    # ]
+    # Plot readiness
+    urine_df["Retention time (min)"] = urine_df["Retention time (min)"].round(2)
+    urine_df["% Change"] = urine_df["% Change"].round(1).fillna(0)
+
+    labels = {"Retention time (min)": "Retention time (min)",
+              "INCHIKEY": "INCHIKEY",
+              "Precursor m/z": "Precursor m/z",
+              "Intensity": "Intensity",
+              "Metabolite name": "Metabolite name"}
+
+    # Colorscale
+    diverging_colorscale = ["#1a88ff", "#3395ff", "#4da3ff", "#a186ca", "#e7727d", "#e35d6a", "#e04958"]
+    diverging_colorscale.reverse()
 
     fig = px.scatter(urine_df,
                      title="QC Urine Metabolites",
@@ -625,12 +643,10 @@ def load_urine_feature_plot(study_name, df_rt, df_mz, df_intensity, urine_featur
                      height=600,
                      hover_name="Metabolite name",
                      color="% Change",
-                     color_continuous_scale=px.colors.sequential.Plasma,
-                     labels={"Retention time (min)": "Retention time (min)",
-                             "Precursor m/z": "Precursor m/z",
-                             "Intensity": "Intensity"},
+                     color_continuous_scale=diverging_colorscale,
+                     labels=labels,
                      log_x=False,
-                     range_color=[0, 100])
+                     range_color=[-100, 100])
     fig.update_layout(showlegend=False,
                       transition_duration=500,
                       clickmode="event",

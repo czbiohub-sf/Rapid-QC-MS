@@ -652,16 +652,18 @@ def populate_study_table(placeholder_input):
 
     # Get study name and chromatography
     for file in QE1_files:
-        if "RT" in file["title"] and "Pos" in file["title"] and "urine" not in file["title"]:
-            QE1_studies["Study"].append(file["title"].split("_")[0])
-            QE1_studies["Type"].append(file["title"].split("_")[2])
-            QE1_studies["Status"].append("Complete")
+        if "RT" in file["title"] and ("Pos" in file["title"] or "Neg" in file["title"]) and "urine" not in file["title"]:
+            if file["title"].split("_")[0] not in QE1_studies["Study"]:
+                QE1_studies["Study"].append(file["title"].split("_")[0])
+                QE1_studies["Type"].append(file["title"].split("_")[2])
+                QE1_studies["Status"].append("Complete")
 
     for file in QE2_files:
-        if "RT" in file["title"] and "Pos" in file["title"] and "urine" not in file["title"]:
-            QE2_studies["Study"].append(file["title"].split("_")[0])
-            QE2_studies["Type"].append(file["title"].split("_")[2])
-            QE2_studies["Status"].append("Complete")
+        if "RT" in file["title"] and ("Pos" in file["title"] or "Neg" in file["title"]) and "urine" not in file["title"]:
+            if file["title"].split("_")[0] not in QE2_studies["Study"]:
+                QE2_studies["Study"].append(file["title"].split("_")[0])
+                QE2_studies["Type"].append(file["title"].split("_")[2])
+                QE2_studies["Status"].append("Complete")
 
     df_studies_QE1["Study"] = QE1_studies["Study"]
     df_studies_QE1["Type"] = QE1_studies["Type"]
@@ -1563,4 +1565,4 @@ if __name__ == "__main__":
     #     webbrowser.get("chrome").open("http://127.0.0.1:8050/", new=1)
 
     # Start Dash app
-    app.run_server(debug=False)
+    app.run_server(debug=True)
