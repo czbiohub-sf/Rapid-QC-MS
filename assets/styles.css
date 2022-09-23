@@ -16,6 +16,7 @@ html {
 .app-layout {
     font-family: sans-serif;
     line-height: 20px;
+    height: 100vh;
     /* border: black 1px solid; */
 }
 
@@ -39,7 +40,7 @@ html {
     float: left;
     margin-right: 2%;
     width: 100%;
-    height: calc(100vh - 200px);
+    height: calc(100vh - 175px);
     overflow-y: scroll;
 }
 
@@ -56,7 +57,7 @@ html {
 .all-plots-container {
     float: left;
     width: 100%;
-    height: calc(100vh - 200px);
+    height: calc(100vh - 160px);
     overflow-y: scroll;
 }
 
