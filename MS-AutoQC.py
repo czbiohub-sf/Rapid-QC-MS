@@ -36,15 +36,23 @@ def serve_layout():
         # Navigation bar
         dbc.Navbar(
             dbc.Container(style={"height": "50px"}, children=[
+                # Logo and title
                 html.A(
                     dbc.Row([
                         dbc.Col(html.Img(src=biohub_logo, height="30px")),
                         dbc.Col(dbc.NavbarBrand(id="header", children="MS-AutoQC", className="ms-2")),
-                    ], align="center", className="g-0",
+                        ], align="center", className="g-0",
+                    ), href="https://biohub.org", style={"textDecoration": "none"},
                 ),
-                href="https://biohub.org",
-                style={"textDecoration": "none"},
-            )]), color="dark", dark=True,
+                # Settings button
+                dbc.Row([
+                    dbc.Nav([
+                        dbc.NavItem(dbc.NavLink("About", href="#", id="about-button", className="navbar-button")),
+                        dbc.NavItem(dbc.NavLink("Help", href="#", id="help-button", className="navbar-button")),
+                        dbc.NavItem(dbc.NavLink("Settings", href="#", id="settings-button", className="navbar-button")),
+                    ], className="me-auto")
+                ], className="g-0 ms-auto flex-nowrap mt-3 mt-md-0")
+            ]), color="dark", dark=True
         ),
 
         # App layout
@@ -107,6 +115,16 @@ def serve_layout():
                                         "width": "25%"}
                                     ]
                                 ),
+
+                                # Button to start monitoring a new run
+                                html.Div(className="d-grid gap-2", children=[
+                                    dbc.Button("Monitor New Instrument Run",
+                                               id="setup-new-run-button",
+                                               style={"margin-top": "15px",
+                                                      "line-height": "1.75"},
+                                               outline=False,
+                                               color="primary"),
+                                ]),
 
                                 # Polarity filtering options
                                 html.Div(className="radio-group-container", children=[
@@ -311,8 +329,7 @@ def serve_layout():
                         ]),
 
                         # Modal/dialog for sample information card
-                        dbc.Modal(id="sample-info-modal", size="xl", centered=True, is_open=False,
-                                  scrollable=True, children=[
+                        dbc.Modal(id="sample-info-modal", size="xl", centered=True, is_open=False, scrollable=True, children=[
                             dbc.ModalHeader(dbc.ModalTitle(id="sample-modal-title"), close_button=True),
                             dbc.ModalBody(id="sample-modal-body")
                         ]),
@@ -322,6 +339,81 @@ def serve_layout():
                                   keyboard=False, backdrop="static", children=[
                             dbc.ModalHeader(dbc.ModalTitle(id="loading-modal-title"), close_button=False),
                             dbc.ModalBody(id="loading-modal-body")
+                        ]),
+
+                        # TODO: Modal/dialog for MS-AutoQC settings
+                        dbc.Modal(id="settings-modal", size="xl", centered=True, is_open=False, scrollable=True, children=[
+                            dbc.ModalHeader(dbc.ModalTitle(children="MS-AutoQC Settings"), close_button=True),
+                            dbc.ModalBody(id="settings-modal-body", children=[
+
+                            ])
+                        ]),
+
+                        # Modal/dialog for starting an instrument run listener
+                        dbc.Modal(id="setup-new-run-modal", size="lg", centered=True, is_open=False, scrollable=True, children=[
+                            dbc.ModalHeader(dbc.ModalTitle(id="setup-new-run-modal-title", children="Monitor New Instrument Run"), close_button=True),
+                            dbc.ModalBody(id="setup-new-run-modal-body", children=[
+
+                                # Text field for entering your run ID
+                                html.Div([
+                                    dbc.Label("Instrument Run ID"),
+                                    dbc.Input(placeholder="NEW_RUN_001", type="text"),
+                                    dbc.FormText("Please enter a unique ID for this run."),
+                                ]),
+
+                                html.Br(),
+
+                                # Button and field for selecting a sequence file
+                                html.Div([
+                                    dbc.Label("Acquisition Sequence (.csv)"),
+                                    dbc.InputGroup([
+                                        dbc.DropdownMenu([dbc.DropdownMenuItem("Thermo Xcalibur"),
+                                                          dbc.DropdownMenuItem("Agilent MassHunter")],
+                                                         label="Vendor Software", color="dark"),
+                                        dbc.Input(id="sequence-upload-text-field",
+                                                  placeholder="No file selected"),
+                                        dbc.Button("Browse Files", color="dark",
+                                                   id="sequence-upload-button", n_clicks=0),
+                                    ]),
+                                    dbc.FormText("Please ensure you have selected the correct vendor software for this sequence."),
+                                ]),
+
+                                html.Br(),
+
+                                # Button and field for selecting a sample metadata file
+                                html.Div([
+                                    dbc.Label("Sample Metadata (.csv)"),
+                                    dbc.InputGroup([
+                                        dbc.Input(id="metadata-upload-text-field",
+                                                  placeholder="No file selected"),
+                                        dbc.Button("Browse Files", color="dark",
+                                                   id="metadata-upload-button", n_clicks=0),
+                                    ]),
+                                    dbc.FormText("Please ensure you have the following columns: " +
+                                                 "Sample Name, Species, Matrix, Treatment, and Conditions"),
+                                ]),
+
+                                html.Br(),
+
+                                # Button and field for selecting the data acquisition directory
+                                html.Div([
+                                    dbc.Label("Data Acquisition Directory"),
+                                    dbc.InputGroup([
+                                        dbc.Input(placeholder="No file selected",
+                                                  id="data-acquisition-folder-text-field"),
+                                        dbc.Button("Select Folder", color="dark",
+                                                   id="data-acquisition-folder-button", n_clicks=0),
+                                    ]),
+                                    dbc.FormText("Please select the folder to which incoming data files will be saved."),
+                                ]),
+
+                                html.Br(),
+
+                                html.Div([
+                                    dbc.Button("Start monitoring this run", style={"line-height": "1.75"}, color="primary"),
+                                ], className="d-grid gap-2")
+
+                            ])
                         ]),
                     ]),
                 ]),
@@ -348,7 +440,6 @@ def serve_layout():
             dcc.Store(id="first-study")
 
         ])
-
     ])
 
 
@@ -886,6 +977,20 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
         return False, title, body, None, None, None, None
     else:
         return True, title, body, None, None, None, None
+
+
+@app.callback(Output("setup-new-run-modal", "is_open"),
+              Output("setup-new-run-modal-title", "children"),
+              Input("setup-new-run-button", "n_clicks"),
+              State("tabs", "value"), prevent_initial_call=True)
+def toggle_new_run_modal(button_click, instrument):
+
+    """
+    Toggles modal for setting up autoQC monitoring for a new instrument run
+    """
+
+    title = "Setup AutoQC Monitoring on " + instrument
+    return True, title
 
 
 if __name__ == "__main__":
