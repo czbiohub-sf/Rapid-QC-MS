@@ -82,6 +82,10 @@ h2 {
     margin: 40px;
 }
 
+.navbar-button {
+    font-size: 1.15rem;
+}
+
 /* Radio items */
 .radio-group-container {
     width: 100%;
@@ -103,4 +107,14 @@ h2 {
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
     margin-left: -1px;
+}
+
+.parent-container {
+    margin: auto;
+    width: 100%;
+}
+
+.child-container {
+    float: left;
+    width: 50%;
 }

@@ -122,7 +122,7 @@ def serve_layout():
                                                id="setup-new-run-button",
                                                style={"margin-top": "15px",
                                                       "line-height": "1.75"},
-                                               outline=False,
+                                               outline=True,
                                                color="primary"),
                                 ]),
 
@@ -341,14 +341,6 @@ def serve_layout():
                             dbc.ModalBody(id="loading-modal-body")
                         ]),
 
-                        # TODO: Modal/dialog for MS-AutoQC settings
-                        dbc.Modal(id="settings-modal", size="xl", centered=True, is_open=False, scrollable=True, children=[
-                            dbc.ModalHeader(dbc.ModalTitle(children="MS-AutoQC Settings"), close_button=True),
-                            dbc.ModalBody(id="settings-modal-body", children=[
-
-                            ])
-                        ]),
-
                         # Modal/dialog for starting an instrument run listener
                         dbc.Modal(id="setup-new-run-modal", size="lg", centered=True, is_open=False, scrollable=True, children=[
                             dbc.ModalHeader(dbc.ModalTitle(id="setup-new-run-modal-title", children="Monitor New Instrument Run"), close_button=True),
@@ -356,16 +348,28 @@ def serve_layout():
 
                                 # Text field for entering your run ID
                                 html.Div([
-                                    dbc.Label("Instrument Run ID"),
+                                    dbc.Label("Instrument run ID"),
                                     dbc.Input(placeholder="NEW_RUN_001", type="text"),
                                     dbc.FormText("Please enter a unique ID for this run."),
                                 ]),
 
                                 html.Br(),
 
+                                # Select chromatography
+                                html.Div([
+                                    dbc.Label("Select chromatography"),
+                                    dbc.Select(id="start-run-chromatography-dropdown", options=[
+                                        {"label": "HILIC", "value": "HILIC"},
+                                        {"label": "C18", "value": "C18"},
+                                        {"label": "Lipids", "value": "Lipids", "disabled": True},
+                                    ], placeholder="No chromatography selected"),
+                                ]),
+
+                                html.Br(),
+
                                 # Button and field for selecting a sequence file
                                 html.Div([
-                                    dbc.Label("Acquisition Sequence (.csv)"),
+                                    dbc.Label("Acquisition sequence (.csv)"),
                                     dbc.InputGroup([
                                         dbc.DropdownMenu([dbc.DropdownMenuItem("Thermo Xcalibur"),
                                                           dbc.DropdownMenuItem("Agilent MassHunter")],
@@ -382,7 +386,7 @@ def serve_layout():
 
                                 # Button and field for selecting a sample metadata file
                                 html.Div([
-                                    dbc.Label("Sample Metadata (.csv)"),
+                                    dbc.Label("Sample metadata (.csv)"),
                                     dbc.InputGroup([
                                         dbc.Input(id="metadata-upload-text-field",
                                                   placeholder="No file selected"),
@@ -397,7 +401,7 @@ def serve_layout():
 
                                 # Button and field for selecting the data acquisition directory
                                 html.Div([
-                                    dbc.Label("Data Acquisition Directory"),
+                                    dbc.Label("Path for data acquisition"),
                                     dbc.InputGroup([
                                         dbc.Input(placeholder="No file selected",
                                                   id="data-acquisition-folder-text-field"),
@@ -412,7 +416,228 @@ def serve_layout():
                                 html.Div([
                                     dbc.Button("Start monitoring this run", style={"line-height": "1.75"}, color="primary"),
                                 ], className="d-grid gap-2")
+                            ]),
+                        ]),
 
+                        # TODO: Modal/dialog for MS-AutoQC settings
+                        dbc.Modal(id="settings-modal", size="lg", centered=True, is_open=False, scrollable=True, children=[
+                            dbc.ModalHeader(dbc.ModalTitle(children="Settings"), close_button=True),
+                            dbc.ModalBody(id="settings-modal-body", children=[
+
+                                # Tabbed interface
+                                dbc.Tabs(children=[
+
+                                    # General settings
+                                    dbc.Tab(label="General", children=[
+
+                                        # Google Drive cloud storage
+                                        html.Br(),
+                                        dbc.Label("Cloud sync"),
+                                        html.Br(),
+                                        dbc.Button("Sync with Google Drive", color="dark", id="google-drive-sync-button"),
+                                        html.Br(),
+                                        dbc.FormText("This will allow you to monitor your instrument runs on other devices."),
+                                        html.Br(), html.Br(),
+
+                                        # Google Drive sharing
+                                        dbc.Label("Add new users"),
+                                        html.Br(),
+                                        dbc.InputGroup([
+                                            dbc.Input(placeholder="example@gmail.com",
+                                                      id="add-user-text-field"),
+                                            dbc.Button("Add user", color="dark",
+                                                       id="add-user-button", n_clicks=0),
+                                        ]),
+                                        dbc.FormText(
+                                            "Adding new users grants full read-and-write access to MS-AutoQC."),
+                                        html.Br(),
+
+                                        # Table of registered instruments
+                                        dbc.Table(),
+                                    ]),
+
+                                    # Notification settings
+                                    dbc.Tab(label="Notifications", children=[
+
+                                        # Slack notifications
+                                        html.Br(),
+                                        dbc.Label("Slack notifications"),
+                                        html.Br(),
+                                        dbc.Button("Sign in with Slack", color="dark",
+                                                   id="slack-sync-button"),
+                                        html.Br(),
+                                        dbc.FormText(
+                                            "This will allow you to be notified of QC fails and warnings via Slack."),
+                                        html.Br(), html.Br(),
+
+                                        # Channel for Slack notifications
+                                        dbc.Label("Slack channels"),
+                                        html.Br(),
+                                        dbc.InputGroup([
+                                            dbc.Input(placeholder="#my-slack-channel",
+                                                      id="add-slack-channel-text-field"),
+                                            dbc.Button("Register channel", color="dark",
+                                                       id="add-slack-channel-button", n_clicks=0),
+                                        ]),
+                                        dbc.FormText("Please enter the name of the Slack channel for MS-AutoQC Bot to join."),
+                                        html.Br(), html.Br(),
+
+                                        # Email notifications
+                                        dbc.Label("Email notifications"),
+                                        html.Br(),
+                                        dbc.InputGroup([
+                                            dbc.Input(placeholder="name@example.com",
+                                                      id="add-email-text-field"),
+                                            dbc.Button("Register email", color="dark",
+                                                       id="add-email-button", n_clicks=0),
+                                        ]),
+                                        dbc.FormText(
+                                            "Please enter a valid email address to register for email notifications."),
+                                        html.Br(),
+
+                                        # Table of registered users
+                                        dbc.Table()
+
+                                    ]),
+
+                                    # Internal standards
+                                    dbc.Tab(label="Internal standards", children=[
+
+                                        html.Br(),
+                                        html.Div([
+                                            dbc.Label("Select chromatography and polarity to modify"),
+                                            html.Div(className="parent-container", children=[
+                                                # Select chromatography
+                                                html.Div(className="child-container", children=[
+                                                    dbc.Select(id="select-istd-chromatography-dropdown", options=[
+                                                        {"label": "HILIC", "value": "HILIC"},
+                                                        {"label": "C18", "value": "C18"},
+                                                        {"label": "Lipids", "value": "Lipids", "disabled": True},
+                                                    ], placeholder="No chromatography selected"),
+                                                ]),
+
+                                                # Select polarity
+                                                html.Div(className="child-container", children=[
+                                                    dbc.Select(id="select-istd-polarity-dropdown", options=[
+                                                        {"label": "Positive Mode", "value": "Positive Mode"},
+                                                        {"label": "Negative Mode", "value": "Negative Mode"},
+                                                    ], placeholder="No polarity selected"),
+                                                ]),
+                                            ]),
+                                        ]),
+
+                                        html.Br(), html.Br(), html.Br(),
+
+                                        html.Div([
+                                            dbc.Label("Add internal standards (.msp format)"),
+                                            dbc.InputGroup([
+                                                dbc.Input(placeholder="No MSP file selected",
+                                                          id="add-istd-msp-text-field"),
+                                                dbc.Button("Browse Files", color="dark",
+                                                           id="add-istd-msp-button", n_clicks=0),
+                                            ]),
+                                            dbc.FormText(
+                                                "Please ensure that each internal standard has a name, m/z, RT, and MS/MS spectrum."),
+                                        ]),
+
+                                        html.Br(),
+
+                                        html.Div([
+                                            dbc.Label("Add internal standards (.csv format)"),
+                                            dbc.InputGroup([
+                                                dbc.Input(placeholder="No CSV file selected",
+                                                          id="add-istd-csv-text-field"),
+                                                dbc.Button("Browse Files", color="dark",
+                                                           id="add-istd-csv-button", n_clicks=0),
+                                            ]),
+                                            dbc.FormText(
+                                                "Please ensure you have the following columns: name, m/z, RT, and spectrum."),
+                                        ]),
+
+                                        dbc.Table(),
+
+                                    ]),
+
+                                    # Biological standards
+                                    dbc.Tab(label="Biological standards", children=[
+
+                                        html.Br(),
+
+                                        html.Div([
+                                            dbc.Label("Select biological standard"),
+                                            dbc.InputGroup([
+                                                dbc.Select(id="select-bio-standard-dropdown", options=[
+                                                    {"label": "Human urine", "value": "Urine"},
+                                                    {"label": "Bovine liver", "value": "Liver"},
+                                                ], placeholder="No biological standard selected"),
+                                                dbc.Button("Remove", color="dark",
+                                                           id="remove-bio-standard", n_clicks=0),
+                                            ]),
+                                        ]),
+
+                                        html.Br(),
+
+                                        html.Div([
+                                            dbc.Label("Add new biological standard"),
+                                            dbc.InputGroup([
+                                                dbc.Input(id="add-bio-standard-text-field",
+                                                          placeholder="Name of biological standard to add"),
+                                                dbc.Button("Add", color="dark",
+                                                           id="add-bio-standard-button", n_clicks=0),
+                                            ]),
+                                            dbc.FormText("Example: Human urine, bovine liver, bacterial supernatant"),
+                                        ]),
+
+                                        html.Br(),
+
+                                        html.Div([
+                                            dbc.Label("Select chromatography and polarity to modify"),
+                                            html.Div(className="parent-container", children=[
+                                                # Select chromatography
+                                                html.Div(className="child-container", children=[
+                                                    dbc.Select(id="select-bio-chromatography-dropdown", options=[
+                                                        {"label": "HILIC", "value": "HILIC"},
+                                                        {"label": "C18", "value": "C18"},
+                                                        {"label": "Lipids", "value": "Lipids", "disabled": True},
+                                                    ], placeholder="No chromatography selected"),
+                                                ]),
+
+                                                # Select polarity
+                                                html.Div(className="child-container", children=[
+                                                    dbc.Select(id="select-bio-polarity-dropdown", options=[
+                                                        {"label": "Positive Mode", "value": "Positive Mode"},
+                                                        {"label": "Negative Mode", "value": "Negative Mode"},
+                                                    ], placeholder="No polarity selected"),
+                                                ]),
+                                            ]),
+                                        ]),
+
+                                        html.Br(), html.Br(), html.Br(),
+
+                                        html.Div([
+                                            dbc.Label("Edit targeted features (.msp format)"),
+                                            html.Br(),
+                                            dbc.InputGroup([
+                                                dbc.Input(placeholder="No MSP file selected",
+                                                          id="add-bio-msp-text-field"),
+                                                dbc.Button("Browse Files", color="dark",
+                                                           id="add-bio-msp-button", n_clicks=0),
+                                            ]),
+                                            dbc.FormText(
+                                                "Please ensure that each feature has a name, m/z, RT, and MS/MS spectrum."),
+                                        ]),
+
+                                        html.Br(),
+
+                                        dbc.Table(),
+
+                                    ]),
+
+                                    # MS-DIAL parameters
+                                    dbc.Tab(label="MS-DIAL parameters", children=[
+
+                                    ]),
+                                ])
                             ])
                         ]),
                     ]),
@@ -989,8 +1214,19 @@ def toggle_new_run_modal(button_click, instrument):
     Toggles modal for setting up autoQC monitoring for a new instrument run
     """
 
-    title = "Setup AutoQC Monitoring on " + instrument
+    title = "Setup QC Monitoring on " + instrument
     return True, title
+
+
+@app.callback(Output("settings-modal", "is_open"),
+              Input("settings-button", "n_clicks"), prevent_initial_call=True)
+def toggle_settings_modal(button_click):
+
+    """
+    Toggles global settings modal
+    """
+
+    return True
 
 
 if __name__ == "__main__":
