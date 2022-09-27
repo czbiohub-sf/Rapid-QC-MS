@@ -3,6 +3,7 @@ import logging
 from datetime import datetime, timedelta
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+import hashlib
 
 class DataAcquisitionEventHandler(FileSystemEventHandler):
 
@@ -14,7 +15,7 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
         self.observer = observer
         self.filenames = filenames
 
-    def on_created(self, event):
+    def on_modified(self, event):
 
         """
         Listen for data file creation
@@ -25,6 +26,9 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
 
         # Check if file created is in the sequence
         if not event.is_directory and filename in self.filenames:
+
+            # TODO: Get MD5 checksum and write to database to detect when file is done acquiring
+            print(get_md5(event.src_path))
 
             # TODO: Execute QC processing
             print("Acquisition completed")
@@ -55,3 +59,18 @@ def start_listener(path, filenames):
     finally:
         observer.stop()
         observer.join()
+
+
+def get_md5(filename):
+
+    """
+    Returns MD5 checksum of a file
+    """
+
+    hash_md5 = hashlib.md5()
+
+    with open(filename, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+
+    return hash_md5.hexdigest()
