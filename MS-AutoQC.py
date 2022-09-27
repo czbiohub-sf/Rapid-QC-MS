@@ -342,9 +342,9 @@ def serve_layout():
                         ]),
 
                         # Modal/dialog for starting an instrument run listener
-                        dbc.Modal(id="setup-new-run-modal", size="lg", centered=True, is_open=False, scrollable=True, children=[
+                        dbc.Modal(id="setup-new-run-modal", size="md", centered=True, is_open=False, scrollable=True, children=[
                             dbc.ModalHeader(dbc.ModalTitle(id="setup-new-run-modal-title", children="Monitor New Instrument Run"), close_button=True),
-                            dbc.ModalBody(id="setup-new-run-modal-body", children=[
+                            dbc.ModalBody(id="setup-new-run-modal-body", className="modal-styles", children=[
 
                                 # Text field for entering your run ID
                                 html.Div([
@@ -373,10 +373,10 @@ def serve_layout():
                                     dbc.InputGroup([
                                         dbc.DropdownMenu([dbc.DropdownMenuItem("Thermo Xcalibur"),
                                                           dbc.DropdownMenuItem("Agilent MassHunter")],
-                                                         label="Vendor Software", color="dark"),
+                                                         label="Vendor", color="secondary"),
                                         dbc.Input(id="sequence-upload-text-field",
                                                   placeholder="No file selected"),
-                                        dbc.Button("Browse Files", color="dark",
+                                        dbc.Button("Browse Files", color="secondary",
                                                    id="sequence-upload-button", n_clicks=0),
                                     ]),
                                     dbc.FormText("Please ensure you have selected the correct vendor software for this sequence."),
@@ -390,7 +390,7 @@ def serve_layout():
                                     dbc.InputGroup([
                                         dbc.Input(id="metadata-upload-text-field",
                                                   placeholder="No file selected"),
-                                        dbc.Button("Browse Files", color="dark",
+                                        dbc.Button("Browse Files", color="secondary",
                                                    id="metadata-upload-button", n_clicks=0),
                                     ]),
                                     dbc.FormText("Please ensure you have the following columns: " +
@@ -405,7 +405,7 @@ def serve_layout():
                                     dbc.InputGroup([
                                         dbc.Input(placeholder="No file selected",
                                                   id="data-acquisition-folder-text-field"),
-                                        dbc.Button("Select Folder", color="dark",
+                                        dbc.Button("Select Folder", color="secondary",
                                                    id="data-acquisition-folder-button", n_clicks=0),
                                     ]),
                                     dbc.FormText("Please select the folder to which incoming data files will be saved."),
@@ -420,7 +420,7 @@ def serve_layout():
                         ]),
 
                         # TODO: Modal/dialog for MS-AutoQC settings
-                        dbc.Modal(id="settings-modal", size="lg", centered=True, is_open=False, scrollable=True, children=[
+                        dbc.Modal(id="settings-modal", size="lg", centered=True, is_open=True, scrollable=True, children=[
                             dbc.ModalHeader(dbc.ModalTitle(children="Settings"), close_button=True),
                             dbc.ModalBody(id="settings-modal-body", children=[
 
@@ -428,13 +428,14 @@ def serve_layout():
                                 dbc.Tabs(children=[
 
                                     # General settings
-                                    dbc.Tab(label="General", children=[
+                                    dbc.Tab(label="General", className="modal-styles", children=[
 
                                         # Google Drive cloud storage
                                         html.Br(),
                                         dbc.Label("Cloud sync"),
                                         html.Br(),
-                                        dbc.Button("Sync with Google Drive", color="dark", id="google-drive-sync-button"),
+                                        dbc.Button("Sync with Google Drive", id="google-drive-sync-button",
+                                                   color="primary", outline=False),
                                         html.Br(),
                                         dbc.FormText("This will allow you to monitor your instrument runs on other devices."),
                                         html.Br(), html.Br(),
@@ -445,7 +446,7 @@ def serve_layout():
                                         dbc.InputGroup([
                                             dbc.Input(placeholder="example@gmail.com",
                                                       id="add-user-text-field"),
-                                            dbc.Button("Add user", color="dark",
+                                            dbc.Button("Add user", color="primary", outline=True,
                                                        id="add-user-button", n_clicks=0),
                                         ]),
                                         dbc.FormText(
@@ -457,13 +458,13 @@ def serve_layout():
                                     ]),
 
                                     # Notification settings
-                                    dbc.Tab(label="Notifications", children=[
+                                    dbc.Tab(label="Notifications", className="modal-styles", children=[
 
                                         # Slack notifications
                                         html.Br(),
                                         dbc.Label("Slack notifications"),
                                         html.Br(),
-                                        dbc.Button("Sign in with Slack", color="dark",
+                                        dbc.Button("Sign in with Slack", color="primary",
                                                    id="slack-sync-button"),
                                         html.Br(),
                                         dbc.FormText(
@@ -476,7 +477,7 @@ def serve_layout():
                                         dbc.InputGroup([
                                             dbc.Input(placeholder="#my-slack-channel",
                                                       id="add-slack-channel-text-field"),
-                                            dbc.Button("Register channel", color="dark",
+                                            dbc.Button("Register channel", color="primary", outline=True,
                                                        id="add-slack-channel-button", n_clicks=0),
                                         ]),
                                         dbc.FormText("Please enter the name of the Slack channel for MS-AutoQC Bot to join."),
@@ -488,7 +489,7 @@ def serve_layout():
                                         dbc.InputGroup([
                                             dbc.Input(placeholder="name@example.com",
                                                       id="add-email-text-field"),
-                                            dbc.Button("Register email", color="dark",
+                                            dbc.Button("Register email", color="primary", outline=True,
                                                        id="add-email-button", n_clicks=0),
                                         ]),
                                         dbc.FormText(
@@ -501,7 +502,7 @@ def serve_layout():
                                     ]),
 
                                     # Internal standards
-                                    dbc.Tab(label="Internal standards", children=[
+                                    dbc.Tab(label="Internal standards", className="modal-styles", children=[
 
                                         html.Br(),
                                         html.Div([
@@ -533,7 +534,7 @@ def serve_layout():
                                             dbc.InputGroup([
                                                 dbc.Input(placeholder="No MSP file selected",
                                                           id="add-istd-msp-text-field"),
-                                                dbc.Button("Browse Files", color="dark",
+                                                dbc.Button("Browse Files", color="secondary",
                                                            id="add-istd-msp-button", n_clicks=0),
                                             ]),
                                             dbc.FormText(
@@ -547,11 +548,19 @@ def serve_layout():
                                             dbc.InputGroup([
                                                 dbc.Input(placeholder="No CSV file selected",
                                                           id="add-istd-csv-text-field"),
-                                                dbc.Button("Browse Files", color="dark",
+                                                dbc.Button("Browse Files", color="secondary",
                                                            id="add-istd-csv-button", n_clicks=0),
                                             ]),
                                             dbc.FormText(
                                                 "Please ensure you have the following columns: name, m/z, RT, and spectrum."),
+                                        ]),
+
+                                        html.Br(),
+
+                                        html.Div([
+                                            html.Div([
+                                                dbc.Button("Save changes", style={"line-height": "1.75"}, color="primary"),
+                                            ], className="d-grid gap-2 col-12 mx-auto"),
                                         ]),
 
                                         dbc.Table(),
@@ -559,7 +568,7 @@ def serve_layout():
                                     ]),
 
                                     # Biological standards
-                                    dbc.Tab(label="Biological standards", children=[
+                                    dbc.Tab(label="Biological standards", className="modal-styles", children=[
 
                                         html.Br(),
 
@@ -570,11 +579,10 @@ def serve_layout():
                                                     {"label": "Human urine", "value": "Urine"},
                                                     {"label": "Bovine liver", "value": "Liver"},
                                                 ], placeholder="No biological standard selected"),
-                                                dbc.Button("Remove", color="dark",
+                                                dbc.Button("Remove", color="danger", outline=True,
                                                            id="remove-bio-standard", n_clicks=0),
                                             ]),
                                         ]),
-
                                         html.Br(),
 
                                         html.Div([
@@ -582,12 +590,11 @@ def serve_layout():
                                             dbc.InputGroup([
                                                 dbc.Input(id="add-bio-standard-text-field",
                                                           placeholder="Name of biological standard to add"),
-                                                dbc.Button("Add", color="dark",
+                                                dbc.Button("Add", color="primary", outline=True,
                                                            id="add-bio-standard-button", n_clicks=0),
                                             ]),
                                             dbc.FormText("Example: Human urine, bovine liver, bacterial supernatant"),
                                         ]),
-
                                         html.Br(),
 
                                         html.Div([
@@ -608,11 +615,11 @@ def serve_layout():
                                                         {"label": "Positive Mode", "value": "Positive Mode"},
                                                         {"label": "Negative Mode", "value": "Negative Mode"},
                                                     ], placeholder="No polarity selected"),
+                                                    html.Br(),
                                                 ]),
                                             ]),
                                         ]),
-
-                                        html.Br(), html.Br(), html.Br(),
+                                        html.Br(),
 
                                         html.Div([
                                             dbc.Label("Edit targeted features (.msp format)"),
@@ -620,7 +627,7 @@ def serve_layout():
                                             dbc.InputGroup([
                                                 dbc.Input(placeholder="No MSP file selected",
                                                           id="add-bio-msp-text-field"),
-                                                dbc.Button("Browse Files", color="dark",
+                                                dbc.Button("Browse Files", color="secondary",
                                                            id="add-bio-msp-button", n_clicks=0),
                                             ]),
                                             dbc.FormText(
@@ -629,13 +636,201 @@ def serve_layout():
 
                                         html.Br(),
 
-                                        dbc.Table(),
+                                        html.Div([
+                                            html.Div([
+                                                dbc.Button("Save changes", style={"line-height": "1.75"},
+                                                           color="primary"),
+                                            ], className="d-grid gap-2 col-12 mx-auto"),
+                                        ]),
 
+                                        dbc.Table(),
                                     ]),
 
                                     # MS-DIAL parameters
-                                    dbc.Tab(label="MS-DIAL parameters", children=[
+                                    dbc.Tab(label="MS-DIAL parameters", className="modal-styles", children=[
 
+                                        html.Br(),
+
+                                        # Data collection parameters
+                                        dbc.Label("Data collection parameters", style={"font-weight": "bold"}),
+                                        html.Br(),
+
+                                        html.Div(className="parent-container", children=[
+                                            # Retention time begin
+                                            html.Div(className="child-container", children=[
+                                                dbc.Label("Retention time begin"),
+                                                dbc.Input(id="retention-time-begin", placeholder="0"),
+                                            ]),
+                                            # Retention time end
+                                            html.Div(className="child-container", children=[
+                                                dbc.Label("Retention time end"),
+                                                dbc.Input(id="retention-time-end", placeholder="100"),
+                                                html.Br(),
+                                            ]),
+                                        ]),
+
+                                        html.Div(className="parent-container", children=[
+                                            # Mass range begin
+                                            html.Div(className="child-container", children=[
+                                                dbc.Label("Mass range begin"),
+                                                dbc.Input(id="mass-range-begin", placeholder="0"),
+                                            ]),
+                                            # Mass range end
+                                            html.Div(className="child-container", children=[
+                                                dbc.Label("Mass range end"),
+                                                dbc.Input(id="mass-range-end", placeholder="2000"),
+                                                html.Br(),
+                                            ]),
+                                        ]),
+
+                                        # Centroid parameters
+                                        dbc.Label("Centroid parameters", style={"font-weight": "bold"}),
+                                        html.Br(),
+
+                                        html.Div(className="parent-container", children=[
+                                            # MS1 centroid tolerance
+                                            html.Div(className="child-container", children=[
+                                                dbc.Label("MS1 centroid tolerance"),
+                                                dbc.Input(id="ms1-centroid-tolerance", placeholder="0.008"),
+                                            ]),
+                                            # MS2 centroid tolerance
+                                            html.Div(className="child-container", children=[
+                                                dbc.Label("MS2 centroid tolerance"),
+                                                dbc.Input(id="ms2-centroid-tolerance", placeholder="0.01"),
+                                                html.Br(),
+                                            ]),
+                                        ]),
+
+                                        # Peak detection parameters
+                                        dbc.Label("Peak detection parameters", style={"font-weight": "bold"}),
+                                        html.Br(),
+
+                                        dbc.Label("Smoothing method"),
+                                        dbc.Select(id="select-smoothing-dropdown", options=[
+                                            {"label": "Simple moving average",
+                                             "value": "Simple moving average"},
+                                            {"label": "Linear weighted moving average",
+                                             "value": "Linear weighted moving average"},
+                                            {"label": "Savitzky-Golay filter",
+                                             "value": "Savitzky-Golay filter"},
+                                            {"label": "Binomial filter",
+                                             "value": "Binomial filter"},
+                                        ], placeholder="Linear weighted moving average"),
+                                        html.Br(),
+
+                                        html.Div(className="parent-container", children=[
+                                            # Smoothing level
+                                            html.Div(className="child-container", children=[
+                                                dbc.Label("Smoothing level"),
+                                                dbc.Input(id="smoothing-level", placeholder="3"),
+                                            ]),
+                                            # Mass slice width
+                                            html.Div(className="child-container", children=[
+                                                dbc.Label("Mass slice width"),
+                                                dbc.Input(id="mass-slice-width", placeholder="0.1"),
+                                                html.Br(),
+                                            ]),
+                                        ]),
+                                        html.Br(),
+
+                                        html.Div(className="parent-container", children=[
+                                            # Minimum peak width
+                                            html.Div(className="child-container", children=[
+                                                dbc.Label("Minimum peak width"),
+                                                dbc.Input(id="min-peak-width", placeholder="4"),
+                                            ]),
+                                            # Minimum peak height
+                                            html.Div(className="child-container", children=[
+                                                dbc.Label("Minimum peak height"),
+                                                dbc.Input(id="min-peak-height", placeholder="50000"),
+                                                html.Br(),
+                                            ]),
+                                        ]),
+                                        html.Br(),
+
+                                        # Identification parameters
+                                        dbc.Label("Identification parameters", style={"font-weight": "bold"}),
+                                        html.Br(),
+
+                                        html.Div(className="parent-container", children=[
+                                            # Retention time tolerance
+                                            html.Div(className="child-container", children=[
+                                                dbc.Label("Post-identification retention time tolerance"),
+                                                dbc.Input(id="post-id-rt-tolerance", placeholder="0.3"),
+                                            ]),
+                                            # Accurate mass tolerance
+                                            html.Div(className="child-container", children=[
+                                                dbc.Label("Post-identification accurate MS1 tolerance"),
+                                                dbc.Input(id="post-id-mz-tolerance", placeholder="0.008"),
+                                                html.Br(),
+                                            ]),
+                                        ]),
+                                        html.Br(),
+
+                                        html.Div([
+                                            dbc.Label("Identification score cutoff"),
+                                            dbc.Input(id="post-id-score-cutoff", placeholder="85"),
+                                        ]),
+                                        html.Br(),
+
+                                        # Alignment parameters
+                                        dbc.Label("Alignment parameters", style={"font-weight": "bold"}),
+                                        html.Br(),
+
+                                        html.Div(className="parent-container", children=[
+                                            # Retention time tolerance
+                                            html.Div(className="child-container", children=[
+                                                dbc.Label("Alignment retention time tolerance"),
+                                                dbc.Input(id="alignment-rt-tolerance", placeholder="0.05"),
+                                            ]),
+                                            # Accurate mass tolerance
+                                            html.Div(className="child-container", children=[
+                                                dbc.Label("Alignment MS1 tolerance"),
+                                                dbc.Input(id="alignment-mz-tolerance", placeholder="0.008"),
+                                                html.Br(),
+                                            ]),
+                                        ]),
+                                        html.Br(),
+
+                                        html.Div(className="parent-container", children=[
+                                            # Retention time factor
+                                            html.Div(className="child-container", children=[
+                                                dbc.Label("Alignment retention time factor"),
+                                                dbc.Input(id="alignment-rt-factor", placeholder="0.5"),
+                                            ]),
+                                            # Accurate mass factor
+                                            html.Div(className="child-container", children=[
+                                                dbc.Label("Alignment MS1 factor"),
+                                                dbc.Input(id="alignment-mz-factor", placeholder="0.5"),
+                                                html.Br(),
+                                            ]),
+                                        ]),
+                                        html.Br(),
+
+                                        html.Div(className="parent-container", children=[
+                                            # Peak count filter
+                                            html.Div(className="child-container", children=[
+                                                dbc.Label("Peak count filter"),
+                                                dbc.Input(id="peak-count-filter", placeholder="0"),
+                                            ]),
+                                            # QC at least filter
+                                            html.Div(className="child-container", children=[
+                                                dbc.Label("QC at least filter"),
+                                                dbc.Select(id="qc-at-least-filter-dropdown", options=[
+                                                    {"label": "True", "value": "True"},
+                                                    {"label": "False", "value": "False"},
+                                                ], placeholder="True"),
+                                                html.Br(),
+                                            ]),
+                                        ]),
+                                        html.Br(), html.Br(),
+
+                                        html.Div([
+                                            html.Div([
+                                                dbc.Button("Save changes", style={"line-height": "1.75"}, color="primary"),
+                                                dbc.Button("Reset default settings", style={"line-height": "1.75"}, color="secondary"),
+                                            ], className="d-grid gap-2 col-12 mx-auto"),
+                                        ]),
                                     ]),
                                 ])
                             ])

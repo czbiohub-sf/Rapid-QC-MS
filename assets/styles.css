@@ -114,7 +114,13 @@ h2 {
     width: 100%;
 }
 
+/* Modal styles */
 .child-container {
     float: left;
     width: 50%;
+}
+
+.modal-styles {
+    padding-left: 1.5vw;
+    padding-right: 1.5vw;
 }
