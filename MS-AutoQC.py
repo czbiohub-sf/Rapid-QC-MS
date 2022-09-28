@@ -1,5 +1,6 @@
 import sys, webbrowser, json
 import pandas as pd
+import sqlalchemy as db
 from dash import dash, dcc, html, dash_table, Input, Output, State
 import dash_bootstrap_components as dbc
 from QCPlotGeneration import *
@@ -25,6 +26,11 @@ bootstrap_colors = {
 app = dash.Dash(__name__, external_stylesheets=[local_stylesheet, dbc.themes.BOOTSTRAP],
                 meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}])
 app.title = "MS-AutoQC"
+
+# Connect to SQLite database
+engine = db.create_engine('sqlite:///assets/QC Database.db')
+connection = engine.connect()
+db_metadata = db.MetaData(bind=engine)
 
 # Create Dash app layout
 def serve_layout():
@@ -65,19 +71,7 @@ def serve_layout():
                     dbc.Row(justify="center", children=[
 
                         # Tabs to switch between instruments
-                        dcc.Tabs(id="tabs", className="instrument-tabs", children=[
-
-                            dcc.Tab(label="Thermo QE 1", value="QE 1"),
-
-                            dcc.Tab(label="Thermo QE 2", value="QE 2"),
-
-                            dcc.Tab(label="Fusion Lumos 1", value="Lumos 1"),
-
-                            dcc.Tab(label="Fusion Lumos 2", value="Lumos 2"),
-
-                            dcc.Tab(label="Bruker timsTOF", value="timsTOF"),
-
-                        ]),
+                        dcc.Tabs(id="tabs", className="instrument-tabs"),
 
                         dbc.Col(width=12, lg=4, children=[
 
@@ -521,8 +515,10 @@ def serve_layout():
                                                          label="Vendor", color="secondary"),
                                         dbc.Input(id="sequence-upload-text-field",
                                                   placeholder="No file selected"),
-                                        dbc.Button("Browse Files", color="secondary",
-                                                   id="sequence-upload-button", n_clicks=0),
+                                        dbc.Button(dcc.Upload(
+                                            id="sequence-upload-button",
+                                            children=[html.A("Browse Files")]),
+                                            color="secondary"),
                                     ]),
                                     dbc.FormText("Please ensure you have selected the correct vendor software for this sequence."),
                                 ]),
@@ -535,8 +531,10 @@ def serve_layout():
                                     dbc.InputGroup([
                                         dbc.Input(id="metadata-upload-text-field",
                                                   placeholder="No file selected"),
-                                        dbc.Button("Browse Files", color="secondary",
-                                                   id="metadata-upload-button", n_clicks=0),
+                                        dbc.Button(dcc.Upload(
+                                            id="metadata-upload-button",
+                                            children=[html.A("Browse Files")]),
+                                            color="secondary"),
                                     ]),
                                     dbc.FormText("Please ensure you have the following columns: " +
                                                  "Sample Name, Species, Matrix, Treatment, and Conditions"),
@@ -550,8 +548,10 @@ def serve_layout():
                                     dbc.InputGroup([
                                         dbc.Input(placeholder="No file selected",
                                                   id="data-acquisition-folder-text-field"),
-                                        dbc.Button("Select Folder", color="secondary",
-                                                   id="data-acquisition-folder-button", n_clicks=0),
+                                        dbc.Button(dcc.Upload(
+                                            id="data-acquisition-folder-button",
+                                            children=[html.A("Browse Files")]),
+                                            color="secondary"),
                                     ]),
                                     dbc.FormText("Please select the folder to which incoming data files will be saved."),
                                 ]),
@@ -650,6 +650,18 @@ def serve_layout():
                                     dbc.Tab(label="Internal standards", className="modal-styles", children=[
 
                                         html.Br(),
+
+                                        html.Div([
+                                            dbc.Label("Add new chromatography method"),
+                                            dbc.InputGroup([
+                                                dbc.Input(id="add-chromatography-text-field",
+                                                          placeholder="Name of chromatography to add"),
+                                                dbc.Button("Add method", color="primary", outline=True,
+                                                           id="add-chromatography-button", n_clicks=0),
+                                            ]),
+                                            dbc.FormText("Example: HILIC, Reverse Phase, RP (30 mins)"),
+                                        ]), html.Br(),
+
                                         html.Div([
                                             dbc.Label("Select chromatography and polarity to modify"),
                                             html.Div(className="parent-container", children=[
@@ -675,12 +687,14 @@ def serve_layout():
                                         html.Br(), html.Br(), html.Br(),
 
                                         html.Div([
-                                            dbc.Label("Add internal standards (.msp format)"),
+                                            dbc.Label("Add internal standards (MSP format)"),
                                             dbc.InputGroup([
                                                 dbc.Input(placeholder="No MSP file selected",
                                                           id="add-istd-msp-text-field"),
-                                                dbc.Button("Browse Files", color="secondary",
-                                                           id="add-istd-msp-button", n_clicks=0),
+                                                dbc.Button(dcc.Upload(
+                                                    id="add-istd-msp-button",
+                                                    children=[html.A("Browse Files")]),
+                                                    color="secondary"),
                                             ]),
                                             dbc.FormText(
                                                 "Please ensure that each internal standard has a name, m/z, RT, and MS/MS spectrum."),
@@ -689,12 +703,14 @@ def serve_layout():
                                         html.Br(),
 
                                         html.Div([
-                                            dbc.Label("Add internal standards (.csv format)"),
+                                            dbc.Label("Add internal standards (CSV format)"),
                                             dbc.InputGroup([
                                                 dbc.Input(placeholder="No CSV file selected",
                                                           id="add-istd-csv-text-field"),
-                                                dbc.Button("Browse Files", color="secondary",
-                                                           id="add-istd-csv-button", n_clicks=0),
+                                                dbc.Button(dcc.Upload(
+                                                    id="add-istd-csv-button",
+                                                    children=[html.A("Browse Files")]),
+                                                    color="secondary"),
                                             ]),
                                             dbc.FormText(
                                                 "Please ensure you have the following columns: name, m/z, RT, and spectrum."),
@@ -735,7 +751,7 @@ def serve_layout():
                                             dbc.InputGroup([
                                                 dbc.Input(id="add-bio-standard-text-field",
                                                           placeholder="Name of biological standard to add"),
-                                                dbc.Button("Add", color="primary", outline=True,
+                                                dbc.Button("Add biological standard", color="primary", outline=True,
                                                            id="add-bio-standard-button", n_clicks=0),
                                             ]),
                                             dbc.FormText("Example: Human urine, bovine liver, bacterial supernatant"),
@@ -767,13 +783,32 @@ def serve_layout():
                                         html.Br(),
 
                                         html.Div([
-                                            dbc.Label("Edit targeted features (.msp format)"),
+                                            dbc.Label("Edit positive (+) mode targeted features (MSP format)"),
                                             html.Br(),
                                             dbc.InputGroup([
                                                 dbc.Input(placeholder="No MSP file selected",
-                                                          id="add-bio-msp-text-field"),
-                                                dbc.Button("Browse Files", color="secondary",
-                                                           id="add-bio-msp-button", n_clicks=0),
+                                                          id="add-pos-bio-msp-text-field"),
+                                                dbc.Button(dcc.Upload(
+                                                    id="add-pos-bio-msp-button",
+                                                    children=[html.A("Browse Files")]),
+                                                    color="secondary"),
+                                            ]),
+                                            dbc.FormText(
+                                                "Please ensure that each feature has a name, m/z, RT, and MS/MS spectrum."),
+                                        ]),
+
+                                        html.Br(),
+
+                                        html.Div([
+                                            dbc.Label("Edit negative (–) mode targeted features (MSP format)"),
+                                            html.Br(),
+                                            dbc.InputGroup([
+                                                dbc.Input(placeholder="No MSP file selected",
+                                                          id="add-neg-bio-msp-text-field"),
+                                                dbc.Button(dcc.Upload(
+                                                    id="add-neg-bio-msp-button",
+                                                    children=[html.A("Browse Files")]),
+                                                    color="secondary"),
                                             ]),
                                             dbc.FormText(
                                                 "Please ensure that each feature has a name, m/z, RT, and MS/MS spectrum."),
@@ -795,6 +830,29 @@ def serve_layout():
                                     dbc.Tab(label="MS-DIAL parameters", className="modal-styles", children=[
 
                                         html.Br(),
+
+                                        html.Div([
+                                            dbc.Label("Add new MS-DIAL configuration"),
+                                            dbc.InputGroup([
+                                                dbc.Input(id="add-msdial-configuration-text-field",
+                                                          placeholder="Name of configuration to add"),
+                                                dbc.Button("Add new config", color="primary", outline=True,
+                                                           id="add-msdial-configuration-button", n_clicks=0),
+                                            ]),
+                                            dbc.FormText("Give your custom configuration a unique name"),
+                                        ]), html.Br(),
+
+                                        # Select chromatography
+                                        html.Div(children=[
+                                            dbc.Label("Select configuration to edit"),
+                                            dbc.InputGroup([
+                                                dbc.Select(id="msdial-configs-dropdown", options=[
+                                                    {"label": "Default configuration", "value": "default"},
+                                                ], placeholder="Default configuration"),
+                                                dbc.Button("Remove", color="danger", outline=True,
+                                                           id="remove-config-button", n_clicks=0),
+                                            ])
+                                        ]), html.Br(),
 
                                         # Data collection parameters
                                         dbc.Label("Data collection parameters", style={"font-weight": "bold"}),
@@ -1010,15 +1068,27 @@ def serve_layout():
 app.layout = serve_layout
 
 
-@app.callback(Output("tabs", "value"),
+@app.callback(Output("tabs", "children"),
+              Output("tabs", "value"),
               Input("url", "data"))
 def get_instrument_tabs(url):
 
     """
-    TODO: Retrieves all instruments on a user installation of MS-AutoQC
+    Retrieves all instruments on a user installation of MS-AutoQC
     """
 
-    return "QE 1"
+    # Get instruments table as DataFrame
+    df_instruments = pd.read_sql("SELECT * FROM instruments", engine)
+
+    # Get list of instruments
+    instrument_list = df_instruments["name"].astype(str).tolist()
+
+    # Create tabs for each instrument
+    instrument_tabs = []
+    for instrument in instrument_list:
+        instrument_tabs.append(dcc.Tab(label=instrument, value=instrument))
+
+    return instrument_tabs, instrument_list[0]
 
 
 @app.callback(Output("instrument-run-table", "active_cell"),
