@@ -1,9 +1,11 @@
-import io, sys, base64, webbrowser, json
+import io, sys, subprocess, time
+import base64, webbrowser, json
 import pandas as pd
 import sqlalchemy as sa
 from dash import dash, dcc, html, dash_table, Input, Output, State
 import dash_bootstrap_components as dbc
 from QCPlotGeneration import *
+from AcquisitionListener import *
 import DatabaseFunctions as db
 import AutoQCProcessing as qc
 
@@ -552,16 +554,12 @@ def serve_layout():
 
                                 # Button and field for selecting the data acquisition directory
                                 html.Div([
-                                    dbc.Label("Path for data acquisition"),
+                                    dbc.Label("Data file directory"),
                                     dbc.InputGroup([
                                         dbc.Input(placeholder="No file selected",
                                                   id="data-acquisition-folder-path"),
-                                        dbc.Button(dcc.Upload(
-                                            id="data-acquisition-folder-button",
-                                            children=[html.A("Browse Files")]),
-                                            color="secondary"),
                                     ]),
-                                    dbc.FormText("Please select the folder to which incoming data files will be saved."),
+                                    dbc.FormText("Please type the folder path to which incoming data files will be saved."),
                                 ]),
 
                                 html.Br(),
@@ -1079,7 +1077,7 @@ def serve_layout():
 
             # Storage of DataFrames for monitoring a new run
             dcc.Store(id="new-sequence"),
-            dcc.Store(id="new-metadata")
+            dcc.Store(id="new-metadata"),
         ])
     ])
 
@@ -1096,14 +1094,7 @@ def get_instrument_tabs(instruments):
     Retrieves all instruments on a user installation of MS-AutoQC
     """
 
-    # Connect to SQLite database
-    engine = sa.create_engine('sqlite:///assets/QC Database.db')
-
-    # Get instruments table as DataFrame
-    df_instruments = pd.read_sql("SELECT * FROM instruments", engine)
-
-    # Get list of instruments
-    instrument_list = df_instruments["name"].astype(str).tolist()
+    instrument_list = db.get_instruments()
 
     # Create tabs for each instrument
     instrument_tabs = []
@@ -1747,17 +1738,20 @@ def capture_uploaded_metadata(contents, filename):
               State("data-acquisition-folder-path", "value"),
               State("start-run-msdial-configs-dropdown", "value"), prevent_initial_call=True)
 def start_monitoring_run(button_clicks, run_id, instrument_id, chromatography, sequence, metadata,
-                         data_acquisition_folder, msdial_config_id):
+                         acquisition_path, msdial_config_id):
 
     """
     This callback initiates the following:
     1. Writing a new instrument run to the database
     2. Initializing run monitoring at the given directory
-    3. Adding UI elements for a newly initiated run monitoring session
     """
 
     # Write a new instrument run to the database
     db.insert_new_run(run_id, instrument_id, chromatography, sequence, metadata, msdial_config_id)
+
+    # Initialize run monitoring at the given directory
+    filenames = qc.get_filenames_from_sequence(sequence)
+    listener = subprocess.Popen(["python3", "AcquisitionListener.py", acquisition_path, str(filenames)])
 
     return True
 
@@ -1772,4 +1766,4 @@ if __name__ == "__main__":
     #     webbrowser.get("chrome").open("http://127.0.0.1:8050/", new=1)
 
     # Start Dash app
-    app.run_server(debug=True)
+    app.run_server(threaded=False, debug=False)
