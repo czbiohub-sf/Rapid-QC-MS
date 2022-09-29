@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import hashlib
+import sqlalchemy as db
 
 class DataAcquisitionEventHandler(FileSystemEventHandler):
 
@@ -11,9 +12,13 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
     Event handler that alerts when the data file has completed sample acquisition
     """
 
-    def __init__(self, observer, filenames):
+    def __init__(self, observer, instrument_id, run_id, filenames):
+
         self.observer = observer
+        self.instrument_id = instrument_id
+        self.run_id = run_id
         self.filenames = filenames
+
 
     def on_modified(self, event):
 
@@ -27,8 +32,8 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
         # Check if file created is in the sequence
         if not event.is_directory and filename in self.filenames:
 
-            # TODO: Get MD5 checksum and write to database to detect when file is done acquiring
-            print(get_md5(event.src_path))
+            # Get MD5 checksum and write to database to detect when file is done acquiring
+            md5_checksum = get_md5(event.src_path)
 
             # TODO: Execute QC processing
             print("Acquisition completed")
@@ -36,6 +41,26 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
             # Terminate listener when the last data file is acquired
             if filename == self.filenames[-1]:
                 self.observer.stop()
+
+
+    def watch_file(self, filename, check_interval=300):
+
+        """
+        Returns True if MD5 checksum on file matches the MD5 checksum written to the database 5 minutes ago.
+        Effectively determines whether sample acquisition has been completed.
+        """
+
+        # TODO: Update this function
+        now = time.time()
+
+        while time.time() <= last_time:
+            if os.path.exists(filename):
+                return True
+            else:
+                # Wait for check interval seconds, then check again.
+                time.sleep(check_interval)
+
+        return False
 
 
 def start_listener(path, filenames):

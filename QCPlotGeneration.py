@@ -16,8 +16,8 @@ GoogleAuth.DEFAULT_SETTINGS['client_config_file'] = current_directory + "/assets
 
 # Google Drive ID's (from URL) for QE 1 and QE 2 folders
 drive_ids = {
-    "QE 1": "1-0y1jUARBM1DwExjrhyl0WF3KRLFWHom",
-    "QE 2": "1-9unZeOHyTPYZScox5Wv9X0CxTWIE-Ih",
+    "Thermo QE 1": "1-0y1jUARBM1DwExjrhyl0WF3KRLFWHom",
+    "Thermo QE 2": "1-9unZeOHyTPYZScox5Wv9X0CxTWIE-Ih",
 }
 
 standards_dict = {

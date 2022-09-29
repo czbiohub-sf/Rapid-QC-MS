@@ -1,9 +1,11 @@
-import sys, webbrowser, json
+import io, sys, base64, webbrowser, json
 import pandas as pd
-import sqlalchemy as db
+import sqlalchemy as sa
 from dash import dash, dcc, html, dash_table, Input, Output, State
 import dash_bootstrap_components as dbc
 from QCPlotGeneration import *
+import DatabaseFunctions as db
+import AutoQCProcessing as qc
 
 local_stylesheet = {
     "href": "https://fonts.googleapis.com/css2?"
@@ -26,11 +28,6 @@ bootstrap_colors = {
 app = dash.Dash(__name__, external_stylesheets=[local_stylesheet, dbc.themes.BOOTSTRAP],
                 meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}])
 app.title = "MS-AutoQC"
-
-# Connect to SQLite database
-engine = db.create_engine('sqlite:///assets/QC Database.db')
-connection = engine.connect()
-db_metadata = db.MetaData(bind=engine)
 
 # Create Dash app layout
 def serve_layout():
@@ -488,7 +485,7 @@ def serve_layout():
                                 # Text field for entering your run ID
                                 html.Div([
                                     dbc.Label("Instrument run ID"),
-                                    dbc.Input(placeholder="NEW_RUN_001", type="text"),
+                                    dbc.Input(id="instrument-run-id", placeholder="NEW_RUN_001", type="text"),
                                     dbc.FormText("Please enter a unique ID for this run."),
                                 ]),
 
@@ -506,14 +503,25 @@ def serve_layout():
 
                                 html.Br(),
 
+                                # Select MS-DIAL configuration
+                                html.Div(children=[
+                                    dbc.Label("Select MS-DIAL processing configuration"),
+                                    dbc.Select(id="start-run-msdial-configs-dropdown", options=[
+                                        {"label": "Default configuration", "value": 0},
+                                    ], placeholder="Default configuration"),
+                                ]),
+
+                                html.Br(),
+
                                 # Button and field for selecting a sequence file
                                 html.Div([
                                     dbc.Label("Acquisition sequence (.csv)"),
                                     dbc.InputGroup([
-                                        dbc.DropdownMenu([dbc.DropdownMenuItem("Thermo Xcalibur"),
-                                                          dbc.DropdownMenuItem("Agilent MassHunter")],
-                                                         label="Vendor", color="secondary"),
-                                        dbc.Input(id="sequence-upload-text-field",
+                                        dbc.DropdownMenu([
+                                            dbc.DropdownMenuItem("Thermo Xcalibur"),
+                                            dbc.DropdownMenuItem("Agilent MassHunter")],
+                                            id="vendor-software", label="Vendor", color="secondary"),
+                                        dbc.Input(id="sequence-path",
                                                   placeholder="No file selected"),
                                         dbc.Button(dcc.Upload(
                                             id="sequence-upload-button",
@@ -529,7 +537,7 @@ def serve_layout():
                                 html.Div([
                                     dbc.Label("Sample metadata (.csv)"),
                                     dbc.InputGroup([
-                                        dbc.Input(id="metadata-upload-text-field",
+                                        dbc.Input(id="metadata-path",
                                                   placeholder="No file selected"),
                                         dbc.Button(dcc.Upload(
                                             id="metadata-upload-button",
@@ -547,7 +555,7 @@ def serve_layout():
                                     dbc.Label("Path for data acquisition"),
                                     dbc.InputGroup([
                                         dbc.Input(placeholder="No file selected",
-                                                  id="data-acquisition-folder-text-field"),
+                                                  id="data-acquisition-folder-path"),
                                         dbc.Button(dcc.Upload(
                                             id="data-acquisition-folder-button",
                                             children=[html.A("Browse Files")]),
@@ -559,12 +567,20 @@ def serve_layout():
                                 html.Br(),
 
                                 html.Div([
-                                    dbc.Button("Start monitoring this run", style={"line-height": "1.75"}, color="primary"),
-                                ], className="d-grid gap-2")
+                                    dbc.Button("Start monitoring this run", id="monitor-new-run-button",
+                                    style={"line-height": "1.75"}, color="primary")],
+                                className="d-grid gap-2")
                             ]),
                         ]),
 
-                        # TODO: Modal/dialog for MS-AutoQC settings
+                        dbc.Modal(id="new-run-success-modal", size="md", centered=True, is_open=False, children=[
+                            dbc.ModalHeader(dbc.ModalTitle(id="new-run-success-modal-title", children="Success!"), close_button=True),
+                            dbc.ModalBody(id="new-run-success-modal-body", className="modal-styles", children=[
+                                dbc.Alert("MS-AutoQC will start monitoring your run. Please do not restart your computer.", color="success")
+                            ]),
+                        ]),
+
+                        # Modal for MS-AutoQC settings
                         dbc.Modal(id="settings-modal", size="lg", centered=True, is_open=False, scrollable=True, children=[
                             dbc.ModalHeader(dbc.ModalTitle(children="Settings"), close_button=True),
                             dbc.ModalBody(id="settings-modal-body", children=[
@@ -600,10 +616,6 @@ def serve_layout():
 
                                         # Table of registered instruments
                                         dbc.Table(),
-                                    ]),
-
-                                    # Notification settings
-                                    dbc.Tab(label="Notifications", className="modal-styles", children=[
 
                                         # Slack notifications
                                         html.Br(),
@@ -625,7 +637,8 @@ def serve_layout():
                                             dbc.Button("Register channel", color="primary", outline=True,
                                                        id="add-slack-channel-button", n_clicks=0),
                                         ]),
-                                        dbc.FormText("Please enter the name of the Slack channel for MS-AutoQC Bot to join."),
+                                        dbc.FormText(
+                                            "Please enter the name of the Slack channel for MS-AutoQC Bot to join."),
                                         html.Br(), html.Br(),
 
                                         # Email notifications
@@ -643,7 +656,6 @@ def serve_layout():
 
                                         # Table of registered users
                                         dbc.Table()
-
                                     ]),
 
                                     # Internal standards
@@ -1035,6 +1047,9 @@ def serve_layout():
                                             ], className="d-grid gap-2 col-12 mx-auto"),
                                         ]),
                                     ]),
+
+                                    dbc.Tab(label="QC parameters", className="modal-styles", children=[]),
+
                                 ])
                             ])
                         ]),
@@ -1042,7 +1057,7 @@ def serve_layout():
                 ]),
             ]),
 
-            # Storage of all necessary DataFrames in dcc.Store objects
+            # Storage of all DataFrames necessary for QC plot generation
             dcc.Store(id="rt-pos"),
             dcc.Store(id="rt-neg"),
             dcc.Store(id="intensity-pos"),
@@ -1059,8 +1074,12 @@ def serve_layout():
             dcc.Store(id="urine-mz-neg"),
             dcc.Store(id="study-resources"),
             dcc.Store(id="samples"),
-            dcc.Store(id="url"),
-            dcc.Store(id="first-study")
+            dcc.Store(id="instruments"),
+            dcc.Store(id="first-study"),
+
+            # Storage of DataFrames for monitoring a new run
+            dcc.Store(id="new-sequence"),
+            dcc.Store(id="new-metadata")
         ])
     ])
 
@@ -1070,12 +1089,15 @@ app.layout = serve_layout
 
 @app.callback(Output("tabs", "children"),
               Output("tabs", "value"),
-              Input("url", "data"))
-def get_instrument_tabs(url):
+              Input("instruments", "data"))
+def get_instrument_tabs(instruments):
 
     """
     Retrieves all instruments on a user installation of MS-AutoQC
     """
+
+    # Connect to SQLite database
+    engine = sa.create_engine('sqlite:///assets/QC Database.db')
 
     # Get instruments table as DataFrame
     df_instruments = pd.read_sql("SELECT * FROM instruments", engine)
@@ -1615,16 +1637,24 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
 
 @app.callback(Output("setup-new-run-modal", "is_open"),
               Output("setup-new-run-modal-title", "children"),
+              Output("setup-new-run-button", "n_clicks"),
               Input("setup-new-run-button", "n_clicks"),
-              State("tabs", "value"), prevent_initial_call=True)
-def toggle_new_run_modal(button_click, instrument):
+              State("tabs", "value"),
+              Input("new-run-success-modal", "is_open"), prevent_initial_call=True)
+def toggle_new_run_modal(button_clicks, instrument, success):
 
     """
     Toggles modal for setting up autoQC monitoring for a new instrument run
     """
 
     title = "Setup QC Monitoring on " + instrument
-    return True, title
+
+    if success:
+        return False, title, 0
+    elif not success and button_clicks != 0:
+        return True, title, 1
+    else:
+        return False, title, 0
 
 
 @app.callback(Output("settings-modal", "is_open"),
@@ -1661,6 +1691,75 @@ def toggle_initial_setup_forms(setup_option):
         return hide, show, hide
     elif setup_option == 3:
         return hide, hide, show
+
+
+@app.callback(Output("sequence-path", "value"),
+              Output("new-sequence", "data"),
+              Input("sequence-upload-button", "contents"),
+              State("sequence-upload-button", "filename"), prevent_initial_call=True)
+def capture_uploaded_sequence(contents, filename):
+
+    """
+    Converts sequence CSV file to JSON string and stores in dcc.Store object
+    """
+
+    # Decode sequence file contents
+    content_type, content_string = contents.split(",")
+    decoded = base64.b64decode(content_string)
+    sequence_file_contents = io.StringIO(decoded.decode("utf-8"))
+
+    # Get sequence file as JSON string
+    sequence = qc.convert_sequence_to_json(sequence_file_contents)
+
+    # Update UI and store sequence JSON string
+    return filename, sequence
+
+
+@app.callback(Output("metadata-path", "value"),
+              Output("new-metadata", "data"),
+              Input("metadata-upload-button", "contents"),
+              State("metadata-upload-button", "filename"), prevent_initial_call=True)
+def capture_uploaded_metadata(contents, filename):
+
+    """
+    Converts metadata CSV file to JSON string and stores in dcc.Store object
+    """
+
+    # Decode metadata file contents
+    content_type, content_string = contents.split(",")
+    decoded = base64.b64decode(content_string)
+    metadata_file_contents = io.StringIO(decoded.decode("utf-8"))
+
+    # Get metadata file as JSON string
+    metadata = qc.convert_metadata_to_json(metadata_file_contents)
+
+    # Update UI and store metadata JSON string
+    return filename, metadata
+
+
+@app.callback(Output("new-run-success-modal", "is_open"),
+              Input("monitor-new-run-button", "n_clicks"),
+              State("instrument-run-id", "value"),
+              State("tabs", "value"),
+              State("start-run-chromatography-dropdown", "value"),
+              State("new-sequence", "data"),
+              State("new-metadata", "data"),
+              State("data-acquisition-folder-path", "value"),
+              State("start-run-msdial-configs-dropdown", "value"), prevent_initial_call=True)
+def start_monitoring_run(button_clicks, run_id, instrument_id, chromatography, sequence, metadata,
+                         data_acquisition_folder, msdial_config_id):
+
+    """
+    This callback initiates the following:
+    1. Writing a new instrument run to the database
+    2. Initializing run monitoring at the given directory
+    3. Adding UI elements for a newly initiated run monitoring session
+    """
+
+    # Write a new instrument run to the database
+    db.insert_new_run(run_id, instrument_id, chromatography, sequence, metadata, msdial_config_id)
+
+    return True
 
 
 if __name__ == "__main__":
