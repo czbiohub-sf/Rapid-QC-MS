@@ -55,29 +55,35 @@ def run_msconvert(path, filename, msconvert_output_folder):
             + ":/data chambm/pwiz-skyline-i-agree-to-the-vendor-licenses wine msconvert /data/" + filename
 
     os.system(command)
+
+    # Wait 10 seconds
     time.sleep(10)
 
-    mzml_file_path = path + filename.split(".")[0] + ".mzml"
-    print(mzml_file_path)
-    return mzml_file_path
+    # Return path of mzML file
+    return path + filename.split(".")[0] + ".mzml"
 
 
-def run_msdial_processing(msdial_path, msdial_parameter_file, msdial_output_folder):
+def run_msdial_processing(filename, msdial_path, parameter_file, input_folder, output_folder):
 
     """
     Processes data files using MS-DIAL command line tools
     """
 
+    # Navigate to directory containing MS-DIAL
     os.chdir(msdial_path)
 
-    command = "./MsdialConsoleApp lcmsdda -i '" + msdial_output_folder \
-              + "' -o '" + msdial_output_folder \
-              + "' -m '" + msdial_parameter_file + "' -p"
+    # Run MS-DIAL
+    command = "MsdialConsoleApp.exe lcmsdda -i " + input_folder \
+              + " -o " + output_folder \
+              + " -m " + parameter_file + " -p"
 
     os.system(command)
 
+    # Return .msdial file path
+    return output_folder + "/" + filename.split(".")[0] + ".msdial"
 
-def autoqc_sample(sample_peak_list, standards_msp):
+
+def autoqc_sample(sample_peak_list, standards_msp=0):
 
     """
     Returns DataFrames with m/z, RT, and intensity info for each internal standard
@@ -85,7 +91,6 @@ def autoqc_sample(sample_peak_list, standards_msp):
 
     # df_standards = pd.read_csv(standards_msp, sep='\t', engine='python', skip_blank_lines=True)
     df_peak_list = pd.read_csv(sample_peak_list, sep='\t', engine='python', skip_blank_lines=True)
-
     print(df_peak_list)
 
 
@@ -98,17 +103,17 @@ def process_data_file(filename, path, run_id, is_bio_standard):
     4. Upload CSV file with QC results (as JSON) to Google Drive
     """
 
-    output_folder = "/" + run_id
+    data_file_directory = "/" + run_id
 
     # TODO: Get these from the database
     msdial_location = ""
     msdial_parameters = ""
 
-    # TODO: Run MSConvert
-    mzml_file = run_msconvert(path, filename, output_folder)
+    # Run MSConvert
+    mzml_file = run_msconvert(path, filename, data_file_directory)
 
-    # TODO: Run MS-DIAL
-    peak_list = run_msdial_processing(mzml_file, msdial_location, msdial_parameters, output_folder)
+    # Run MS-DIAL
+    peak_list = run_msdial_processing(filename, msdial_location, data_file_directory, data_file_directory)
 
     # TODO: Get m/z, RT, and intensity dataframes
     if not is_bio_standard:
