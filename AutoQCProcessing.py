@@ -44,27 +44,28 @@ def get_filenames_from_sequence(sequence):
     return samples
 
 
-def run_msconvert(path, filename, output_folder):
+def run_msconvert(path, filename, extension, output_folder):
 
     """
     Converts data files in closed vendor format to open mzML format
     """
 
+    # Copy original data file to output folder
+    shutil.copy2(path, output_folder)
+
     # Run MSConvert Docker container and allow 5 seconds for conversion
     command = "docker run --rm -e WINEDEBUG=-all -v " \
-            + path.replace(" ", "\ ") \
-            + ":/data chambm/pwiz-skyline-i-agree-to-the-vendor-licenses wine msconvert /data/" + filename
+            + output_folder.replace(" ", "/") \
+            + ":/data chambm/pwiz-skyline-i-agree-to-the-vendor-licenses wine msconvert /data/" \
+            + filename + "." + extension
 
+    # Give MSConvert 5 seconds to run
     os.system(command)
-
-    # Wait 5 seconds
     time.sleep(5)
 
-    # Get newly-generate mzml file
-    mzml_file = path + filename.split(".")[0] + ".mzml"
-
-    # Copy to output folder
-    shutil.copy2(mzml_file, output_folder)
+    # Delete copy of original data file
+    data_file_copy = output_folder + filename + "." + extension
+    os.remove(data_file_copy)
 
     return
 
@@ -76,6 +77,7 @@ def run_msdial_processing(filename, msdial_path, parameter_file, input_folder, o
     """
 
     # Navigate to directory containing MS-DIAL
+    home = os.getcwd()
     os.chdir(msdial_path)
 
     # Run MS-DIAL
@@ -83,10 +85,20 @@ def run_msdial_processing(filename, msdial_path, parameter_file, input_folder, o
               + " -o " + output_folder \
               + " -m " + parameter_file + " -p"
 
+    # Give MS-DIAL 10 seconds to run
     os.system(command)
+    time.sleep(10)
 
     # Clear data file directory for next sample
+    for file in os.listdir(input_folder):
+        filepath = os.path.join(input_folder, file)
+        try:
+            shutil.rmtree(filepath)
+        except OSError:
+            os.remove(filepath)
 
+    # Return to original working directory
+    os.chdir(home)
 
     # Return .msdial file path
     return output_folder + "/" + filename.split(".")[0] + ".msdial"
@@ -118,7 +130,7 @@ def peak_list_to_dataframe(sample_peak_list, internal_standards=None, targeted_f
     return df_peak_list
 
 
-def process_data_file(filename, path, run_id, is_bio_standard):
+def process_data_file(path, filename, extension, run_id):
 
     """
     1. Convert data file to mzML format using MSConvert
@@ -127,25 +139,36 @@ def process_data_file(filename, path, run_id, is_bio_standard):
     4. Upload CSV file with QC results (as JSON) to Google Drive
     """
 
-    if not path.endswith("/"):
-        path = path + "/"
+    # Create directories
+    autoqc_directory = os.path.join(os.getcwd(), r"data")
+    mzml_file_directory = os.path.join(autoqc_directory, run_id, "data")
+    qc_results_directory = os.path.join(autoqc_directory, run_id, "results")
 
-    data_file_directory = "/" + run_id + "/data/"
-    qc_results_directory = "/" + run_id + "/data/"
+    for directory in [autoqc_directory, mzml_file_directory, qc_results_directory]:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+    mzml_file_directory = mzml_file_directory + "/"
+    qc_results_directory = qc_results_directory + "/"
 
     # TODO: Get these from the database
-    msdial_location = ""
-    msdial_parameters = ""
-    internal_standards = ""
+    msdial_location = "C:/Users/eliaslab/Documents/MSDIAL"
+    msdial_parameters = "C:/Users/eliaslab/Downloads/AutoQC_Test_Files/DDA_HILIC_Pos/" \
+                        + "Msdial_lcms_ddaParamBCDEditedUpdatedPositive.txt"
+    internal_standards = ["1_Methionine_d8", "1_1_Methylnicotinamide_d3", "1_Creatinine_d3", "1_Carnitine_d3",
+                          "1_Acetylcarnitine_d3", "1_TMAO_d9", "1_Choline_d9", "1_Glutamine_d5", "1_CUDA",
+                          "1_Glutamic Acid_d3", "1_Arginine_d7", "1_Alanine_d3", "1_Valine d8", "1_Tryptophan d5",
+                          "1_Serine d3", "1_Lysine d8", "1_Phenylalanine d8", "1_Hippuric acid d5"]
     targeted_features = ""
     qc_result = "pass"
+    is_bio_standard = False
 
     # Run MSConvert
-    run_msconvert(path, filename, data_file_directory)
+    run_msconvert(path, filename, extension, mzml_file_directory)
 
     # Run MS-DIAL
     peak_list = run_msdial_processing(filename, msdial_location, msdial_parameters,
-                                      data_file_directory, qc_results_directory)
+                                      str(mzml_file_directory), str(qc_results_directory))
 
     # Convert peak list to DataFrame
     if is_bio_standard:

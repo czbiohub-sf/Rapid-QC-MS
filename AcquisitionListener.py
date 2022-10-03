@@ -26,11 +26,11 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
         Listen for data file creation
         """
 
-        print(event)
-        print(self.filenames)
-
         # Remove directory path and file extension from filename
-        filename = event.src_path.split("/")[-1].split(".")[0]
+        path = event.src_path.replace("\\", "/")
+        filename = path.split("/")[-1].split(".")[0]
+        extension = path.split("/")[-1].split(".")[-1]
+        path = path.replace(filename + "." + extension, "")
 
         # Check if file created is in the sequence
         if not event.is_directory and filename in self.filenames:
@@ -39,12 +39,13 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
             print("Watching file...")
 
             # Start watching file until sample acquisition is complete
-            sample_acquired = self.watch_file(event.src_path, filename)
+            sample_acquired = self.watch_file(path, filename, extension)
 
             # Execute QC processing
             if sample_acquired:
-                qc.process_data_file(filename, event.src_path, run_id)
                 print("Data acquisition completed for", filename)
+                qc.process_data_file(event.src_path, filename, extension, self.run_id)
+                print("Data processing complete.")
 
             # Terminate listener when the last data file is acquired
             if filename == self.filenames[-1]:
@@ -52,7 +53,7 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
                 self.observer.stop()
 
 
-    def watch_file(self, path, filename, check_interval=180):
+    def watch_file(self, path, filename, extension, check_interval=180):
 
         """
         Returns True if MD5 checksum on file matches the MD5 checksum written to the database 3 minutes ago.
@@ -60,7 +61,7 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
         """
 
         # Write initial MD5 checksum to database
-        md5_checksum = get_md5(path)
+        md5_checksum = get_md5(path + filename + "." + extension)
         db.update_md5_checksum(filename, md5_checksum)
 
         # Watch file indefinitely
@@ -71,7 +72,7 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
             # Wait 5 minutes
             time.sleep(check_interval)
 
-            new_md5 = get_md5(path)
+            new_md5 = get_md5(path + filename + "." + extension)
             old_md5 = db.get_md5(filename)
 
             print("Comparing MD5 checksums...")
@@ -79,6 +80,7 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
             # If the MD5 checksum after 3 mins is the same as before, file is done acquiring
             if new_md5 == old_md5:
                 return True
+                break
             else:
                 db.update_md5_checksum(filename, new_md5)
 
