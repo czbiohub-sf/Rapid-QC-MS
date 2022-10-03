@@ -1,6 +1,5 @@
 import pandas as pd
 import sqlalchemy as sa
-import AutoQCProcessing as qc
 
 sqlite_db_location = "sqlite:///data/QC Database.db"
 
@@ -57,7 +56,8 @@ def insert_new_run(run_id, instrument_id, chromatography, sequence, metadata, ms
     sample_qc_results_table = sa.Table("sample_qc_results", db_metadata, autoload=True)
 
     # Get list of samples from sequence
-    samples = qc.get_filenames_from_sequence(sequence)
+    df_sequence = pd.read_json(sequence, orient="split")
+    samples = df_sequence["File Name"].astype(str).tolist()
 
     # Insert each sample into sample_qc_results table
     for sample in samples:
@@ -113,4 +113,35 @@ def update_md5_checksum(sample_id, md5_checksum):
 
     # Execute UPDATE into database, then close the connection
     connection.execute(update_md5)
+    connection.close()
+
+
+def write_qc_results(sample_id, run_id, json_mz, json_rt, json_intensity, qc_result):
+
+    """
+    Updates m/z, RT, and intensity info (as JSON strings) to
+    "sample_qc_results" table upon MS-DIAL processing completion.
+    """
+
+    # Connect to database
+    engine = sa.create_engine(sqlite_db_location)
+    db_metadata = sa.MetaData(bind=engine)
+    connection = engine.connect()
+
+    # Get sample_qc_results table
+    sample_qc_results_table = sa.Table("sample_qc_results", db_metadata, autoload=True)
+
+    # Prepare update (insert) of QC results to correct sample row
+    update_qc_results = (
+        sa.update(sample_qc_results_table)
+            .where((sample_qc_results_table.c.sample_id == sample_id)
+                   & (sample_qc_results_table.c.run_id == run_id))
+            .values(precursor_mz=json_mz,
+                    retention_time=json_rt,
+                    intensity=json_intensity,
+                    qc_result=qc_result)
+    )
+
+    # Execute INSERT into database, then close the connection
+    connection.execute(update_qc_results)
     connection.close()

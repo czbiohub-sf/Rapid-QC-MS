@@ -5,6 +5,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import hashlib
 import DatabaseFunctions as db
+import AutoQCProcessing as qc
 
 class DataAcquisitionEventHandler(FileSystemEventHandler):
 
@@ -12,10 +13,11 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
     Event handler that alerts when the data file has completed sample acquisition
     """
 
-    def __init__(self, observer, filenames):
+    def __init__(self, observer, filenames, run_id):
 
         self.observer = observer
         self.filenames = filenames
+        self.run_id = run_id
 
 
     def on_created(self, event):
@@ -39,8 +41,9 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
             # Start watching file until sample acquisition is complete
             sample_acquired = self.watch_file(event.src_path, filename)
 
-            # TODO: Execute QC processing
+            # Execute QC processing
             if sample_acquired:
+                qc.process_data_file(filename, event.src_path, run_id)
                 print("Data acquisition completed for", filename)
 
             # Terminate listener when the last data file is acquired
@@ -80,7 +83,7 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
                 db.update_md5_checksum(filename, new_md5)
 
 
-def start_listener(path, filenames):
+def start_listener(path, filenames, run_id):
 
     """
     Watchdog file monitor to get files in directory upon data acquisition completion
@@ -93,7 +96,7 @@ def start_listener(path, filenames):
                         datefmt="%Y-%m-%d %H:%M:%S")
 
     observer = Observer()
-    event_handler = DataAcquisitionEventHandler(observer, filenames)
+    event_handler = DataAcquisitionEventHandler(observer, filenames, run_id)
     observer.schedule(event_handler, path, recursive=True)
     observer.start()
 
@@ -122,4 +125,4 @@ def get_md5(filename):
 
 if __name__ == "__main__":
     # Start listening to data file directory
-    start_listener(path=sys.argv[1], filenames=sys.argv[2])
+    start_listener(path=sys.argv[1], filenames=sys.argv[2], run_id=sys.argv[3])

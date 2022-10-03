@@ -1,5 +1,6 @@
-import os, time
+import os, time, shutil
 import pandas as pd
+import DatabaseFunctions as db
 
 def convert_sequence_to_json(sequence_contents, vendor_software="Thermo Xcalibur"):
 
@@ -43,24 +44,29 @@ def get_filenames_from_sequence(sequence):
     return samples
 
 
-def run_msconvert(path, filename, msconvert_output_folder):
+def run_msconvert(path, filename, output_folder):
 
     """
     Converts data files in closed vendor format to open mzML format
     """
 
-    # Run MSConvert Docker container and allow 10 seconds for conversion
+    # Run MSConvert Docker container and allow 5 seconds for conversion
     command = "docker run --rm -e WINEDEBUG=-all -v " \
             + path.replace(" ", "\ ") \
             + ":/data chambm/pwiz-skyline-i-agree-to-the-vendor-licenses wine msconvert /data/" + filename
 
     os.system(command)
 
-    # Wait 10 seconds
-    time.sleep(10)
+    # Wait 5 seconds
+    time.sleep(5)
 
-    # Return path of mzML file
-    return path + filename.split(".")[0] + ".mzml"
+    # Get newly-generate mzml file
+    mzml_file = path + filename.split(".")[0] + ".mzml"
+
+    # Copy to output folder
+    shutil.copy2(mzml_file, output_folder)
+
+    return
 
 
 def run_msdial_processing(filename, msdial_path, parameter_file, input_folder, output_folder):
@@ -79,19 +85,37 @@ def run_msdial_processing(filename, msdial_path, parameter_file, input_folder, o
 
     os.system(command)
 
+    # Clear data file directory for next sample
+
+
     # Return .msdial file path
     return output_folder + "/" + filename.split(".")[0] + ".msdial"
 
 
-def autoqc_sample(sample_peak_list, standards_msp=0):
+def peak_list_to_dataframe(sample_peak_list, internal_standards=None, targeted_features=None):
 
     """
-    Returns DataFrames with m/z, RT, and intensity info for each internal standard
+    Returns DataFrame with m/z, RT, and intensity info for each internal standard in a given sample
     """
 
-    # df_standards = pd.read_csv(standards_msp, sep='\t', engine='python', skip_blank_lines=True)
-    df_peak_list = pd.read_csv(sample_peak_list, sep='\t', engine='python', skip_blank_lines=True)
-    print(df_peak_list)
+    # Convert .msdial file into a DataFrame
+    df_peak_list = pd.read_csv(sample_peak_list, sep="\t", engine="python", skip_blank_lines=True)
+    df_peak_list.rename(columns={"Title": "Name"}, inplace=True)
+
+    # Get only the m/z, RT, and intensity columns
+    df_peak_list = df_peak_list[["Name", "Precursor m/z", "RT (min)", "Height"]]
+
+    # Query only internal standards (or targeted features for biological standard)
+    if internal_standards is not None:
+        df_peak_list = df_peak_list.loc[df_peak_list["Name"].isin(internal_standards)]
+    elif targeted_features is not None:
+        df_peak_list = df_peak_list.loc[df_peak_list["Name"].isin(targeted_features)]
+
+    # DataFrame readiness
+    df_peak_list.reset_index(drop=True, inplace=True)
+
+    # Return DataFrame
+    return df_peak_list
 
 
 def process_data_file(filename, path, run_id, is_bio_standard):
@@ -103,23 +127,41 @@ def process_data_file(filename, path, run_id, is_bio_standard):
     4. Upload CSV file with QC results (as JSON) to Google Drive
     """
 
-    data_file_directory = "/" + run_id
+    if not path.endswith("/"):
+        path = path + "/"
+
+    data_file_directory = "/" + run_id + "/data/"
+    qc_results_directory = "/" + run_id + "/data/"
 
     # TODO: Get these from the database
     msdial_location = ""
     msdial_parameters = ""
+    internal_standards = ""
+    targeted_features = ""
+    qc_result = "pass"
 
     # Run MSConvert
-    mzml_file = run_msconvert(path, filename, data_file_directory)
+    run_msconvert(path, filename, data_file_directory)
 
     # Run MS-DIAL
-    peak_list = run_msdial_processing(filename, msdial_location, data_file_directory, data_file_directory)
+    peak_list = run_msdial_processing(filename, msdial_location, msdial_parameters,
+                                      data_file_directory, qc_results_directory)
 
-    # TODO: Get m/z, RT, and intensity dataframes
-    if not is_bio_standard:
-        qc_results = autoqc_sample()
+    # Convert peak list to DataFrame
+    if is_bio_standard:
+        df_peak_list = peak_list_to_dataframe(peak_list, targeted_features)
     else:
-        qc_results = autoqc_bio_standard()
+        df_peak_list = peak_list_to_dataframe(peak_list, internal_standards)
 
-    # TODO: Write QC results to database and upload to Google Drive
-    return qc_results
+    # TODO: Perform QC checks
+    # qc_result = run_autoqc(df_peak_list, is_bio_standard)
+
+    # Get m/z, RT, and intensity info as JSON strings
+    json_mz = df_peak_list[["Name", "Precursor m/z"]].to_json(orient="split")
+    json_rt = df_peak_list[["Name", "RT (min)"]].to_json(orient="split")
+    json_intensity = df_peak_list[["Name", "Height"]].to_json(orient="split")
+
+    # Write QC results to database and upload to Google Drive
+    db.write_qc_results(filename, run_id, json_mz, json_rt, json_intensity, qc_result)
+
+    return qc_result
