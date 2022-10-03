@@ -480,9 +480,9 @@ def serve_layout():
                         ]),
 
                         # Modal for starting an instrument run listener
-                        dbc.Modal(id="setup-new-run-modal", size="md", centered=True, is_open=False, scrollable=True, children=[
+                        dbc.Modal(id="setup-new-run-modal", size="lg", centered=True, is_open=False, scrollable=True, children=[
                             dbc.ModalHeader(dbc.ModalTitle(id="setup-new-run-modal-title", children="Monitor New Instrument Run"), close_button=True),
-                            dbc.ModalBody(id="setup-new-run-modal-body", className="modal-styles", children=[
+                            dbc.ModalBody(id="setup-new-run-modal-body", className="modal-styles-2", children=[
 
                                 # Text field for entering your run ID
                                 html.Div([
@@ -505,12 +505,22 @@ def serve_layout():
 
                                 html.Br(),
 
+                                # Select AutoQC configuration
+                                html.Div(children=[
+                                    dbc.Label("Select AutoQC monitoring configuration"),
+                                    dbc.Select(id="start-run-qc-configs-dropdown", options=[
+                                        {"label": "Default AutoQC configuration", "value": 0},
+                                    ], placeholder="No configuration selected"),
+                                ]),
+
+                                html.Br(),
+
                                 # Select MS-DIAL configuration
                                 html.Div(children=[
                                     dbc.Label("Select MS-DIAL processing configuration"),
                                     dbc.Select(id="start-run-msdial-configs-dropdown", options=[
-                                        {"label": "Default configuration", "value": 0},
-                                    ], placeholder="Default configuration"),
+                                        {"label": "Default MS-DIAL configuration", "value": 0},
+                                    ], placeholder="No configuration selected"),
                                 ]),
 
                                 html.Br(),
@@ -530,7 +540,11 @@ def serve_layout():
                                             children=[html.A("Browse Files")]),
                                             color="secondary"),
                                     ]),
-                                    dbc.FormText("Please ensure you have selected the correct vendor software for this sequence."),
+                                    dbc.FormText(
+                                        "Please ensure you have selected the correct vendor software for this sequence."),
+                                    dbc.FormFeedback("Looks good!", type="valid"),
+                                    dbc.FormFeedback(
+                                        "Please ensure you have selected the correct vendor software for this sequence.", type="invalid"),
                                 ]),
 
                                 html.Br(),
@@ -548,6 +562,8 @@ def serve_layout():
                                     ]),
                                     dbc.FormText("Please ensure you have the following columns: " +
                                                  "Sample Name, Species, Matrix, Treatment, and Conditions"),
+                                    dbc.FormFeedback("Looks good!", type="valid"),
+                                    dbc.FormFeedback("Please make sure your metadata file has the required columns.", type="invalid"),
                                 ]),
 
                                 html.Br(),
@@ -556,7 +572,7 @@ def serve_layout():
                                 html.Div([
                                     dbc.Label("Data file directory"),
                                     dbc.InputGroup([
-                                        dbc.Input(placeholder="No file selected",
+                                        dbc.Input(placeholder="C:/Users/Data/NEW_RUN_001",
                                                   id="data-acquisition-folder-path"),
                                     ]),
                                     dbc.FormText("Please type the folder path to which incoming data files will be saved."),
@@ -579,9 +595,9 @@ def serve_layout():
                         ]),
 
                         # Modal for MS-AutoQC settings
-                        dbc.Modal(id="settings-modal", size="lg", centered=True, is_open=False, scrollable=True, children=[
+                        dbc.Modal(id="settings-modal", fullscreen=True, centered=True, is_open=False, scrollable=True, children=[
                             dbc.ModalHeader(dbc.ModalTitle(children="Settings"), close_button=True),
-                            dbc.ModalBody(id="settings-modal-body", children=[
+                            dbc.ModalBody(id="settings-modal-body", className="modal-styles-fullscreen", children=[
 
                                 # Tabbed interface
                                 dbc.Tabs(children=[
@@ -836,8 +852,80 @@ def serve_layout():
                                         dbc.Table(),
                                     ]),
 
+                                    # AutoQC parameters
+                                    dbc.Tab(label="QC parameters", className="modal-styles", children=[
+
+                                        html.Br(),
+
+                                        html.Div([
+                                            dbc.Label("Add new QC configuration"),
+                                            dbc.InputGroup([
+                                                dbc.Input(id="add-qc-configuration-text-field",
+                                                          placeholder="Name of configuration to add"),
+                                                dbc.Button("Add new config", color="primary", outline=True,
+                                                           id="add-qc-configuration-button", n_clicks=0),
+                                            ]),
+                                            dbc.FormText("Give your custom QC configuration a unique name"),
+                                        ]), html.Br(),
+
+                                        # Select configuration
+                                        html.Div(children=[
+                                            dbc.Label("Select QC configuration to edit"),
+                                            dbc.InputGroup([
+                                                dbc.Select(id="qc-configs-dropdown", options=[
+                                                    {"label": "Default configuration", "value": "default"},
+                                                ], placeholder="No configuration selected"),
+                                                dbc.Button("Remove", color="danger", outline=True,
+                                                           id="remove-qc-config-button", n_clicks=0),
+                                            ])
+                                        ]), html.Br(),
+
+                                        html.Div([
+                                            dbc.Label("Cutoff for intensity dropouts"),
+                                            dbc.Input(id="intensity-dropout-text-field", type="number",
+                                                      placeholder="Ex: 4"),
+                                            dbc.FormText("The minimum number of missing internal standards required for a QC fail."),
+                                        ]), html.Br(),
+
+                                        html.Div([
+                                            dbc.Label("Cutoff for RT shift from run average (min)"),
+                                            dbc.Input(id="run-rt-shift-text-field",
+                                                      placeholder="Ex: 0.1"),
+                                            dbc.FormText(
+                                                "The minimum retention time shift from the run average (in minutes) required for a QC fail."),
+                                        ]), html.Br(),
+
+                                        html.Div([
+                                            dbc.Label("Allowed number of samples where delta RT is increasing"),
+                                            dbc.Input(id="allowed-delta-rt_trends-text-field", type="number",
+                                                      placeholder="Ex: 3"),
+                                            dbc.FormText(
+                                                "If the delta RT is growing in X consecutive samples, you will be sent a warning."),
+                                        ]), html.Br(),
+
+                                        html.Div([
+                                            html.Div([
+                                                dbc.Button("Save changes", style={"line-height": "1.75"}, color="primary"),
+                                                dbc.Button("Reset default settings", style={"line-height": "1.75"}, color="secondary"),
+                                            ], className="d-grid gap-2 col-12 mx-auto"),
+                                        ]),
+                                    ]),
+
                                     # MS-DIAL parameters
                                     dbc.Tab(label="MS-DIAL parameters", className="modal-styles", children=[
+
+                                        html.Br(),
+
+                                        # Button and field for selecting the data acquisition directory
+                                        html.Div([
+                                            dbc.Label("MS-DIAL folder"),
+                                            dbc.InputGroup([
+                                                dbc.Input(placeholder="C:/Users/Me/Downloads/MS-DIAL",
+                                                          id="msdial-directory"),
+                                            ]),
+                                            dbc.FormText(
+                                                "Please enter the full path for the folder containing MS-DIAL files."),
+                                        ]),
 
                                         html.Br(),
 
@@ -852,13 +940,13 @@ def serve_layout():
                                             dbc.FormText("Give your custom configuration a unique name"),
                                         ]), html.Br(),
 
-                                        # Select chromatography
+                                        # Select configuration
                                         html.Div(children=[
                                             dbc.Label("Select configuration to edit"),
                                             dbc.InputGroup([
                                                 dbc.Select(id="msdial-configs-dropdown", options=[
                                                     {"label": "Default configuration", "value": "default"},
-                                                ], placeholder="Default configuration"),
+                                                ], placeholder="No configuration selected"),
                                                 dbc.Button("Remove", color="danger", outline=True,
                                                            id="remove-config-button", n_clicks=0),
                                             ])
@@ -1045,9 +1133,6 @@ def serve_layout():
                                             ], className="d-grid gap-2 col-12 mx-auto"),
                                         ]),
                                     ]),
-
-                                    dbc.Tab(label="QC parameters", className="modal-styles", children=[]),
-
                                 ])
                             ])
                         ]),
@@ -1638,7 +1723,7 @@ def toggle_new_run_modal(button_clicks, instrument, success):
     Toggles modal for setting up autoQC monitoring for a new instrument run
     """
 
-    title = "Setup QC Monitoring on " + instrument
+    title = instrument + " – Setup AutoQC Monitoring"
 
     if success:
         return False, title, 0
@@ -1736,9 +1821,10 @@ def capture_uploaded_metadata(contents, filename):
               State("new-sequence", "data"),
               State("new-metadata", "data"),
               State("data-acquisition-folder-path", "value"),
+              State("start-run-qc-configs-dropdown", "value"),
               State("start-run-msdial-configs-dropdown", "value"), prevent_initial_call=True)
 def start_monitoring_run(button_clicks, run_id, instrument_id, chromatography, sequence, metadata,
-                         acquisition_path, msdial_config_id):
+                         acquisition_path, qc_config_id, msdial_config_id):
 
     """
     This callback initiates the following:
@@ -1751,7 +1837,7 @@ def start_monitoring_run(button_clicks, run_id, instrument_id, chromatography, s
 
     # Initialize run monitoring at the given directory
     filenames = qc.get_filenames_from_sequence(sequence)
-    listener = subprocess.Popen(["python3", "AcquisitionListener.py", acquisition_path, str(filenames)])
+    listener = subprocess.Popen(["python", "AcquisitionListener.py", acquisition_path, str(filenames), run_id])
 
     return True
 
