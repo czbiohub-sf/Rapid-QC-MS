@@ -686,7 +686,7 @@ def serve_layout():
                                         html.Div([
                                             dbc.Label("Add new chromatography method"),
                                             dbc.InputGroup([
-                                                dbc.Input(id="add-chromatography-text-field",
+                                                dbc.Input(id="add-chromatography-text-field", type="text",
                                                           placeholder="Name of chromatography to add"),
                                                 dbc.Button("Add method", color="primary", outline=True,
                                                            id="add-chromatography-button", n_clicks=0),
@@ -699,11 +699,8 @@ def serve_layout():
                                             html.Div(className="parent-container", children=[
                                                 # Select chromatography
                                                 html.Div(className="child-container", children=[
-                                                    dbc.Select(id="select-istd-chromatography-dropdown", options=[
-                                                        {"label": "HILIC", "value": "HILIC"},
-                                                        {"label": "C18", "value": "C18"},
-                                                        {"label": "Lipids", "value": "Lipids", "disabled": True},
-                                                    ], placeholder="No chromatography selected"),
+                                                    dbc.Select(id="select-istd-chromatography-dropdown",
+                                                               placeholder="No chromatography selected"),
                                                 ]),
 
                                                 # Select polarity
@@ -719,9 +716,9 @@ def serve_layout():
                                         html.Br(), html.Br(), html.Br(),
 
                                         html.Div([
-                                            dbc.Label("Add internal standards (MSP format)"),
+                                            dbc.Label("Add internal standards (MSP or CSV format)"),
                                             dbc.InputGroup([
-                                                dbc.Input(placeholder="No MSP file selected",
+                                                dbc.Input(placeholder="No file selected",
                                                           id="add-istd-msp-text-field"),
                                                 dbc.Button(dcc.Upload(
                                                     id="add-istd-msp-button",
@@ -734,30 +731,16 @@ def serve_layout():
 
                                         html.Br(),
 
-                                        html.Div([
-                                            dbc.Label("Add internal standards (CSV format)"),
-                                            dbc.InputGroup([
-                                                dbc.Input(placeholder="No CSV file selected",
-                                                          id="add-istd-csv-text-field"),
-                                                dbc.Button(dcc.Upload(
-                                                    id="add-istd-csv-button",
-                                                    children=[html.A("Browse Files")]),
-                                                    color="secondary"),
-                                            ]),
-                                            dbc.FormText(
-                                                "Please ensure you have the following columns: name, m/z, RT, and spectrum."),
-                                        ]),
+                                        html.Div(id="chromatography-methods-table"),
 
                                         html.Br(),
 
                                         html.Div([
                                             html.Div([
-                                                dbc.Button("Save changes", style={"line-height": "1.75"}, color="primary"),
+                                                dbc.Button("Save changes", id="msp-save-changes-button",
+                                                           style={"line-height": "1.75"}, color="primary"),
                                             ], className="d-grid gap-2 col-12 mx-auto"),
                                         ]),
-
-                                        dbc.Table(),
-
                                     ]),
 
                                     # Biological standards
@@ -1146,6 +1129,9 @@ def serve_layout():
                 ]),
             ]),
 
+            # Dummy input object for callbacks on page load
+            dcc.Store(id="on-page-load"),
+
             # Storage of all DataFrames necessary for QC plot generation
             dcc.Store(id="rt-pos"),
             dcc.Store(id="rt-neg"),
@@ -1169,6 +1155,9 @@ def serve_layout():
             # Storage of DataFrames for monitoring a new run
             dcc.Store(id="new-sequence"),
             dcc.Store(id="new-metadata"),
+            
+            # Dummy inputs for UI update callbacks
+            dcc.Store(id="istd-msp-added")
         ])
     ])
 
@@ -1821,6 +1810,95 @@ def start_monitoring_run(button_clicks, run_id, instrument_id, chromatography, s
     listener = subprocess.Popen(["python", "AcquisitionListener.py", acquisition_path, str(filenames), run_id])
 
     return True
+
+
+@app.callback(Output("chromatography-methods-table", "children"),
+              Output("select-istd-chromatography-dropdown", "options"),
+              Output("add-chromatography-text-field", "value"),
+              Input("on-page-load", "data"),
+              Input("add-chromatography-button", "n_clicks"),
+              State("add-chromatography-text-field", "value"),
+              Input("istd-msp-added", "data"))
+def add_chromatography_method(on_page_load, button_click, chromatography_method, msp_added):
+
+    """
+    Write chromatography method to database
+    """
+
+    # Add chromatography method to database
+    if chromatography_method is not None:
+        db.insert_chromatography_method(chromatography_method)
+
+    # Update table
+    df_methods = db.get_chromatography_methods()
+    methods_table = dbc.Table.from_dataframe(df_methods, striped=True, hover=True)
+
+    # Update dropdown
+    dropdown_options = []
+    for method in df_methods["Method ID"].astype(str).tolist():
+        dropdown_options.append({"label": method, "value": method})
+
+    return methods_table, dropdown_options, None
+
+
+@app.callback(Output("msp-save-changes-button", "children"),
+              Output("msp-save-changes-button", "disabled"),
+              Input("on-page-load", "data"),
+              Input("select-istd-chromatography-dropdown", "value"),
+              Input("select-istd-polarity-dropdown", "value"),
+              Input("istd-msp-added", "data"))
+def add_msp_to_chromatography_ui_feedback(on_page_load, chromatography, polarity, msp_added):
+
+    """
+    "Save changes" button UI feedback for Settings > Internal Standards
+    """
+
+    if chromatography is not None and polarity is not None:
+        button_text = "Save changes to " + chromatography + " " + polarity
+    else:
+        button_text = "Save changes"
+
+    if msp_added == "Ready":
+        button_disabled = False
+    elif msp_added == "Added":
+        button_text = "Save changes"
+        button_disabled = True
+    else:
+        button_disabled = True
+
+    return button_text, button_disabled
+
+
+@app.callback(Output("add-istd-msp-text-field", "value"),
+              Output("istd-msp-added", "data"),
+              Input("msp-save-changes-button", "n_clicks"),
+              Input("add-istd-msp-button", "contents"),
+              State("add-istd-msp-button", "filename"),
+              State("select-istd-chromatography-dropdown", "value"),
+              State("select-istd-polarity-dropdown", "value"), prevent_initial_call=True)
+def capture_uploaded_istd_msp(button_click, contents, filename, chromatography, polarity):
+
+    """
+    In Settings > Internal Standards, captures contents of
+    uploaded MSP file and calls add_msp_to_database().
+    """
+
+    if contents is not None and chromatography is not None and polarity is not None:
+
+        # Decode file contents
+        content_type, content_string = contents.split(",")
+        decoded = base64.b64decode(content_string)
+        msp_file = io.StringIO(decoded.decode("utf-8"))
+
+        # Add MSP to database
+        if button_click is not None:
+            db.add_msp_to_database(msp_file, chromatography, polarity)
+            return filename, "Added"
+
+        return filename, "Ready"
+
+    # Update dummy dcc.Store object to update chromatography methods table
+    return filename, ""
 
 
 if __name__ == "__main__":
