@@ -905,6 +905,10 @@ def serve_layout():
 
                                         html.Br(),
 
+                                        # Alerts for user feedback on configuration addition/removal
+                                        dbc.Alert(id="msdial-config-addition-alert", is_open=False, duration=4000),
+                                        dbc.Alert(id="msdial-config-removal-alert", is_open=False, duration=4000),
+
                                         # Button and field for selecting the data acquisition directory
                                         html.Div([
                                             dbc.Label("MS-DIAL folder"),
@@ -913,7 +917,7 @@ def serve_layout():
                                                           id="msdial-directory"),
                                             ]),
                                             dbc.FormText(
-                                                "Please enter the full path for the folder containing MS-DIAL files."),
+                                                "Please enter the full path of your downloaded MS-DIAL folder."),
                                         ]),
 
                                         html.Br(),
@@ -933,9 +937,8 @@ def serve_layout():
                                         html.Div(children=[
                                             dbc.Label("Select configuration to edit"),
                                             dbc.InputGroup([
-                                                dbc.Select(id="msdial-configs-dropdown", options=[
-                                                    {"label": "Default configuration", "value": "default"},
-                                                ], placeholder="No configuration selected"),
+                                                dbc.Select(id="msdial-configs-dropdown",
+                                                           placeholder="No configuration selected"),
                                                 dbc.Button("Remove", color="danger", outline=True,
                                                            id="remove-config-button", n_clicks=0),
                                             ])
@@ -998,13 +1001,13 @@ def serve_layout():
                                         dbc.Label("Smoothing method"),
                                         dbc.Select(id="select-smoothing-dropdown", options=[
                                             {"label": "Simple moving average",
-                                             "value": "Simple moving average"},
+                                             "value": "SimpleMovingAverage"},
                                             {"label": "Linear weighted moving average",
-                                             "value": "Linear weighted moving average"},
+                                             "value": "LinearWeightedMovingAverage"},
                                             {"label": "Savitzky-Golay filter",
-                                             "value": "Savitzky-Golay filter"},
+                                             "value": "SavitzkyGolayFilter"},
                                             {"label": "Binomial filter",
-                                             "value": "Binomial filter"},
+                                             "value": "BinomialFilter"},
                                         ], placeholder="Linear weighted moving average"),
                                         html.Br(),
 
@@ -1117,8 +1120,10 @@ def serve_layout():
 
                                         html.Div([
                                             html.Div([
-                                                dbc.Button("Save changes", style={"line-height": "1.75"}, color="primary"),
-                                                dbc.Button("Reset default settings", style={"line-height": "1.75"}, color="secondary"),
+                                                dbc.Button("Save changes", id="save-changes-msdial-parameters-button",
+                                                           style={"line-height": "1.75"}, color="primary"),
+                                                dbc.Button("Reset default settings", id="reset-default-msdial-parameters-button",
+                                                           style={"line-height": "1.75"}, color="secondary"),
                                             ], className="d-grid gap-2 col-12 mx-auto"),
                                         ]),
                                     ]),
@@ -1157,7 +1162,12 @@ def serve_layout():
             dcc.Store(id="new-metadata"),
             
             # Dummy inputs for UI update callbacks
-            dcc.Store(id="istd-msp-added")
+            dcc.Store(id="istd-msp-added"),
+            dcc.Store(id="msdial-config-added"),
+            dcc.Store(id="msdial-config-removed"),
+            dcc.Store(id="msdial-parameters-saved"),
+            dcc.Store(id="msdial-parameters-reset"),
+            dcc.Store(id="msdial-directory-data")
         ])
     ])
 
@@ -1899,6 +1909,204 @@ def capture_uploaded_istd_msp(button_click, contents, filename, chromatography, 
 
     # Update dummy dcc.Store object to update chromatography methods table
     return filename, ""
+
+
+@app.callback(Output("msdial-directory", "value"),
+              Input("on-page-load", "data"))
+def get_msdial_directory(on_page_load):
+
+    """
+    Returns (previously inputted by user) location of MS-DIAL directory
+    """
+
+    return db.get_msdial_configuration_parameters("Default configuration")[-1]
+
+
+@app.callback(Output("msdial-config-added", "data"),
+              Output("add-msdial-configuration-text-field", "value"),
+              Input("add-msdial-configuration-button", "n_clicks"),
+              State("add-msdial-configuration-text-field", "value"),
+              State("msdial-directory", "value"), prevent_initial_call=True)
+def add_msdial_configuration(button_click, msdial_config_id, msdial_directory):
+
+    """
+    Adds new MS-DIAL configuration to the database
+    """
+
+    if msdial_config_id is not None:
+        db.add_msdial_configuration(msdial_config_id, msdial_directory)
+        return "Added", None
+    else:
+        return "", None
+
+
+@app.callback(Output("msdial-config-removed", "data"),
+              Input("remove-config-button", "n_clicks"),
+              State("msdial-configs-dropdown", "value"), prevent_initial_call=True)
+def delete_msdial_configuration(button_click, msdial_config_id):
+
+    """
+    Removes dropdown-selected MS-DIAL configuration from database
+    """
+
+    if msdial_config_id is not None:
+        if msdial_config_id != "Default configuration":
+            db.remove_msdial_configuration(msdial_config_id)
+            return "Removed"
+        else:
+            return "Cannot remove"
+    else:
+        return ""
+
+
+@app.callback(Output("msdial-configs-dropdown", "options"),
+              Output("msdial-configs-dropdown", "value"),
+              Input("on-page-load", "data"),
+              Input("msdial-config-added", "data"),
+              Input("msdial-config-removed", "data"))
+def get_msdial_configs_for_dropdown(on_page_load, on_config_added, on_config_removed):
+
+    """
+    Retrieves list of user-created configurations of MS-DIAL parameters from database
+    """
+
+    # Get MS-DIAL configurations from database
+    msdial_configurations = db.get_msdial_configurations()
+
+    # Create and return options for dropdown
+    config_options = []
+
+    for config in msdial_configurations:
+        config_options.append({"label": config, "value": config})
+
+    return config_options, "Default configuration"
+
+
+@app.callback(Output("msdial-config-addition-alert", "is_open"),
+              Output("msdial-config-addition-alert", "children"),
+              Output("msdial-config-addition-alert", "color"),
+              Input("msdial-config-added", "data"), prevent_initial_call=True)
+def show_alert_on_msdial_config_addition(config_added):
+
+    """
+    UI feedback on MS-DIAL configuration addition
+    """
+
+    if config_added is not None:
+        if config_added == "Added":
+            return True, "Success! New MS-DIAL configuration added.", "success"
+
+
+@app.callback(Output("msdial-config-removal-alert", "is_open"),
+              Output("msdial-config-removal-alert", "children"),
+              Output("msdial-config-removal-alert", "color"),
+              Input("msdial-config-removed", "data"),
+              State("msdial-configs-dropdown", "value"), prevent_initial_call=True)
+def show_alert_on_msdial_config_removal(config_removed, selected_config):
+
+    """
+    UI feedback on MS-DIAL configuration removal
+    """
+
+    if config_removed is not None:
+        if config_removed == "Removed":
+            message = "The selected MS-DIAL configuration has been deleted."
+            color = "primary"
+        if selected_config == "Default configuration":
+            message = "Error: The default configuration cannot be deleted."
+            color = "danger"
+        return True, message, color
+    else:
+        return False, "", "danger"
+
+
+@app.callback(Output("retention-time-begin", "value"),
+              Output("retention-time-end", "value"),
+              Output("mass-range-begin", "value"),
+              Output("mass-range-end", "value"),
+              Output("ms1-centroid-tolerance", "value"),
+              Output("ms2-centroid-tolerance", "value"),
+              Output("select-smoothing-dropdown", "value"),
+              Output("smoothing-level", "value"),
+              Output("mass-slice-width", "value"),
+              Output("min-peak-width", "value"),
+              Output("min-peak-height", "value"),
+              Output("post-id-rt-tolerance", "value"),
+              Output("post-id-mz-tolerance", "value"),
+              Output("post-id-score-cutoff", "value"),
+              Output("alignment-rt-tolerance", "value"),
+              Output("alignment-mz-tolerance", "value"),
+              Output("alignment-rt-factor", "value"),
+              Output("alignment-mz-factor", "value"),
+              Output("peak-count-filter", "value"),
+              Output("qc-at-least-filter-dropdown", "value"),
+              Output("msdial-directory-data", "data"),
+              Input("msdial-configs-dropdown", "value"), prevent_initial_call=True)
+def get_msdial_parameters_for_config(msdial_config_id):
+
+    """
+    In Settings > MS-DIAL parameters, fills text fields with placeholders
+    of current parameter values stored in the database.
+    """
+
+    return db.get_msdial_configuration_parameters(msdial_config_id)
+
+
+@app.callback(Output("msdial-parameters-saved", "data"),
+              Input("save-changes-msdial-parameters-button", "n_clicks"),
+              State("msdial-configs-dropdown", "value"),
+              State("retention-time-begin", "value"),
+              State("retention-time-end", "value"),
+              State("mass-range-begin", "value"),
+              State("mass-range-end", "value"),
+              State("ms1-centroid-tolerance", "value"),
+              State("ms2-centroid-tolerance", "value"),
+              State("select-smoothing-dropdown", "value"),
+              State("smoothing-level", "value"),
+              State("mass-slice-width", "value"),
+              State("min-peak-width", "value"),
+              State("min-peak-height", "value"),
+              State("post-id-rt-tolerance", "value"),
+              State("post-id-mz-tolerance", "value"),
+              State("post-id-score-cutoff", "value"),
+              State("alignment-rt-tolerance", "value"),
+              State("alignment-mz-tolerance", "value"),
+              State("alignment-rt-factor", "value"),
+              State("alignment-mz-factor", "value"),
+              State("peak-count-filter", "value"),
+              State("qc-at-least-filter-dropdown", "value"),
+              State("msdial-directory", "value"), prevent_initial_call=True)
+def write_msdial_parameters_to_database(button_clicks, config_name, rt_begin, rt_end, mz_begin, mz_end,
+    ms1_centroid_tolerance, ms2_centroid_tolerance, smoothing_method, smoothing_level, mass_slice_width, min_peak_width,
+    min_peak_height, post_id_rt_tolerance, post_id_mz_tolerance, post_id_score_cutoff, alignment_rt_tolerance,
+    alignment_mz_tolerance, alignment_rt_factor, alignment_mz_factor, peak_count_filter, qc_at_least_filter, msdial_directory):
+
+    """
+    Saves MS-DIAL parameters to respective configuration in database
+    """
+
+    db.update_msdial_configuration(config_name, rt_begin, rt_end, mz_begin, mz_end, ms1_centroid_tolerance,
+        ms2_centroid_tolerance, smoothing_method, smoothing_level, mass_slice_width, min_peak_width, min_peak_height,
+        post_id_rt_tolerance, post_id_mz_tolerance, post_id_score_cutoff, alignment_rt_tolerance, alignment_mz_tolerance,
+        alignment_rt_factor, alignment_mz_factor, peak_count_filter, qc_at_least_filter, msdial_directory)
+
+    return "Saved"
+
+
+@app.callback(Output("msdial-parameters-reset", "data"),
+              Input("reset-default-msdial-parameters-button", "n_clicks"),
+              State("msdial-configs-dropdown", "value"),
+              State("msdial-directory", "value"), prevent_initial_call=True)
+def reset_msdial_parameters_to_default(button_clicks, msdial_config_name, msdial_directory):
+
+    """
+    Resets parameters for selected MS-DIAL configuration to default settings
+    """
+
+    db.update_msdial_configuration(msdial_config_name, 0, 100, 0, 2000, 0.008, 0.01, "LinearWeightedMovingAverage",
+        3, 3, 35000, 0.1, 0.3, 0.008, 85, 0.05, 0.008, 0.5, 0.5, 0, "True", msdial_directory)
+
+    return "Reset"
 
 
 if __name__ == "__main__":

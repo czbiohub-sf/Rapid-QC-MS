@@ -318,3 +318,154 @@ def add_msp_to_database(msp_file, chromatography, polarity, is_bio_standard=Fals
 
     # Close the connection
     connection.close()
+
+
+def get_msdial_configurations():
+
+    """
+    Returns list of user configurations of MS-DIAL parameters
+    """
+
+    engine = sa.create_engine(sqlite_db_location)
+    df_msdial_configurations = pd.read_sql("SELECT * FROM msdial_parameters", engine)
+    return df_msdial_configurations["config_name"].astype(str).tolist()
+
+
+def add_msdial_configuration(msdial_config_name, msdial_directory):
+
+    """
+    Inserts new user configuration of MS-DIAL parameters into the "msdial_parameters" table
+    """
+
+    # Connect to database
+    db_metadata, connection = connect_to_database()
+
+    # Get MS-DIAL parameters table
+    msdial_parameters_table = sa.Table("msdial_parameters", db_metadata, autoload=True)
+
+    # Prepare insert of user-inputted run data
+    insert_config = msdial_parameters_table.insert().values(
+        {"config_name": msdial_config_name,
+         "rt_begin": 0,
+         "rt_end": 100,
+         "mz_begin": 0,
+         "mz_end": 2000,
+         "ms1_centroid_tolerance": 0.008,
+         "ms2_centroid_tolerance": 0.01,
+         "smoothing_method": "LinearWeightedMovingAverage",
+         "smoothing_level": 3,
+         "min_peak_width": 3,
+         "min_peak_height": 35000,
+         "mass_slice_width": 0.1,
+         "post_id_rt_tolerance": 0.3,
+         "post_id_mz_tolerance": 0.008,
+         "post_id_score_cutoff": 85,
+         "alignment_rt_tolerance": 0.05,
+         "alignment_mz_tolerance": 0.008,
+         "alignment_rt_factor": 0.5,
+         "alignment_mz_factor": 0.5,
+         "peak_count_filter": 0,
+         "qc_at_least_filter": "True",
+         "msdial_directory": msdial_directory}
+    )
+
+    # Execute INSERT to database, then close the connection
+    connection.execute(insert_config)
+    connection.close()
+
+
+def remove_msdial_configuration(msdial_config_name):
+
+    """
+    Deletes user configuration of MS-DIAL parameters from the "msdial_parameters" table
+    """
+
+    # Connect to database
+    db_metadata, connection = connect_to_database()
+
+    # Get MS-DIAL parameters table
+    msdial_parameters_table = sa.Table("msdial_parameters", db_metadata, autoload=True)
+
+    # Prepare DELETE of MS-DIAL configuration
+    delete_config = (
+        sa.delete(msdial_parameters_table)
+            .where(msdial_parameters_table.c.config_name == msdial_config_name)
+    )
+
+    # Execute DELETE, then close the connection
+    connection.execute(delete_config)
+    connection.close()
+
+
+def get_msdial_configuration_parameters(msdial_config_name):
+
+    """
+    Returns a tuple of parameters defined for a selected MS-DIAL configuration
+    """
+
+    # Get "msdial_parameters" table from database as a DataFrame
+    engine = sa.create_engine(sqlite_db_location)
+    df_configurations = pd.read_sql("SELECT * FROM msdial_parameters", engine)
+
+    # Get selected configuration
+    selected_config = df_configurations.loc[
+        df_configurations["config_name"] == msdial_config_name]
+
+    selected_config.drop(["id", "config_name"], inplace=True, axis=1)
+
+    # Get parameters of selected configuration as a tuple
+    return tuple(selected_config.to_records(index=False)[0])
+
+
+def update_msdial_configuration(config_name, rt_begin, rt_end, mz_begin, mz_end, ms1_centroid_tolerance,
+    ms2_centroid_tolerance, smoothing_method, smoothing_level, mass_slice_width, min_peak_width, min_peak_height,
+    post_id_rt_tolerance, post_id_mz_tolerance, post_id_score_cutoff, alignment_rt_tolerance, alignment_mz_tolerance,
+    alignment_rt_factor, alignment_mz_factor, peak_count_filter, qc_at_least_filter, msdial_directory):
+
+    """
+    Updates parameters of a selected MS-DIAL configuration
+    """
+
+    # Connect to database
+    db_metadata, connection = connect_to_database()
+
+    # Get MS-DIAL parameters table
+    msdial_parameters_table = sa.Table("msdial_parameters", db_metadata, autoload=True)
+
+    # Prepare insert of user-inputted MS-DIAL parameters
+    update_parameters = (
+        sa.update(msdial_parameters_table)
+            .where(msdial_parameters_table.c.config_name == config_name)
+            .values(rt_begin=rt_begin,
+                    rt_end=rt_end,
+                    mz_begin=mz_begin,
+                    mz_end=mz_end,
+                    ms1_centroid_tolerance=ms1_centroid_tolerance,
+                    ms2_centroid_tolerance=ms2_centroid_tolerance,
+                    smoothing_method=smoothing_method,
+                    smoothing_level=smoothing_level,
+                    min_peak_width=min_peak_width,
+                    min_peak_height=min_peak_height,
+                    mass_slice_width=mass_slice_width,
+                    post_id_rt_tolerance=post_id_rt_tolerance,
+                    post_id_mz_tolerance=post_id_mz_tolerance,
+                    post_id_score_cutoff=post_id_score_cutoff,
+                    alignment_rt_tolerance=alignment_rt_tolerance,
+                    alignment_mz_tolerance=alignment_mz_tolerance,
+                    alignment_rt_factor=alignment_rt_factor,
+                    alignment_mz_factor=alignment_mz_factor,
+                    peak_count_filter=peak_count_filter,
+                    qc_at_least_filter=qc_at_least_filter,
+                    msdial_directory=msdial_directory)
+    )
+
+    update_msdial_location = (
+        sa.update(msdial_parameters_table)
+            .where(msdial_parameters_table.c.config_name == "Default configuration")
+            .values(msdial_directory=msdial_directory)
+    )
+
+    # Execute UPDATE to database, then close the connection
+    connection.execute(update_parameters)
+    connection.execute(update_msdial_location)
+    connection.close()
