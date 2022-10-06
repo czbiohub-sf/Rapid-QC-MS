@@ -228,8 +228,8 @@ def get_chromatography_methods(for_internal_standards=True):
 def add_msp_to_database(msp_file, chromatography, polarity, is_bio_standard=False):
 
     """
-    Inserts location of pos/neg MSP files into "chromatography_methods" table, and
-    parses compounds from MSP into "internal_standards" or "targeted_features" table
+    Parses compounds from MSP into "internal_standards" or "targeted_features" table,
+    and inserts location of pos/neg MSP files into "chromatography_methods" table
     """
 
     # Connect to database
@@ -350,6 +350,83 @@ def add_msp_to_database(msp_file, chromatography, polarity, is_bio_standard=Fals
         )
 
     # Execute UPDATE of MSP file location
+    connection.execute(update_msp_file)
+
+    # Close the connection
+    connection.close()
+
+
+def add_csv_to_database(csv_file, chromatography, polarity):
+
+    """
+    Parses compounds from a CSV into the "internal_standards" table, and stores
+    the location of the pos/neg TXT files in "chromatography_methods" table
+    """
+
+    # Convert CSV file into Python dictionary
+    df_internal_standards = pd.read_csv(csv_file, index_col=False)
+    internal_standards_dict = df_internal_standards.to_dict("index")
+
+    # Create methods directory if it doesn't already exist
+    methods_directory = os.path.join(os.getcwd(), "methods")
+    if not os.path.exists(methods_directory):
+        os.makedirs(methods_directory)
+
+    # Name file accordingly
+    if polarity == "Positive Mode":
+        txt_file_path = os.path.join(methods_directory, chromatography + "_Pos.txt")
+    elif polarity == "Negative Mode":
+        txt_file_path = os.path.join(methods_directory, chromatography + "_Neg.txt")
+
+    # Write CSV columns to tab-delimited text file
+    df_internal_standards.to_csv(txt_file_path, sep="\t", index=False)
+
+    # Connect to database
+    db_metadata, connection = connect_to_database()
+
+    # Get internal_standards table
+    internal_standards_table = sa.Table("internal_standards", db_metadata, autoload=True)
+
+    # Prepare DELETE of old internal standards
+    delete_old_internal_standards = (
+        sa.delete(internal_standards_table)
+            .where((internal_standards_table.c.chromatography == chromatography)
+                   & (internal_standards_table.c.polarity == polarity))
+    )
+
+    # Execute DELETE
+    connection.execute(delete_old_internal_standards)
+
+    # Execute INSERT of each internal standard into internal_standards table
+    for row in internal_standards_dict.keys():
+        insert_standard = internal_standards_table.insert().values(
+            {"name": internal_standards_dict[row]["Common Name"],
+             "chromatography": chromatography,
+             "polarity": polarity,
+             "precursor_mz": internal_standards_dict[row]["MS1 m/z"],
+             "retention_time": internal_standards_dict[row]["RT (min)"]})
+        connection.execute(insert_standard)
+
+    # Get "chromatography" table
+    chromatography_table = sa.Table("chromatography_methods", db_metadata, autoload=True)
+
+    # Write location of CSV file to respective cell
+    if polarity == "Positive Mode":
+        update_msp_file = (
+            sa.update(chromatography_table)
+                .where(chromatography_table.c.method_id == chromatography)
+                .values(num_pos_standards=len(internal_standards_dict),
+                        pos_istd_msp_file=txt_file_path)
+        )
+    elif polarity == "Negative Mode":
+        update_msp_file = (
+            sa.update(chromatography_table)
+                .where(chromatography_table.c.method_id == chromatography)
+                .values(num_neg_standards=len(internal_standards_dict),
+                        neg_istd_msp_file=txt_file_path)
+        )
+
+    # Execute UPDATE of CSV file location
     connection.execute(update_msp_file)
 
     # Close the connection

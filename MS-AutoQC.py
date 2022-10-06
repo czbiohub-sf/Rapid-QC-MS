@@ -1926,11 +1926,14 @@ def capture_uploaded_istd_msp(button_click, contents, filename, chromatography, 
         # Decode file contents
         content_type, content_string = contents.split(",")
         decoded = base64.b64decode(content_string)
-        msp_file = io.StringIO(decoded.decode("utf-8"))
+        file = io.StringIO(decoded.decode("utf-8"))
 
-        # Add MSP to database
+        # Add identification file to database
         if button_click is not None:
-            db.add_msp_to_database(msp_file, chromatography, polarity)
+            if filename.endswith(".msp"):
+                db.add_msp_to_database(file, chromatography, polarity)  # Parse MSP files
+            elif filename.endswith(".csv") or filename.endswith(".txt"):
+                db.add_csv_to_database(file, chromatography, polarity)  # Parse CSV files
             return filename, "Added"
 
         return filename, "Ready"
