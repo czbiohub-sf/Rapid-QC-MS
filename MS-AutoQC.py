@@ -695,25 +695,30 @@ def serve_layout():
                                         ]), html.Br(),
 
                                         html.Div([
-                                            dbc.Label("Select chromatography and polarity to modify"),
-                                            html.Div(className="parent-container", children=[
-                                                # Select chromatography
-                                                html.Div(className="child-container", children=[
-                                                    dbc.Select(id="select-istd-chromatography-dropdown",
-                                                               placeholder="No chromatography selected"),
-                                                ]),
-
-                                                # Select polarity
-                                                html.Div(className="child-container", children=[
-                                                    dbc.Select(id="select-istd-polarity-dropdown", options=[
-                                                        {"label": "Positive Mode", "value": "Positive Mode"},
-                                                        {"label": "Negative Mode", "value": "Negative Mode"},
-                                                    ], placeholder="No polarity selected"),
-                                                ]),
+                                            dbc.Label("Select chromatography to modify"),
+                                            dbc.InputGroup([
+                                                dbc.Select(id="select-istd-chromatography-dropdown",
+                                                    placeholder="No chromatography selected"),
+                                                dbc.Button("Remove", color="danger", outline=True,
+                                                    id="remove-chromatography-method", n_clicks=0),
+                                                dbc.Popover("You are about to delete this chromatography method and "
+                                                    "all of its corresponding MSP files. Are you sure?",
+                                                    target="remove-chromatography-method", trigger="hover", body=True)
                                             ]),
                                         ]),
 
-                                        html.Br(), html.Br(), html.Br(),
+                                        html.Br(),
+
+                                        # Select polarity
+                                        html.Div([
+                                            dbc.Label("Select polarity to modify"),
+                                            dbc.Select(id="select-istd-polarity-dropdown", options=[
+                                                {"label": "Positive Mode", "value": "Positive Mode"},
+                                                {"label": "Negative Mode", "value": "Negative Mode"},
+                                            ], placeholder="No polarity selected"),
+                                        ]),
+
+                                        html.Br(),
 
                                         html.Div([
                                             dbc.Label("Add internal standards (MSP or CSV format)"),
@@ -757,6 +762,9 @@ def serve_layout():
                                                 ], placeholder="No biological standard selected"),
                                                 dbc.Button("Remove", color="danger", outline=True,
                                                            id="remove-bio-standard", n_clicks=0),
+                                                dbc.Popover("You are about to delete this biological standard and "
+                                                            "all of its corresponding MSP files. Are you sure?",
+                                                            target="remove-bio-standard", trigger="hover", body=True)
                                             ]),
                                         ]),
                                         html.Br(),
@@ -866,6 +874,8 @@ def serve_layout():
                                                 ], placeholder="No configuration selected"),
                                                 dbc.Button("Remove", color="danger", outline=True,
                                                            id="remove-qc-config-button", n_clicks=0),
+                                                dbc.Popover("You are about to delete this QC configuration. Are you sure?",
+                                                            target="remove-qc-config-button", trigger="hover", body=True)
                                             ])
                                         ]), html.Br(),
 
@@ -941,6 +951,8 @@ def serve_layout():
                                                            placeholder="No configuration selected"),
                                                 dbc.Button("Remove", color="danger", outline=True,
                                                            id="remove-config-button", n_clicks=0),
+                                                dbc.Popover("You are about to delete this configuration. Are you sure?",
+                                                            target="remove-config-button", trigger="hover", body=True)
                                             ])
                                         ]), html.Br(),
 
@@ -1117,6 +1129,16 @@ def serve_layout():
                                             ]),
                                         ]),
                                         html.Br(), html.Br(),
+
+                                        html.Div([
+                                            # Alerts for user feedback on saving changes to MS-DIAL parameters
+                                            dbc.Alert(id="msdial-parameters-success-alert",
+                                                      color="success", is_open=False, duration=4000),
+                                            dbc.Alert(id="msdial-parameters-reset-alert",
+                                                      color="primary", is_open=False, duration=4000),
+                                            dbc.Alert(id="msdial-parameters-error-alert",
+                                                      color="danger", is_open=False, duration=4000),
+                                        ]),
 
                                         html.Div([
                                             html.Div([
@@ -2041,8 +2063,10 @@ def show_alert_on_msdial_config_removal(config_removed, selected_config):
               Output("peak-count-filter", "value"),
               Output("qc-at-least-filter-dropdown", "value"),
               Output("msdial-directory-data", "data"),
-              Input("msdial-configs-dropdown", "value"), prevent_initial_call=True)
-def get_msdial_parameters_for_config(msdial_config_id):
+              Input("msdial-configs-dropdown", "value"),
+              Input("msdial-parameters-saved", "data"),
+              Input("msdial-parameters-reset", "data"), prevent_initial_call=True)
+def get_msdial_parameters_for_config(msdial_config_id, on_parameters_saved, on_parameters_reset):
 
     """
     In Settings > MS-DIAL parameters, fills text fields with placeholders
@@ -2107,6 +2131,34 @@ def reset_msdial_parameters_to_default(button_clicks, msdial_config_name, msdial
         3, 3, 35000, 0.1, 0.3, 0.008, 85, 0.05, 0.008, 0.5, 0.5, 0, "True", msdial_directory)
 
     return "Reset"
+
+
+@app.callback(Output("msdial-parameters-success-alert", "is_open"),
+              Output("msdial-parameters-success-alert", "children"),
+              Input("msdial-parameters-saved", "data"), prevent_initial_call=True)
+def show_alert_on_parameter_save(parameters_saved):
+
+    """
+    UI feedback for saving changes to MS-DIAL parameters
+    """
+
+    if parameters_saved is not None:
+        if parameters_saved == "Saved":
+            return True, "Your changes were successfully saved."
+
+
+@app.callback(Output("msdial-parameters-reset-alert", "is_open"),
+              Output("msdial-parameters-reset-alert", "children"),
+              Input("msdial-parameters-reset", "data"), prevent_initial_call=True)
+def show_alert_on_parameter_save(parameters_reset):
+
+    """
+    UI feedback for saving changes to MS-DIAL parameters
+    """
+
+    if parameters_reset is not None:
+        if parameters_reset == "Reset":
+            return True, "Your configuration has been reset to its default settings."
 
 
 if __name__ == "__main__":

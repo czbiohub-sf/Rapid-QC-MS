@@ -44,6 +44,85 @@ def get_filenames_from_sequence(sequence):
     return samples
 
 
+def generate_msdial_parameters_file(config_name, polarity, msp_filepath=None, txt_filepath=None):
+
+    """
+    Uses parameters from user-curated MS-DIAL configuration to create a
+    parameters.txt file for MS-DIAL console app usage
+    """
+
+    # Get parameters of selected configuration
+    parameters = db.get_msdial_configuration_parameters(config_name)
+
+    if polarity == "Positive Mode":
+        adduct_type = "[M+H]+"
+        ion_mode = "Positive"
+    elif polarity == "Negative Mode":
+        adduct_type = "[M-H]-"
+        ion_mode = "Negative"
+
+    if msp_filepath is not None:
+        filepath = "MSP file: " + msp_filepath
+    elif txt_filepath is not None:
+        filepath = "Text file: " + txt_filepath
+
+    # Text file contents
+    lines = [
+        "#Data type",
+        "MS1 data type: Centroid",
+        "MS2 data type: Centroid",
+        "Ion mode: " + ion_mode,
+        "DIA file:", "\n"
+
+        "#Data collection parameters",
+        "Retention time begin: " + str(parameters[0]),
+        "Retention time end: " + str(parameters[1]),
+        "Mass range begin: " + str(parameters[2]),
+        "Mass range end: " + str(parameters[3]), "\n",
+
+        "#Centroid parameters",
+        "MS1 tolerance for centroid: " + str(parameters[4]),
+        "MS2 tolerance for centroid: " + str(parameters[5]), "\n",
+
+        "#Peak detection parameters",
+        "Smoothing method: " + str(parameters[6]),
+        "Smoothing level: " + str(parameters[7]),
+        "Minimum peak width: " + str(parameters[8]),
+        "Minimum peak height: " + str(parameters[9]),
+        "Mass slice width: " + str(parameters[10]), "\n",
+
+        "#Deconvolution parameters",
+        "Sigma window value: 0.5",
+        "Amplitude cut off: 0", "\n",
+
+        "#Adduct list",
+        "Adduct list: " + adduct_type, "\n",
+
+        "#Text file and post identification (retention time and accurate mass based) setting",
+        filepath,
+        "Retention time tolerance for post identification: " + str(parameters[11]),
+        "Accurate ms1 tolerance for post identification: " + str(parameters[12]),
+        "Post identification score cut off: " + str(parameters[13]), "\n",
+
+        "#Alignment parameters setting",
+        "Retention time tolerance for alignment: " + str(parameters[14]),
+        "MS1 tolerance for alignment: " + str(parameters[15]),
+        "Retention time factor for alignment: " + str(parameters[16]),
+        "MS1 factor for alignment: " + str(parameters[17]),
+        "Peak count filter: " + str(parameters[18]),
+        "QC at least filter: " + str(parameters[19]),
+    ]
+
+    # Write parameters to a text file
+    with open("parameters.txt", "w") as file:
+        for line in lines:
+            file.write(line)
+            if line != "\n":
+                file.write("\n")
+
+    return
+
+
 def run_msconvert(path, filename, extension, output_folder):
 
     """
