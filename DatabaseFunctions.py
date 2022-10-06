@@ -1,3 +1,4 @@
+import os, io, shutil
 import pandas as pd
 import sqlalchemy as sa
 
@@ -85,6 +86,18 @@ def insert_new_run(run_id, instrument_id, chromatography, sequence, metadata, ms
     connection.close()
 
 
+def get_instrument_run(run_id):
+
+    """
+    Returns DataFrame of selected instrument run from "runs" table
+    """
+
+    engine = sa.create_engine(sqlite_db_location)
+    query = "SELECT * FROM runs WHERE run_id = '" + run_id + "'"
+    df_instrument_run = pd.read_sql(query, engine)
+    return df_instrument_run
+
+
 def get_md5(sample_id):
 
     """
@@ -169,21 +182,23 @@ def insert_chromatography_method(method_id):
     # Prepare insert
     insert_method = chromatography_table.insert().values(
         {"method_id": method_id,
+         "num_pos_standards": 0,
+         "num_neg_standards": 0,
+         "num_pos_features": 0,
+         "num_neg_features": 0,
          "pos_istd_msp_file": "",
          "neg_istd_msp_file": "",
-         "pos_istd_csv_file": "",
-         "neg_istd_csv_file": "",
          "pos_bio_msp_file": "",
          "neg_bio_msp_file": "",
-         "num_pos_standards": 0,
-         "num_neg_standards": 0})
+         "pos_parameter_file": "",
+         "neg_parameter_file": ""})
 
     # Execute INSERT to database, then close the connection
     connection.execute(insert_method)
     connection.close()
 
 
-def get_chromatography_methods():
+def get_chromatography_methods(for_internal_standards=True):
 
     """
     Returns DataFrame of chromatography methods
@@ -197,9 +212,15 @@ def get_chromatography_methods():
     df_methods = df_methods.rename(
         columns={"method_id": "Method ID",
         "num_pos_standards": "Positive (+) Mode Standards",
-        "num_neg_standards": "Negative (–) Mode Standards"})
+        "num_neg_standards": "Negative (–) Mode Standards",
+        "num_pos_features": "Positive (+) Mode Features",
+        "num_neg_features": "Negative (–) Mode Features"})
 
-    df_methods.drop(["id", "num_pos_features", "num_neg_features"], inplace=True, axis=1)
+    # Drop columns based on purpose of retrieving methods
+    if for_internal_standards:
+        df_methods = df_methods[["Method ID", "Positive (+) Mode Standards", "Negative (–) Mode Standards"]]
+    else:
+        df_methods = df_methods[["Method ID", "Positive (+) Mode Features", "Negative (–) Mode Features"]]
 
     return df_methods
 
@@ -214,8 +235,22 @@ def add_msp_to_database(msp_file, chromatography, polarity, is_bio_standard=Fals
     # Connect to database
     db_metadata, connection = connect_to_database()
 
+    # Write MSP file to folder, store file path in database (further down in function)
+    methods_directory = os.path.join(os.getcwd(), "methods")
+    if not os.path.exists(methods_directory):
+        os.makedirs(methods_directory)
+
+    if polarity == "Positive Mode":
+        msp_file_path = os.path.join(methods_directory, chromatography + "_Pos.msp")
+    elif polarity == "Negative Mode":
+        msp_file_path = os.path.join(methods_directory, chromatography + "_Neg.msp")
+
+    with open(msp_file_path, "w") as file:
+        msp_file.seek(0)
+        shutil.copyfileobj(msp_file, file)
+
     # Read MSP file
-    with msp_file as msp:
+    with open(msp_file_path, "r") as msp:
 
         list_of_features = []
 
@@ -303,14 +338,15 @@ def add_msp_to_database(msp_file, chromatography, polarity, is_bio_standard=Fals
         update_msp_file = (
             sa.update(chromatography_table)
                 .where(chromatography_table.c.method_id == chromatography)
-                .values(num_pos_standards=len(features_dict))
+                .values(num_pos_standards=len(features_dict),
+                        pos_istd_msp_file=msp_file_path)
         )
-
     elif polarity == "Negative Mode":
         update_msp_file = (
             sa.update(chromatography_table)
                 .where(chromatography_table.c.method_id == chromatography)
-                .values(num_neg_standards=len(features_dict))
+                .values(num_neg_standards=len(features_dict),
+                        neg_istd_msp_file=msp_file_path)
         )
 
     # Execute UPDATE of MSP file location
@@ -329,6 +365,110 @@ def get_msdial_configurations():
     engine = sa.create_engine(sqlite_db_location)
     df_msdial_configurations = pd.read_sql("SELECT * FROM msdial_parameters", engine)
     return df_msdial_configurations["config_name"].astype(str).tolist()
+
+
+def generate_msdial_parameters_file(config_name, chromatography, polarity, msp_file_path):
+
+    """
+    Uses parameters from user-curated MS-DIAL configuration to create a
+    parameters.txt file for MS-DIAL console app usage
+    """
+
+    # Get parameters of selected configuration
+    parameters = db.get_msdial_configuration_parameters(config_name)
+
+    if polarity == "Positive":
+        adduct_type = "[M+H]+"
+    elif polarity == "Negative":
+        adduct_type = "[M-H]-"
+
+    if msp_file_path.endswith(".msp"):
+        filepath = "MSP file: " + msp_filepath
+    elif msp_file_path.endswith(".txt"):
+        filepath = "Text file: " + txt_filepath
+
+    # Text file contents
+    lines = [
+        "#Data type",
+        "MS1 data type: Centroid",
+        "MS2 data type: Centroid",
+        "Ion mode: " + polarity,
+        "DIA file:", "\n"
+
+        "#Data collection parameters",
+        "Retention time begin: " + str(parameters[0]),
+        "Retention time end: " + str(parameters[1]),
+        "Mass range begin: " + str(parameters[2]),
+        "Mass range end: " + str(parameters[3]), "\n",
+
+        "#Centroid parameters",
+        "MS1 tolerance for centroid: " + str(parameters[4]),
+        "MS2 tolerance for centroid: " + str(parameters[5]), "\n",
+
+        "#Peak detection parameters",
+        "Smoothing method: " + str(parameters[6]),
+        "Smoothing level: " + str(parameters[7]),
+        "Minimum peak width: " + str(parameters[8]),
+        "Minimum peak height: " + str(parameters[9]),
+        "Mass slice width: " + str(parameters[10]), "\n",
+
+        "#Deconvolution parameters",
+        "Sigma window value: 0.5",
+        "Amplitude cut off: 0", "\n",
+
+        "#Adduct list",
+        "Adduct list: " + adduct_type, "\n",
+
+        "#Text file and post identification (retention time and accurate mass based) setting",
+        filepath,
+        "Retention time tolerance for post identification: " + str(parameters[11]),
+        "Accurate ms1 tolerance for post identification: " + str(parameters[12]),
+        "Post identification score cut off: " + str(parameters[13]), "\n",
+
+        "#Alignment parameters setting",
+        "Retention time tolerance for alignment: " + str(parameters[14]),
+        "MS1 tolerance for alignment: " + str(parameters[15]),
+        "Retention time factor for alignment: " + str(parameters[16]),
+        "MS1 factor for alignment: " + str(parameters[17]),
+        "Peak count filter: " + str(parameters[18]),
+        "QC at least filter: " + str(parameters[19]),
+    ]
+
+    # Write parameters to a text file
+    methods_directory = os.path.join(os.getcwd(), "methods")
+    if not os.path.exists(methods_directory):
+        os.makedirs(methods_directory)
+
+    if polarity == "Positive":
+        parameters_file = os.path.join(methods_directory, config_name.replace(" ", "_") + "Parameters_Pos.txt")
+    elif polarity == "Negative":
+        parameters_file = os.path.join(methods_directory, config_name.replace(" ", "_") + "Parameters_Neg.txt")
+
+    with open(parameters_file, "w") as file:
+        for line in lines:
+            file.write(line)
+            if line != "\n":
+                file.write("\n")
+
+    # Write path of parameters text file to chromatography method in database
+    db_metadata, connection = connect_to_database()
+    chromatography_table = sa.Table("chromatography_methods", db_metadata, autoload=True)
+
+    if polarity == "Positive":
+        update_parameter_file = (
+            sa.update(chromatography_table)
+                .where(chromatography_table.c.method_id == chromatography)
+                .values(pos_parameter_file=parameters_file)
+        )
+    elif polarity == "Negative":
+        update_parameter_file = (
+            sa.update(chromatography_table)
+                .where(chromatography_table.c.method_id == chromatography)
+                .values(neg_parameter_file=parameters_file)
+        )
+
+    connection.execute(update_parameter_file)
+    connection.close()
 
 
 def add_msdial_configuration(msdial_config_name, msdial_directory):
@@ -469,3 +609,64 @@ def update_msdial_configuration(config_name, rt_begin, rt_end, mz_begin, mz_end,
     connection.execute(update_parameters)
     connection.execute(update_msdial_location)
     connection.close()
+
+
+def get_msp_file_paths(chromatography, polarity, type):
+
+    """
+    Returns file paths of positive and negative MSPs (both stored in the methods folder
+    upon user upload) MS-DIAL for parameter file generation – from the "chromatography_methods" table
+    """
+
+    # Connect to database and get selected chromatography method
+    engine = sa.create_engine(sqlite_db_location)
+    query = "SELECT * FROM chromatography_methods WHERE method_id='" + chromatography + "'"
+    df_methods = pd.read_sql(query, engine)
+
+    # Return file path of MSP in chromatography, based on polarity/type requested
+    if polarity == "Positive":
+        msp_file_path = df_methods["pos_" + type + "_msp_file"].astype(str).values[0]
+    elif polarity == "Negative":
+        msp_file_path = df_methods["neg_" + type + "_msp_file"].astype(str).values[0]
+
+    return msp_file_path
+
+
+def get_parameter_file_path(chromatography, polarity):
+
+    """
+    Returns file path of parameters file stored in "chromatography_methods" table
+    """
+
+    engine = sa.create_engine(sqlite_db_location)
+    query = "SELECT * FROM chromatography_methods WHERE method_id='" + chromatography + "'"
+    df_methods = pd.read_sql(query, engine)
+
+    if polarity == "Positive":
+        parameter_file = df_methods["pos_parameter_file"].astype(str).values[0]
+    elif polarity == "Negative":
+        parameter_file = df_methods["neg_parameter_file"].astype(str).values[0]
+
+    return parameter_file
+
+
+def get_msdial_directory(config_id):
+
+    """
+    Returns location of MS-DIAL "installation" folder
+    """
+
+    return get_msdial_configuration_parameters(config_id)[-1]
+
+
+def get_internal_standards(chromatography, polarity):
+
+    """
+    Returns list of internal standards for a given chromatography method and polarity
+    """
+
+    engine = sa.create_engine(sqlite_db_location)
+    query = "SELECT * FROM internal_standards " + \
+            "WHERE chromatography='" + chromatography + "' AND polarity='" + polarity + "'"
+    df_internal_standards = pd.read_sql(query, engine)
+    return df_internal_standards["name"].astype(str).tolist()

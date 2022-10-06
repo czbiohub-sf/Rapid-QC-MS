@@ -44,85 +44,6 @@ def get_filenames_from_sequence(sequence):
     return samples
 
 
-def generate_msdial_parameters_file(config_name, polarity, msp_filepath=None, txt_filepath=None):
-
-    """
-    Uses parameters from user-curated MS-DIAL configuration to create a
-    parameters.txt file for MS-DIAL console app usage
-    """
-
-    # Get parameters of selected configuration
-    parameters = db.get_msdial_configuration_parameters(config_name)
-
-    if polarity == "Positive Mode":
-        adduct_type = "[M+H]+"
-        ion_mode = "Positive"
-    elif polarity == "Negative Mode":
-        adduct_type = "[M-H]-"
-        ion_mode = "Negative"
-
-    if msp_filepath is not None:
-        filepath = "MSP file: " + msp_filepath
-    elif txt_filepath is not None:
-        filepath = "Text file: " + txt_filepath
-
-    # Text file contents
-    lines = [
-        "#Data type",
-        "MS1 data type: Centroid",
-        "MS2 data type: Centroid",
-        "Ion mode: " + ion_mode,
-        "DIA file:", "\n"
-
-        "#Data collection parameters",
-        "Retention time begin: " + str(parameters[0]),
-        "Retention time end: " + str(parameters[1]),
-        "Mass range begin: " + str(parameters[2]),
-        "Mass range end: " + str(parameters[3]), "\n",
-
-        "#Centroid parameters",
-        "MS1 tolerance for centroid: " + str(parameters[4]),
-        "MS2 tolerance for centroid: " + str(parameters[5]), "\n",
-
-        "#Peak detection parameters",
-        "Smoothing method: " + str(parameters[6]),
-        "Smoothing level: " + str(parameters[7]),
-        "Minimum peak width: " + str(parameters[8]),
-        "Minimum peak height: " + str(parameters[9]),
-        "Mass slice width: " + str(parameters[10]), "\n",
-
-        "#Deconvolution parameters",
-        "Sigma window value: 0.5",
-        "Amplitude cut off: 0", "\n",
-
-        "#Adduct list",
-        "Adduct list: " + adduct_type, "\n",
-
-        "#Text file and post identification (retention time and accurate mass based) setting",
-        filepath,
-        "Retention time tolerance for post identification: " + str(parameters[11]),
-        "Accurate ms1 tolerance for post identification: " + str(parameters[12]),
-        "Post identification score cut off: " + str(parameters[13]), "\n",
-
-        "#Alignment parameters setting",
-        "Retention time tolerance for alignment: " + str(parameters[14]),
-        "MS1 tolerance for alignment: " + str(parameters[15]),
-        "Retention time factor for alignment: " + str(parameters[16]),
-        "MS1 factor for alignment: " + str(parameters[17]),
-        "Peak count filter: " + str(parameters[18]),
-        "QC at least filter: " + str(parameters[19]),
-    ]
-
-    # Write parameters to a text file
-    with open("parameters.txt", "w") as file:
-        for line in lines:
-            file.write(line)
-            if line != "\n":
-                file.write("\n")
-
-    return
-
-
 def run_msconvert(path, filename, extension, output_folder):
 
     """
@@ -209,7 +130,7 @@ def peak_list_to_dataframe(sample_peak_list, internal_standards=None, targeted_f
     return df_peak_list
 
 
-def process_data_file(path, filename, extension, run_id):
+def process_data_file(path, filename, extension, run_id, is_bio_standard=False):
 
     """
     1. Convert data file to mzML format using MSConvert
@@ -230,17 +151,19 @@ def process_data_file(path, filename, extension, run_id):
     mzml_file_directory = mzml_file_directory + "/"
     qc_results_directory = qc_results_directory + "/"
 
-    # TODO: Get these from the database
-    msdial_location = "C:/Users/eliaslab/Documents/MSDIAL"
-    msdial_parameters = "C:/Users/eliaslab/Downloads/AutoQC_Test_Files/DDA_HILIC_Pos/" \
-                        + "Msdial_lcms_ddaParamBCDEditedUpdatedPositive.txt"
-    internal_standards = ["1_Methionine_d8", "1_1_Methylnicotinamide_d3", "1_Creatinine_d3", "1_Carnitine_d3",
-                          "1_Acetylcarnitine_d3", "1_TMAO_d9", "1_Choline_d9", "1_Glutamine_d5", "1_CUDA",
-                          "1_Glutamic Acid_d3", "1_Arginine_d7", "1_Alanine_d3", "1_Valine d8", "1_Tryptophan d5",
-                          "1_Serine d3", "1_Lysine d8", "1_Phenylalanine d8", "1_Hippuric acid d5"]
+    # Retrieve run information from database
+    run = db.get_instrument_run(run_id)
+    chromatography = run["chromatography"].astype(str).values[0]
+    if "Pos" in filename:
+        polarity = "Positive"
+    elif "Neg" in filename:
+        polarity = "Negative"
+
+    # Retrieve MS-DIAL directory, MS-DIAL parameters, internal standards, and targeted features from database
+    msdial_location = db.get_msdial_directory(config_id)
+    msdial_parameters = db.get_parameter_file_path(chromatography, polarity)
+    internal_standards = db.get_internal_standards(chromatography, polarity)
     targeted_features = ""
-    qc_result = "pass"
-    is_bio_standard = False
 
     # Run MSConvert
     run_msconvert(path, filename, extension, mzml_file_directory)
@@ -257,6 +180,7 @@ def process_data_file(path, filename, extension, run_id):
 
     # TODO: Perform QC checks
     # qc_result = run_autoqc(df_peak_list, is_bio_standard)
+    qc_result = "pass"
 
     # Get m/z, RT, and intensity info as JSON strings
     json_mz = df_peak_list[["Name", "Precursor m/z"]].to_json(orient="split")

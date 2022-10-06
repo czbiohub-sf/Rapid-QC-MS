@@ -1831,11 +1831,17 @@ def start_monitoring_run(button_clicks, run_id, instrument_id, chromatography, s
     """
     This callback initiates the following:
     1. Writing a new instrument run to the database
-    2. Initializing run monitoring at the given directory
+    2. Generate parameters files for MS-DIAL processing
+    3. Initializing run monitoring at the given directory
     """
 
     # Write a new instrument run to the database
     db.insert_new_run(run_id, instrument_id, chromatography, sequence, metadata, msdial_config_id)
+
+    # Get MSPs and generate parameters files for MS-DIAL processing
+    for polarity in ["Positive", "Negative"]:
+        msp_file_path = db.get_msp_file_paths(chromatography, polarity, "istd")
+        db.generate_msdial_parameters_file(msdial_config_id, chromatography, polarity, msp_file_path)
 
     # Initialize run monitoring at the given directory
     filenames = qc.get_filenames_from_sequence(sequence)
