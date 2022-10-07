@@ -700,10 +700,10 @@ def serve_layout():
                                                 dbc.Select(id="select-istd-chromatography-dropdown",
                                                     placeholder="No chromatography selected"),
                                                 dbc.Button("Remove", color="danger", outline=True,
-                                                    id="remove-chromatography-method", n_clicks=0),
+                                                    id="remove-chromatography-method-button", n_clicks=0),
                                                 dbc.Popover("You are about to delete this chromatography method and "
                                                     "all of its corresponding MSP files. Are you sure?",
-                                                    target="remove-chromatography-method", trigger="hover", body=True)
+                                                    target="remove-chromatography-method-button", trigger="hover", body=True)
                                             ]),
                                         ]),
 
@@ -756,15 +756,13 @@ def serve_layout():
                                         html.Div([
                                             dbc.Label("Select biological standard"),
                                             dbc.InputGroup([
-                                                dbc.Select(id="select-bio-standard-dropdown", options=[
-                                                    {"label": "Human urine", "value": "Urine"},
-                                                    {"label": "Bovine liver", "value": "Liver"},
-                                                ], placeholder="No biological standard selected"),
+                                                dbc.Select(id="select-bio-standard-dropdown",
+                                                           placeholder="No biological standard selected"),
                                                 dbc.Button("Remove", color="danger", outline=True,
-                                                           id="remove-bio-standard", n_clicks=0),
+                                                           id="remove-bio-standard-button", n_clicks=0),
                                                 dbc.Popover("You are about to delete this biological standard and "
                                                             "all of its corresponding MSP files. Are you sure?",
-                                                            target="remove-bio-standard", trigger="hover", body=True)
+                                                            target="remove-bio-standard-button", trigger="hover", body=True)
                                             ]),
                                         ]),
                                         html.Br(),
@@ -786,11 +784,8 @@ def serve_layout():
                                             html.Div(className="parent-container", children=[
                                                 # Select chromatography
                                                 html.Div(className="child-container", children=[
-                                                    dbc.Select(id="select-bio-chromatography-dropdown", options=[
-                                                        {"label": "HILIC", "value": "HILIC"},
-                                                        {"label": "C18", "value": "C18"},
-                                                        {"label": "Lipids", "value": "Lipids", "disabled": True},
-                                                    ], placeholder="No chromatography selected"),
+                                                    dbc.Select(id="select-bio-chromatography-dropdown",
+                                                               placeholder="No chromatography selected"),
                                                 ]),
 
                                                 # Select polarity
@@ -803,16 +798,17 @@ def serve_layout():
                                                 ]),
                                             ]),
                                         ]),
+
                                         html.Br(),
 
                                         html.Div([
-                                            dbc.Label("Edit positive (+) mode targeted features (MSP format)"),
+                                            dbc.Label("Edit targeted feature list (MSP format)"),
                                             html.Br(),
                                             dbc.InputGroup([
                                                 dbc.Input(placeholder="No MSP file selected",
-                                                          id="add-pos-bio-msp-text-field"),
+                                                          id="add-bio-msp-text-field"),
                                                 dbc.Button(dcc.Upload(
-                                                    id="add-pos-bio-msp-button",
+                                                    id="add-bio-msp-button",
                                                     children=[html.A("Browse Files")]),
                                                     color="secondary"),
                                             ]),
@@ -822,31 +818,16 @@ def serve_layout():
 
                                         html.Br(),
 
-                                        html.Div([
-                                            dbc.Label("Edit negative (–) mode targeted features (MSP format)"),
-                                            html.Br(),
-                                            dbc.InputGroup([
-                                                dbc.Input(placeholder="No MSP file selected",
-                                                          id="add-neg-bio-msp-text-field"),
-                                                dbc.Button(dcc.Upload(
-                                                    id="add-neg-bio-msp-button",
-                                                    children=[html.A("Browse Files")]),
-                                                    color="secondary"),
-                                            ]),
-                                            dbc.FormText(
-                                                "Please ensure that each feature has a name, m/z, RT, and MS/MS spectrum."),
-                                        ]),
+                                        html.Div(id="biological-standards-table"),
 
                                         html.Br(),
 
                                         html.Div([
                                             html.Div([
-                                                dbc.Button("Save changes", style={"line-height": "1.75"},
-                                                           color="primary"),
+                                                dbc.Button("Save changes", id="bio-standard-save-changes-button",
+                                                           style={"line-height": "1.75"}, color="primary"),
                                             ], className="d-grid gap-2 col-12 mx-auto"),
                                         ]),
-
-                                        dbc.Table(),
                                     ]),
 
                                     # AutoQC parameters
@@ -1184,12 +1165,16 @@ def serve_layout():
             dcc.Store(id="new-metadata"),
             
             # Dummy inputs for UI update callbacks
+            dcc.Store(id="chromatography-added"),
+            dcc.Store(id="chromatography-removed"),
             dcc.Store(id="istd-msp-added"),
             dcc.Store(id="msdial-config-added"),
             dcc.Store(id="msdial-config-removed"),
             dcc.Store(id="msdial-parameters-saved"),
             dcc.Store(id="msdial-parameters-reset"),
-            dcc.Store(id="msdial-directory-data")
+            dcc.Store(id="msdial-directory-data"),
+            dcc.Store(id="bio-standard-added"),
+            dcc.Store(id="bio-standard-removed"),
         ])
     ])
 
@@ -1840,7 +1825,7 @@ def start_monitoring_run(button_clicks, run_id, instrument_id, chromatography, s
 
     # Get MSPs and generate parameters files for MS-DIAL processing
     for polarity in ["Positive", "Negative"]:
-        msp_file_path = db.get_msp_file_paths(chromatography, polarity, "istd")
+        msp_file_path = db.get_istd_msp_file_paths(chromatography, polarity)
         db.generate_msdial_parameters_file(msdial_config_id, chromatography, polarity, msp_file_path)
 
     # Initialize run monitoring at the given directory
@@ -1852,20 +1837,25 @@ def start_monitoring_run(button_clicks, run_id, instrument_id, chromatography, s
 
 @app.callback(Output("chromatography-methods-table", "children"),
               Output("select-istd-chromatography-dropdown", "options"),
+              Output("select-bio-chromatography-dropdown", "options"),
               Output("add-chromatography-text-field", "value"),
+              Output("chromatography-added", "data"),
               Input("on-page-load", "data"),
               Input("add-chromatography-button", "n_clicks"),
               State("add-chromatography-text-field", "value"),
-              Input("istd-msp-added", "data"))
-def add_chromatography_method(on_page_load, button_click, chromatography_method, msp_added):
+              Input("istd-msp-added", "data"),
+              Input("chromatography-removed", "data"))
+def add_chromatography_method(on_page_load, button_click, chromatography_method, msp_added, method_removed):
 
     """
-    Write chromatography method to database
+    Add chromatography method to database
     """
 
     # Add chromatography method to database
+    method_added = ""
     if chromatography_method is not None:
         db.insert_chromatography_method(chromatography_method)
+        method_added = "Added"
 
     # Update table
     df_methods = db.get_chromatography_methods()
@@ -1876,7 +1866,23 @@ def add_chromatography_method(on_page_load, button_click, chromatography_method,
     for method in df_methods["Method ID"].astype(str).tolist():
         dropdown_options.append({"label": method, "value": method})
 
-    return methods_table, dropdown_options, None
+    return methods_table, dropdown_options, dropdown_options, None, method_added
+
+
+@app.callback(Output("chromatography-removed", "data"),
+              Input("remove-chromatography-method-button", "n_clicks"),
+              State("select-istd-chromatography-dropdown", "value"), prevent_initial_call=True)
+def remove_chromatography_method(button_click, chromatography):
+
+    """
+    Remove chromatography method from database
+    """
+
+    if chromatography is not None:
+        db.remove_chromatography_method(chromatography)
+        return "Removed"
+    else:
+        return ""
 
 
 @app.callback(Output("msp-save-changes-button", "children"),
@@ -2168,6 +2174,65 @@ def show_alert_on_parameter_save(parameters_reset):
     if parameters_reset is not None:
         if parameters_reset == "Reset":
             return True, "Your configuration has been reset to its default settings."
+
+
+@app.callback(Output("select-bio-standard-dropdown", "options"),
+              Output("biological-standards-table", "children"),
+              Input("on-page-load", "data"),
+              Input("bio-standard-added", "data"),
+              Input("bio-standard-removed", "data"),
+              Input("chromatography-added", "data"),
+              Input("chromatography-removed", "data"))
+def get_biological_standards(on_page_load, on_standard_added, on_standard_removed, on_method_added, on_method_removed):
+
+    """
+    Populates dropdown and table of biological standards
+    """
+
+    # Populate dropdown
+    dropdown_options = []
+
+    for biological_standard in db.get_biological_standards_list():
+        dropdown_options.append({"label": biological_standard, "value": biological_standard})
+
+    # Populate table
+    df_biological_standards = db.get_biological_standards()
+    biological_standards_table = dbc.Table.from_dataframe(df_biological_standards, striped=True, hover=True)
+
+    return dropdown_options, biological_standards_table
+
+
+@app.callback(Output("bio-standard-added", "data"),
+              Output("add-bio-standard-text-field", "value"),
+              Input("add-bio-standard-button", "n_clicks"),
+              State("add-bio-standard-text-field", "value"), prevent_initial_call=True)
+def add_biological_standard(button_click, biological_standard_name):
+
+    """
+    Adds biological standard to database
+    """
+
+    if biological_standard_name is not None:
+        db.add_biological_standard(biological_standard_name)
+        return "Added", None
+    else:
+        return "Error", biological_standard_name
+
+
+@app.callback(Output("bio-standard-removed", "data"),
+              Input("remove-bio-standard-button", "n_clicks"),
+              State("select-bio-standard-dropdown", "value"), prevent_initial_call=True)
+def remove_biological_standard(button_click, biological_standard_name):
+
+    """
+    Removes biological standard (and all corresponding MSPs) in the database
+    """
+
+    if biological_standard_name is not None:
+        db.remove_biological_standard(biological_standard_name)
+        return "Removed", None
+    else:
+        return "Error", biological_standard_name
 
 
 if __name__ == "__main__":

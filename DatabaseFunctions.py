@@ -167,38 +167,7 @@ def write_qc_results(sample_id, run_id, json_mz, json_rt, json_intensity, qc_res
     connection.close()
 
 
-def insert_chromatography_method(method_id):
-
-    """
-    Inserts new chromatography method in "chromatography_methods" table
-    """
-
-    # Connect to database
-    db_metadata, connection = connect_to_database()
-
-    # Get "chromatography_methods" table
-    chromatography_table = sa.Table("chromatography_methods", db_metadata, autoload=True)
-
-    # Prepare insert
-    insert_method = chromatography_table.insert().values(
-        {"method_id": method_id,
-         "num_pos_standards": 0,
-         "num_neg_standards": 0,
-         "num_pos_features": 0,
-         "num_neg_features": 0,
-         "pos_istd_msp_file": "",
-         "neg_istd_msp_file": "",
-         "pos_bio_msp_file": "",
-         "neg_bio_msp_file": "",
-         "pos_parameter_file": "",
-         "neg_parameter_file": ""})
-
-    # Execute INSERT to database, then close the connection
-    connection.execute(insert_method)
-    connection.close()
-
-
-def get_chromatography_methods(for_internal_standards=True):
+def get_chromatography_methods():
 
     """
     Returns DataFrame of chromatography methods
@@ -212,17 +181,81 @@ def get_chromatography_methods(for_internal_standards=True):
     df_methods = df_methods.rename(
         columns={"method_id": "Method ID",
         "num_pos_standards": "Positive (+) Mode Standards",
-        "num_neg_standards": "Negative (–) Mode Standards",
-        "num_pos_features": "Positive (+) Mode Features",
-        "num_neg_features": "Negative (–) Mode Features"})
+        "num_neg_standards": "Negative (–) Mode Standards",})
 
-    # Drop columns based on purpose of retrieving methods
-    if for_internal_standards:
-        df_methods = df_methods[["Method ID", "Positive (+) Mode Standards", "Negative (–) Mode Standards"]]
-    else:
-        df_methods = df_methods[["Method ID", "Positive (+) Mode Features", "Negative (–) Mode Features"]]
+    df_methods = df_methods[["Method ID", "Positive (+) Mode Standards", "Negative (–) Mode Standards"]]
 
     return df_methods
+
+
+def insert_chromatography_method(method_id):
+
+    """
+    Inserts new chromatography method in "chromatography_methods" table
+    """
+
+    # Connect to database
+    db_metadata, connection = connect_to_database()
+
+    # Get "chromatography_methods" table and "biological_standards" table
+    chromatography_table = sa.Table("chromatography_methods", db_metadata, autoload=True)
+    biological_standards_table = sa.Table("biological_standards", db_metadata, autoload=True)
+
+    # Execute insert of chromatography method
+    insert_method = chromatography_table.insert().values(
+        {"method_id": method_id,
+         "num_pos_standards": 0,
+         "num_neg_standards": 0,
+         "pos_istd_msp_file": "",
+         "neg_istd_msp_file": "",
+         "pos_parameter_file": "",
+         "neg_parameter_file": ""})
+
+    connection.execute(insert_method)
+
+    # Execute insert of method for each biological standard
+    biological_standards = get_biological_standards_list()
+
+    for biological_standard in biological_standards:
+        insert_method_for_bio_standard = biological_standards_table.insert().values({
+            "name": biological_standard,
+            "chromatography": method_id,
+            "num_pos_features": 0,
+            "num_neg_features": 0})
+        connection.execute(insert_method_for_bio_standard)
+
+    # Execute INSERT to database, then close the connection
+    connection.close()
+
+
+def remove_chromatography_method(method_id):
+
+    """
+    Removes chromatography method in "chromatography_methods" table and
+    "biological_standards" table, and deletes corresponding MSPs from folders
+    """
+
+    # Connect to database and get relevant tables
+    db_metadata, connection = connect_to_database()
+    chromatography_table = sa.Table("chromatography_methods", db_metadata, autoload=True)
+    biological_standards_table = sa.Table("biological_standards", db_metadata, autoload=True)
+
+    # Remove from "chromatography_methods" table
+    delete_chromatography_method = (
+        sa.delete(chromatography_table)
+            .where((chromatography_table.c.method_id == method_id))
+    )
+
+    # Remove from "biological_standards" table
+    delete_from_biological_standards = (
+        sa.delete(biological_standards_table)
+            .where((biological_standards_table.c.chromatography == method_id))
+    )
+
+    # Execute deletes, then close the connection
+    connection.execute(delete_chromatography_method)
+    connection.execute(delete_from_biological_standards)
+    connection.close()
 
 
 def add_msp_to_database(msp_file, chromatography, polarity, is_bio_standard=False):
@@ -688,11 +721,11 @@ def update_msdial_configuration(config_name, rt_begin, rt_end, mz_begin, mz_end,
     connection.close()
 
 
-def get_msp_file_paths(chromatography, polarity, type):
+def get_istd_msp_file_paths(chromatography, polarity):
 
     """
-    Returns file paths of positive and negative MSPs (both stored in the methods folder
-    upon user upload) MS-DIAL for parameter file generation – from the "chromatography_methods" table
+    Returns file paths of positive and negative internal standard MSPs (both stored
+    in the methods folder upon user upload) MS-DIAL for parameter file generation
     """
 
     # Connect to database and get selected chromatography method
@@ -702,9 +735,9 @@ def get_msp_file_paths(chromatography, polarity, type):
 
     # Return file path of MSP in chromatography, based on polarity/type requested
     if polarity == "Positive":
-        msp_file_path = df_methods["pos_" + type + "_msp_file"].astype(str).values[0]
+        msp_file_path = df_methods["pos_istd_msp_file"].astype(str).values[0]
     elif polarity == "Negative":
-        msp_file_path = df_methods["neg_" + type + "_msp_file"].astype(str).values[0]
+        msp_file_path = df_methods["neg_istd_msp_file"].astype(str).values[0]
 
     return msp_file_path
 
@@ -747,3 +780,84 @@ def get_internal_standards(chromatography, polarity):
             "WHERE chromatography='" + chromatography + "' AND polarity='" + polarity + "'"
     df_internal_standards = pd.read_sql(query, engine)
     return df_internal_standards["name"].astype(str).tolist()
+
+
+def get_biological_standards():
+
+    """
+    Returns a tailored DataFrame of the "biological_standards" table
+    """
+
+    # Get table from database as a DataFrame
+    engine = sa.create_engine(sqlite_db_location)
+    df_biological_standards = pd.read_sql("SELECT * FROM biological_standards", engine)
+
+    # DataFrame refactoring
+    df_biological_standards = df_biological_standards.rename(
+        columns={"name": "Name",
+            "chromatography": "Chromatography",
+            "num_pos_features": "Positive (+) Mode Features",
+            "num_neg_features": "Negative (–) Mode Features",})
+
+    df_biological_standards = df_biological_standards[
+        ["Name", "Chromatography", "Positive (+) Mode Features", "Negative (–) Mode Features"]]
+
+    return df_biological_standards
+
+
+def get_biological_standards_list():
+
+    """
+    Returns a list of biological standards in the database
+    """
+
+    df_biological_standards = get_biological_standards()
+    return df_biological_standards["Name"].astype(str).unique().tolist()
+
+
+def add_biological_standard(name):
+
+    """
+    Inserts new biological standard into "biological_standards" table
+    """
+
+    # Get list of chromatography methods
+    chromatography_methods = get_chromatography_methods()["Method ID"].tolist()
+
+    # Connect to database and get "biological_standards" table
+    db_metadata, connection = connect_to_database()
+    biological_standards_table = sa.Table("biological_standards", db_metadata, autoload=True)
+
+    # Insert a biological standard row for each chromatography
+    for method in chromatography_methods:
+        insert = biological_standards_table.insert().values({
+            "name": name,
+            "chromatography": method,
+            "num_pos_features": 0,
+            "num_neg_features": 0
+        })
+        connection.execute(insert)
+
+    # Close the connection
+    connection.close()
+
+
+def remove_biological_standard(name):
+
+    """
+    Deletes biological standard (and corresponding MSPs) from database
+    """
+
+    # Connect to database and get "biological_standards" table
+    db_metadata, connection = connect_to_database()
+    biological_standards_table = sa.Table("biological_standards", db_metadata, autoload=True)
+
+    # Remove biological standard
+    delete_biological_standard = (
+        sa.delete(biological_standards_table)
+            .where((biological_standards_table.c.name == name))
+    )
+    connection.execute(delete_biological_standard)
+
+    # Close the connection
+    connection.close()
