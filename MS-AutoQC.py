@@ -683,6 +683,10 @@ def serve_layout():
 
                                         html.Br(),
 
+                                        # Alerts for user feedback on biological standard addition/removal
+                                        dbc.Alert(id="chromatography-addition-alert", color="success", is_open=False, duration=4000),
+                                        dbc.Alert(id="chromatography-removal-alert", color="primary", is_open=False, duration=4000),
+
                                         html.Div([
                                             dbc.Label("Add new chromatography method"),
                                             dbc.InputGroup([
@@ -736,6 +740,10 @@ def serve_layout():
 
                                         html.Br(),
 
+                                        # UI feedback on adding MSP to chromatography method
+                                        dbc.Alert(id="chromatography-msp-success-alert", color="success", is_open=False, duration=4000),
+                                        dbc.Alert(id="chromatography-msp-error-alert", color="danger", is_open=False, duration=4000),
+
                                         html.Div(id="chromatography-methods-table"),
 
                                         html.Br(),
@@ -753,6 +761,23 @@ def serve_layout():
 
                                         html.Br(),
 
+                                        # UI feedback for biological standard addition/removal
+                                        dbc.Alert(id="bio-standard-addition-alert", color="success", is_open=False, duration=4000),
+                                        dbc.Alert(id="bio-standard-removal-alert", color="primary", is_open=False, duration=4000),
+
+                                        html.Div([
+                                            dbc.Label("Add new biological standard"),
+                                            dbc.InputGroup([
+                                                dbc.Input(id="add-bio-standard-text-field",
+                                                          placeholder="Name of biological standard to add"),
+                                                dbc.Button("Add biological standard", color="primary", outline=True,
+                                                           id="add-bio-standard-button", n_clicks=0),
+                                            ]),
+                                            dbc.FormText("Example: Human urine, bovine liver, bacterial supernatant"),
+                                        ]),
+
+                                        html.Br(),
+
                                         html.Div([
                                             dbc.Label("Select biological standard"),
                                             dbc.InputGroup([
@@ -765,18 +790,7 @@ def serve_layout():
                                                             target="remove-bio-standard-button", trigger="hover", body=True)
                                             ]),
                                         ]),
-                                        html.Br(),
 
-                                        html.Div([
-                                            dbc.Label("Add new biological standard"),
-                                            dbc.InputGroup([
-                                                dbc.Input(id="add-bio-standard-text-field",
-                                                          placeholder="Name of biological standard to add"),
-                                                dbc.Button("Add biological standard", color="primary", outline=True,
-                                                           id="add-bio-standard-button", n_clicks=0),
-                                            ]),
-                                            dbc.FormText("Example: Human urine, bovine liver, bacterial supernatant"),
-                                        ]),
                                         html.Br(),
 
                                         html.Div([
@@ -817,6 +831,10 @@ def serve_layout():
                                         ]),
 
                                         html.Br(),
+
+                                        # UI feedback on adding MSP to biological standard
+                                        dbc.Alert(id="bio-msp-success-alert", color="success", is_open=False, duration=4000),
+                                        dbc.Alert(id="bio-msp-error-alert", color="danger", is_open=False, duration=4000),
 
                                         html.Div(id="biological-standards-table"),
 
@@ -896,7 +914,7 @@ def serve_layout():
 
                                         html.Br(),
 
-                                        # Alerts for user feedback on configuration addition/removal
+                                        # UI feedback on configuration addition/removal
                                         dbc.Alert(id="msdial-config-addition-alert", is_open=False, duration=4000),
                                         dbc.Alert(id="msdial-config-removal-alert", is_open=False, duration=4000),
 
@@ -1112,7 +1130,7 @@ def serve_layout():
                                         html.Br(), html.Br(),
 
                                         html.Div([
-                                            # Alerts for user feedback on saving changes to MS-DIAL parameters
+                                            # UI feedback on saving changes to MS-DIAL parameters
                                             dbc.Alert(id="msdial-parameters-success-alert",
                                                       color="success", is_open=False, duration=4000),
                                             dbc.Alert(id="msdial-parameters-reset-alert",
@@ -1175,12 +1193,11 @@ def serve_layout():
             dcc.Store(id="msdial-directory-data"),
             dcc.Store(id="bio-standard-added"),
             dcc.Store(id="bio-standard-removed"),
+            dcc.Store(id="bio-msp-added"),
         ])
     ])
 
-
 app.layout = serve_layout
-
 
 @app.callback(Output("tabs", "children"),
               Output("tabs", "value"),
@@ -1885,38 +1902,87 @@ def remove_chromatography_method(button_click, chromatography):
         return ""
 
 
+@app.callback(Output("chromatography-addition-alert", "is_open"),
+              Output("chromatography-addition-alert", "children"),
+              Input("chromatography-added", "data"))
+def show_alert_on_chromatography_addition(chromatography_added):
+
+    """
+    UI feedback for adding a chromatography method
+    """
+
+    if chromatography_added is not None:
+        if chromatography_added == "Added":
+            return True, "The chromatography method was added successfully."
+
+    return False, None
+
+
+@app.callback(Output("chromatography-removal-alert", "is_open"),
+              Output("chromatography-removal-alert", "children"),
+              Input("chromatography-removed", "data"))
+def show_alert_on_chromatography_addition(chromatography_removed):
+
+    """
+    UI feedback for removing a chromatography method
+    """
+
+    if chromatography_removed is not None:
+        if chromatography_removed == "Removed":
+            return True, "The selected chromatography method was removed."
+
+    return False, None
+
+
+@app.callback(Output("chromatography-msp-success-alert", "is_open"),
+              Output("chromatography-msp-success-alert", "children"),
+              Output("chromatography-msp-error-alert", "is_open"),
+              Output("chromatography-msp-error-alert", "children"),
+              Input("istd-msp-added", "data"), prevent_initial_call=True)
+def ui_feedback_for_adding_msp_to_chromatography(msp_added):
+
+    """
+    UI feedback for adding an MSP to a chromatography method
+    """
+
+    if msp_added is not None:
+        if msp_added == "Added":
+            return True, "Success! Your MSP was added to the selected chromatography.", False, ""
+        elif msp_added == "Error":
+            return False, "", True, "Error: Unable to add MSP to chromatography."
+    else:
+        return False, "", False, ""
+
+
 @app.callback(Output("msp-save-changes-button", "children"),
-              Output("msp-save-changes-button", "disabled"),
-              Input("on-page-load", "data"),
               Input("select-istd-chromatography-dropdown", "value"),
-              Input("select-istd-polarity-dropdown", "value"),
-              Input("istd-msp-added", "data"))
-def add_msp_to_chromatography_ui_feedback(on_page_load, chromatography, polarity, msp_added):
+              Input("select-istd-polarity-dropdown", "value"))
+def add_msp_to_chromatography_button_feedback(chromatography, polarity):
 
     """
     "Save changes" button UI feedback for Settings > Internal Standards
     """
 
     if chromatography is not None and polarity is not None:
-        button_text = "Save changes to " + chromatography + " " + polarity
+        return "Add MSP to " + chromatography + " " + polarity
     else:
-        button_text = "Save changes"
-
-    if msp_added == "Ready":
-        button_disabled = False
-    elif msp_added == "Added":
-        button_text = "Save changes"
-        button_disabled = True
-    else:
-        button_disabled = True
-
-    return button_text, button_disabled
+        return "Add MSP"
 
 
 @app.callback(Output("add-istd-msp-text-field", "value"),
-              Output("istd-msp-added", "data"),
+              Input("add-istd-msp-button", "filename"), prevent_intitial_call=True)
+def bio_standard_msp_text_field_feedback(filename):
+
+    """
+    UI feedback for selecting an MSP to save for a chromatography method
+    """
+
+    return filename
+
+
+@app.callback(Output("istd-msp-added", "data"),
               Input("msp-save-changes-button", "n_clicks"),
-              Input("add-istd-msp-button", "contents"),
+              State("add-istd-msp-button", "contents"),
               State("add-istd-msp-button", "filename"),
               State("select-istd-chromatography-dropdown", "value"),
               State("select-istd-polarity-dropdown", "value"), prevent_initial_call=True)
@@ -1940,12 +2006,12 @@ def capture_uploaded_istd_msp(button_click, contents, filename, chromatography, 
                 db.add_msp_to_database(file, chromatography, polarity)  # Parse MSP files
             elif filename.endswith(".csv") or filename.endswith(".txt"):
                 db.add_csv_to_database(file, chromatography, polarity)  # Parse CSV files
-            return filename, "Added"
+            return "Added"
 
-        return filename, "Ready"
+        return "Ready"
 
     # Update dummy dcc.Store object to update chromatography methods table
-    return filename, ""
+    return ""
 
 
 @app.callback(Output("msdial-directory", "value"),
@@ -2032,6 +2098,8 @@ def show_alert_on_msdial_config_addition(config_added):
     if config_added is not None:
         if config_added == "Added":
             return True, "Success! New MS-DIAL configuration added.", "success"
+
+    return False, None, "success"
 
 
 @app.callback(Output("msdial-config-removal-alert", "is_open"),
@@ -2182,8 +2250,9 @@ def show_alert_on_parameter_save(parameters_reset):
               Input("bio-standard-added", "data"),
               Input("bio-standard-removed", "data"),
               Input("chromatography-added", "data"),
-              Input("chromatography-removed", "data"))
-def get_biological_standards(on_page_load, on_standard_added, on_standard_removed, on_method_added, on_method_removed):
+              Input("chromatography-removed", "data"),
+              Input("bio-msp-added", "data"))
+def get_biological_standards(on_page_load, on_standard_added, on_standard_removed, on_method_added, on_method_removed, on_msp_added):
 
     """
     Populates dropdown and table of biological standards
@@ -2230,9 +2299,124 @@ def remove_biological_standard(button_click, biological_standard_name):
 
     if biological_standard_name is not None:
         db.remove_biological_standard(biological_standard_name)
-        return "Removed", None
+        return "Removed"
     else:
-        return "Error", biological_standard_name
+        return "Error"
+
+
+@app.callback(Output("add-bio-msp-text-field", "value"),
+              Input("add-bio-msp-button", "filename"), prevent_intitial_call=True)
+def bio_standard_msp_text_field_ui_callback(filename):
+
+    """
+    UI feedback for selecting an MSP to save for a biological standard
+    """
+
+    return filename
+
+
+@app.callback(Output("bio-msp-added", "data"),
+              Input("bio-standard-save-changes-button", "n_clicks"),
+              State("add-bio-msp-button", "contents"),
+              State("add-bio-msp-button", "filename"),
+              State("select-bio-chromatography-dropdown", "value"),
+              State("select-bio-polarity-dropdown", "value"),
+              State("select-bio-standard-dropdown", "value"), prevent_initial_call=True)
+def capture_uploaded_bio_msp(button_click, contents, filename, chromatography, polarity, bio_standard):
+
+    """
+    In Settings > Biological Standards, captures contents of uploaded MSP file and calls add_msp_to_database().
+    """
+
+    if contents is not None and chromatography is not None and polarity is not None:
+
+        # Decode file contents
+        content_type, content_string = contents.split(",")
+        decoded = base64.b64decode(content_string)
+        file = io.StringIO(decoded.decode("utf-8"))
+
+        # Add MSP file to database
+        if button_click is not None:
+            if filename.endswith(".msp"):
+                db.add_msp_to_database(file, chromatography, polarity, bio_standard=bio_standard)
+
+            # Check whether MSP was added successfully
+            if bio_standard in db.get_biological_standards_list():
+                return "Added"
+            else:
+                return "Error"
+
+        return "Ready"
+
+    # Update dummy dcc.Store object to update chromatography methods table
+    return ""
+
+
+@app.callback(Output("bio-standard-addition-alert", "is_open"),
+              Output("bio-standard-addition-alert", "children"),
+              Input("bio-standard-added", "data"), prevent_initial_call=True)
+def show_alert_on_bio_standard_addition(bio_standard_added):
+
+    """
+    UI feedback for adding a biological standard
+    """
+
+    if bio_standard_added is not None:
+        if bio_standard_added == "Added":
+            return True, "Success! New biological standard added."
+
+    return False, None
+
+
+@app.callback(Output("bio-standard-removal-alert", "is_open"),
+              Output("bio-standard-removal-alert", "children"),
+              Input("bio-standard-removed", "data"), prevent_initial_call=True)
+def show_alert_on_bio_standard_removal(bio_standard_removed):
+
+    """
+    UI feedback for removing a biological standard
+    """
+
+    if bio_standard_removed is not None:
+        if bio_standard_removed == "Removed":
+            return True, "The selected biological standard has been deleted."
+
+    return False, None
+
+
+@app.callback(Output("bio-msp-success-alert", "is_open"),
+              Output("bio-msp-success-alert", "children"),
+              Output("bio-msp-error-alert", "is_open"),
+              Output("bio-msp-error-alert", "children"),
+              Input("bio-msp-added", "data"), prevent_initial_call=True)
+def ui_feedback_for_adding_msp_to_bio_standard(bio_standard_msp_added):
+
+    """
+    UI feedback for adding an MSP to a biological standard
+    """
+
+    if bio_standard_msp_added is not None:
+        if bio_standard_msp_added == "Added":
+            return True, "Success! Your MSP was added to the biological standard.", False, ""
+        elif bio_standard_msp_added == "Error":
+            return False, "", True, "Error: Unable to add MSP to biological standard."
+    else:
+        return False, "", False, ""
+
+
+@app.callback(Output("bio-standard-save-changes-button", "children"),
+              Input("select-bio-chromatography-dropdown", "value"),
+              Input("select-bio-polarity-dropdown", "value"))
+def add_msp_to_bio_standard_button_feedback(chromatography, polarity):
+
+    """
+    "Save changes" button UI feedback for Settings > Biological Standards
+    """
+
+    if chromatography is not None and polarity is not None:
+        return "Add MSP to " + chromatography + " " + polarity
+    else:
+        return "Add MSP"
 
 
 if __name__ == "__main__":

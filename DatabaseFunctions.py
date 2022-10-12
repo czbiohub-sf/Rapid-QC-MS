@@ -188,6 +188,16 @@ def get_chromatography_methods():
     return df_methods
 
 
+def get_chromatography_methods_list():
+
+    """
+    Returns list of chromatography method ID's
+    """
+
+    df_methods = get_chromatography_methods()
+    return df_methods["Method ID"].astype(str).tolist()
+
+
 def insert_chromatography_method(method_id):
 
     """
@@ -231,14 +241,21 @@ def insert_chromatography_method(method_id):
 def remove_chromatography_method(method_id):
 
     """
-    Removes chromatography method in "chromatography_methods" table and
-    "biological_standards" table, and deletes corresponding MSPs from folders
+    1. Removes chromatography method in "chromatography_methods" table
+    2. Removes method from "biological_standards" table
+    3. Removes associated internal standards from "internal_standards" table
+    4. Removes associated targeted features from "targeted_features" table
+    5. Deletes corresponding MSPs from folders
     """
 
     # Connect to database and get relevant tables
     db_metadata, connection = connect_to_database()
     chromatography_table = sa.Table("chromatography_methods", db_metadata, autoload=True)
     biological_standards_table = sa.Table("biological_standards", db_metadata, autoload=True)
+    internal_standards_table = sa.Table("internal_standards", db_metadata, autoload=True)
+    targeted_features_table = sa.Table("targeted_features", db_metadata, autoload=True)
+
+    delete_queries = []
 
     # Remove from "chromatography_methods" table
     delete_chromatography_method = (
@@ -246,19 +263,24 @@ def remove_chromatography_method(method_id):
             .where((chromatography_table.c.method_id == method_id))
     )
 
-    # Remove from "biological_standards" table
-    delete_from_biological_standards = (
-        sa.delete(biological_standards_table)
-            .where((biological_standards_table.c.chromatography == method_id))
-    )
+    delete_queries.append(delete_chromatography_method)
 
-    # Execute deletes, then close the connection
-    connection.execute(delete_chromatography_method)
-    connection.execute(delete_from_biological_standards)
+    # Remove all entries in other tables associated with chromatography
+    for table in [biological_standards_table, internal_standards_table, targeted_features_table]:
+        delete_from_table = (
+            sa.delete(table)
+                .where((table.c.chromatography == method_id))
+        )
+        delete_queries.append(delete_from_table)
+
+    # Execute all deletes, then close the connection
+    for query in delete_queries:
+        connection.execute(query)
+
     connection.close()
 
 
-def add_msp_to_database(msp_file, chromatography, polarity, is_bio_standard=False):
+def add_msp_to_database(msp_file, chromatography, polarity, bio_standard=None):
 
     """
     Parses compounds from MSP into "internal_standards" or "targeted_features" table,
@@ -273,10 +295,18 @@ def add_msp_to_database(msp_file, chromatography, polarity, is_bio_standard=Fals
     if not os.path.exists(methods_directory):
         os.makedirs(methods_directory)
 
-    if polarity == "Positive Mode":
-        msp_file_path = os.path.join(methods_directory, chromatography + "_Pos.msp")
-    elif polarity == "Negative Mode":
-        msp_file_path = os.path.join(methods_directory, chromatography + "_Neg.msp")
+    if bio_standard is not None:
+        if polarity == "Positive Mode":
+            msp_file_path = os.path.join(methods_directory, bio_standard.replace(" ", "_")
+                                         + "_" + chromatography + "_Pos.msp")
+        elif polarity == "Negative Mode":
+            msp_file_path = os.path.join(methods_directory, bio_standard.replace(" ", "_")
+                                         + "_" + chromatography + "_Neg.msp")
+    else:
+        if polarity == "Positive Mode":
+            msp_file_path = os.path.join(methods_directory, chromatography + "_Pos.msp")
+        elif polarity == "Negative Mode":
+            msp_file_path = os.path.join(methods_directory, chromatography + "_Neg.msp")
 
     with open(msp_file_path, "w") as file:
         msp_file.seek(0)
@@ -301,7 +331,13 @@ def add_msp_to_database(msp_file, chromatography, polarity, is_bio_standard=Fals
         # Iterate through features in MSP
         for feature_index, feature in enumerate(list_of_features):
 
-            features_dict[feature_index] = {}
+            features_dict[feature_index] = {
+                "Name": None,
+                "Precursor m/z": None,
+                "Retention time": None,
+                "INCHIKEY": None,
+                "MS2 spectrum": None
+            }
 
             # Iterate through each line of each feature in the MSP
             for data_index, feature_data in enumerate(feature):
@@ -338,52 +374,109 @@ def add_msp_to_database(msp_file, chromatography, polarity, is_bio_standard=Fals
                     features_dict[feature_index]["MS2 spectrum"] = str(peaks_in_spectrum)
                     break
 
-    # Get internal_standards table
-    internal_standards_table = sa.Table("internal_standards", db_metadata, autoload=True)
+    # Adding MSP for biological standards
+    if bio_standard is not None:
 
-    # Prepare DELETE of old internal standards
-    delete_old_internal_standards = (
-        sa.delete(internal_standards_table)
-            .where((internal_standards_table.c.chromatography == chromatography)
-                   & (internal_standards_table.c.polarity == polarity))
-    )
+        # Get "targeted_features" table
+        targeted_features_table = sa.Table("targeted_features", db_metadata, autoload=True)
 
-    # Execute DELETE
-    connection.execute(delete_old_internal_standards)
-
-    # Execute INSERT of each internal standard into internal_standards table
-    for feature in features_dict:
-        insert_feature = internal_standards_table.insert().values(
-            {"name": features_dict[feature]["Name"],
-             "chromatography": chromatography,
-             "polarity": polarity,
-             "precursor_mz": features_dict[feature]["Precursor m/z"],
-             "retention_time": features_dict[feature]["Retention time"],
-             "ms2_spectrum": features_dict[feature]["MS2 spectrum"],
-             "inchikey": features_dict[feature]["INCHIKEY"]})
-        connection.execute(insert_feature)
-
-    # Get "chromatography" table
-    chromatography_table = sa.Table("chromatography_methods", db_metadata, autoload=True)
-
-    # Write location of msp file to respective cell
-    if polarity == "Positive Mode":
-        update_msp_file = (
-            sa.update(chromatography_table)
-                .where(chromatography_table.c.method_id == chromatography)
-                .values(num_pos_standards=len(features_dict),
-                        pos_istd_msp_file=msp_file_path)
-        )
-    elif polarity == "Negative Mode":
-        update_msp_file = (
-            sa.update(chromatography_table)
-                .where(chromatography_table.c.method_id == chromatography)
-                .values(num_neg_standards=len(features_dict),
-                        neg_istd_msp_file=msp_file_path)
+        # Prepare DELETE of old targeted features
+        delete_old_targeted_features = (
+            sa.delete(targeted_features_table)
+                .where((targeted_features_table.c.chromatography == chromatography)
+                       & (targeted_features_table.c.polarity == polarity)
+                       & (targeted_features_table.c.biological_standard == bio_standard))
         )
 
-    # Execute UPDATE of MSP file location
-    connection.execute(update_msp_file)
+        # Execute DELETE
+        connection.execute(delete_old_targeted_features)
+
+        # Execute INSERT of each targeted feature into targeted_features table
+        for feature in features_dict:
+            insert_feature = targeted_features_table.insert().values(
+                {"name": features_dict[feature]["Name"],
+                 "chromatography": chromatography,
+                 "polarity": polarity,
+                 "biological_standard": bio_standard,
+                 "precursor_mz": features_dict[feature]["Precursor m/z"],
+                 "retention_time": features_dict[feature]["Retention time"],
+                 "ms2_spectrum": features_dict[feature]["MS2 spectrum"],
+                 "inchikey": features_dict[feature]["INCHIKEY"]})
+            connection.execute(insert_feature)
+
+        # Get "biological_standards" table
+        biological_standards_table = sa.Table("biological_standards", db_metadata, autoload=True)
+
+        # Write location of msp file to respective cell
+        if polarity == "Positive Mode":
+            update_msp_file = (
+                sa.update(biological_standards_table)
+                    .where((biological_standards_table.c.chromatography == chromatography)
+                           & (biological_standards_table.c.name == bio_standard))
+                    .values(num_pos_features=len(features_dict),
+                            pos_bio_msp_file=msp_file_path)
+            )
+        elif polarity == "Negative Mode":
+            update_msp_file = (
+                sa.update(biological_standards_table)
+                    .where((biological_standards_table.c.chromatography == chromatography)
+                           & (biological_standards_table.c.name == bio_standard))
+                    .values(num_neg_features=len(features_dict),
+                            neg_bio_msp_file=msp_file_path)
+            )
+
+        # Execute UPDATE of MSP file location
+        connection.execute(update_msp_file)
+
+    # Adding MSP for internal standards
+    else:
+
+        # Get internal_standards table
+        internal_standards_table = sa.Table("internal_standards", db_metadata, autoload=True)
+
+        # Prepare DELETE of old internal standards
+        delete_old_internal_standards = (
+            sa.delete(internal_standards_table)
+                .where((internal_standards_table.c.chromatography == chromatography)
+                       & (internal_standards_table.c.polarity == polarity))
+        )
+
+        # Execute DELETE
+        connection.execute(delete_old_internal_standards)
+
+        # Execute INSERT of each internal standard into internal_standards table
+        for feature in features_dict:
+            insert_feature = internal_standards_table.insert().values(
+                {"name": features_dict[feature]["Name"],
+                 "chromatography": chromatography,
+                 "polarity": polarity,
+                 "precursor_mz": features_dict[feature]["Precursor m/z"],
+                 "retention_time": features_dict[feature]["Retention time"],
+                 "ms2_spectrum": features_dict[feature]["MS2 spectrum"],
+                 "inchikey": features_dict[feature]["INCHIKEY"]})
+            connection.execute(insert_feature)
+
+        # Get "chromatography" table
+        chromatography_table = sa.Table("chromatography_methods", db_metadata, autoload=True)
+
+        # Write location of msp file to respective cell
+        if polarity == "Positive Mode":
+            update_msp_file = (
+                sa.update(chromatography_table)
+                    .where(chromatography_table.c.method_id == chromatography)
+                    .values(num_pos_standards=len(features_dict),
+                            pos_istd_msp_file=msp_file_path)
+            )
+        elif polarity == "Negative Mode":
+            update_msp_file = (
+                sa.update(chromatography_table)
+                    .where(chromatography_table.c.method_id == chromatography)
+                    .values(num_neg_standards=len(features_dict),
+                            neg_istd_msp_file=msp_file_path)
+            )
+
+        # Execute UPDATE of MSP file location
+        connection.execute(update_msp_file)
 
     # Close the connection
     connection.close()
@@ -848,9 +941,10 @@ def remove_biological_standard(name):
     Deletes biological standard (and corresponding MSPs) from database
     """
 
-    # Connect to database and get "biological_standards" table
+    # Connect to database and get relevant tables
     db_metadata, connection = connect_to_database()
     biological_standards_table = sa.Table("biological_standards", db_metadata, autoload=True)
+    targeted_features_table = sa.Table("targeted_features", db_metadata, autoload=True)
 
     # Remove biological standard
     delete_biological_standard = (
@@ -858,6 +952,13 @@ def remove_biological_standard(name):
             .where((biological_standards_table.c.name == name))
     )
     connection.execute(delete_biological_standard)
+
+    # Remove targeted features for that biological standard
+    delete_targeted_features = (
+        sa.delete(targeted_features_table)
+            .where((targeted_features_table.c.biological_standard == name))
+    )
+    connection.execute(delete_targeted_features)
 
     # Close the connection
     connection.close()
