@@ -1837,6 +1837,14 @@ def add_chromatography_method(on_page_load, button_click, chromatography_method,
 
     # Update table
     df_methods = db.get_chromatography_methods()
+
+    df_methods = df_methods.rename(
+        columns={"method_id": "Method ID",
+        "num_pos_standards": "Positive (+) Mode Standards",
+        "num_neg_standards": "Negative (–) Mode Standards"})
+
+    df_methods = df_methods[["Method ID", "Positive (+) Mode Standards", "Negative (–) Mode Standards"]]
+
     methods_table = dbc.Table.from_dataframe(df_methods, striped=True, hover=True)
 
     # Update dropdown

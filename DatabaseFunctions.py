@@ -33,7 +33,7 @@ def get_instruments_list():
     return df_instruments["name"].astype(str).tolist()
 
 
-def insert_new_run(run_id, instrument_id, chromatography, bio_standards, sequence, metadata, msdial_config_id, qc_config_id):
+def insert_new_run(run_id, instrument_id, chromatography, bio_standards, sequence, metadata, qc_config_id):
 
     """
     1. Inserts a new instrument run into the "runs" table
@@ -61,7 +61,7 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, sequenc
         if len(bio_standards) > 0:
             for bio_standard in bio_standards:
                 df = df_bio_standards.loc[df_bio_standards["Name"] == bio_standard]
-                identifier = df["Identifier"].astype(str).unique().values[0]
+                identifier = df["Identifier"].astype(str).unique().tolist()[0]
                 identifiers.append(identifier)
 
     # Prepare insert of user-inputted run data
@@ -77,9 +77,8 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, sequenc
          "passes": 0,
          "fails": 0,
          "latest_sample": "",
-         "msdial_config_id": msdial_config_id,
          "qc_config_id": qc_config_id,
-         "biological_standards": bio_standards})
+         "biological_standards": str(bio_standards)})
 
     insert_samples = []
 
@@ -204,18 +203,8 @@ def get_chromatography_methods():
     Returns DataFrame of chromatography methods
     """
 
-    # Get table from database
     engine = sa.create_engine(sqlite_db_location)
     df_methods = pd.read_sql("SELECT * FROM chromatography_methods", engine)
-
-    # DataFrame refactoring
-    df_methods = df_methods.rename(
-        columns={"method_id": "Method ID",
-        "num_pos_standards": "Positive (+) Mode Standards",
-        "num_neg_standards": "Negative (–) Mode Standards",})
-
-    df_methods = df_methods[["Method ID", "Positive (+) Mode Standards", "Negative (–) Mode Standards"]]
-
     return df_methods
 
 
@@ -226,7 +215,7 @@ def get_chromatography_methods_list():
     """
 
     df_methods = get_chromatography_methods()
-    return df_methods["Method ID"].astype(str).tolist()
+    return df_methods["method_id"].astype(str).tolist()
 
 
 def insert_chromatography_method(method_id):
@@ -625,24 +614,28 @@ def get_msdial_configurations():
     return df_msdial_configurations["config_name"].astype(str).tolist()
 
 
-def generate_msdial_parameters_file(config_name, chromatography, polarity, msp_file_path, bio_standard=None):
+def generate_msdial_parameters_file(chromatography, polarity, msp_file_path, bio_standard=None):
 
     """
     Uses parameters from user-curated MS-DIAL configuration to create a parameters.txt file for command-line MS-DIAL
     """
 
     # Get parameters of selected configuration
-    parameters = db.get_msdial_configuration_parameters(config_name)
+    df_methods = get_chromatography_methods()
+    df_methods = df_methods.loc[df_methods["method_id"] == chromatography]
+    config_name = df_methods["msdial_config_id"].astype(str).values[0]
+    parameters = get_msdial_configuration_parameters(config_name)
 
+    # Some specifications based on polarity / file type for the parameters
     if polarity == "Positive":
         adduct_type = "[M+H]+"
     elif polarity == "Negative":
         adduct_type = "[M-H]-"
 
     if msp_file_path.endswith(".msp"):
-        filepath = "MSP file: " + msp_filepath
+        filepath = "MSP file: " + msp_file_path
     elif msp_file_path.endswith(".txt"):
-        filepath = "Text file: " + txt_filepath
+        filepath = "Text file: " + msp_file_path
 
     # Text file contents
     lines = [
