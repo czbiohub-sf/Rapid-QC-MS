@@ -111,7 +111,7 @@ def serve_layout():
 
                                 # Button to start monitoring a new run
                                 html.Div(className="d-grid gap-2", children=[
-                                    dbc.Button("Monitor New Instrument Run",
+                                    dbc.Button("Setup New AutoQC Job",
                                                id="setup-new-run-button",
                                                style={"margin-top": "15px",
                                                       "line-height": "1.75"},
@@ -121,7 +121,7 @@ def serve_layout():
 
                                 # Polarity filtering options
                                 html.Div(className="radio-group-container", children=[
-                                    html.Div(className="radio-group", children=[
+                                    html.Div(className="radio-group margin-top-30", children=[
                                         dbc.RadioItems(
                                             id="polarity-options",
                                             className="btn-group",
@@ -138,7 +138,7 @@ def serve_layout():
 
                                 # Sample / blank / pool / treatment filtering options
                                 html.Div(className="radio-group-container", children=[
-                                    html.Div(className="radio-group", children=[
+                                    html.Div(className="radio-group margin-top-30", children=[
                                         dbc.RadioItems(
                                             id="sample-filtering-options",
                                             className="btn-group",
@@ -487,7 +487,7 @@ def serve_layout():
 
                         # Modal for starting an instrument run listener
                         dbc.Modal(id="setup-new-run-modal", size="lg", centered=True, is_open=False, scrollable=True, children=[
-                            dbc.ModalHeader(dbc.ModalTitle(id="setup-new-run-modal-title", children="Monitor New Instrument Run"), close_button=True),
+                            dbc.ModalHeader(dbc.ModalTitle(id="setup-new-run-modal-title", children="Setup New AutoQC Job"), close_button=True),
                             dbc.ModalBody(id="setup-new-run-modal-body", className="modal-styles-2", children=[
 
                                 # Text field for entering your run ID
@@ -502,31 +502,25 @@ def serve_layout():
                                 # Select chromatography
                                 html.Div([
                                     dbc.Label("Select chromatography"),
-                                    dbc.Select(id="start-run-chromatography-dropdown", options=[
-                                        {"label": "HILIC", "value": "HILIC"},
-                                        {"label": "C18", "value": "C18"},
-                                        {"label": "Lipids", "value": "Lipids", "disabled": True},
-                                    ], placeholder="No chromatography selected"),
+                                    dbc.Select(id="start-run-chromatography-dropdown",
+                                               placeholder="No chromatography selected"),
+                                ]),
+
+                                html.Br(),
+
+                                # Select biological standard used in this study
+                                html.Div(children=[
+                                    dbc.Label("Select biological standards (optional)"),
+                                    dbc.Checklist(id="start-run-bio-standards-checklist"),
                                 ]),
 
                                 html.Br(),
 
                                 # Select AutoQC configuration
                                 html.Div(children=[
-                                    dbc.Label("Select AutoQC monitoring configuration"),
-                                    dbc.Select(id="start-run-qc-configs-dropdown", options=[
-                                        {"label": "Default AutoQC configuration", "value": 0},
-                                    ], placeholder="No configuration selected"),
-                                ]),
-
-                                html.Br(),
-
-                                # Select MS-DIAL configuration
-                                html.Div(children=[
-                                    dbc.Label("Select MS-DIAL processing configuration"),
-                                    dbc.Select(id="start-run-msdial-configs-dropdown", options=[
-                                        {"label": "Default MS-DIAL configuration", "value": 0},
-                                    ], placeholder="No configuration selected"),
+                                    dbc.Label("Select MS-AutoQC configuration"),
+                                    dbc.Select(id="start-run-qc-configs-dropdown",
+                                               placeholder="No configuration selected"),
                                 ]),
 
                                 html.Br(),
@@ -535,10 +529,10 @@ def serve_layout():
                                 html.Div([
                                     dbc.Label("Acquisition sequence (.csv)"),
                                     dbc.InputGroup([
-                                        dbc.DropdownMenu([
-                                            dbc.DropdownMenuItem("Thermo Xcalibur"),
-                                            dbc.DropdownMenuItem("Agilent MassHunter")],
-                                            id="vendor-software", label="Vendor", color="secondary"),
+                                        # dbc.DropdownMenu([
+                                        #     dbc.DropdownMenuItem("Thermo Xcalibur"),
+                                        #     dbc.DropdownMenuItem("Agilent MassHunter")],
+                                        #     id="vendor-software", label="Vendor", color="secondary"),
                                         dbc.Input(id="sequence-path",
                                                   placeholder="No file selected"),
                                         dbc.Button(dcc.Upload(
@@ -582,6 +576,19 @@ def serve_layout():
                                                   id="data-acquisition-folder-path"),
                                     ]),
                                     dbc.FormText("Please type the folder path to which incoming data files will be saved."),
+                                ]),
+
+                                html.Br(),
+
+                                # Switch between running AutoQC on a live run vs. past completed run
+                                html.Div(children=[
+                                    dbc.Label("Is this an active or completed instrument run?"),
+                                    dbc.RadioItems(id="autoqc-active-past-options", value="active", options=[
+                                        {"label": "I want to monitor and QC an active instrument run",
+                                         "value": "active"},
+                                        {"label": "I want to QC a completed instrument run",
+                                         "value": "past"}],
+                                    ),
                                 ]),
 
                                 html.Br(),
@@ -724,6 +731,22 @@ def serve_layout():
 
                                         html.Br(),
 
+                                        dbc.Alert(id="istd-config-success-alert", color="success", is_open=False, duration=4000),
+
+                                        # Set MS-DIAL configuration for selected chromatography
+                                        html.Div(children=[
+                                            dbc.Label("Set MS-DIAL processing configuration",
+                                                      id="istd-medial-configs-label"),
+                                            dbc.InputGroup([
+                                                dbc.Select(id="istd-msdial-configs-dropdown",
+                                                           placeholder="No configuration selected"),
+                                                dbc.Button("Set configuration", color="primary", outline=True,
+                                                           id="istd-msdial-configs-button", n_clicks=0),
+                                            ])
+                                        ]),
+
+                                        html.Br(),
+
                                         html.Div([
                                             dbc.Label("Add internal standards (MSP or CSV format)"),
                                             dbc.InputGroup([
@@ -769,11 +792,14 @@ def serve_layout():
                                             dbc.Label("Add new biological standard"),
                                             dbc.InputGroup([
                                                 dbc.Input(id="add-bio-standard-text-field",
-                                                          placeholder="Name of biological standard to add"),
+                                                          placeholder="Name of biological standard"),
+                                                dbc.Input(id="add-bio-standard-identifier-text-field",
+                                                          placeholder="Sequence identifier"),
                                                 dbc.Button("Add biological standard", color="primary", outline=True,
                                                            id="add-bio-standard-button", n_clicks=0),
                                             ]),
-                                            dbc.FormText("Example: Human urine, bovine liver, bacterial supernatant"),
+                                            dbc.FormText(
+                                                "The sequence identifier is the label that denotes your biological standard in the sequence."),
                                         ]),
 
                                         html.Br(),
@@ -811,6 +837,22 @@ def serve_layout():
                                                     html.Br(),
                                                 ]),
                                             ]),
+                                        ]),
+
+                                        html.Br(), html.Br(),
+
+                                        dbc.Alert(id="bio-config-success-alert", color="success", is_open=False, duration=4000),
+
+                                        # Set MS-DIAL configuration for selected biological standard
+                                        html.Div(children=[
+                                            dbc.Label("Set MS-DIAL processing configuration",
+                                                      id="bio-standard-msdial-configs-label"),
+                                            dbc.InputGroup([
+                                                dbc.Select(id="bio-standard-msdial-configs-dropdown",
+                                                           placeholder="No configuration selected"),
+                                                dbc.Button("Set configuration", color="primary", outline=True,
+                                                           id="bio-standard-msdial-configs-button", n_clicks=0),
+                                            ])
                                         ]),
 
                                         html.Br(),
@@ -1185,6 +1227,7 @@ def serve_layout():
             # Dummy inputs for UI update callbacks
             dcc.Store(id="chromatography-added"),
             dcc.Store(id="chromatography-removed"),
+            dcc.Store(id="chromatography-msdial-config-added"),
             dcc.Store(id="istd-msp-added"),
             dcc.Store(id="msdial-config-added"),
             dcc.Store(id="msdial-config-removed"),
@@ -1194,6 +1237,7 @@ def serve_layout():
             dcc.Store(id="bio-standard-added"),
             dcc.Store(id="bio-standard-removed"),
             dcc.Store(id="bio-msp-added"),
+            dcc.Store(id="bio-standard-msdial-config-added"),
         ])
     ])
 
@@ -1208,7 +1252,7 @@ def get_instrument_tabs(instruments):
     Retrieves all instruments on a user installation of MS-AutoQC
     """
 
-    instrument_list = db.get_instruments()
+    instrument_list = db.get_instruments_list()
 
     # Create tabs for each instrument
     instrument_tabs = []
@@ -1741,25 +1785,21 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
 
 
 @app.callback(Output("setup-new-run-modal", "is_open"),
-              Output("setup-new-run-modal-title", "children"),
               Output("setup-new-run-button", "n_clicks"),
               Input("setup-new-run-button", "n_clicks"),
-              State("tabs", "value"),
               Input("new-run-success-modal", "is_open"), prevent_initial_call=True)
-def toggle_new_run_modal(button_clicks, instrument, success):
+def toggle_new_run_modal(button_clicks, success):
 
     """
-    Toggles modal for setting up autoQC monitoring for a new instrument run
+    Toggles modal for setting up AutoQC monitoring for a new instrument run
     """
-
-    title = instrument + " – Setup AutoQC Monitoring"
 
     if success:
-        return False, title, 0
+        return False, 0
     elif not success and button_clicks != 0:
-        return True, title, 1
+        return True, 1
     else:
-        return False, title, 0
+        return False, 0
 
 
 @app.callback(Output("settings-modal", "is_open"),
@@ -1769,85 +1809,6 @@ def toggle_settings_modal(button_click):
     """
     Toggles global settings modal
     """
-
-    return True
-
-
-@app.callback(Output("sequence-path", "value"),
-              Output("new-sequence", "data"),
-              Input("sequence-upload-button", "contents"),
-              State("sequence-upload-button", "filename"), prevent_initial_call=True)
-def capture_uploaded_sequence(contents, filename):
-
-    """
-    Converts sequence CSV file to JSON string and stores in dcc.Store object
-    """
-
-    # Decode sequence file contents
-    content_type, content_string = contents.split(",")
-    decoded = base64.b64decode(content_string)
-    sequence_file_contents = io.StringIO(decoded.decode("utf-8"))
-
-    # Get sequence file as JSON string
-    sequence = qc.convert_sequence_to_json(sequence_file_contents)
-
-    # Update UI and store sequence JSON string
-    return filename, sequence
-
-
-@app.callback(Output("metadata-path", "value"),
-              Output("new-metadata", "data"),
-              Input("metadata-upload-button", "contents"),
-              State("metadata-upload-button", "filename"), prevent_initial_call=True)
-def capture_uploaded_metadata(contents, filename):
-
-    """
-    Converts metadata CSV file to JSON string and stores in dcc.Store object
-    """
-
-    # Decode metadata file contents
-    content_type, content_string = contents.split(",")
-    decoded = base64.b64decode(content_string)
-    metadata_file_contents = io.StringIO(decoded.decode("utf-8"))
-
-    # Get metadata file as JSON string
-    metadata = qc.convert_metadata_to_json(metadata_file_contents)
-
-    # Update UI and store metadata JSON string
-    return filename, metadata
-
-
-@app.callback(Output("new-run-success-modal", "is_open"),
-              Input("monitor-new-run-button", "n_clicks"),
-              State("instrument-run-id", "value"),
-              State("tabs", "value"),
-              State("start-run-chromatography-dropdown", "value"),
-              State("new-sequence", "data"),
-              State("new-metadata", "data"),
-              State("data-acquisition-folder-path", "value"),
-              State("start-run-qc-configs-dropdown", "value"),
-              State("start-run-msdial-configs-dropdown", "value"), prevent_initial_call=True)
-def start_monitoring_run(button_clicks, run_id, instrument_id, chromatography, sequence, metadata,
-                         acquisition_path, qc_config_id, msdial_config_id):
-
-    """
-    This callback initiates the following:
-    1. Writing a new instrument run to the database
-    2. Generate parameters files for MS-DIAL processing
-    3. Initializing run monitoring at the given directory
-    """
-
-    # Write a new instrument run to the database
-    db.insert_new_run(run_id, instrument_id, chromatography, sequence, metadata, msdial_config_id)
-
-    # Get MSPs and generate parameters files for MS-DIAL processing
-    for polarity in ["Positive", "Negative"]:
-        msp_file_path = db.get_istd_msp_file_paths(chromatography, polarity)
-        db.generate_msdial_parameters_file(msdial_config_id, chromatography, polarity, msp_file_path)
-
-    # Initialize run monitoring at the given directory
-    filenames = qc.get_filenames_from_sequence(sequence)
-    listener = subprocess.Popen(["python", "AcquisitionListener.py", acquisition_path, str(filenames), run_id])
 
     return True
 
@@ -2273,19 +2234,21 @@ def get_biological_standards(on_page_load, on_standard_added, on_standard_remove
 
 @app.callback(Output("bio-standard-added", "data"),
               Output("add-bio-standard-text-field", "value"),
+              Output("add-bio-standard-identifier-text-field", "value"),
               Input("add-bio-standard-button", "n_clicks"),
-              State("add-bio-standard-text-field", "value"), prevent_initial_call=True)
-def add_biological_standard(button_click, biological_standard_name):
+              State("add-bio-standard-text-field", "value"),
+              State("add-bio-standard-identifier-text-field", "value"), prevent_initial_call=True)
+def add_biological_standard(button_click, name, identifier):
 
     """
     Adds biological standard to database
     """
 
-    if biological_standard_name is not None:
-        db.add_biological_standard(biological_standard_name)
-        return "Added", None
+    if name is not None and identifier is not None:
+        db.add_biological_standard(name, identifier)
+        return "Added", None, None
     else:
-        return "Error", biological_standard_name
+        return "Error", name, identifier
 
 
 @app.callback(Output("bio-standard-removed", "data"),
@@ -2417,6 +2380,268 @@ def add_msp_to_bio_standard_button_feedback(chromatography, polarity):
         return "Add MSP to " + chromatography + " " + polarity
     else:
         return "Add MSP"
+
+
+@app.callback(Output("bio-standard-msdial-configs-dropdown", "options"),
+              Output("istd-msdial-configs-dropdown", "options"),
+              Input("msdial-config-added", "data"),
+              Input("msdial-config-removed", "data"))
+def populate_msdial_configs_for_biological_standard(msdial_config_added, msdial_config_removed):
+
+    """
+    In Settings > Biological Standards, populates the MS-DIAL configurations dropdown
+    """
+
+    options = []
+
+    for config in db.get_msdial_configurations():
+        options.append({"label": config, "value": config})
+
+    return options, options
+
+
+@app.callback(Output("bio-standard-msdial-config-added", "data"),
+              Input("bio-standard-msdial-configs-button", "n_clicks"),
+              State("select-bio-standard-dropdown", "value"),
+              State("select-bio-chromatography-dropdown", "value"),
+              State("bio-standard-msdial-configs-dropdown", "value"), prevent_initial_call=True)
+def add_msdial_config_for_bio_standard(button_click, biological_standard, chromatography, config_id):
+
+    """
+    In Settings > Biological Standards, sets the MS-DIAL configuration to be used for chromatography
+    """
+
+    if biological_standard is not None and chromatography is not None and config_id is not None:
+        db.update_msdial_config_for_bio_standard(biological_standard, chromatography, config_id)
+        return "Added"
+    else:
+        return ""
+
+
+@app.callback(Output("bio-config-success-alert", "is_open"),
+              Output("bio-config-success-alert", "children"),
+              Input("bio-standard-msdial-config-added", "data"),
+              State("select-bio-standard-dropdown", "value"),
+              State("select-bio-chromatography-dropdown", "value"), prevent_initial_call=True)
+def ui_feedback_for_setting_msdial_config_for_bio_standard(config_added, bio_standard, chromatography):
+
+    """
+    In Settings > Biological Standards, provides an alert when MS-DIAL config is successfully set for biological standard
+    """
+
+    if config_added is not None:
+        if config_added == "Added":
+            message = "MS-DIAL parameter configuration saved successfully for " + bio_standard + " (" + chromatography + " method)."
+            return True, message
+
+    return False, ""
+
+
+@app.callback(Output("chromatography-msdial-config-added", "data"),
+              Input("istd-msdial-configs-button", "n_clicks"),
+              State("select-istd-chromatography-dropdown", "value"),
+              State("istd-msdial-configs-dropdown", "value"), prevent_initial_call=True)
+def add_msdial_config_for_chromatography(button_click, chromatography, config_id):
+
+    """
+    In Settings > Internal Standards, sets the MS-DIAL configuration to be used for processing samples
+    """
+
+    if chromatography is not None and config_id is not None:
+        db.update_msdial_config_for_internal_standards(chromatography, config_id)
+        return "Added"
+    else:
+        return ""
+
+
+@app.callback(Output("istd-config-success-alert", "is_open"),
+              Output("istd-config-success-alert", "children"),
+              Input("chromatography-msdial-config-added", "data"),
+              State("select-istd-chromatography-dropdown", "value"), prevent_initial_call=True)
+def ui_feedback_for_setting_msdial_config_for_chromatography(config_added, chromatography):
+
+    """
+    In Settings > Internal Standards, provides an alert when MS-DIAL config is successfully set for a chromatography
+    """
+
+    if config_added is not None:
+        if config_added == "Added":
+            message = "MS-DIAL parameter configuration saved successfully for " + chromatography + "."
+            return True, message
+
+    return False, ""
+
+
+@app.callback(Output("start-run-chromatography-dropdown", "options"),
+              Output("start-run-bio-standards-checklist", "options"),
+              Output("start-run-qc-configs-dropdown", "options"),
+              Input("setup-new-run-button", "n_clicks"), prevent_initial_call=True)
+def populate_options_for_new_run(button_click):
+
+    """
+    Populates dropdowns and checklists for Setup New AutoQC Job page
+    """
+
+    chromatography_methods = []
+    biological_standards = []
+    qc_configurations = []
+
+    for method in db.get_chromatography_methods_list():
+        chromatography_methods.append({"value": method, "label": method})
+
+    for bio_standard in db.get_biological_standards_list():
+        biological_standards.append({"value": bio_standard, "label": bio_standard})
+
+    for qc_configuration in db.get_qc_configurations_list():
+        qc_configurations.append({"value": qc_configuration, "label": qc_configuration})
+
+    return chromatography_methods, biological_standards, qc_configurations
+
+
+@app.callback(Output("sequence-path", "value"),
+              Output("new-sequence", "data"),
+              Input("sequence-upload-button", "contents"),
+              State("sequence-upload-button", "filename"), prevent_initial_call=True)
+def capture_uploaded_sequence(contents, filename):
+
+    """
+    Converts sequence CSV file to JSON string and stores in dcc.Store object
+    """
+
+    # Decode sequence file contents
+    content_type, content_string = contents.split(",")
+    decoded = base64.b64decode(content_string)
+    sequence_file_contents = io.StringIO(decoded.decode("utf-8"))
+
+    # Get sequence file as JSON string
+    sequence = qc.convert_sequence_to_json(sequence_file_contents)
+
+    # Update UI and store sequence JSON string
+    return filename, sequence
+
+
+@app.callback(Output("metadata-path", "value"),
+              Output("new-metadata", "data"),
+              Input("metadata-upload-button", "contents"),
+              State("metadata-upload-button", "filename"), prevent_initial_call=True)
+def capture_uploaded_metadata(contents, filename):
+
+    """
+    Converts metadata CSV file to JSON string and stores in dcc.Store object
+    """
+
+    # Decode metadata file contents
+    content_type, content_string = contents.split(",")
+    decoded = base64.b64decode(content_string)
+    metadata_file_contents = io.StringIO(decoded.decode("utf-8"))
+
+    # Get metadata file as JSON string
+    metadata = qc.convert_metadata_to_json(metadata_file_contents)
+
+    # Update UI and store metadata JSON string
+    return filename, metadata
+
+
+@app.callback(Output("new-run-success-modal", "is_open"),
+              Input("monitor-new-run-button", "n_clicks"),
+              State("instrument-run-id", "value"),
+              State("tabs", "value"),
+              State("start-run-chromatography-dropdown", "value"),
+              State("start-run-bio-standards-checklist", "value"),
+              State("new-sequence", "data"),
+              State("new-metadata", "data"),
+              State("data-acquisition-folder-path", "value"),
+              State("start-run-qc-configs-dropdown", "value"), prevent_initial_call=True)
+def start_monitoring_run(button_clicks, run_id, instrument_id, chromatography, bio_standards, sequence, metadata,
+                         acquisition_path, qc_config_id):
+
+    """
+    This callback initiates the following:
+    1. Writing a new instrument run to the database
+    2. Generate parameters files for MS-DIAL processing
+    3. Initializing run monitoring at the given directory
+    """
+
+    # Write a new instrument run to the database
+    db.insert_new_run(run_id, instrument_id, chromatography, bio_standards, sequence, metadata, qc_config_id)
+
+    # Get MSPs and generate parameters files for MS-DIAL processing
+    for polarity in ["Positive", "Negative"]:
+
+        # Generate parameters files for processing samples
+        msp_file_path = db.get_msp_file_paths(chromatography, polarity)
+        db.generate_msdial_parameters_file(chromatography, polarity, msp_file_path)
+
+        # Generate parameters files for processing each biological standard
+        for bio_standard in bio_standards:
+            msp_file_path = db.get_msp_file_paths(chromatography, polarity, bio_standard)
+            db.generate_msdial_parameters_file(chromatography, polarity, msp_file_path, bio_standard)
+
+    # Initialize run monitoring at the given directory
+    filenames = qc.get_filenames_from_sequence(sequence)
+    listener = subprocess.Popen(["python", "AcquisitionListener.py", acquisition_path, str(filenames), run_id])
+
+    return True
+
+
+@app.callback(Output("instrument-run-id", "valid"),
+              Output("start-run-chromatography-dropdown", "valid"),
+              Output("start-run-bio-standards-checklist", "valid"),
+              Output("start-run-qc-configs-dropdown", "valid"),
+              Output("sequence-path", "valid"),
+              Output("metadata-path", "valid"),
+              Output("data-acquisition-folder-path", "valid"),
+              Output("autoqc-active-past-options", "valid"),
+              Input("instrument-run-id", "value"),
+              Input("start-run-chromatography-dropdown", "value"),
+              Input("start-run-bio-standards-checklist", "value"),
+              Input("start-run-qc-configs-dropdown", "value"),
+              Input("sequence-path", "value"),
+              Input("metadata-path", "value"),
+              Input("data-acquisition-folder-path", "value"),
+              Input("autoqc-active-past-options", "value"),
+              State("instrument-run-id", "valid"),
+              State("start-run-chromatography-dropdown", "valid"),
+              State("start-run-bio-standards-checklist", "valid"),
+              State("start-run-qc-configs-dropdown", "valid"),
+              State("sequence-path", "valid"),
+              State("metadata-path", "valid"),
+              State("data-acquisition-folder-path", "valid"),
+              State("autoqc-active-past-options", "valid"), prevent_initial_call=True)
+def validation_feedback_for_new_run_setup_form(run_id, chromatography, bio_standard, qc_config, sequence,
+    metadata, data_acquisition_path, active_or_past_run, run_id_valid, chromatography_valid, bio_standard_valid,
+    qc_config_valid, sequence_valid, metadata_valid, data_acquisition_path_valid, active_past_valid):
+
+    """
+    Form validation feedback for the Setup New AutoQC Job page
+    """
+
+    if run_id is not None:
+        run_id_valid = True
+
+    if chromatography is not None:
+        chromatography_valid = True
+
+    if bio_standard is not None:
+        bio_standard_valid = True
+
+    if qc_config is not None:
+        qc_config_valid = True
+
+    if sequence is not None:
+        sequence_valid = True
+
+    if metadata is not None:
+        metadata_valid = True
+
+    if data_acquisition_path is not None:
+        data_acquisition_path_valid = True
+
+    if active_or_past_run is not None:
+        active_past_valid = True
+
+    return run_id_valid, chromatography_valid, bio_standard_valid, qc_config_valid, sequence_valid, metadata_valid, \
+           data_acquisition_path_valid, active_past_valid
 
 
 if __name__ == "__main__":

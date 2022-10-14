@@ -93,7 +93,6 @@ h2 {
 }
 
 .radio-group .form-check {
-    margin-top: 30px;
     padding-left: 0;
     display: inline-block;
 }
@@ -112,6 +111,10 @@ h2 {
 .parent-container {
     margin: auto;
     width: 100%;
+}
+
+.margin-top-30 {
+    margin-top: 30px;
 }
 
 /* Modal styles */

@@ -17,7 +17,7 @@ def connect_to_database():
     return db_metadata, connection
 
 
-def get_instruments():
+def get_instruments_list():
 
     """
     Returns list of instruments in database
@@ -30,21 +30,39 @@ def get_instruments():
     df_instruments = pd.read_sql("SELECT * FROM instruments", engine)
 
     # Return list of instruments
-    return df_instruments["id"].astype(str).tolist()
+    return df_instruments["name"].astype(str).tolist()
 
 
-def insert_new_run(run_id, instrument_id, chromatography, sequence, metadata, msdial_config_id):
+def insert_new_run(run_id, instrument_id, chromatography, bio_standards, sequence, metadata, msdial_config_id, qc_config_id):
 
     """
-    Inserts a new instrument run into the "runs" table, and
-    inserts sample rows into the "sample_qc_results" table.
+    1. Inserts a new instrument run into the "runs" table
+    2. Inserts sample rows into the "sample_qc_results" table
+    3. Inserts biological standard sample rows into the "bio_qc_results" table
     """
+
+    # Get list of samples from sequence
+    df_sequence = pd.read_json(sequence, orient="split")
+    samples = df_sequence["File Name"].astype(str).tolist()
+    num_samples = len(samples)
 
     # Connect to database
     db_metadata, connection = connect_to_database()
 
-    # Get instrument runs table
+    # Get relevant tables
     runs_table = sa.Table("runs", db_metadata, autoload=True)
+    sample_qc_results_table = sa.Table("sample_qc_results", db_metadata, autoload=True)
+    bio_qc_results_table = sa.Table("bio_qc_results", db_metadata, autoload=True)
+
+    # Get identifiers for biological standard (if any)
+    df_bio_standards = get_biological_standards()
+    identifiers = []
+    if bio_standards is not None:
+        if len(bio_standards) > 0:
+            for bio_standard in bio_standards:
+                df = df_bio_standards.loc[df_bio_standards["Name"] == bio_standard]
+                identifier = df["Identifier"].astype(str).unique().values[0]
+                identifiers.append(identifier)
 
     # Prepare insert of user-inputted run data
     insert_run = runs_table.insert().values(
@@ -54,32 +72,45 @@ def insert_new_run(run_id, instrument_id, chromatography, sequence, metadata, ms
          "sequence": sequence,
          "metadata": metadata,
          "status": "active",
-         "samples": "",
+         "samples": num_samples,
          "completed": 0,
          "passes": 0,
          "fails": 0,
          "latest_sample": "",
-         "msdial_config_id": msdial_config_id})
+         "msdial_config_id": msdial_config_id,
+         "qc_config_id": qc_config_id,
+         "biological_standards": bio_standards})
+
+    insert_samples = []
+
+    for sample in samples:
+        # Check if the biological standard identifier is in the sample name
+        is_bio_standard = False
+
+        for identifier in identifiers:
+            if identifier in sample:
+                is_bio_standard = True
+                break
+
+        # Prepare insert of the sample row into the "sample_qc_results" table
+        if not is_bio_standard:
+            insert_sample = sample_qc_results_table.insert().values(
+                {"sample_id": sample,
+                 "run_id": run_id})
+
+        # Prepare insert of the sample row into the "bio_qc_results" table
+        else:
+            insert_sample = bio_qc_results_table.insert().values(
+                {"sample_id": sample,
+                 "run_id": run_id})
+
+        # Add this INSERT query into the list of insert queries
+        insert_samples.append(insert_sample)
 
     # Execute INSERT to database
     connection.execute(insert_run)
 
-    # Get sample_qc_results table
-    sample_qc_results_table = sa.Table("sample_qc_results", db_metadata, autoload=True)
-
-    # Get list of samples from sequence
-    df_sequence = pd.read_json(sequence, orient="split")
-    samples = df_sequence["File Name"].astype(str).tolist()
-
-    # Insert each sample into sample_qc_results table
-    for sample in samples:
-        insert_sample = sample_qc_results_table.insert().values(
-            {"sample_id": sample,
-             "run_id": run_id,
-             "precursor_mz": "",
-             "retention_time": "",
-             "intensity": "",
-             "md5": ""})
+    for insert_sample in insert_samples:
         connection.execute(insert_sample)
 
     # Close the connection
@@ -224,11 +255,14 @@ def insert_chromatography_method(method_id):
     connection.execute(insert_method)
 
     # Execute insert of method for each biological standard
-    biological_standards = get_biological_standards_list()
+    df_biological_standards = get_biological_standards()
+    biological_standards = df_biological_standards["Name"].astype(str).unique().tolist()
+    identifiers = df_biological_standards["Identifier"].astype(str).tolist()
 
-    for biological_standard in biological_standards:
+    for index, biological_standard in enumerate(biological_standards):
         insert_method_for_bio_standard = biological_standards_table.insert().values({
             "name": biological_standard,
+            "identifier": identifiers[index],
             "chromatography": method_id,
             "num_pos_features": 0,
             "num_neg_features": 0})
@@ -277,6 +311,27 @@ def remove_chromatography_method(method_id):
     for query in delete_queries:
         connection.execute(query)
 
+    connection.close()
+
+
+def update_msdial_config_for_internal_standards(chromatography, config_id):
+
+    """
+    Updates MS-DIAL configuration for a given chromatography method
+    """
+
+    # Connect to database and get relevant tables
+    db_metadata, connection = connect_to_database()
+    methods_table = sa.Table("chromatography_methods", db_metadata, autoload=True)
+
+    # Update MS-DIAL configuration for chromatography method
+    update_msdial_config = (
+        sa.update(methods_table)
+            .where(methods_table.c.method_id == chromatography)
+            .values(msdial_config_id=config_id)
+    )
+
+    connection.execute(update_msdial_config)
     connection.close()
 
 
@@ -570,11 +625,10 @@ def get_msdial_configurations():
     return df_msdial_configurations["config_name"].astype(str).tolist()
 
 
-def generate_msdial_parameters_file(config_name, chromatography, polarity, msp_file_path):
+def generate_msdial_parameters_file(config_name, chromatography, polarity, msp_file_path, bio_standard=None):
 
     """
-    Uses parameters from user-curated MS-DIAL configuration to create a
-    parameters.txt file for MS-DIAL console app usage
+    Uses parameters from user-curated MS-DIAL configuration to create a parameters.txt file for command-line MS-DIAL
     """
 
     # Get parameters of selected configuration
@@ -637,15 +691,22 @@ def generate_msdial_parameters_file(config_name, chromatography, polarity, msp_f
         "QC at least filter: " + str(parameters[19]),
     ]
 
-    # Write parameters to a text file
+    # Write parameters to a text file, and save in "methods" directory
     methods_directory = os.path.join(os.getcwd(), "methods")
     if not os.path.exists(methods_directory):
         os.makedirs(methods_directory)
 
-    if polarity == "Positive":
-        parameters_file = os.path.join(methods_directory, config_name.replace(" ", "_") + "Parameters_Pos.txt")
-    elif polarity == "Negative":
-        parameters_file = os.path.join(methods_directory, config_name.replace(" ", "_") + "Parameters_Neg.txt")
+    if bio_standard is not None:
+        if polarity == "Positive":
+            filename = bio_standard.replace(" ", "_") + "_" + config_name.replace(" ", "_") + "_Parameters_Pos.txt"
+        elif polarity == "Negative":
+            filename = bio_standard.replace(" ", "_") + "_" + config_name.replace(" ", "_") + "_Parameters_Neg.txt"
+        parameters_file = os.path.join(methods_directory, filename)
+    else:
+        if polarity == "Positive":
+            parameters_file = os.path.join(methods_directory, config_name.replace(" ", "_") + "Parameters_Pos.txt")
+        elif polarity == "Negative":
+            parameters_file = os.path.join(methods_directory, config_name.replace(" ", "_") + "Parameters_Neg.txt")
 
     with open(parameters_file, "w") as file:
         for line in lines:
@@ -656,19 +717,38 @@ def generate_msdial_parameters_file(config_name, chromatography, polarity, msp_f
     # Write path of parameters text file to chromatography method in database
     db_metadata, connection = connect_to_database()
     chromatography_table = sa.Table("chromatography_methods", db_metadata, autoload=True)
+    biological_standards_table = sa.Table("biological_standards", db_metadata, autoload=True)
 
-    if polarity == "Positive":
-        update_parameter_file = (
-            sa.update(chromatography_table)
-                .where(chromatography_table.c.method_id == chromatography)
-                .values(pos_parameter_file=parameters_file)
-        )
-    elif polarity == "Negative":
-        update_parameter_file = (
-            sa.update(chromatography_table)
-                .where(chromatography_table.c.method_id == chromatography)
-                .values(neg_parameter_file=parameters_file)
-        )
+    # For processing biological standard samples
+    if bio_standard is not None:
+        if polarity == "Positive":
+            update_parameter_file = (
+                sa.update(biological_standards_table)
+                    .where((biological_standards_table.c.chromatography == chromatography)
+                            & (biological_standards_table.c.name) == bio_standard)
+                    .values(pos_parameter_file=parameters_file)
+            )
+        elif polarity == "Negative":
+            update_parameter_file = (
+                sa.update(biological_standards_table)
+                    .where((biological_standards_table.c.chromatography == chromatography)
+                            & (biological_standards_table.c.name) == bio_standard)
+                    .values(neg_parameter_file=parameters_file)
+            )
+    # For processing samples with internal standards
+    else:
+        if polarity == "Positive":
+            update_parameter_file = (
+                sa.update(chromatography_table)
+                    .where(chromatography_table.c.method_id == chromatography)
+                    .values(pos_parameter_file=parameters_file)
+            )
+        elif polarity == "Negative":
+            update_parameter_file = (
+                sa.update(chromatography_table)
+                    .where(chromatography_table.c.method_id == chromatography)
+                    .values(neg_parameter_file=parameters_file)
+            )
 
     connection.execute(update_parameter_file)
     connection.close()
@@ -814,24 +894,39 @@ def update_msdial_configuration(config_name, rt_begin, rt_end, mz_begin, mz_end,
     connection.close()
 
 
-def get_istd_msp_file_paths(chromatography, polarity):
+def get_msp_file_paths(chromatography, polarity, bio_standard=None):
 
     """
-    Returns file paths of positive and negative internal standard MSPs (both stored
-    in the methods folder upon user upload) MS-DIAL for parameter file generation
+    Returns file paths of MSPs for a selected chromatography / polarity (both stored
+    in the methods folder upon user upload) for MS-DIAL parameter file generation
     """
 
-    # Connect to database and get selected chromatography method
+    # Connect to database
     engine = sa.create_engine(sqlite_db_location)
-    query = "SELECT * FROM chromatography_methods WHERE method_id='" + chromatography + "'"
-    df_methods = pd.read_sql(query, engine)
 
-    # Return file path of MSP in chromatography, based on polarity/type requested
-    if polarity == "Positive":
-        msp_file_path = df_methods["pos_istd_msp_file"].astype(str).values[0]
-    elif polarity == "Negative":
-        msp_file_path = df_methods["neg_istd_msp_file"].astype(str).values[0]
+    if bio_standard is not None:
+        # Get selected biological standard
+        query = "SELECT * FROM biological_standards WHERE name = '" + bio_standard + "' AND chromatography='" + chromatography + "'"
+        df_biological_standards = pd.read_sql(query, engine)
 
+        # Get file path of MSP in requested polarity
+        if polarity == "Positive":
+            msp_file_path = df_biological_standards["pos_bio_msp_file"].astype(str).values[0]
+        elif polarity == "Negative":
+            msp_file_path = df_biological_standards["neg_bio_msp_file"].astype(str).values[0]
+
+    else:
+        # Get selected chromatography method
+        query = "SELECT * FROM chromatography_methods WHERE method_id='" + chromatography + "'"
+        df_methods = pd.read_sql(query, engine)
+
+        # Get file path of MSP in requested polarity
+        if polarity == "Positive":
+            msp_file_path = df_methods["pos_istd_msp_file"].astype(str).values[0]
+        elif polarity == "Negative":
+            msp_file_path = df_methods["neg_istd_msp_file"].astype(str).values[0]
+
+    # Return file path
     return msp_file_path
 
 
@@ -888,12 +983,13 @@ def get_biological_standards():
     # DataFrame refactoring
     df_biological_standards = df_biological_standards.rename(
         columns={"name": "Name",
+            "identifier": "Identifier",
             "chromatography": "Chromatography",
-            "num_pos_features": "Positive (+) Mode Features",
-            "num_neg_features": "Negative (–) Mode Features",})
+            "num_pos_features": "Pos (+) Features",
+            "num_neg_features": "Neg (–) Features"})
 
     df_biological_standards = df_biological_standards[
-        ["Name", "Chromatography", "Positive (+) Mode Features", "Negative (–) Mode Features"]]
+        ["Name", "Identifier", "Chromatography", "Pos (+) Features", "Neg (–) Features"]]
 
     return df_biological_standards
 
@@ -908,7 +1004,7 @@ def get_biological_standards_list():
     return df_biological_standards["Name"].astype(str).unique().tolist()
 
 
-def add_biological_standard(name):
+def add_biological_standard(name, identifier):
 
     """
     Inserts new biological standard into "biological_standards" table
@@ -925,6 +1021,7 @@ def add_biological_standard(name):
     for method in chromatography_methods:
         insert = biological_standards_table.insert().values({
             "name": name,
+            "identifier": identifier,
             "chromatography": method,
             "num_pos_features": 0,
             "num_neg_features": 0
@@ -962,3 +1059,44 @@ def remove_biological_standard(name):
 
     # Close the connection
     connection.close()
+
+
+def update_msdial_config_for_bio_standard(biological_standard, chromatography, config_id):
+
+    """
+    Updates MS-DIAL configuration for a given biological standard and chromatography method
+    """
+
+    # Connect to database and get relevant tables
+    db_metadata, connection = connect_to_database()
+    biological_standards_table = sa.Table("biological_standards", db_metadata, autoload=True)
+
+    # Update MS-DIAL configuration for biological standard
+    update_msdial_config = (
+        sa.update(biological_standards_table)
+            .where((biological_standards_table.c.name == biological_standard)
+                   & (biological_standards_table.c.chromatography == chromatography))
+            .values(msdial_config_id=config_id)
+    )
+
+    connection.execute(update_msdial_config)
+    connection.close()
+
+
+def get_qc_configurations():
+
+    """
+    Returns a DataFrame of QC parameter configurations
+    """
+
+    engine = sa.create_engine(sqlite_db_location)
+    return pd.read_sql("SELECT * FROM qc_parameters", engine)
+
+
+def get_qc_configurations_list():
+
+    """
+    Returns a list of QC parameter configurations
+    """
+
+    return get_qc_configurations()["config_name"].astype(str).tolist()
