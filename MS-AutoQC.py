@@ -891,9 +891,13 @@ def serve_layout():
                                     ]),
 
                                     # AutoQC parameters
-                                    dbc.Tab(label="QC parameters", className="modal-styles", children=[
+                                    dbc.Tab(label="QC configurations", className="modal-styles", children=[
 
                                         html.Br(),
+
+                                        # UI feedback on adding / removing QC configurations
+                                        dbc.Alert(id="qc-config-addition-alert", is_open=False, duration=4000),
+                                        dbc.Alert(id="qc-config-removal-alert", is_open=False, duration=4000),
 
                                         html.Div([
                                             dbc.Label("Add new QC configuration"),
@@ -904,55 +908,74 @@ def serve_layout():
                                                            id="add-qc-configuration-button", n_clicks=0),
                                             ]),
                                             dbc.FormText("Give your custom QC configuration a unique name"),
-                                        ]), html.Br(),
+                                        ]),
+
+                                        html.Br(),
 
                                         # Select configuration
                                         html.Div(children=[
                                             dbc.Label("Select QC configuration to edit"),
                                             dbc.InputGroup([
-                                                dbc.Select(id="qc-configs-dropdown", options=[
-                                                    {"label": "Default configuration", "value": "default"},
-                                                ], placeholder="No configuration selected"),
+                                                dbc.Select(id="qc-configs-dropdown",
+                                                           placeholder="No configuration selected"),
                                                 dbc.Button("Remove", color="danger", outline=True,
                                                            id="remove-qc-config-button", n_clicks=0),
                                                 dbc.Popover("You are about to delete this QC configuration. Are you sure?",
                                                             target="remove-qc-config-button", trigger="hover", body=True)
                                             ])
-                                        ]), html.Br(),
+                                        ]),
+
+                                        html.Br(),
 
                                         html.Div([
                                             dbc.Label("Cutoff for intensity dropouts"),
                                             dbc.Input(id="intensity-dropout-text-field", type="number",
-                                                      placeholder="Ex: 4"),
+                                                      placeholder="4"),
                                             dbc.FormText("The minimum number of missing internal standards required for a QC fail."),
-                                        ]), html.Br(),
+                                        ]),
+
+                                        html.Br(),
 
                                         html.Div([
                                             dbc.Label("Cutoff for RT shift from run average (min)"),
                                             dbc.Input(id="run-rt-shift-text-field",
-                                                      placeholder="Ex: 0.1"),
+                                                      placeholder="0.1"),
                                             dbc.FormText(
                                                 "The minimum retention time shift from the run average (in minutes) required for a QC fail."),
-                                        ]), html.Br(),
+                                        ]),
+
+                                        html.Br(),
 
                                         html.Div([
                                             dbc.Label("Allowed number of samples where delta RT is increasing"),
-                                            dbc.Input(id="allowed-delta-rt_trends-text-field", type="number",
-                                                      placeholder="Ex: 3"),
+                                            dbc.Input(id="allowed-delta-rt-trends-text-field", type="number",
+                                                      placeholder="3"),
                                             dbc.FormText(
                                                 "If the delta RT is growing in X consecutive samples, you will be sent a warning."),
-                                        ]), html.Br(),
+                                        ]),
+
+                                        html.Br(),
+
+                                        # UI feedback on saving changes to MS-DIAL parameters
+                                        dbc.Alert(id="qc-parameters-success-alert",
+                                                  color="success", is_open=False, duration=4000),
+                                        dbc.Alert(id="qc-parameters-reset-alert",
+                                                  color="primary", is_open=False, duration=4000),
+                                        dbc.Alert(id="qc-parameters-error-alert",
+                                                  color="danger", is_open=False, duration=4000),
 
                                         html.Div([
                                             html.Div([
-                                                dbc.Button("Save changes", style={"line-height": "1.75"}, color="primary"),
-                                                dbc.Button("Reset default settings", style={"line-height": "1.75"}, color="secondary"),
+                                                dbc.Button("Save changes", id="save-changes-qc-parameters-button",
+                                                           style={"line-height": "1.75"}, color="primary"),
+                                                dbc.Button("Reset default settings", id="reset-default-qc-parameters-button",
+                                                           style={"line-height": "1.75"}, color="secondary"),
                                             ], className="d-grid gap-2 col-12 mx-auto"),
                                         ]),
                                     ]),
 
                                     # MS-DIAL parameters
-                                    dbc.Tab(label="MS-DIAL parameters", className="modal-styles", children=[
+                                    dbc.Tab(label="MS-DIAL configurations", className="modal-styles", children=[
 
                                         html.Br(),
 
@@ -1169,7 +1192,9 @@ def serve_layout():
                                                 html.Br(),
                                             ]),
                                         ]),
-                                        html.Br(), html.Br(),
+
+                                        html.Br(), html.Br(), html.Br(), html.Br(), html.Br(),
+                                        html.Br(), html.Br(), html.Br(), html.Br(), html.Br(),
 
                                         html.Div([
                                             # UI feedback on saving changes to MS-DIAL parameters
@@ -1229,15 +1254,19 @@ def serve_layout():
             dcc.Store(id="chromatography-removed"),
             dcc.Store(id="chromatography-msdial-config-added"),
             dcc.Store(id="istd-msp-added"),
+            dcc.Store(id="bio-standard-added"),
+            dcc.Store(id="bio-standard-removed"),
+            dcc.Store(id="bio-msp-added"),
+            dcc.Store(id="bio-standard-msdial-config-added"),
+            dcc.Store(id="qc-config-added"),
+            dcc.Store(id="qc-config-removed"),
+            dcc.Store(id="qc-parameters-saved"),
+            dcc.Store(id="qc-parameters-reset"),
             dcc.Store(id="msdial-config-added"),
             dcc.Store(id="msdial-config-removed"),
             dcc.Store(id="msdial-parameters-saved"),
             dcc.Store(id="msdial-parameters-reset"),
             dcc.Store(id="msdial-directory-data"),
-            dcc.Store(id="bio-standard-added"),
-            dcc.Store(id="bio-standard-removed"),
-            dcc.Store(id="bio-msp-added"),
-            dcc.Store(id="bio-standard-msdial-config-added"),
         ])
     ])
 
@@ -2202,15 +2231,187 @@ def show_alert_on_parameter_save(parameters_saved):
 @app.callback(Output("msdial-parameters-reset-alert", "is_open"),
               Output("msdial-parameters-reset-alert", "children"),
               Input("msdial-parameters-reset", "data"), prevent_initial_call=True)
-def show_alert_on_parameter_save(parameters_reset):
+def show_alert_on_parameter_reset(parameters_reset):
 
     """
-    UI feedback for saving changes to MS-DIAL parameters
+    UI feedback for resetting MS-DIAL parameters in a configuration
     """
 
     if parameters_reset is not None:
         if parameters_reset == "Reset":
             return True, "Your configuration has been reset to its default settings."
+
+
+@app.callback(Output("qc-config-added", "data"),
+              Output("add-qc-configuration-text-field", "value"),
+              Input("add-qc-configuration-button", "n_clicks"),
+              State("add-qc-configuration-text-field", "value"), prevent_initial_call=True)
+def add_qc_configuration(button_click, qc_config_id):
+
+    """
+    Adds new QC configuration to the database
+    """
+
+    if qc_config_id is not None:
+        db.add_qc_configuration(qc_config_id)
+        return "Added", None
+    else:
+        return "", None
+
+
+@app.callback(Output("qc-config-removed", "data"),
+              Input("remove-qc-config-button", "n_clicks"),
+              State("qc-configs-dropdown", "value"), prevent_initial_call=True)
+def delete_qc_configuration(button_click, qc_config_id):
+
+    """
+    Removes dropdown-selected QC configuration from database
+    """
+
+    if qc_config_id is not None:
+        if qc_config_id != "Default configuration":
+            db.remove_qc_configuration(qc_config_id)
+            return "Removed"
+        else:
+            return "Cannot remove"
+    else:
+        return ""
+
+
+@app.callback(Output("qc-configs-dropdown", "options"),
+              Output("qc-configs-dropdown", "value"),
+              Input("on-page-load", "data"),
+              Input("qc-config-added", "data"),
+              Input("qc-config-removed", "data"))
+def get_qc_configs_for_dropdown(on_page_load, qc_config_added, qc_config_removed):
+
+    """
+    Retrieves list of user-created configurations of QC parameters from database
+    """
+
+    # Get QC configurations from database
+    qc_configurations = db.get_qc_configurations_list()
+
+    # Create and return options for dropdown
+    config_options = []
+
+    for config in qc_configurations:
+        config_options.append({"label": config, "value": config})
+
+    return config_options, "Default configuration"
+
+
+@app.callback(Output("qc-config-addition-alert", "is_open"),
+              Output("qc-config-addition-alert", "children"),
+              Output("qc-config-addition-alert", "color"),
+              Input("qc-config-added", "data"), prevent_initial_call=True)
+def show_alert_on_qc_config_addition(config_added):
+
+    """
+    UI feedback on QC configuration addition
+    """
+
+    if config_added is not None:
+        if config_added == "Added":
+            return True, "Success! New QC configuration added.", "success"
+
+    return False, None, "success"
+
+
+@app.callback(Output("qc-config-removal-alert", "is_open"),
+              Output("qc-config-removal-alert", "children"),
+              Output("qc-config-removal-alert", "color"),
+              Input("qc-config-removed", "data"),
+              State("qc-configs-dropdown", "value"), prevent_initial_call=True)
+def show_alert_on_qc_config_removal(config_removed, selected_config):
+
+    """
+    UI feedback on QC configuration removal
+    """
+
+    if config_removed is not None:
+        if config_removed == "Removed":
+            message = "The selected QC configuration has been deleted."
+            color = "primary"
+        if selected_config == "Default configuration":
+            message = "Error: The default configuration cannot be deleted."
+            color = "danger"
+        return True, message, color
+    else:
+        return False, "", "danger"
+
+
+@app.callback(Output("intensity-dropout-text-field", "value"),
+              Output("run-rt-shift-text-field", "value"),
+              Output("allowed-delta-rt-trends-text-field", "value"),
+              Input("qc-configs-dropdown", "value"),
+              Input("qc-parameters-saved", "data"),
+              Input("qc-parameters-reset", "data"), prevent_initial_call=True)
+def get_qc_parameters_for_config(qc_config_id, on_parameters_saved, on_parameters_reset):
+
+    """
+    In Settings > QC Configurations, fills text fields with placeholders
+    of current parameter values stored in the database.
+    """
+
+    return db.get_qc_configuration_parameters(qc_config_id)
+
+
+@app.callback(Output("qc-parameters-saved", "data"),
+              Input("save-changes-qc-parameters-button", "n_clicks"),
+              State("qc-configs-dropdown", "value"),
+              State("intensity-dropout-text-field", "value"),
+              State("run-rt-shift-text-field", "value"),
+              State("allowed-delta-rt-trends-text-field", "value"), prevent_initial_call=True)
+def write_qc_parameters_to_database(button_clicks, config_name, intensity_dropouts_cutoff, max_rt_shift, allowed_delta_rt_trends):
+
+    """
+    Saves QC parameters to respective configuration in database
+    """
+
+    db.update_qc_configuration(config_name, intensity_dropouts_cutoff, max_rt_shift, allowed_delta_rt_trends)
+    return "Saved"
+
+
+@app.callback(Output("qc-parameters-reset", "data"),
+              Input("reset-default-qc-parameters-button", "n_clicks"),
+              State("qc-configs-dropdown", "value"), prevent_initial_call=True)
+def reset_msdial_parameters_to_default(button_clicks, config_name):
+
+    """
+    Resets parameters for selected QC configuration to default settings
+    """
+
+    db.update_qc_configuration(config_name, 4, 0.1, 3)
+    return "Reset"
+
+
+@app.callback(Output("qc-parameters-success-alert", "is_open"),
+              Output("qc-parameters-success-alert", "children"),
+              Input("qc-parameters-saved", "data"), prevent_initial_call=True)
+def show_alert_on_qc_parameter_save(parameters_saved):
+
+    """
+    UI feedback for saving changes to QC parameters
+    """
+
+    if parameters_saved is not None:
+        if parameters_saved == "Saved":
+            return True, "Your changes were successfully saved."
+
+
+@app.callback(Output("qc-parameters-reset-alert", "is_open"),
+              Output("qc-parameters-reset-alert", "children"),
+              Input("qc-parameters-reset", "data"), prevent_initial_call=True)
+def show_alert_on_qc_parameter_reset(parameters_reset):
+
+    """
+    UI feedback for resetting QC parameters in a configuration
+    """
+
+    if parameters_reset is not None:
+        if parameters_reset == "Reset":
+            return True, "Your QC configuration has been reset to its default settings."
 
 
 @app.callback(Output("select-bio-standard-dropdown", "options"),

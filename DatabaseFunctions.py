@@ -17,6 +17,16 @@ def connect_to_database():
     return db_metadata, connection
 
 
+def get_table(table_name):
+
+    """
+    Returns table from database as a DataFrame
+    """
+
+    engine = sa.create_engine(sqlite_db_location)
+    return pd.read_sql("SELECT * FROM " + table_name, engine)
+
+
 def get_instruments_list():
 
     """
@@ -55,14 +65,7 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, sequenc
     bio_qc_results_table = sa.Table("bio_qc_results", db_metadata, autoload=True)
 
     # Get identifiers for biological standard (if any)
-    df_bio_standards = get_biological_standards()
-    identifiers = []
-    if bio_standards is not None:
-        if len(bio_standards) > 0:
-            for bio_standard in bio_standards:
-                df = df_bio_standards.loc[df_bio_standards["Name"] == bio_standard]
-                identifier = df["Identifier"].astype(str).unique().tolist()[0]
-                identifiers.append(identifier)
+    identifiers = get_biological_standard_identifiers(bio_standards)
 
     # Prepare insert of user-inputted run data
     insert_run = runs_table.insert().values(
@@ -171,8 +174,7 @@ def update_md5_checksum(sample_id, md5_checksum):
 def write_qc_results(sample_id, run_id, json_mz, json_rt, json_intensity, qc_result):
 
     """
-    Updates m/z, RT, and intensity info (as JSON strings) to
-    "sample_qc_results" table upon MS-DIAL processing completion.
+    Updates m/z, RT, and intensity info (as JSON strings) in appropriate table upon MS-DIAL processing completion.
     """
 
     # Connect to database
@@ -957,10 +959,29 @@ def get_internal_standards(chromatography, polarity):
     """
 
     engine = sa.create_engine(sqlite_db_location)
+
     query = "SELECT * FROM internal_standards " + \
             "WHERE chromatography='" + chromatography + "' AND polarity='" + polarity + "'"
+
     df_internal_standards = pd.read_sql(query, engine)
     return df_internal_standards["name"].astype(str).tolist()
+
+
+def get_targeted_features(biological_standard, chromatography, polarity):
+
+    """
+    Returns list of metabolite targets for a given biological standard, chromatography, and polarity
+    """
+
+    engine = sa.create_engine(sqlite_db_location)
+
+    query = "SELECT * FROM targeted_features " + \
+            "WHERE chromatography='" + chromatography + \
+            "' AND polarity='" + polarity + \
+            "' AND biological_standard ='" + biological_standard + "'"
+
+    df_targeted_features = pd.read_sql(query, engine)
+    return df_targeted_features["name"].astype(str).tolist()
 
 
 def get_biological_standards():
@@ -1004,7 +1025,7 @@ def add_biological_standard(name, identifier):
     """
 
     # Get list of chromatography methods
-    chromatography_methods = get_chromatography_methods()["Method ID"].tolist()
+    chromatography_methods = get_chromatography_methods()["method_id"].tolist()
 
     # Connect to database and get "biological_standards" table
     db_metadata, connection = connect_to_database()
@@ -1076,6 +1097,26 @@ def update_msdial_config_for_bio_standard(biological_standard, chromatography, c
     connection.close()
 
 
+def get_biological_standard_identifiers(bio_standards):
+
+    """
+    Returns list of identifiers for a given list of biological standards
+    """
+
+    df_bio_standards = get_biological_standards()
+
+    identifiers = []
+
+    if bio_standards is not None:
+        if len(bio_standards) > 0:
+            for bio_standard in bio_standards:
+                df = df_bio_standards.loc[df_bio_standards["Name"] == bio_standard]
+                identifier = df["Identifier"].astype(str).unique().tolist()[0]
+                identifiers.append(identifier)
+
+    return identifiers
+
+
 def get_qc_configurations():
 
     """
@@ -1093,3 +1134,109 @@ def get_qc_configurations_list():
     """
 
     return get_qc_configurations()["config_name"].astype(str).tolist()
+
+
+def add_qc_configuration(qc_config_name):
+
+    """
+    Adds a new QC configuration to the "qc_parameters" table
+    """
+
+    # Connect to database
+    db_metadata, connection = connect_to_database()
+
+    # Get QC parameters table
+    qc_parameters_table = sa.Table("qc_parameters", db_metadata, autoload=True)
+
+    # Prepare insert of user-inputted run data
+    insert_config = qc_parameters_table.insert().values(
+        {"config_name": qc_config_name}
+    )
+
+    # Execute INSERT to database, then close the connection
+    connection.execute(insert_config)
+    connection.close()
+
+
+def remove_qc_configuration(qc_config_name):
+
+    """
+    Deletes QC configuration from the "qc_parameters" table
+    """
+
+    # Connect to database
+    db_metadata, connection = connect_to_database()
+
+    # Get QC parameters table
+    qc_parameters_table = sa.Table("qc_parameters", db_metadata, autoload=True)
+
+    # Prepare DELETE of MS-DIAL configuration
+    delete_config = (
+        sa.delete(qc_parameters_table)
+            .where(qc_parameters_table.c.config_name == qc_config_name)
+    )
+
+    # Execute DELETE, then close the connection
+    connection.execute(delete_config)
+    connection.close()
+
+
+def get_qc_configuration_parameters(config_name):
+
+    """
+    Returns tuple of parameters for a selected QC configuration
+    """
+
+    # Get "qc_parameters" table from database as a DataFrame
+    df_configurations = get_table("qc_parameters")
+
+    # Get selected configuration
+    selected_config = df_configurations.loc[
+        df_configurations["config_name"] == config_name]
+
+    selected_config.drop(["id", "config_name"], inplace=True, axis=1)
+
+    # Return parameters of selected configuration as a tuple
+    return tuple(selected_config.to_records(index=False)[0])
+
+
+def update_qc_configuration(config_name, intensity_dropouts_cutoff, max_rt_shift, allowed_delta_rt_trends):
+
+    """
+    Updates parameters for a given QC configuration
+    """
+
+    # Connect to database
+    db_metadata, connection = connect_to_database()
+
+    # Get QC parameters table
+    qc_parameters_table = sa.Table("qc_parameters", db_metadata, autoload=True)
+
+    # Prepare insert of user-inputted QC parameters
+    update_parameters = (
+        sa.update(qc_parameters_table)
+            .where(qc_parameters_table.c.config_name == config_name)
+            .values(intensity_dropouts_cutoff=intensity_dropouts_cutoff,
+                    max_rt_shift=max_rt_shift,
+                    allowed_delta_rt_trends=allowed_delta_rt_trends)
+    )
+
+    # Execute UPDATE to database, then close the connection
+    connection.execute(update_parameters)
+    connection.close()
+
+
+def get_samples_in_run(run_id, sample_type):
+
+    """
+    Returns list of samples for a given run
+    """
+
+    if sample_type == "Sample":
+        df = get_table("sample_qc_results")
+    elif sample_type == "Biological Standard":
+        df = get_table("bio_qc_results")
+
+    df.loc[df["run_id"] == run_id]
+
+    return df["sample_id"].astype(str).tolist()
