@@ -51,17 +51,15 @@ def run_msconvert(path, filename, extension, output_folder):
     """
 
     # Copy original data file to output folder
-    shutil.copy2(path, output_folder)
+    shutil.copy2(path + filename + "." + extension, output_folder)
 
     # Run MSConvert Docker container and allow 5 seconds for conversion
     command = "docker run --rm -e WINEDEBUG=-all -v " \
             + output_folder.replace(" ", "/") \
             + ":/data chambm/pwiz-skyline-i-agree-to-the-vendor-licenses wine msconvert /data/" \
             + filename + "." + extension
-
-    # Give MSConvert 5 seconds to run
     os.system(command)
-    time.sleep(5)
+    time.sleep(3)
 
     # Delete copy of original data file
     data_file_copy = output_folder + filename + "." + extension
@@ -84,10 +82,7 @@ def run_msdial_processing(filename, msdial_path, parameter_file, input_folder, o
     command = "MsdialConsoleApp.exe lcmsdda -i " + input_folder \
               + " -o " + output_folder \
               + " -m " + parameter_file + " -p"
-
-    # Give MS-DIAL 10 seconds to run
     os.system(command)
-    time.sleep(10)
 
     # Clear data file directory for next sample
     for file in os.listdir(input_folder):
@@ -130,16 +125,31 @@ def peak_list_to_dataframe(sample_peak_list, internal_standards=None, targeted_f
     return df_peak_list
 
 
-def process_data_file(path, filename, extension, run_id, is_bio_standard=False):
+def qc_sample(df_peak_list, is_bio_standard):
+
+    """
+    Main algorithm that performs QC checks on sample data
+    """
+
+    # Handles sample QC checks
+    if not is_bio_standard:
+        return "pass"
+    # Handles biological standard QC checks
+    else:
+        return "pass"
+
+
+def process_data_file(path, filename, extension, run_id):
 
     """
     1. Convert data file to mzML format using MSConvert
     2. Process data file using MS-DIAL and user-defined parameter configuration
-    3. Write QC results to "sample_qc_results" table in SQLite database
+    3a. Write QC results to "sample_qc_results" table
+    3b. Write QC results to "bio_qc_results" table if sample is biological standard
     4. Upload CSV file with QC results (as JSON) to Google Drive
     """
 
-    # Create directories
+    # Create the necessary directories
     autoqc_directory = os.path.join(os.getcwd(), r"data")
     mzml_file_directory = os.path.join(autoqc_directory, run_id, "data")
     qc_results_directory = os.path.join(autoqc_directory, run_id, "results")
@@ -151,19 +161,40 @@ def process_data_file(path, filename, extension, run_id, is_bio_standard=False):
     mzml_file_directory = mzml_file_directory + "/"
     qc_results_directory = qc_results_directory + "/"
 
-    # Retrieve run information from database
-    run = db.get_instrument_run(run_id)
-    chromatography = run["chromatography"].astype(str).values[0]
+    # Retrieve chromatography, polarity, samples, and biological standards using run ID
+    df_run = db.get_instrument_run(run_id)
+    chromatography = df_run["chromatography"].astype(str).values[0]
+
     if "Pos" in filename:
         polarity = "Positive"
     elif "Neg" in filename:
         polarity = "Negative"
 
-    # Retrieve MS-DIAL directory, MS-DIAL parameters, internal standards, and targeted features from database
-    msdial_location = db.get_msdial_directory(config_id)
-    msdial_parameters = db.get_parameter_file_path(chromatography, polarity)
-    internal_standards = db.get_internal_standards(chromatography, polarity)
-    targeted_features = ""
+    df_samples = db.get_samples_in_run(run_id, sample_type="Sample")
+    df_biological_standards = db.get_samples_in_run(run_id, sample_type="Biological Standard")
+
+    # Retrieve MS-DIAL parameters, internal standards, and targeted features from database
+    if filename in df_biological_standards["sample_id"].astype(str).tolist():
+        # Get biological standard type
+        biological_standard = df_biological_standards.loc[
+            df_biological_standards["sample_id"] == filename]
+        biological_standard = biological_standard["biological_standard"].astype(str).values[0]
+
+        # Get parameters and features for that biological standard type
+        msdial_parameters = db.get_parameter_file_path(chromatography, polarity, biological_standard)
+        feature_list = db.get_targeted_features(biological_standard, chromatography, polarity + " Mode")
+        is_bio_standard = True
+
+    elif filename in df_samples["sample_id"].astype(str).tolist():
+        msdial_parameters = db.get_parameter_file_path(chromatography, polarity)
+        feature_list = db.get_internal_standards(chromatography, polarity + " Mode")
+        is_bio_standard = False
+
+    else:
+        return
+
+    # Get MS-DIAL directory
+    msdial_location = db.get_msdial_directory("Default configuration")
 
     # Run MSConvert
     run_msconvert(path, filename, extension, mzml_file_directory)
@@ -173,14 +204,10 @@ def process_data_file(path, filename, extension, run_id, is_bio_standard=False):
                                       str(mzml_file_directory), str(qc_results_directory))
 
     # Convert peak list to DataFrame
-    if is_bio_standard:
-        df_peak_list = peak_list_to_dataframe(peak_list, targeted_features)
-    else:
-        df_peak_list = peak_list_to_dataframe(peak_list, internal_standards)
+    df_peak_list = peak_list_to_dataframe(peak_list, feature_list)
 
-    # TODO: Perform QC checks
-    # qc_result = run_autoqc(df_peak_list, is_bio_standard)
-    qc_result = "pass"
+    # Perform QC checks
+    qc_result = qc_sample(df_peak_list, is_bio_standard)
 
     # Get m/z, RT, and intensity info as JSON strings
     json_mz = df_peak_list[["Name", "Precursor m/z"]].to_json(orient="split")
@@ -188,6 +215,6 @@ def process_data_file(path, filename, extension, run_id, is_bio_standard=False):
     json_intensity = df_peak_list[["Name", "Height"]].to_json(orient="split")
 
     # Write QC results to database and upload to Google Drive
-    db.write_qc_results(filename, run_id, json_mz, json_rt, json_intensity, qc_result)
+    db.write_qc_results(filename, run_id, json_mz, json_rt, json_intensity, qc_result, is_bio_standard)
 
-    return qc_result
+    return

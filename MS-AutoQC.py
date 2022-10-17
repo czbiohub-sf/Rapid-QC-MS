@@ -583,11 +583,11 @@ def serve_layout():
                                 # Switch between running AutoQC on a live run vs. past completed run
                                 html.Div(children=[
                                     dbc.Label("Is this an active or completed instrument run?"),
-                                    dbc.RadioItems(id="autoqc-active-past-options", value="active", options=[
+                                    dbc.RadioItems(id="autoqc-job-type", value="active", options=[
                                         {"label": "I want to monitor and QC an active instrument run",
                                          "value": "active"},
                                         {"label": "I want to QC a completed instrument run",
-                                         "value": "past"}],
+                                         "value": "completed"}],
                                     ),
                                 ]),
 
@@ -600,14 +600,34 @@ def serve_layout():
                             ]),
                         ]),
 
-                        dbc.Modal(id="new-run-success-modal", size="md", centered=True, is_open=False, children=[
-                            dbc.ModalHeader(dbc.ModalTitle(id="new-run-success-modal-title", children="Success!"), close_button=True),
-                            dbc.ModalBody(id="new-run-success-modal-body", className="modal-styles", children=[
+                        # Modal to alert user that run monitoring has started
+                        dbc.Modal(id="start-run-monitor-modal", size="md", centered=True, is_open=False, children=[
+                            dbc.ModalHeader(dbc.ModalTitle(id="start-run-monitor-modal-title", children="Success!"), close_button=True),
+                            dbc.ModalBody(id="start-run-monitor-modal-body", className="modal-styles", children=[
                                 dbc.Alert("MS-AutoQC will start monitoring your run. Please do not restart your computer.", color="success")
                             ]),
                         ]),
 
-                        # Modal for MS-AutoQC settings
+                        # Progress modal for bulk QC process
+                        dbc.Modal(id="start-bulk-qc-modal", size="md", centered=True, is_open=False,
+                                  keyboard=False, backdrop="static", children=[
+                            dbc.ModalHeader(dbc.ModalTitle(id="start-bulk-qc-modal-title", children="Processing data files..."), close_button=False),
+                            dbc.ModalBody(id="start-bulk-qc-modal-body", className="modal-styles", children=[
+                                html.Div([
+                                    dcc.Interval(id="progress-interval", n_intervals=0, interval=10000),
+                                    dbc.Label("Please do not refresh the page or close this window."),
+                                    dbc.Progress(id="bulk-qc-progress-bar", striped=True, animated=True, style={"height": "30px"}),
+                                ])
+                            ]),
+                        ]),
+
+                        # TODO: Error modal for new AutoQC job setup
+                        dbc.Modal(id="new-job-error-modal", size="md", centered=True, is_open=False, children=[
+                            dbc.ModalHeader(dbc.ModalTitle(id="new-job-error-modal-title"), close_button=False),
+                            dbc.ModalBody(id="new-job-error-modal-body", className="modal-styles"),
+                        ]),
+
+                        # MS-AutoQC settings
                         dbc.Modal(id="settings-modal", fullscreen=True, centered=True, is_open=False, scrollable=True, children=[
                             dbc.ModalHeader(dbc.ModalTitle(children="Settings"), close_button=True),
                             dbc.ModalBody(id="settings-modal-body", className="modal-styles-fullscreen", children=[
@@ -1245,9 +1265,10 @@ def serve_layout():
             dcc.Store(id="instruments"),
             dcc.Store(id="first-study"),
 
-            # Storage of DataFrames for monitoring a new run
+            # Data for starting a new AutoQC job
             dcc.Store(id="new-sequence"),
             dcc.Store(id="new-metadata"),
+            dcc.Store(id="filenames-for-bulk-qc"),
             
             # Dummy inputs for UI update callbacks
             dcc.Store(id="chromatography-added"),
@@ -1816,16 +1837,17 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
 @app.callback(Output("setup-new-run-modal", "is_open"),
               Output("setup-new-run-button", "n_clicks"),
               Input("setup-new-run-button", "n_clicks"),
-              Input("new-run-success-modal", "is_open"), prevent_initial_call=True)
-def toggle_new_run_modal(button_clicks, success):
+              Input("start-run-monitor-modal", "is_open"),
+              Input("start-bulk-qc-modal", "is_open"), prevent_initial_call=True)
+def toggle_new_run_modal(button_clicks, success, success_2):
 
     """
     Toggles modal for setting up AutoQC monitoring for a new instrument run
     """
 
-    if success:
+    if success or success_2:
         return False, 0
-    elif not success and button_clicks != 0:
+    elif (not success or not success_2) and button_clicks != 0:
         return True, 1
     else:
         return False, 0
@@ -2131,9 +2153,9 @@ def show_alert_on_msdial_config_removal(config_removed, selected_config):
               Output("ms2-centroid-tolerance", "value"),
               Output("select-smoothing-dropdown", "value"),
               Output("smoothing-level", "value"),
-              Output("mass-slice-width", "value"),
               Output("min-peak-width", "value"),
               Output("min-peak-height", "value"),
+              Output("mass-slice-width", "value"),
               Output("post-id-rt-tolerance", "value"),
               Output("post-id-mz-tolerance", "value"),
               Output("post-id-score-cutoff", "value"),
@@ -2436,6 +2458,18 @@ def get_biological_standards(on_page_load, on_standard_added, on_standard_remove
 
     # Populate table
     df_biological_standards = db.get_biological_standards()
+
+    # DataFrame refactoring
+    df_biological_standards = df_biological_standards.rename(
+        columns={"name": "Name",
+            "identifier": "Identifier",
+            "chromatography": "Chromatography",
+            "num_pos_features": "Pos (+) Features",
+            "num_neg_features": "Neg (–) Features"})
+
+    df_biological_standards = df_biological_standards[
+        ["Name", "Identifier", "Chromatography", "Pos (+) Features", "Neg (–) Features"]]
+
     biological_standards_table = dbc.Table.from_dataframe(df_biological_standards, striped=True, hover=True)
 
     return dropdown_options, biological_standards_table
@@ -2751,7 +2785,56 @@ def capture_uploaded_metadata(contents, filename):
     return filename, metadata
 
 
-@app.callback(Output("new-run-success-modal", "is_open"),
+@app.callback(Output("instrument-run-id", "valid"),
+              Output("start-run-chromatography-dropdown", "valid"),
+              Output("start-run-qc-configs-dropdown", "valid"),
+              Output("sequence-path", "valid"),
+              Output("metadata-path", "valid"),
+              Output("data-acquisition-folder-path", "valid"),
+              Input("instrument-run-id", "value"),
+              Input("start-run-chromatography-dropdown", "value"),
+              Input("start-run-qc-configs-dropdown", "value"),
+              Input("sequence-path", "value"),
+              Input("metadata-path", "value"),
+              Input("data-acquisition-folder-path", "value"),
+              State("instrument-run-id", "valid"),
+              State("start-run-chromatography-dropdown", "valid"),
+              State("start-run-qc-configs-dropdown", "valid"),
+              State("sequence-path", "valid"),
+              State("metadata-path", "valid"),
+              State("data-acquisition-folder-path", "valid"), prevent_initial_call=True)
+def validation_feedback_for_new_run_setup_form(run_id, chromatography, qc_config, sequence, metadata, data_acquisition_path,
+    run_id_valid, chromatography_valid, qc_config_valid, sequence_valid, metadata_valid, data_acquisition_path_valid):
+
+    """
+    Form validation feedback for the Setup New AutoQC Job page
+    """
+
+    if run_id is not None:
+        run_id_valid = True
+
+    if chromatography is not None:
+        chromatography_valid = True
+
+    if qc_config is not None:
+        qc_config_valid = True
+
+    if sequence is not None:
+        sequence_valid = True
+
+    if metadata is not None:
+        metadata_valid = True
+
+    if data_acquisition_path is not None:
+        data_acquisition_path_valid = True
+
+    return run_id_valid, chromatography_valid, qc_config_valid, sequence_valid, metadata_valid, data_acquisition_path_valid
+
+
+@app.callback(Output("start-run-monitor-modal", "is_open"),
+              Output("start-bulk-qc-modal", "is_open"),
+              Output("new-job-error-modal", "is_open"),
+              Output("filenames-for-bulk-qc", "data"),
               Input("monitor-new-run-button", "n_clicks"),
               State("instrument-run-id", "value"),
               State("tabs", "value"),
@@ -2760,15 +2843,17 @@ def capture_uploaded_metadata(contents, filename):
               State("new-sequence", "data"),
               State("new-metadata", "data"),
               State("data-acquisition-folder-path", "value"),
-              State("start-run-qc-configs-dropdown", "value"), prevent_initial_call=True)
-def start_monitoring_run(button_clicks, run_id, instrument_id, chromatography, bio_standards, sequence, metadata,
-                         acquisition_path, qc_config_id):
+              State("start-run-qc-configs-dropdown", "value"),
+              State("autoqc-job-type", "value"), prevent_initial_call=True)
+def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, bio_standards, sequence, metadata,
+                         acquisition_path, qc_config_id, job_type):
 
     """
     This callback initiates the following:
     1. Writing a new instrument run to the database
     2. Generate parameters files for MS-DIAL processing
-    3. Initializing run monitoring at the given directory
+    3a. Initializing run monitoring at the given directory for an active run, or
+    3b. Iterating through and processing data files for a completed run
     """
 
     # Write a new instrument run to the database
@@ -2786,71 +2871,88 @@ def start_monitoring_run(button_clicks, run_id, instrument_id, chromatography, b
             msp_file_path = db.get_msp_file_paths(chromatography, polarity, bio_standard)
             db.generate_msdial_parameters_file(chromatography, polarity, msp_file_path, bio_standard)
 
-    # Initialize run monitoring at the given directory
+    # Get filenames from sequence and filter out preblanks, wash, shutdown, etc.
     filenames = qc.get_filenames_from_sequence(sequence)
-    listener = subprocess.Popen(["python", "AcquisitionListener.py", acquisition_path, str(filenames), run_id])
 
-    return True
+    for filename in filenames.copy():
+        if "_BK_" and "_pre_" in filename:
+            filenames.remove(filename)
+        elif "wash" in filename:
+            filenames.remove(filename)
+        elif "shutdown" in filename:
+            filenames.remove(filename)
+
+    # If this is for an active run, initialize run monitoring at the given directory
+    if job_type == "active":
+        listener = subprocess.Popen(["python", "AcquisitionListener.py", acquisition_path, str(filenames), run_id])
+        return True, False, False, ""
+
+    # If this is for a completed run, begin iterating through the files and process them
+    elif job_type == "completed":
+        return False, True, False, json.dumps(filenames)
+
+    # TODO: Handle form validation errors
+    else:
+        return False, False, True, ""
 
 
-@app.callback(Output("instrument-run-id", "valid"),
-              Output("start-run-chromatography-dropdown", "valid"),
-              Output("start-run-bio-standards-checklist", "valid"),
-              Output("start-run-qc-configs-dropdown", "valid"),
-              Output("sequence-path", "valid"),
-              Output("metadata-path", "valid"),
-              Output("data-acquisition-folder-path", "valid"),
-              Output("autoqc-active-past-options", "valid"),
-              Input("instrument-run-id", "value"),
-              Input("start-run-chromatography-dropdown", "value"),
-              Input("start-run-bio-standards-checklist", "value"),
-              Input("start-run-qc-configs-dropdown", "value"),
-              Input("sequence-path", "value"),
-              Input("metadata-path", "value"),
-              Input("data-acquisition-folder-path", "value"),
-              Input("autoqc-active-past-options", "value"),
-              State("instrument-run-id", "valid"),
-              State("start-run-chromatography-dropdown", "valid"),
-              State("start-run-bio-standards-checklist", "valid"),
-              State("start-run-qc-configs-dropdown", "valid"),
-              State("sequence-path", "valid"),
-              State("metadata-path", "valid"),
-              State("data-acquisition-folder-path", "valid"),
-              State("autoqc-active-past-options", "valid"), prevent_initial_call=True)
-def validation_feedback_for_new_run_setup_form(run_id, chromatography, bio_standard, qc_config, sequence,
-    metadata, data_acquisition_path, active_or_past_run, run_id_valid, chromatography_valid, bio_standard_valid,
-    qc_config_valid, sequence_valid, metadata_valid, data_acquisition_path_valid, active_past_valid):
+@app.callback(Output("bulk-qc-progress-bar", "value"),
+              Output("bulk-qc-progress-bar", "label"),
+              Output("start-bulk-qc-modal-title", "children"),
+              Output("progress-interval", "disabled"),
+              Input("start-bulk-qc-modal", "is_open"),
+              Input("progress-interval", "n_intervals"),
+              State("data-acquisition-folder-path", "value"),
+              State("filenames-for-bulk-qc", "data"),
+              State("instrument-run-id", "value"),
+              State("start-bulk-qc-modal-title", "children"), prevent_initial_call=True)
+def start_bulk_qc_processing(modal_open, progress_intervals, data_file_directory, filenames_as_json, run_id, title):
 
     """
-    Form validation feedback for the Setup New AutoQC Job page
+    Initiates bulk QC processing:
+    1. Iterates through data files in a given directory
+    2. Processes them and writes results to database
+    3. Updates progress bar
     """
 
-    if run_id is not None:
-        run_id_valid = True
+    if modal_open:
+        # Get filenames as list from JSON string
+        filenames = json.loads(filenames_as_json)
 
-    if chromatography is not None:
-        chromatography_valid = True
+        # Replace any backwards slashes in path
+        path = data_file_directory.replace("\\", "/")
+        if not path.endswith("/"):
+            path = path + "/"
 
-    if bio_standard is not None:
-        bio_standard_valid = True
+        # Iterate through files using index from progress bar callback loop
+        if title != "Processing data files...":
+            index = int(title.split(" out of ")[0])
+        else:
+            index = 0
 
-    if qc_config is not None:
-        qc_config_valid = True
+        filename = filenames[index]
 
-    if sequence is not None:
-        sequence_valid = True
+        # Once the last file has been processed, terminate the job
+        if index == len(filenames):
+            return 100, "100%", "Processing complete!", True
 
-    if metadata is not None:
-        metadata_valid = True
+        # Prepare update of progress bar
+        progress = int(min(((index + 1) / len(filenames)) * 100, 100))
+        progress_label = str(progress) + "%"
+        new_title = str(index + 1) + " out of " + str(len(filenames)) + " samples processed"
 
-    if data_acquisition_path is not None:
-        data_acquisition_path_valid = True
+        # If the file has already been processed, restart the loop
+        df_samples = db.get_samples_in_run(run_id)
+        df_sample = df_samples.loc[df_samples["sample_id"] == filename]
+        if df_sample["qc_result"].astype(str).values[0] != "None":
+            return progress, progress_label, new_title, False
 
-    if active_or_past_run is not None:
-        active_past_valid = True
+        # Otherwise, process the data file
+        qc.process_data_file(path=path, filename=filename, extension="raw", run_id=run_id)
+        return progress, progress_label, new_title, False
 
-    return run_id_valid, chromatography_valid, bio_standard_valid, qc_config_valid, sequence_valid, metadata_valid, \
-           data_acquisition_path_valid, active_past_valid
+    else:
+        return 0, "", "", False
 
 
 if __name__ == "__main__":
