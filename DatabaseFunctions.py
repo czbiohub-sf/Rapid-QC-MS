@@ -54,14 +54,18 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, sequenc
     # Get list of samples from sequence
     df_sequence = pd.read_json(sequence, orient="split")
     samples = df_sequence["File Name"].astype(str).tolist()
+    positions = df_sequence["Position"].astype(str).tolist()
 
-    for sample in samples.copy():
+    for index, sample in enumerate(samples.copy()):
         if "_BK_" and "_pre_" in sample:
             samples.remove(sample)
+            positions.remove(positions[index])
         elif "wash" in sample:
             samples.remove(sample)
+            positions.remove(positions[index])
         elif "shutdown" in sample:
             samples.remove(sample)
+            positions.remove(positions[index])
 
     num_samples = len(samples)
 
@@ -83,7 +87,7 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, sequenc
          "chromatography": chromatography,
          "sequence": sequence,
          "metadata": metadata,
-         "status": "active",
+         "status": "Active",
          "samples": num_samples,
          "completed": 0,
          "passes": 0,
@@ -94,7 +98,7 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, sequenc
 
     insert_samples = []
 
-    for sample in samples:
+    for index, sample in enumerate(samples):
         # Check if the biological standard identifier is in the sample name
         is_bio_standard = False
 
@@ -107,14 +111,16 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, sequenc
         if not is_bio_standard:
             insert_sample = sample_qc_results_table.insert().values(
                 {"sample_id": sample,
-                 "run_id": run_id})
+                 "run_id": run_id,
+                 "position": positions[index]})
 
         # Prepare insert of the sample row into the "bio_qc_results" table
         else:
             insert_sample = bio_qc_results_table.insert().values(
                 {"sample_id": sample,
                  "run_id": run_id,
-                 "biological_standard": identifiers[identifier]})
+                 "biological_standard": identifiers[identifier],
+                 "position": positions[index]})
 
         # Add this INSERT query into the list of insert queries
         insert_samples.append(insert_sample)
@@ -139,6 +145,18 @@ def get_instrument_run(run_id):
     query = "SELECT * FROM runs WHERE run_id = '" + run_id + "'"
     df_instrument_run = pd.read_sql(query, engine)
     return df_instrument_run
+
+
+def get_instrument_runs(instrument_id):
+
+    """
+    Returns DataFrame of all runs on a given instrument from "runs" table
+    """
+
+    engine = sa.create_engine(sqlite_db_location)
+    query = "SELECT * FROM runs WHERE instrument_id = '" + instrument_id + "'"
+    df_instrument_runs = pd.read_sql(query, engine)
+    return df_instrument_runs
 
 
 def get_md5(sample_id):
@@ -915,7 +933,7 @@ def update_msdial_configuration(config_name, rt_begin, rt_end, mz_begin, mz_end,
 
     update_msdial_location = (
         sa.update(msdial_parameters_table)
-            .where(msdial_parameters_table.c.config_name == "Default configuration")
+            .where(msdial_parameters_table.c.config_name == "Default")
             .values(msdial_directory=msdial_directory)
     )
 
@@ -994,7 +1012,27 @@ def get_msdial_directory(config_id):
     return get_msdial_configuration_parameters(config_id)[-1]
 
 
-def get_internal_standards(chromatography, polarity):
+def get_internal_standards_dict(chromatography, value_type):
+
+    """
+    Returns dictionary of internal standard keys mapped to either m/z or RT values
+    """
+
+    engine = sa.create_engine(sqlite_db_location)
+    query = "SELECT * FROM internal_standards " + "WHERE chromatography='" + chromatography + "'"
+    df_internal_standards = pd.read_sql(query, engine)
+
+    dict = {}
+    keys = df_internal_standards["name"].astype(str).tolist()
+    values = df_internal_standards[value_type].astype(float).tolist()
+
+    for index, key in enumerate(keys):
+        dict[key] = values[index]
+
+    return dict
+
+
+def get_internal_standards_list(chromatography, polarity):
 
     """
     Returns list of internal standards for a given chromatography method and polarity
@@ -1009,7 +1047,7 @@ def get_internal_standards(chromatography, polarity):
     return df_internal_standards["name"].astype(str).tolist()
 
 
-def get_targeted_features(biological_standard, chromatography, polarity):
+def get_targeted_features_list(biological_standard, chromatography, polarity):
 
     """
     Returns list of metabolite targets for a given biological standard, chromatography, and polarity
@@ -1068,7 +1106,8 @@ def add_biological_standard(name, identifier):
             "identifier": identifier,
             "chromatography": method,
             "num_pos_features": 0,
-            "num_neg_features": 0
+            "num_neg_features": 0,
+            "msdial_config_id": "Default"
         })
         connection.execute(insert)
 
@@ -1280,3 +1319,81 @@ def get_samples_in_run(run_id, sample_type="Both"):
         df = df_bio_standards.append(df_samples, ignore_index=True)
 
     return df.loc[df["run_id"] == run_id]
+
+
+def parse_internal_standard_data(run_id, result_type, polarity):
+
+    """
+    Returns JSON-ified DataFrame of samples (as columns) vs. internal standards (as rows)
+    """
+
+    # Get relevant QC results table from database
+    df_samples = get_samples_in_run(run_id, "Sample")
+
+    # Filter by polarity
+    df_samples = df_samples.loc[df_samples["sample_id"].str.contains(polarity)]
+
+    # Get list of results using result type
+    sample_ids = df_samples["sample_id"].astype(str).tolist()
+    results = df_samples[result_type].tolist()
+
+    # Prepare unified results DataFrame
+    df_results = pd.DataFrame()
+
+    # For each JSON-ified result,
+    for index, result in enumerate(results):
+
+        # Convert to DataFrame
+        df = pd.read_json(result, orient="split")
+
+        # Refactor so that each row is a sample, and each column is an internal standard
+        df.rename(columns={df.columns[1]: sample_ids[index]}, inplace=True)
+        df = df.transpose()
+        df.columns = df.iloc[0]
+        df = df.drop(df.index[0])
+        df.reset_index(inplace=True)
+        df.rename(columns={"index": "Sample"}, inplace=True)
+
+        # Append result to df_results
+        df_results = pd.concat([df_results, df], ignore_index=True)
+
+    # Return DataFrame as JSON string
+    return df_results.to_json(orient="split")
+
+
+def parse_biological_standard_data(result_type, polarity, biological_standard):
+
+    """
+    Returns JSON-ified DataFrame of instrument runs (as columns) vs. targeted features (as rows)
+    """
+
+    # Get relevant QC results table from database
+    df_samples = get_table("bio_qc_results")
+
+    # Filter by biological standard type
+    df_samples = df_samples.loc[df_samples["biological_standard"] == biological_standard]
+
+    # Filter by polarity
+    df_samples = df_samples.loc[df_samples["sample_id"].str.contains(polarity)]
+
+    # Get list of results using result type
+    run_ids = df_samples["run_id"].astype(str).tolist()
+    results = df_samples[result_type].tolist()
+
+    # Prepare unified results DataFrame
+    df_results = pd.DataFrame()
+
+    # For each JSON-ified result,
+    for index, result in enumerate(results):
+
+        # Convert to DataFrame
+        df = pd.read_json(result, orient="split")
+
+        # Refactor so that each row is a sample, and each column is an internal standard
+        df.rename(columns={df.columns[1]: run_ids[index]}, inplace=True)
+
+        # Append result to df_results
+        df_results = pd.concat([df_results, df], ignore_index=True)
+
+    # Return DataFrame as JSON string
+    return df_results.to_json(orient="split")

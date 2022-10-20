@@ -133,10 +133,10 @@ def qc_sample(df_peak_list, is_bio_standard):
 
     # Handles sample QC checks
     if not is_bio_standard:
-        return "pass"
+        return "Pass"
     # Handles biological standard QC checks
     else:
-        return "pass"
+        return "Pass"
 
 
 def process_data_file(path, filename, extension, run_id):
@@ -182,19 +182,19 @@ def process_data_file(path, filename, extension, run_id):
 
         # Get parameters and features for that biological standard type
         msdial_parameters = db.get_parameter_file_path(chromatography, polarity, biological_standard)
-        feature_list = db.get_targeted_features(biological_standard, chromatography, polarity + " Mode")
+        feature_list = db.get_targeted_features_list(biological_standard, chromatography, polarity + " Mode")
         is_bio_standard = True
 
     elif filename in df_samples["sample_id"].astype(str).tolist():
         msdial_parameters = db.get_parameter_file_path(chromatography, polarity)
-        feature_list = db.get_internal_standards(chromatography, polarity + " Mode")
+        feature_list = db.get_internal_standards_list(chromatography, polarity + " Mode")
         is_bio_standard = False
 
     else:
         return
 
     # Get MS-DIAL directory
-    msdial_location = db.get_msdial_directory("Default configuration")
+    msdial_location = db.get_msdial_directory("Default")
 
     # Run MSConvert
     run_msconvert(path, filename, extension, mzml_file_directory)

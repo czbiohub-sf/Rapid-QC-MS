@@ -214,7 +214,7 @@ def serve_layout():
                                         # Dropdown for selecting an internal standard for the RT vs. sample plot
                                         dcc.Dropdown(
                                             id="istd-rt-dropdown",
-                                            options=standards_list,
+                                            options=[],
                                             placeholder="Select internal standards...",
                                             style={"text-align": "left",
                                                    "height": "35px",
@@ -233,7 +233,7 @@ def serve_layout():
                                                    "display": "inline-block"},
                                             multi=True),
 
-                                        # Scatter plot of internal standard retention times in QE 1 samples
+                                        # Scatter plot of internal standard retention times vs. samples
                                         dcc.Graph(id="istd-rt-plot")
                                     ]),
 
@@ -242,7 +242,7 @@ def serve_layout():
                                         # Dropdown for internal standard intensity plot
                                         dcc.Dropdown(
                                             id="istd-intensity-dropdown",
-                                            options=standards_list,
+                                            options=[],
                                             placeholder="Select internal standard...",
                                             style={"text-align": "left",
                                                    "height": "35px",
@@ -260,7 +260,7 @@ def serve_layout():
                                                    "display": "inline-block"},
                                             multi=True),
 
-                                        # Bar plot of internal standard intensity in QE 1 samples
+                                        # Bar plot of internal standard intensity vs. samples
                                         dcc.Graph(id="istd-intensity-plot")
                                     ]),
 
@@ -269,7 +269,7 @@ def serve_layout():
                                         # Dropdown for internal standard delta m/z plot
                                         dcc.Dropdown(
                                             id="istd-mz-dropdown",
-                                            options=standards_list,
+                                            options=[],
                                             placeholder="Select internal standards...",
                                             style={"text-align": "left",
                                                    "height": "35px",
@@ -294,28 +294,28 @@ def serve_layout():
 
                                 ]),
 
-                                html.Div(className="urine-plot-div", children=[
+                                html.Div(className="bio-plot-div", children=[
 
-                                    # Scatter plot of QC urine feature retention times from QE 1
+                                    # Scatter plot for biological standard m/z vs. RT
                                     html.Div(className="plot-container", children=[
-                                        dcc.Graph(id="urine-rt-plot")
+                                        dcc.Graph(id="bio-rt-plot")
                                     ]),
 
-                                    # Bar plot of QC urine feature peak heights from QE 1
+                                    # Bar plot for biological standard feature intensity vs. run
                                     html.Div(className="plot-container", children=[
 
-                                        # Dropdown for urine feature intensity plot
+                                        # Dropdown for biological standard feature intensity plot
                                         dcc.Dropdown(
-                                            id="urine-intensity-dropdown",
-                                            options=list(get_pos_urine_features_dict().keys()),
-                                            placeholder="Select urine feature...",
+                                            id="bio-intensity-dropdown",
+                                            options=[],
+                                            placeholder="Select targeted metabolite...",
                                             style={"text-align": "left",
                                                    "height": "35px",
                                                    "width": "100%",
                                                    "display": "inline-block"}
                                         ),
 
-                                        dcc.Graph(id="urine-intensity-plot", animate=False)
+                                        dcc.Graph(id="bio-intensity-plot", animate=False)
                                     ])
                                 ])
                             ]),
@@ -805,7 +805,7 @@ def serve_layout():
                                         html.Br(),
 
                                         # UI feedback for biological standard addition/removal
-                                        dbc.Alert(id="bio-standard-addition-alert", color="success", is_open=False, duration=4000),
+                                        dbc.Alert(id="bio-standard-addition-alert", is_open=False, duration=4000),
                                         dbc.Alert(id="bio-standard-removal-alert", color="primary", is_open=False, duration=4000),
 
                                         html.Div([
@@ -1246,20 +1246,20 @@ def serve_layout():
             dcc.Store(id="on-page-load"),
 
             # Storage of all DataFrames necessary for QC plot generation
-            dcc.Store(id="rt-pos"),
-            dcc.Store(id="rt-neg"),
-            dcc.Store(id="intensity-pos"),
-            dcc.Store(id="intensity-neg"),
-            dcc.Store(id="mz-pos"),
-            dcc.Store(id="mz-neg"),
+            dcc.Store(id="istd-rt-pos"),
+            dcc.Store(id="istd-rt-neg"),
+            dcc.Store(id="istd-intensity-pos"),
+            dcc.Store(id="istd-intensity-neg"),
+            dcc.Store(id="istd-mz-pos"),
+            dcc.Store(id="istd-mz-neg"),
             dcc.Store(id="sequence"),
             dcc.Store(id="metadata"),
-            dcc.Store(id="urine-rt-pos"),
-            dcc.Store(id="urine-rt-neg"),
-            dcc.Store(id="urine-intensity-pos"),
-            dcc.Store(id="urine-intensity-neg"),
-            dcc.Store(id="urine-mz-pos"),
-            dcc.Store(id="urine-mz-neg"),
+            dcc.Store(id="bio-rt-pos"),
+            dcc.Store(id="bio-rt-neg"),
+            dcc.Store(id="bio-intensity-pos"),
+            dcc.Store(id="bio-intensity-neg"),
+            dcc.Store(id="bio-mz-pos"),
+            dcc.Store(id="bio-mz-neg"),
             dcc.Store(id="study-resources"),
             dcc.Store(id="samples"),
             dcc.Store(id="instruments"),
@@ -1343,58 +1343,42 @@ def populate_study_table(placeholder_input, instrument):
     Dash callback for populating tables with list of past/active instrument runs
     """
 
-    df_studies = pd.DataFrame()
-    df_metadata = pd.DataFrame()
+    # Get instrument runs from database
+    df_instrument_runs = db.get_instrument_runs(instrument)
+    df_instrument_runs = df_instrument_runs[["run_id", "chromatography", "status"]]
+    df_instrument_runs = df_instrument_runs.rename(
+        columns={"run_id": "Run ID",
+                 "chromatography": "Chromatography",
+                 "status": "Status"})
 
-    studies = {
-        "Study": [],
-        "Type": [],
-        "Status": []
-    }
+    # Convert DataFrame into a dictionary
+    instrument_runs = df_instrument_runs.to_dict("records")
 
-    files = drive.ListFile({"q": "'" + drive_ids[instrument] + "' in parents and trashed=false"}).GetList()
-
-    # Get study name and chromatography
-    for file in files:
-        if "RT" in file["title"] and ("Pos" in file["title"] or "Neg" in file["title"]) and "urine" not in file["title"]:
-            if file["title"].split("_")[0] not in studies["Study"]:
-                studies["Study"].append(file["title"].split("_")[0])
-                studies["Type"].append(file["title"].split("_")[2])
-                studies["Status"].append("Complete")
-
-    df_studies["Study"] = studies["Study"]
-    df_studies["Type"] = studies["Type"]
-    df_studies["Status"] = studies["Status"]
-    studies = df_studies.to_dict("records")
-
-    display_div = {"display": "block"}
-
-    return studies, df_studies["Study"].tolist()[0], display_div, display_div
+    return instrument_runs, df_instrument_runs["Run ID"].values[0], {"display": "block"}, {"display": "block"}
 
 
-@app.callback(Output("rt-pos", "data"),
-              Output("rt-neg", "data"),
-              Output("intensity-pos", "data"),
-              Output("intensity-neg", "data"),
-              Output("mz-pos", "data"),
-              Output("mz-neg", "data"),
+@app.callback(Output("istd-rt-pos", "data"),
+              Output("istd-rt-neg", "data"),
+              Output("istd-intensity-pos", "data"),
+              Output("istd-intensity-neg", "data"),
+              Output("istd-mz-pos", "data"),
+              Output("istd-mz-neg", "data"),
               Output("sequence", "data"),
               Output("metadata", "data"),
-              Output("urine-rt-pos", "data"),
-              Output("urine-rt-neg", "data"),
-              Output("urine-intensity-pos", "data"),
-              Output("urine-intensity-neg", "data"),
-              Output("urine-mz-pos", "data"),
-              Output("urine-mz-neg", "data"),
+              Output("bio-rt-pos", "data"),
+              Output("bio-rt-neg", "data"),
+              Output("bio-intensity-pos", "data"),
+              Output("bio-intensity-neg", "data"),
+              Output("bio-mz-pos", "data"),
+              Output("bio-mz-neg", "data"),
               Output("study-resources", "data"),
               Output("samples", "data"),
               Input("instrument-run-table", "active_cell"),
-              State("instrument-run-table", "data"),
-              State("tabs", "value"), prevent_initial_call=True, suppress_callback_exceptions=True)
-def load_data(active_cell, table_data, instrument):
+              State("instrument-run-table", "data"), prevent_initial_call=True, suppress_callback_exceptions=True)
+def load_data(active_cell, table_data):
 
     """
-    Stores QC results for QE 1 in dcc.Store objects (user's browser session)
+    Stores QC results in dcc.Store objects (user's browser session)
     """
 
     no_data = (None, None, None, None, None, None, None, None,
@@ -1402,7 +1386,7 @@ def load_data(active_cell, table_data, instrument):
 
     if active_cell:
         study_id = table_data[active_cell["row"]][active_cell["column_id"]]
-        return get_data(instrument, study_id)
+        return get_qc_results(study_id)
     else:
         return no_data
 
@@ -1421,11 +1405,9 @@ def loading_data_feedback(active_cell, table_data, placeholder_input, modal_is_o
     Dash callback for providing user feedback when retrieving data from Google Drive
     """
 
-    study_name = ""
-
     if active_cell:
         if study_resources:
-            study_name = json.loads(study_resources)["study_name"]
+            study_name = json.loads(study_resources)["run_id"]
             if table_data[active_cell["row"]][active_cell["column_id"]] != study_name:
                 study_name = table_data[active_cell["row"]][active_cell["column_id"]]
         else:
@@ -1451,7 +1433,7 @@ def loading_data_feedback(active_cell, table_data, placeholder_input, modal_is_o
 def populate_sample_tables(samples):
 
     """
-    Populates table with list of samples for selected study from QE 1 instrument table
+    Populates table with list of samples for selected run from instrument runs table
     """
 
     if samples is not None:
@@ -1464,18 +1446,20 @@ def populate_sample_tables(samples):
 @app.callback(Output("istd-rt-dropdown", "options"),
               Output("istd-mz-dropdown", "options"),
               Output("istd-intensity-dropdown", "options"),
-              Output("urine-intensity-dropdown", "options"),
+              Output("bio-intensity-dropdown", "options"),
               Output("rt-plot-sample-dropdown", "options"),
               Output("mz-plot-sample-dropdown", "options"),
               Output("intensity-plot-sample-dropdown", "options"),
               Input("polarity-options", "value"),
               Input("sample-table", "data"),
               State("study-resources", "data"),
-              State("samples", "data"), prevent_initial_call=True)
-def update_dropdowns_on_polarity_change(polarity, table_data, study_resources, samples):
+              State("samples", "data"),
+              State("bio-intensity-pos", "data"),
+              State("bio-intensity-neg", "data"), prevent_initial_call=True)
+def update_dropdowns_on_polarity_change(polarity, table_data, study_resources, samples, bio_intensity_pos, bio_intensity_neg):
 
     """
-    Updates QE 1 dropdown lists with correct items for user-selected polarity
+    Updates dropdown lists with correct items for user-selected polarity
     """
 
     if samples is not None:
@@ -1484,17 +1468,25 @@ def update_dropdowns_on_polarity_change(polarity, table_data, study_resources, s
 
         if polarity == "neg":
             istd_dropdown = study_resources["neg_internal_standards"]
-            urine_dropdown = list(neg_urine_features_dict.keys())
+
+            if bio_intensity_neg is not None:
+                df = pd.read_json(bio_intensity_neg, orient="split")
+                bio_dropdown = df["Name"].astype(str).unique().tolist()
+
             df_samples = df_samples.loc[df_samples["Sample"].str.contains("Neg")]
             sample_dropdown = df_samples["Sample"].tolist()
 
         elif polarity == "pos":
             istd_dropdown = study_resources["pos_internal_standards"]
-            urine_dropdown = list(get_pos_urine_features_dict().keys())
+
+            if bio_intensity_pos is not None:
+                df = pd.read_json(bio_intensity_pos, orient="split")
+                bio_dropdown = df["Name"].astype(str).unique().tolist()
+
             df_samples = df_samples.loc[df_samples["Sample"].str.contains("Pos")]
             sample_dropdown = df_samples["Sample"].tolist()
 
-        return istd_dropdown, istd_dropdown, istd_dropdown, urine_dropdown, sample_dropdown, sample_dropdown, sample_dropdown
+        return istd_dropdown, istd_dropdown, istd_dropdown, bio_dropdown, sample_dropdown, sample_dropdown, sample_dropdown
 
     else:
         return [], [], [], [], [], [], []
@@ -1554,92 +1546,101 @@ def apply_sample_filter_to_plots(filter, polarity, samples, metadata):
 @app.callback(Output("istd-rt-plot", "figure"),
               Output("istd-intensity-plot", "figure"),
               Output("istd-mz-plot", "figure"),
-              Output("urine-rt-plot", "figure"),
-              Output("urine-intensity-plot", "figure"),
-              Output("urine-intensity-dropdown", "value"),
-              Output("urine-rt-plot", "clickData"),
+              Output("bio-rt-plot", "figure"),
+              Output("bio-intensity-plot", "figure"),
+              Output("bio-intensity-dropdown", "value"),
+              Output("bio-rt-plot", "clickData"),
               Input("polarity-options", "value"),
               Input("istd-rt-dropdown", "value"),
               Input("istd-intensity-dropdown", "value"),
               Input("istd-mz-dropdown", "value"),
-              Input("urine-intensity-dropdown", "value"),
-              Input("urine-rt-plot", "clickData"),
+              Input("bio-intensity-dropdown", "value"),
+              Input("bio-rt-plot", "clickData"),
               Input("rt-plot-sample-dropdown", "value"),
               Input("intensity-plot-sample-dropdown", "value"),
               Input("mz-plot-sample-dropdown", "value"),
-              State("rt-pos", "data"),
-              State("rt-neg", "data"),
-              State("intensity-pos", "data"),
-              State("intensity-neg", "data"),
-              State("mz-pos", "data"),
-              State("mz-neg", "data"),
+              State("istd-rt-pos", "data"),
+              State("istd-rt-neg", "data"),
+              State("istd-intensity-pos", "data"),
+              State("istd-intensity-neg", "data"),
+              State("istd-mz-pos", "data"),
+              State("istd-mz-neg", "data"),
               State("sequence", "data"),
               State("metadata", "data"),
-              State("urine-rt-pos", "data"),
-              State("urine-rt-neg", "data"),
-              State("urine-intensity-pos", "data"),
-              State("urine-intensity-neg", "data"),
-              State("urine-mz-pos", "data"),
-              State("urine-mz-neg", "data"),
+              State("bio-rt-pos", "data"),
+              State("bio-rt-neg", "data"),
+              State("bio-intensity-pos", "data"),
+              State("bio-intensity-neg", "data"),
+              State("bio-mz-pos", "data"),
+              State("bio-mz-neg", "data"),
               Input("study-resources", "data"),
               State("samples", "data"),
               Input("tabs", "value"), prevent_initial_call=True)
-def populate_plots(polarity, rt_plot_standard, intensity_plot_standard, mz_plot_standard,
-                   urine_plot_feature, click_data, rt_plot_samples, intensity_plot_samples, mz_plot_samples,
-                   rt_pos, rt_neg, intensity_pos, intensity_neg, mz_pos, mz_neg, sequence,
-                   metadata, urine_rt_pos, urine_rt_neg, urine_intensity_pos, urine_intensity_neg,
-                   urine_mz_pos, urine_mz_neg, study_resources, samples, instrument):
+def populate_plots(polarity, rt_plot_standard, intensity_plot_standard, mz_plot_standard, bio_plot_feature, click_data,
+    rt_plot_samples, intensity_plot_samples, mz_plot_samples, istd_rt_pos, istd_rt_neg, istd_intensity_pos, istd_intensity_neg,
+    istd_mz_pos, istd_mz_neg, sequence, metadata, bio_rt_pos, bio_rt_neg, bio_intensity_pos, bio_intensity_neg, bio_mz_pos,
+    bio_mz_neg, study_resources, samples, instrument):
 
     """
-    Dash callback for loading QE 1 instrument data into scatter and bar plots
+    Dash callback for loading instrument run data into scatter and bar plots
     """
-
-    if rt_pos is None:
-        return dash.no_update, dash.no_update, dash.no_update, \
-               dash.no_update, dash.no_update, None, None
 
     # Retrieve data for clicked study and store as a dictionary
     files = {
-        "rt_pos": pd.read_json(rt_pos, orient="split"),
-        "rt_neg": pd.read_json(rt_neg, orient="split"),
-        "intensity_pos": pd.read_json(intensity_pos, orient="split"),
-        "intensity_neg": pd.read_json(intensity_neg, orient="split"),
-        "mz_pos": pd.read_json(mz_pos, orient="split"),
-        "mz_neg": pd.read_json(mz_neg, orient="split"),
+        "istd_rt_pos": pd.read_json(istd_rt_pos, orient="split"),
+        "istd_rt_neg": pd.read_json(istd_rt_neg, orient="split"),
+        "istd_intensity_pos": pd.read_json(istd_intensity_pos, orient="split"),
+        "istd_intensity_neg": pd.read_json(istd_intensity_neg, orient="split"),
+        "istd_mz_pos": pd.read_json(istd_mz_pos, orient="split"),
+        "istd_mz_neg": pd.read_json(istd_mz_neg, orient="split"),
         "sequence": pd.read_json(sequence, orient="split"),
         "metadata": pd.read_json(metadata, orient="split"),
-        "urine_rt_pos": pd.read_json(urine_rt_pos, orient="split"),
-        "urine_rt_neg": pd.read_json(urine_rt_neg, orient="split"),
-        "urine_intensity_pos": pd.read_json(urine_intensity_pos, orient="split"),
-        "urine_intensity_neg": pd.read_json(urine_intensity_neg, orient="split"),
-        "urine_mz_pos": pd.read_json(urine_mz_pos, orient="split"),
-        "urine_mz_neg": pd.read_json(urine_mz_neg, orient="split"),
-        "study_resources": json.loads(study_resources),
+        "bio_rt_pos": pd.read_json(bio_rt_pos, orient="split"),
+        "bio_rt_neg": pd.read_json(bio_rt_neg, orient="split"),
+        "bio_intensity_pos": pd.read_json(bio_intensity_pos, orient="split"),
+        "bio_intensity_neg": pd.read_json(bio_intensity_neg, orient="split"),
+        "bio_mz_pos": pd.read_json(bio_mz_pos, orient="split"),
+        "bio_mz_neg": pd.read_json(bio_mz_neg, orient="split"),
+        "resources": json.loads(study_resources),
         "samples": pd.read_json(samples, orient="split")
     }
 
-    if files["study_resources"]["instrument"] is not None:
-        if files["study_resources"]["instrument"] != instrument:
+    if files["resources"]["instrument"] is not None:
+        if files["resources"]["instrument"] != instrument:
             return {}, {}, {}, {}, {}, None, None
 
-    # Get study name
-    study_name = files["study_resources"]["study_name"]
+    # Get run ID and chromatography method
+    run_id = files["resources"]["run_id"]
+    chromatography = files["resources"]["chromatography"]
 
     # Get retention times
-    retention_times_dict = files["study_resources"]["retention_times_dict"]
+    retention_times_dict = files["resources"]["retention_times_dict"]
 
     # Get metadata DataFrame
     df_metadata = files["metadata"]
 
-    # Get internal standards from QC DataFrames for RT scatter plot
-    if polarity == "pos":
-        internal_standards = files["rt_pos"]["Title"].astype(str).tolist()
-        urine_features_dict = get_pos_urine_features_dict()
-    elif polarity == "neg":
-        internal_standards = files["rt_neg"]["Title"].astype(str).tolist()
-        urine_features_dict = get_neg_urine_features_dict()
+    # Get list of samples
+    samples = db.get_samples_in_run(run_id, "Sample")["sample_id"].astype(str).tolist()
 
-    # Set initial dropdown values when none are selected
+    # Get polarity-specific resources
+    if polarity == "pos":
+        internal_standards = files["istd_rt_pos"].columns.tolist()
+        internal_standards.remove("Sample")
+        samples = [x for x in samples if "Pos" in x]
+    elif polarity == "neg":
+        internal_standards = files["istd_rt_neg"].columns.tolist()
+        internal_standards.remove("Sample")
+        samples = [x for x in samples if "Neg" in x]
+
+    # Prepare DataFrames for plotting
+    df_istd_rt = files["istd_rt_" + polarity]
+    df_istd_intensity = files["istd_intensity_" + polarity]
+    df_istd_mz = files["istd_mz_" + polarity]
+    df_bio_rt = files["bio_rt_" + polarity]
+    df_bio_intensity = files["bio_intensity_" + polarity]
+    df_bio_mz = files["bio_mz_" + polarity]
+
+    # Set initial INTERNAL STANDARD dropdown values when none are selected
     if not rt_plot_standard:
         rt_plot_standard = internal_standards[0]
 
@@ -1649,48 +1650,7 @@ def populate_plots(polarity, rt_plot_standard, intensity_plot_standard, mz_plot_
     if not mz_plot_standard:
         mz_plot_standard = internal_standards[0]
 
-    # Get clicked or selected feature from QC urine m/z-RT plot
-    if not urine_plot_feature:
-        urine_plot_feature = list(urine_features_dict.keys())[0]
-
-    if click_data:
-        urine_plot_feature = click_data["points"][0]["hovertext"]
-
-    # Prepare DataFrames for plotting
-    df_istd_rt = files["rt_" + polarity]
-    df_istd_intensity = files["intensity_" + polarity]
-    df_istd_mz = files["mz_" + polarity]
-    df_urine_rt = files["urine_rt_" + polarity]
-    df_urine_intensity = files["urine_intensity_" + polarity]
-    df_urine_mz = files["urine_mz_" + polarity]
-
-    # Transpose DataFrames
-    df_istd_rt = df_istd_rt.transpose()
-    df_istd_intensity = df_istd_intensity.transpose()
-    df_istd_mz = df_istd_mz.transpose()
-    df_urine_intensity = df_urine_intensity.transpose()
-
-    for dataframe in [df_istd_rt, df_istd_intensity, df_istd_mz, df_urine_intensity]:
-        dataframe.columns = dataframe.iloc[0]
-        dataframe.drop(dataframe.index[0], inplace=True)
-
-    # Split text in internal standard dataframes
-    for istd in internal_standards:
-
-        # Splitting text for RT data
-        rt = df_istd_rt[istd].str.split(": ").str[0]
-        rt_diff = df_istd_rt[istd].str.split(": ").str[1]
-        df_istd_rt[istd] = rt.astype(float)
-
-        # Splitting text for m/z data
-        mz = df_istd_mz[istd].str.split(": ").str[0]
-        delta_mz = df_istd_mz[istd].str.split(": ").str[1]
-        df_istd_mz[istd] = delta_mz.astype(float)
-
-    # Get list of samples from transposed DataFrames
-    samples = df_istd_rt.index.values.tolist()
-    samples = [sample.replace(": RT Info", "") for sample in samples]
-
+    # Set initial SAMPLE dropdown values when none are selected
     if not rt_plot_samples:
         rt_plot_samples = samples
 
@@ -1707,43 +1667,37 @@ def populate_plots(polarity, rt_plot_standard, intensity_plot_standard, mz_plot_
     if not mz_plot_samples:
         mz_plot_samples = samples
 
+    # Get clicked or selected feature from biological standard m/z-RT plot
+    if not bio_plot_feature:
+        bio_plot_feature = df_bio_intensity["Name"].astype(str).tolist()[0]
+    if click_data:
+        bio_plot_feature = click_data["points"][0]["hovertext"]
+
     try:
         # Internal standards – retention time vs. sample
-        istd_rt_plot = load_istd_rt_plot(dataframe=df_istd_rt,
-                                         samples=rt_plot_samples,
-                                         internal_standard=rt_plot_standard,
-                                         retention_times_dict=retention_times_dict)
+        istd_rt_plot = load_istd_rt_plot(dataframe=df_istd_rt, samples=rt_plot_samples,
+        internal_standard=rt_plot_standard, retention_times_dict=retention_times_dict)
 
         # Internal standards – intensity vs. sample
-        istd_intensity_plot = load_istd_intensity_plot(dataframe=df_istd_intensity,
-                                                      samples=intensity_plot_samples,
-                                                      internal_standard=intensity_plot_standard,
-                                                      text=intensity_plot_samples,
-                                                      treatments=treatments)
+        istd_intensity_plot = load_istd_intensity_plot(dataframe=df_istd_intensity, samples=intensity_plot_samples,
+        internal_standard=intensity_plot_standard, text=intensity_plot_samples, treatments=treatments)
 
         # Internal standards – delta m/z vs. sample
-        istd_delta_mz_plot = load_istd_delta_mz_plot(dataframe=df_istd_mz,
-                                                     samples=mz_plot_samples,
-                                                     internal_standard=mz_plot_standard)
+        istd_delta_mz_plot = load_istd_delta_mz_plot(dataframe=df_istd_mz, samples=mz_plot_samples,
+            internal_standard=mz_plot_standard)
 
-        # Urine features – retention time vs. feature
-        urine_feature_plot = load_urine_feature_plot(study_name=study_name,
-                                                     df_rt=df_urine_rt,
-                                                     df_mz=df_urine_mz,
-                                                     df_intensity=files["urine_intensity_" + polarity],
-                                                     urine_features_dict=urine_features_dict)
+        # Biological standard metabolites – m/z vs. retention time
+        bio_feature_plot = load_bio_feature_plot(run_id=run_id, df_rt=df_bio_rt, df_mz=df_bio_mz,
+            df_intensity=df_bio_intensity)
 
-        # Urine features – intensity vs. feature
-        urine_benchmark_plot = load_urine_benchmark_plot(dataframe=df_urine_intensity,
-                                                         study=df_urine_intensity.index,
-                                                         feature_name=urine_plot_feature,
-                                                         polarity=polarity)
+        # Biological standard metabolites – intensity vs. run
+        bio_benchmark_plot = load_bio_benchmark_plot(dataframe=df_bio_intensity, feature_name=bio_plot_feature)
 
         return istd_rt_plot, istd_intensity_plot, istd_delta_mz_plot, \
-               urine_feature_plot, urine_benchmark_plot, urine_plot_feature, None
+               bio_feature_plot, bio_benchmark_plot, bio_plot_feature, None
 
     except Exception as error:
-        print(error)
+        print("Plot generation error:", error)
         return {}, {}, {}, {}, {}, None, None
 
 
@@ -1760,12 +1714,12 @@ def populate_plots(polarity, rt_plot_standard, intensity_plot_standard, mz_plot_
               Input("istd-rt-plot", "clickData"),
               Input("istd-intensity-plot", "clickData"),
               Input("istd-mz-plot", "clickData"),
-              State("rt-pos", "data"),
-              State("rt-neg", "data"),
-              State("intensity-pos", "data"),
-              State("intensity-neg", "data"),
-              State("mz-pos", "data"),
-              State("mz-neg", "data"),
+              State("istd-rt-pos", "data"),
+              State("istd-rt-neg", "data"),
+              State("istd-intensity-pos", "data"),
+              State("istd-intensity-neg", "data"),
+              State("istd-mz-pos", "data"),
+              State("istd-mz-neg", "data"),
               State("sequence", "data"),
               State("metadata", "data"), prevent_initial_call=True)
 def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_click, mz_click,
@@ -1802,22 +1756,20 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
 
     # Generate DataFrames with iSTD and metadata info for selected sample
     if polarity == "pos":
-
         df_rt_pos = pd.read_json(rt_pos, orient="split")
         df_intensity_pos = pd.read_json(intensity_pos, orient="split")
         df_mz_pos = pd.read_json(mz_pos, orient="split")
 
-        df_sample_istd, df_sample_info = generate_sample_metadata_dataframe(clicked_sample, df_rt_pos,
-                                                df_mz_pos, df_intensity_pos, df_sequence, df_metadata)
+        df_sample_istd, df_sample_info = generate_sample_metadata_dataframe(
+            clicked_sample, df_rt_pos, df_mz_pos, df_intensity_pos, df_sequence, df_metadata)
 
     elif polarity == "neg":
-
         df_rt_neg = pd.read_json(rt_neg, orient="split")
         df_intensity_neg = pd.read_json(intensity_neg, orient="split")
         df_mz_neg = pd.read_json(mz_neg, orient="split")
 
-        df_sample_istd, df_sample_info = generate_sample_metadata_dataframe(clicked_sample, df_rt_neg,
-                                                df_mz_neg, df_intensity_neg, df_sequence, df_metadata)
+        df_sample_istd, df_sample_info = generate_sample_metadata_dataframe(
+            clicked_sample, df_rt_neg, df_mz_neg, df_intensity_neg, df_sequence, df_metadata)
 
     # Create tables from DataFrames
     metadata_table = dbc.Table.from_dataframe(df_sample_info, striped=True, bordered=True, hover=True)
@@ -1873,8 +1825,9 @@ def toggle_settings_modal(button_click):
               Input("add-chromatography-button", "n_clicks"),
               State("add-chromatography-text-field", "value"),
               Input("istd-msp-added", "data"),
-              Input("chromatography-removed", "data"))
-def add_chromatography_method(on_page_load, button_click, chromatography_method, msp_added, method_removed):
+              Input("chromatography-removed", "data"),
+              Input("chromatography-msdial-config-added", "data"))
+def add_chromatography_method(on_page_load, button_click, chromatography_method, msp_added, method_removed, config_added):
 
     """
     Add chromatography method to database
@@ -1891,10 +1844,11 @@ def add_chromatography_method(on_page_load, button_click, chromatography_method,
 
     df_methods = df_methods.rename(
         columns={"method_id": "Method ID",
-        "num_pos_standards": "Positive (+) Mode Standards",
-        "num_neg_standards": "Negative (–) Mode Standards"})
+        "num_pos_standards": "Pos (+) Standards",
+        "num_neg_standards": "Neg (–) Standards",
+        "msdial_config_id": "MS-DIAL Config"})
 
-    df_methods = df_methods[["Method ID", "Positive (+) Mode Standards", "Negative (–) Mode Standards"]]
+    df_methods = df_methods[["Method ID", "Pos (+) Standards", "Neg (–) Standards", "MS-DIAL Config"]]
 
     methods_table = dbc.Table.from_dataframe(df_methods, striped=True, hover=True)
 
@@ -2042,7 +1996,7 @@ def get_msdial_directory(on_page_load):
     Returns (previously inputted by user) location of MS-DIAL directory
     """
 
-    return db.get_msdial_configuration_parameters("Default configuration")[-1]
+    return db.get_msdial_configuration_parameters("Default")[-1]
 
 
 @app.callback(Output("msdial-config-added", "data"),
@@ -2073,7 +2027,7 @@ def delete_msdial_configuration(button_click, msdial_config_id):
     """
 
     if msdial_config_id is not None:
-        if msdial_config_id != "Default configuration":
+        if msdial_config_id != "Default":
             db.remove_msdial_configuration(msdial_config_id)
             return "Removed"
         else:
@@ -2102,7 +2056,7 @@ def get_msdial_configs_for_dropdown(on_page_load, on_config_added, on_config_rem
     for config in msdial_configurations:
         config_options.append({"label": config, "value": config})
 
-    return config_options, "Default configuration"
+    return config_options, "Default"
 
 
 @app.callback(Output("msdial-config-addition-alert", "is_open"),
@@ -2137,7 +2091,7 @@ def show_alert_on_msdial_config_removal(config_removed, selected_config):
         if config_removed == "Removed":
             message = "The selected MS-DIAL configuration has been deleted."
             color = "primary"
-        if selected_config == "Default configuration":
+        if selected_config == "Default":
             message = "Error: The default configuration cannot be deleted."
             color = "danger"
         return True, message, color
@@ -2291,7 +2245,7 @@ def delete_qc_configuration(button_click, qc_config_id):
     """
 
     if qc_config_id is not None:
-        if qc_config_id != "Default configuration":
+        if qc_config_id != "Default":
             db.remove_qc_configuration(qc_config_id)
             return "Removed"
         else:
@@ -2320,7 +2274,7 @@ def get_qc_configs_for_dropdown(on_page_load, qc_config_added, qc_config_removed
     for config in qc_configurations:
         config_options.append({"label": config, "value": config})
 
-    return config_options, "Default configuration"
+    return config_options, "Default"
 
 
 @app.callback(Output("qc-config-addition-alert", "is_open"),
@@ -2355,7 +2309,7 @@ def show_alert_on_qc_config_removal(config_removed, selected_config):
         if config_removed == "Removed":
             message = "The selected QC configuration has been deleted."
             color = "primary"
-        if selected_config == "Default configuration":
+        if selected_config == "Default":
             message = "Error: The default configuration cannot be deleted."
             color = "danger"
         return True, message, color
@@ -2463,12 +2417,13 @@ def get_biological_standards(on_page_load, on_standard_added, on_standard_remove
     df_biological_standards = df_biological_standards.rename(
         columns={"name": "Name",
             "identifier": "Identifier",
-            "chromatography": "Chromatography",
-            "num_pos_features": "Pos (+) Features",
-            "num_neg_features": "Neg (–) Features"})
+            "chromatography": "Method ID",
+            "num_pos_features": "Pos (+) Metabolites",
+            "num_neg_features": "Neg (–) Metabolites",
+            "msdial_config_id": "MS-DIAL Config"})
 
     df_biological_standards = df_biological_standards[
-        ["Name", "Identifier", "Chromatography", "Pos (+) Features", "Neg (–) Features"]]
+        ["Name", "Identifier", "Method ID", "Pos (+) Metabolites", "Neg (–) Metabolites", "MS-DIAL Config"]]
 
     biological_standards_table = dbc.Table.from_dataframe(df_biological_standards, striped=True, hover=True)
 
@@ -2488,10 +2443,16 @@ def add_biological_standard(button_click, name, identifier):
     """
 
     if name is not None and identifier is not None:
-        db.add_biological_standard(name, identifier)
+
+        if len(db.get_chromatography_methods()) == 0:
+            return "Error 2", name, identifier
+        else:
+            db.add_biological_standard(name, identifier)
+
         return "Added", None, None
+
     else:
-        return "Error", name, identifier
+        return "Error 1", name, identifier
 
 
 @app.callback(Output("bio-standard-removed", "data"),
@@ -2560,6 +2521,7 @@ def capture_uploaded_bio_msp(button_click, contents, filename, chromatography, p
 
 @app.callback(Output("bio-standard-addition-alert", "is_open"),
               Output("bio-standard-addition-alert", "children"),
+              Output("bio-standard-addition-alert", "color"),
               Input("bio-standard-added", "data"), prevent_initial_call=True)
 def show_alert_on_bio_standard_addition(bio_standard_added):
 
@@ -2569,9 +2531,11 @@ def show_alert_on_bio_standard_addition(bio_standard_added):
 
     if bio_standard_added is not None:
         if bio_standard_added == "Added":
-            return True, "Success! New biological standard added."
+            return True, "Success! New biological standard added.", "success"
+        elif bio_standard_added == "Error 2":
+            return True, "Error: Please add a chromatography method first.", "danger"
 
-    return False, None
+    return False, None, None
 
 
 @app.callback(Output("bio-standard-removal-alert", "is_open"),
