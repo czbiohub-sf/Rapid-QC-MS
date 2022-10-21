@@ -3,6 +3,7 @@ import base64, webbrowser, json
 import pandas as pd
 import sqlalchemy as sa
 from dash import dash, dcc, html, dash_table, Input, Output, State
+from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from QCPlotGeneration import *
 from AcquisitionListener import *
@@ -129,9 +130,9 @@ def serve_layout():
                                             labelClassName="btn btn-outline-primary",
                                             inputCheckedClassName="active",
                                             options=[
-                                                {"label": "Positive Mode", "value": "pos"},
-                                                {"label": "Negative Mode", "value": "neg"}],
-                                            value="pos"
+                                                {"label": "Positive Mode", "value": "Pos"},
+                                                {"label": "Negative Mode", "value": "Neg"}],
+                                            value="Pos"
                                         ),
                                     ])
                                 ]),
@@ -150,7 +151,6 @@ def serve_layout():
                                                 {"label": "Samples", "value": "samples"},
                                                 {"label": "Pools", "value": "pools"},
                                                 {"label": "Blanks", "value": "blanks"}],
-                                            value="all"
                                         ),
                                     ])
                                 ]),
@@ -298,7 +298,7 @@ def serve_layout():
 
                                     # Scatter plot for biological standard m/z vs. RT
                                     html.Div(className="plot-container", children=[
-                                        dcc.Graph(id="bio-rt-plot")
+                                        dcc.Graph(id="bio-standard-mz-rt-plot")
                                     ]),
 
                                     # Bar plot for biological standard feature intensity vs. run
@@ -306,7 +306,7 @@ def serve_layout():
 
                                         # Dropdown for biological standard feature intensity plot
                                         dcc.Dropdown(
-                                            id="bio-intensity-dropdown",
+                                            id="bio-standard-benchmark-dropdown",
                                             options=[],
                                             placeholder="Select targeted metabolite...",
                                             style={"text-align": "left",
@@ -315,7 +315,7 @@ def serve_layout():
                                                    "display": "inline-block"}
                                         ),
 
-                                        dcc.Graph(id="bio-intensity-plot", animate=False)
+                                        dcc.Graph(id="bio-standard-benchmark-plot", animate=False)
                                     ])
                                 ])
                             ]),
@@ -584,9 +584,9 @@ def serve_layout():
                                 html.Div(children=[
                                     dbc.Label("Is this an active or completed instrument run?"),
                                     dbc.RadioItems(id="autoqc-job-type", value="active", options=[
-                                        {"label": "I want to monitor and QC an active instrument run",
+                                        {"label": "Monitor an active instrument run",
                                          "value": "active"},
-                                        {"label": "I want to QC a completed instrument run",
+                                        {"label": "QC a completed instrument run",
                                          "value": "completed"}],
                                     ),
                                 ]),
@@ -1262,8 +1262,9 @@ def serve_layout():
             dcc.Store(id="bio-mz-neg"),
             dcc.Store(id="study-resources"),
             dcc.Store(id="samples"),
+            dcc.Store(id="pos-internal-standards"),
+            dcc.Store(id="neg-internal-standards"),
             dcc.Store(id="instruments"),
-            dcc.Store(id="first-study"),
 
             # Data for starting a new AutoQC job
             dcc.Store(id="new-sequence"),
@@ -1291,6 +1292,7 @@ def serve_layout():
         ])
     ])
 
+# Serve app layout
 app.layout = serve_layout
 
 @app.callback(Output("tabs", "children"),
@@ -1314,30 +1316,22 @@ def get_instrument_tabs(instruments):
 
 @app.callback(Output("instrument-run-table", "active_cell"),
               Output("instrument-run-table", "selected_cells"),
-              Input("instrument-run-table", "data"),
-              State("instrument-run-table", "active_cell"),
-              State("first-study", "data"), prevent_initial_call=True)
-def reset_instrument_table(table_data, active_cell, first_study):
+              Input("tabs", "value"), prevent_initial_call=True)
+def reset_instrument_table(instrument):
 
     """
     Removes selected cell highlight upon tab switch to different instrument
     (A case study in insane side missions during frontend development)
     """
 
-    if active_cell:
-        if first_study != table_data[active_cell["row"]][active_cell["column_id"]]:
-            return None, []
-    else:
-        return None, []
+    return None, []
 
 
 @app.callback(Output("instrument-run-table", "data"),
-              Output("first-study", "data"),
               Output("table-container", "style"),
               Output("plot-container", "style"),
-              Input("header", "children"),
               Input("tabs", "value"), suppress_callback_exceptions=True)
-def populate_study_table(placeholder_input, instrument):
+def populate_instrument_runs_table(instrument):
 
     """
     Dash callback for populating tables with list of past/active instrument runs
@@ -1345,6 +1339,12 @@ def populate_study_table(placeholder_input, instrument):
 
     # Get instrument runs from database
     df_instrument_runs = db.get_instrument_runs(instrument)
+
+    if len(df_instrument_runs) == 0:
+        empty_table = [{"Run ID": "None", "Chromatography": "N/A", "Status": "N/A"}]
+        return empty_table, {"display": "block"}, {"display": "none"}
+
+    # DataFrame refactoring
     df_instrument_runs = df_instrument_runs[["run_id", "chromatography", "status"]]
     df_instrument_runs = df_instrument_runs.rename(
         columns={"run_id": "Run ID",
@@ -1353,8 +1353,7 @@ def populate_study_table(placeholder_input, instrument):
 
     # Convert DataFrame into a dictionary
     instrument_runs = df_instrument_runs.to_dict("records")
-
-    return instrument_runs, df_instrument_runs["Run ID"].values[0], {"display": "block"}, {"display": "block"}
+    return instrument_runs, {"display": "block"}, {"display": "block"}
 
 
 @app.callback(Output("istd-rt-pos", "data"),
@@ -1373,6 +1372,8 @@ def populate_study_table(placeholder_input, instrument):
               Output("bio-mz-neg", "data"),
               Output("study-resources", "data"),
               Output("samples", "data"),
+              Output("pos-internal-standards", "data"),
+              Output("neg-internal-standards", "data"),
               Input("instrument-run-table", "active_cell"),
               State("instrument-run-table", "data"), prevent_initial_call=True, suppress_callback_exceptions=True)
 def load_data(active_cell, table_data):
@@ -1380,9 +1381,6 @@ def load_data(active_cell, table_data):
     """
     Stores QC results in dcc.Store objects (user's browser session)
     """
-
-    no_data = (None, None, None, None, None, None, None, None,
-               None, None, None, None, None, None, None, None)
 
     if active_cell:
         study_id = table_data[active_cell["row"]][active_cell["column_id"]]
@@ -1406,12 +1404,14 @@ def loading_data_feedback(active_cell, table_data, placeholder_input, modal_is_o
     """
 
     if active_cell:
+        # status = table_data[active_cell["row"]]["Status"]
+
         if study_resources:
             study_name = json.loads(study_resources)["run_id"]
             if table_data[active_cell["row"]][active_cell["column_id"]] != study_name:
-                study_name = table_data[active_cell["row"]][active_cell["column_id"]]
+                study_name = table_data[active_cell["row"]]["Run ID"]
         else:
-            study_name = table_data[active_cell["row"]][active_cell["column_id"]]
+            study_name = table_data[active_cell["row"]]["Run ID"]
 
         if modal_is_open:
             return False, None, None
@@ -1421,6 +1421,11 @@ def loading_data_feedback(active_cell, table_data, placeholder_input, modal_is_o
         ])
 
         body = "This may take a few seconds..."
+
+        # if status == "Active":
+        #    return True, title, body
+        # else:
+        #    return False, None, None
 
         return True, title, body
 
@@ -1446,17 +1451,19 @@ def populate_sample_tables(samples):
 @app.callback(Output("istd-rt-dropdown", "options"),
               Output("istd-mz-dropdown", "options"),
               Output("istd-intensity-dropdown", "options"),
-              Output("bio-intensity-dropdown", "options"),
+              Output("bio-standard-benchmark-dropdown", "options"),
               Output("rt-plot-sample-dropdown", "options"),
               Output("mz-plot-sample-dropdown", "options"),
               Output("intensity-plot-sample-dropdown", "options"),
               Input("polarity-options", "value"),
               Input("sample-table", "data"),
-              State("study-resources", "data"),
               State("samples", "data"),
               State("bio-intensity-pos", "data"),
-              State("bio-intensity-neg", "data"), prevent_initial_call=True)
-def update_dropdowns_on_polarity_change(polarity, table_data, study_resources, samples, bio_intensity_pos, bio_intensity_neg):
+              State("bio-intensity-neg", "data"),
+              State("pos-internal-standards", "data"),
+              State("neg-internal-standards", "data"), prevent_initial_call=True)
+def update_dropdowns_on_polarity_change(polarity, table_data, samples, bio_intensity_pos, bio_intensity_neg,
+    pos_internal_standards, neg_internal_standards):
 
     """
     Updates dropdown lists with correct items for user-selected polarity
@@ -1464,10 +1471,9 @@ def update_dropdowns_on_polarity_change(polarity, table_data, study_resources, s
 
     if samples is not None:
         df_samples = pd.read_json(samples, orient="split")
-        study_resources = json.loads(study_resources)
 
-        if polarity == "neg":
-            istd_dropdown = study_resources["neg_internal_standards"]
+        if polarity == "Neg":
+            istd_dropdown = json.loads(neg_internal_standards)
 
             if bio_intensity_neg is not None:
                 df = pd.read_json(bio_intensity_neg, orient="split")
@@ -1476,8 +1482,8 @@ def update_dropdowns_on_polarity_change(polarity, table_data, study_resources, s
             df_samples = df_samples.loc[df_samples["Sample"].str.contains("Neg")]
             sample_dropdown = df_samples["Sample"].tolist()
 
-        elif polarity == "pos":
-            istd_dropdown = study_resources["pos_internal_standards"]
+        elif polarity == "Pos":
+            istd_dropdown = json.loads(pos_internal_standards)
 
             if bio_intensity_pos is not None:
                 df = pd.read_json(bio_intensity_pos, orient="split")
@@ -1497,7 +1503,7 @@ def update_dropdowns_on_polarity_change(polarity, table_data, study_resources, s
               Output("intensity-plot-sample-dropdown", "value"),
               Input("sample-filtering-options", "value"),
               Input("polarity-options", "value"),
-              State("samples", "data"),
+              Input("samples", "data"),
               State("metadata", "data"), prevent_initial_call=True)
 def apply_sample_filter_to_plots(filter, polarity, samples, metadata):
 
@@ -1510,195 +1516,306 @@ def apply_sample_filter_to_plots(filter, polarity, samples, metadata):
     5. Filter by blanks
     """
 
-    # Hmmm...
-    if polarity == "pos":
-        polarity = "Pos"
-    elif polarity == "neg":
-        polarity = "Neg"
-
     # Get complete list of samples (including blanks + pools) in polarity
-    df_samples = pd.read_json(samples, orient="split")
-    df_samples = df_samples.loc[df_samples["Sample"].str.contains(polarity)]
-    sample_list = df_samples["Sample"].tolist()
+    if samples is not None:
+        df_samples = pd.read_json(samples, orient="split")
+        df_samples = df_samples.loc[df_samples["Sample"].str.contains(polarity)]
+        sample_list = df_samples["Sample"].tolist()
+    else:
+        raise PreventUpdate
 
-    # Return all samples, blanks, and pools
-    if filter == "all":
+    if filter is not None:
+        # Return all samples, blanks, and pools
+        if filter == "all":
+            return [], [], []
+
+        # Return samples only
+        elif filter == "samples":
+            df_metadata = pd.read_json(metadata, orient="split")
+            df_metadata = df_metadata.loc[df_metadata["Filename"].isin(sample_list)]
+            samples_only = df_metadata["Filename"].tolist()
+            return samples_only, samples_only, samples_only
+
+        # Return pools only
+        elif filter == "pools":
+            pools = [sample for sample in sample_list if "QC" in sample]
+            return pools, pools, pools
+
+        # Return blanks only
+        elif filter == "blanks":
+            blanks = [sample for sample in sample_list if "BK" in sample]
+            return blanks, blanks, blanks
+
+    else:
         return [], [], []
-
-    # Return samples only
-    elif filter == "samples":
-        df_metadata = pd.read_json(metadata, orient="split")
-        df_metadata = df_metadata.loc[df_metadata["Filename"].isin(sample_list)]
-        samples_only = df_metadata["Filename"].tolist()
-        return samples_only, samples_only, samples_only
-
-    # Return pools only
-    elif filter == "pools":
-        pools = [sample for sample in sample_list if "QC" in sample]
-        return pools, pools, pools
-
-    # Return blanks only
-    elif filter == "blanks":
-        blanks = [sample for sample in sample_list if "BK" in sample]
-        return blanks, blanks, blanks
 
 
 @app.callback(Output("istd-rt-plot", "figure"),
-              Output("istd-intensity-plot", "figure"),
-              Output("istd-mz-plot", "figure"),
-              Output("bio-rt-plot", "figure"),
-              Output("bio-intensity-plot", "figure"),
-              Output("bio-intensity-dropdown", "value"),
-              Output("bio-rt-plot", "clickData"),
               Input("polarity-options", "value"),
               Input("istd-rt-dropdown", "value"),
-              Input("istd-intensity-dropdown", "value"),
-              Input("istd-mz-dropdown", "value"),
-              Input("bio-intensity-dropdown", "value"),
-              Input("bio-rt-plot", "clickData"),
               Input("rt-plot-sample-dropdown", "value"),
+              Input("istd-rt-pos", "data"),
+              Input("istd-rt-neg", "data"),
+              State("samples", "data"),
+              State("study-resources", "data"),
+              State("pos-internal-standards", "data"),
+              State("neg-internal-standards", "data"), prevent_initial_call=True)
+def populate_istd_rt_plot(polarity, internal_standard, selected_samples, rt_pos, rt_neg, samples, resources,
+    pos_internal_standards, neg_internal_standards):
+
+    """
+    Populates internal standard retention time vs. sample plot
+    """
+
+    # if files["resources"]["instrument"] is not None:
+    #     if files["resources"]["instrument"] != instrument:
+    #         raise PreventUpdate
+
+    # Get internal standard RT data
+    df_istd_rt_pos = pd.DataFrame()
+    df_istd_rt_neg = pd.DataFrame()
+
+    if rt_pos is not None:
+        df_istd_rt_pos = pd.read_json(rt_pos, orient="split")
+
+    if rt_neg is not None:
+        df_istd_rt_neg = pd.read_json(rt_neg, orient="split")
+
+    # Get samples
+    df_samples = pd.read_json(samples, orient="split")
+    samples = df_samples["Sample"].astype(str).tolist()
+    identifiers = db.get_biological_standard_identifiers()
+    for identifier in identifiers:
+        samples = [x for x in samples if identifier not in x]
+
+    # Filter samples and internal standards by polarity
+    if polarity == "Pos":
+        samples = [x for x in samples if "Pos" in x]
+        internal_standards = json.loads(pos_internal_standards)
+        df_istd_rt = df_istd_rt_pos
+    elif polarity == "Neg":
+        samples = [x for x in samples if "Neg" in x]
+        internal_standards = json.loads(neg_internal_standards)
+        df_istd_rt = df_istd_rt_neg
+
+    # Get retention times
+    retention_times = json.loads(resources)["retention_times_dict"]
+
+    # Set initial dropdown values when none are selected
+    if not internal_standard:
+        internal_standard = internal_standards[0]
+    if not selected_samples:
+        selected_samples = samples
+
+    try:
+        # Generate internal standard RT vs. sample plot
+        return load_istd_rt_plot(dataframe=df_istd_rt, samples=selected_samples,
+        internal_standard=internal_standard, retention_times=retention_times)
+
+    except Exception as error:
+        print("Error in loading RT vs. sample plot:", error)
+        return {}
+
+
+@app.callback(Output("istd-intensity-plot", "figure"),
+              Input("polarity-options", "value"),
+              Input("istd-intensity-dropdown", "value"),
               Input("intensity-plot-sample-dropdown", "value"),
-              Input("mz-plot-sample-dropdown", "value"),
-              State("istd-rt-pos", "data"),
-              State("istd-rt-neg", "data"),
-              State("istd-intensity-pos", "data"),
-              State("istd-intensity-neg", "data"),
-              State("istd-mz-pos", "data"),
-              State("istd-mz-neg", "data"),
-              State("sequence", "data"),
+              Input("istd-intensity-pos", "data"),
+              Input("istd-intensity-neg", "data"),
+              State("samples", "data"),
               State("metadata", "data"),
-              State("bio-rt-pos", "data"),
-              State("bio-rt-neg", "data"),
+              State("pos-internal-standards", "data"),
+              State("neg-internal-standards", "data"), prevent_initial_call=True)
+def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, intensity_pos, intensity_neg, samples, metadata,
+    pos_internal_standards, neg_internal_standards):
+
+    """
+    Populates internal standard intensity vs. sample plot
+    """
+
+    # Get internal standard intensity data
+    df_istd_intensity_pos = pd.DataFrame()
+    df_istd_intensity_neg = pd.DataFrame()
+
+    if intensity_pos is not None:
+        df_istd_intensity_pos = pd.read_json(intensity_pos, orient="split")
+
+    if intensity_neg is not None:
+        df_istd_intensity_neg = pd.read_json(intensity_neg, orient="split")
+
+    # Get samples
+    df_samples = pd.read_json(samples, orient="split")
+    samples = df_samples["Sample"].astype(str).tolist()
+    identifiers = db.get_biological_standard_identifiers()
+    for identifier in identifiers:
+        samples = [x for x in samples if identifier not in x]
+
+    # Get sample metadata
+    df_metadata = pd.read_json(metadata, orient="split")
+
+    # Filter samples and internal standards by polarity
+    if polarity == "Pos":
+        samples = [x for x in samples if "Pos" in x]
+        internal_standards = json.loads(pos_internal_standards)
+        df_istd_intensity = df_istd_intensity_pos
+    elif polarity == "Neg":
+        samples = [x for x in samples if "Neg" in x]
+        internal_standard = json.loads(neg_internal_standards)
+        df_istd_intensity = df_istd_intensity_neg
+
+    # Set initial internal standard dropdown value when none are selected
+    if not internal_standard:
+        internal_standard = internal_standards[0]
+
+    # Set initial sample dropdown value when none are selected
+    if not selected_samples:
+        selected_samples = samples
+        treatments = []
+    else:
+        df_metadata = df_metadata.loc[df_metadata["Filename"].isin(selected_samples)]
+        df_metadata = df_metadata.sort_values(by=["Treatment"])
+        treatments = df_metadata["Treatment"].tolist()
+        selected_samples = df_metadata["Filename"].tolist()
+
+    try:
+        # Generate internal standard intensity vs. sample plot
+        return load_istd_intensity_plot(dataframe=df_istd_intensity, samples=selected_samples,
+        internal_standard=internal_standard, text=selected_samples, treatments=treatments)
+
+    except Exception as error:
+        print("Error in loading intensity vs. sample plot:", error)
+        return {}
+
+
+@app.callback(Output("istd-mz-plot", "figure"),
+              Input("polarity-options", "value"),
+              Input("istd-mz-dropdown", "value"),
+              Input("mz-plot-sample-dropdown", "value"),
+              Input("istd-mz-pos", "data"),
+              Input("istd-mz-neg", "data"),
+              State("samples", "data"),
+              State("pos-internal-standards", "data"),
+              State("neg-internal-standards", "data"), prevent_initial_call=True)
+def populate_istd_mz_plot(polarity, internal_standard, selected_samples, mz_pos, mz_neg, samples,
+    pos_internal_standards, neg_internal_standards):
+
+    """
+    Populates internal standard delta m/z vs. sample plot
+    """
+
+    # Get internal standard RT data
+    df_istd_mz_pos = pd.DataFrame()
+    df_istd_mz_neg = pd.DataFrame()
+
+    if mz_pos is not None:
+        df_istd_mz_pos = pd.read_json(mz_pos, orient="split")
+
+    if mz_neg is not None:
+        df_istd_mz_neg = pd.read_json(mz_neg, orient="split")
+
+    # Get samples (and filter out biological standards)
+    df_samples = pd.read_json(samples, orient="split")
+    samples = df_samples["Sample"].astype(str).tolist()
+    identifiers = db.get_biological_standard_identifiers()
+    for identifier in identifiers:
+        samples = [x for x in samples if identifier not in x]
+
+    # Filter samples and internal standards by polarity
+    if polarity == "Pos":
+        samples = [x for x in samples if "Pos" in x]
+        internal_standards = json.loads(pos_internal_standards)
+        df_istd_mz = df_istd_mz_pos
+    elif polarity == "Neg":
+        samples = [x for x in samples if "Neg" in x]
+        internal_standards = json.loads(neg_internal_standards)
+        df_istd_mz = df_istd_mz_neg
+
+    # Set initial dropdown values when none are selected
+    if not internal_standard:
+        internal_standard = internal_standards[0]
+    if not selected_samples:
+        selected_samples = samples
+
+    try:
+        # Generate internal standard delta m/z vs. sample plot
+        return load_istd_delta_mz_plot(dataframe=df_istd_mz, samples=selected_samples, internal_standard=internal_standard)
+
+    except Exception as error:
+        print("Error in loading delta m/z vs. sample plot:", error)
+        return {}
+
+
+@app.callback(Output("bio-standard-mz-rt-plot", "figure"),
+              Output("bio-standard-benchmark-dropdown", "value"),
+              Output("bio-standard-mz-rt-plot", "clickData"),
+              Input("polarity-options", "value"),
+              Input("bio-rt-pos", "data"),
+              Input("bio-rt-neg", "data"),
               State("bio-intensity-pos", "data"),
               State("bio-intensity-neg", "data"),
               State("bio-mz-pos", "data"),
               State("bio-mz-neg", "data"),
-              Input("study-resources", "data"),
-              State("samples", "data"),
-              Input("tabs", "value"), prevent_initial_call=True)
-def populate_plots(polarity, rt_plot_standard, intensity_plot_standard, mz_plot_standard, bio_plot_feature, click_data,
-    rt_plot_samples, intensity_plot_samples, mz_plot_samples, istd_rt_pos, istd_rt_neg, istd_intensity_pos, istd_intensity_neg,
-    istd_mz_pos, istd_mz_neg, sequence, metadata, bio_rt_pos, bio_rt_neg, bio_intensity_pos, bio_intensity_neg, bio_mz_pos,
-    bio_mz_neg, study_resources, samples, instrument):
+              State("study-resources", "data"),
+              Input("bio-standard-mz-rt-plot", "clickData"), prevent_initial_call=True)
+def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, intensity_neg, mz_pos, mz_neg, resources, click_data):
 
     """
-    Dash callback for loading instrument run data into scatter and bar plots
+    Populates biological standard m/z vs. RT plot
     """
-
-    # Retrieve data for clicked study and store as a dictionary
-    files = {
-        "istd_rt_pos": pd.read_json(istd_rt_pos, orient="split"),
-        "istd_rt_neg": pd.read_json(istd_rt_neg, orient="split"),
-        "istd_intensity_pos": pd.read_json(istd_intensity_pos, orient="split"),
-        "istd_intensity_neg": pd.read_json(istd_intensity_neg, orient="split"),
-        "istd_mz_pos": pd.read_json(istd_mz_pos, orient="split"),
-        "istd_mz_neg": pd.read_json(istd_mz_neg, orient="split"),
-        "sequence": pd.read_json(sequence, orient="split"),
-        "metadata": pd.read_json(metadata, orient="split"),
-        "bio_rt_pos": pd.read_json(bio_rt_pos, orient="split"),
-        "bio_rt_neg": pd.read_json(bio_rt_neg, orient="split"),
-        "bio_intensity_pos": pd.read_json(bio_intensity_pos, orient="split"),
-        "bio_intensity_neg": pd.read_json(bio_intensity_neg, orient="split"),
-        "bio_mz_pos": pd.read_json(bio_mz_pos, orient="split"),
-        "bio_mz_neg": pd.read_json(bio_mz_neg, orient="split"),
-        "resources": json.loads(study_resources),
-        "samples": pd.read_json(samples, orient="split")
-    }
-
-    if files["resources"]["instrument"] is not None:
-        if files["resources"]["instrument"] != instrument:
-            return {}, {}, {}, {}, {}, None, None
 
     # Get run ID and chromatography method
-    run_id = files["resources"]["run_id"]
-    chromatography = files["resources"]["chromatography"]
+    run_id = json.loads(resources)["run_id"]
 
-    # Get retention times
-    retention_times_dict = files["resources"]["retention_times_dict"]
+    # Get biological standard m/z, RT, and intensity data
+    if polarity == "Pos":
+        if rt_pos is not None and intensity_pos is not None and mz_pos is not None:
+            df_bio_rt = pd.read_json(rt_pos, orient="split")
+            df_bio_intensity = pd.read_json(intensity_pos, orient="split")
+            df_bio_mz = pd.read_json(mz_pos, orient="split")
 
-    # Get metadata DataFrame
-    df_metadata = files["metadata"]
+    elif polarity == "Neg":
+        if rt_neg is not None and intensity_neg is not None and mz_neg is not None:
+            df_bio_rt = pd.read_json(rt_neg, orient="split")
+            df_bio_intensity = pd.read_json(intensity_neg, orient="split")
+            df_bio_mz = pd.read_json(mz_neg, orient="split")
 
-    # Get list of samples
-    samples = db.get_samples_in_run(run_id, "Sample")["sample_id"].astype(str).tolist()
-
-    # Get polarity-specific resources
-    if polarity == "pos":
-        internal_standards = files["istd_rt_pos"].columns.tolist()
-        internal_standards.remove("Sample")
-        samples = [x for x in samples if "Pos" in x]
-    elif polarity == "neg":
-        internal_standards = files["istd_rt_neg"].columns.tolist()
-        internal_standards.remove("Sample")
-        samples = [x for x in samples if "Neg" in x]
-
-    # Prepare DataFrames for plotting
-    df_istd_rt = files["istd_rt_" + polarity]
-    df_istd_intensity = files["istd_intensity_" + polarity]
-    df_istd_mz = files["istd_mz_" + polarity]
-    df_bio_rt = files["bio_rt_" + polarity]
-    df_bio_intensity = files["bio_intensity_" + polarity]
-    df_bio_mz = files["bio_mz_" + polarity]
-
-    # Set initial INTERNAL STANDARD dropdown values when none are selected
-    if not rt_plot_standard:
-        rt_plot_standard = internal_standards[0]
-
-    if not intensity_plot_standard:
-        intensity_plot_standard = internal_standards[0]
-
-    if not mz_plot_standard:
-        mz_plot_standard = internal_standards[0]
-
-    # Set initial SAMPLE dropdown values when none are selected
-    if not rt_plot_samples:
-        rt_plot_samples = samples
-
-    if not intensity_plot_samples:
-        intensity_plot_samples = samples
-        treatments = []
+    if click_data is not None:
+        selected_feature = click_data["points"][0]["hovertext"]
     else:
-        df_metadata = df_metadata.loc[df_metadata["Filename"].isin(intensity_plot_samples)]
-        df_metadata = df_metadata.sort_values(by=["Treatment"])
-        treatments = df_metadata["Treatment"].tolist()
-        if len(df_metadata) == len(intensity_plot_samples):
-            intensity_plot_samples = df_metadata["Filename"].tolist()
+        selected_feature = None
 
-    if not mz_plot_samples:
-        mz_plot_samples = samples
+    # Biological standard metabolites – m/z vs. retention time
+    return load_bio_feature_plot(run_id=run_id, df_rt=df_bio_rt, df_mz=df_bio_mz, df_intensity=df_bio_intensity), \
+           selected_feature, None
+
+
+@app.callback(Output("bio-standard-benchmark-plot", "figure"),
+              Input("polarity-options", "value"),
+              Input("bio-standard-benchmark-dropdown", "value"),
+              Input("bio-intensity-pos", "data"),
+              Input("bio-intensity-neg", "data"), prevent_initial_call=True)
+def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_pos, intensity_neg):
+
+    """
+    Populates biological standard benchmark plot
+    """
+
+    # Get intensity data
+    if polarity == "Pos":
+        if intensity_pos is not None:
+            df_bio_intensity = pd.read_json(intensity_pos, orient="split")
+
+    elif polarity == "Neg":
+        if intensity_neg is not None:
+            df_bio_intensity = pd.read_json(intensity_neg, orient="split")
 
     # Get clicked or selected feature from biological standard m/z-RT plot
-    if not bio_plot_feature:
-        bio_plot_feature = df_bio_intensity["Name"].astype(str).tolist()[0]
-    if click_data:
-        bio_plot_feature = click_data["points"][0]["hovertext"]
+    if not selected_feature:
+        selected_feature = df_bio_intensity["Name"].astype(str).tolist()[0]
 
-    try:
-        # Internal standards – retention time vs. sample
-        istd_rt_plot = load_istd_rt_plot(dataframe=df_istd_rt, samples=rt_plot_samples,
-        internal_standard=rt_plot_standard, retention_times_dict=retention_times_dict)
-
-        # Internal standards – intensity vs. sample
-        istd_intensity_plot = load_istd_intensity_plot(dataframe=df_istd_intensity, samples=intensity_plot_samples,
-        internal_standard=intensity_plot_standard, text=intensity_plot_samples, treatments=treatments)
-
-        # Internal standards – delta m/z vs. sample
-        istd_delta_mz_plot = load_istd_delta_mz_plot(dataframe=df_istd_mz, samples=mz_plot_samples,
-            internal_standard=mz_plot_standard)
-
-        # Biological standard metabolites – m/z vs. retention time
-        bio_feature_plot = load_bio_feature_plot(run_id=run_id, df_rt=df_bio_rt, df_mz=df_bio_mz,
-            df_intensity=df_bio_intensity)
-
-        # Biological standard metabolites – intensity vs. run
-        bio_benchmark_plot = load_bio_benchmark_plot(dataframe=df_bio_intensity, feature_name=bio_plot_feature)
-
-        return istd_rt_plot, istd_intensity_plot, istd_delta_mz_plot, \
-               bio_feature_plot, bio_benchmark_plot, bio_plot_feature, None
-
-    except Exception as error:
-        print("Plot generation error:", error)
-        return {}, {}, {}, {}, {}, None, None
+    # Generate biological standard metabolite intensity vs. instrument run plot
+    return load_bio_benchmark_plot(dataframe=df_bio_intensity, metabolite_name=selected_feature)
 
 
 @app.callback(Output("sample-info-modal", "is_open"),
@@ -1749,13 +1866,13 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
     df_sequence = pd.read_json(sequence, orient="split")
     df_metadata = pd.read_json(metadata, orient="split")
 
-    if "pos" in clicked_sample.lower():
-        polarity = "pos"
-    elif "neg" in clicked_sample.lower():
-        polarity = "neg"
+    if "Pos" in clicked_sample:
+        polarity = "Pos"
+    elif "Neg" in clicked_sample:
+        polarity = "Neg"
 
     # Generate DataFrames with iSTD and metadata info for selected sample
-    if polarity == "pos":
+    if polarity == "Pos":
         df_rt_pos = pd.read_json(rt_pos, orient="split")
         df_intensity_pos = pd.read_json(intensity_pos, orient="split")
         df_mz_pos = pd.read_json(mz_pos, orient="split")
@@ -1763,7 +1880,7 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
         df_sample_istd, df_sample_info = generate_sample_metadata_dataframe(
             clicked_sample, df_rt_pos, df_mz_pos, df_intensity_pos, df_sequence, df_metadata)
 
-    elif polarity == "neg":
+    elif polarity == "Neg":
         df_rt_neg = pd.read_json(rt_neg, orient="split")
         df_intensity_neg = pd.read_json(intensity_neg, orient="split")
         df_mz_neg = pd.read_json(mz_neg, orient="split")

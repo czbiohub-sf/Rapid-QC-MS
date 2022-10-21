@@ -15,14 +15,14 @@ current_directory = os.getcwd()
 # Define client secrets file
 GoogleAuth.DEFAULT_SETTINGS["client_config_file"] = current_directory + "/assets/client_secrets.json"
 
+no_data = (None, None, None, None, None, None, None, None, None,
+           None, None, None, None, None, None, None, None, None)
+
 def get_qc_results(run_id):
 
     """
     Loads QC results for samples and biological standards from either the SQLite database or Google Drive
     """
-
-    no_data = (None, None, None, None, None, None, None, None,
-               None, None, None, None, None, None, None, None)
 
     positive = "Positive Mode"
     negative = "Negative Mode"
@@ -35,8 +35,6 @@ def get_qc_results(run_id):
     df_metadata = df_run["metadata"].values[0]
 
     # Get internal standards in chromatography method
-    pos_internal_standards = db.get_internal_standards_list(chromatography, positive)
-    neg_internal_standards = db.get_internal_standards_list(chromatography, negative)
     precursor_mz_dict = db.get_internal_standards_dict(chromatography, "precursor_mz")
     retention_times_dict = db.get_internal_standards_dict(chromatography, "retention_time")
 
@@ -44,12 +42,8 @@ def get_qc_results(run_id):
         "instrument": instrument,
         "run_id": run_id,
         "chromatography": chromatography,
-        "pos_internal_standards": pos_internal_standards,
-        "neg_internal_standards": neg_internal_standards,
         "precursor_mass_dict": precursor_mz_dict,
-        "retention_times_dict": retention_times_dict,
-        "ui_callback": False,
-        "clicked_feature": False
+        "retention_times_dict": retention_times_dict
     }
 
     # Overarching try/catch
@@ -86,13 +80,22 @@ def get_qc_results(run_id):
                 "qc_result": "QC"})
             df_samples = df_samples.to_json(orient="split")
 
+            # Get internal standards from data
+            if df_rt_pos is not None:
+                pos_internal_standards = pd.read_json(df_rt_pos, orient="split").columns.tolist()
+                pos_internal_standards.remove("Sample")
+
+            if df_rt_neg is not None:
+                neg_internal_standards = pd.read_json(df_rt_neg, orient="split").columns.tolist()
+                neg_internal_standards.remove("Sample")
+
         except Exception as error:
             print("Data retrieval error: " + str(error))
             return no_data
 
         return (df_rt_pos, df_rt_neg, df_intensity_pos, df_intensity_neg, df_mz_pos, df_mz_neg, df_sequence, df_metadata, \
         df_bio_rt_pos, df_bio_rt_neg, df_bio_intensity_pos, df_bio_intensity_neg, df_bio_mz_pos, df_bio_mz_neg, \
-        json.dumps(resources), df_samples)
+        json.dumps(resources), df_samples, json.dumps(pos_internal_standards), json.dumps(neg_internal_standards))
 
     except Exception as error:
         print("Data parsing error: " + str(error))
@@ -123,6 +126,8 @@ def generate_sample_metadata_dataframe(sample, df_istd_rt, df_istd_delta_mz, df_
     df_sample_istd["m/z"] = precursor_masses
     df_sample_istd["RT"] = retention_times
     df_sample_istd["Intensity"] = ["{:.2e}".format(x) for x in intensities]
+
+    # TODO: Calculate delta m/z and delta RT
     # df_sample_istd["Delta RT"] = [x.split(": ")[-1] for x in retention_times]
     # df_sample_istd["Delta m/z"] = [x.split(": ")[-1] for x in mz_values]
 
@@ -146,7 +151,7 @@ def generate_sample_metadata_dataframe(sample, df_istd_rt, df_istd_delta_mz, df_
     return df_sample_istd, df_sample_info
 
 
-def load_istd_rt_plot(dataframe, samples, internal_standard, retention_times_dict):
+def load_istd_rt_plot(dataframe, samples, internal_standard, retention_times):
 
     """
     Returns scatter plot figure of retention time vs. sample for internal standards
@@ -154,9 +159,8 @@ def load_istd_rt_plot(dataframe, samples, internal_standard, retention_times_dic
 
     df_filtered_by_samples = dataframe.loc[dataframe["Sample"].isin(samples)]
 
-    y_min = retention_times_dict[internal_standard] - 0.1
-    y_max = retention_times_dict[internal_standard] + 0.1
-    # median_rt = dataframe[y].median()
+    y_min = retention_times[internal_standard] - 0.1
+    y_max = retention_times[internal_standard] + 0.1
 
     fig = px.line(df_filtered_by_samples,
                   title="Internal Standards RT – " + internal_standard,
@@ -176,7 +180,7 @@ def load_istd_rt_plot(dataframe, samples, internal_standard, retention_times_dic
                      margin=dict(t=75, b=75))
     fig.update_xaxes(showticklabels=False, title="Sample")
     fig.update_yaxes(title="Retention time (min)", range=[y_min, y_max])
-    fig.add_hline(y=retention_times_dict[internal_standard], line_width=2, line_dash="dash")
+    fig.add_hline(y=retention_times[internal_standard], line_width=2, line_dash="dash")
     fig.update_traces(hovertemplate="Sample: %{x} <br>Retention Time: %{y} min<br>")
 
     return fig
@@ -287,7 +291,7 @@ def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity):
     diverging_colorscale.reverse()
 
     fig = px.scatter(bio_df,
-                     title="QC Urine Metabolites",
+                     title="Biological Standard – Targeted Metabolites",
                      x="Retention time (min)",
                      y="Precursor m/z",
                      height=600,
@@ -308,7 +312,7 @@ def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity):
     return fig
 
 
-def load_bio_benchmark_plot(dataframe, feature_name):
+def load_bio_benchmark_plot(dataframe, metabolite_name):
 
     """
     Returns bar plot figure of intensity vs. study for biological standard features
@@ -319,7 +323,7 @@ def load_bio_benchmark_plot(dataframe, feature_name):
     del instrument_runs[0]
 
     # Get targeted metabolite intensities for each run
-    intensities = dataframe.loc[dataframe["Name"] == feature_name].values.tolist()
+    intensities = dataframe.loc[dataframe["Name"] == metabolite_name].values.tolist()
     if len(intensities) != 0:
         intensities = intensities[0]
         del intensities[0]
@@ -336,7 +340,7 @@ def load_bio_benchmark_plot(dataframe, feature_name):
                  y=intensities,
                  text=intensities_text,
                  height=600)
-    fig.update_layout(title="QC Urine Benchmark",
+    fig.update_layout(title="Biological Standard Benchmark",
                       showlegend=False,
                       transition_duration=500,
                       clickmode="event",
@@ -346,6 +350,6 @@ def load_bio_benchmark_plot(dataframe, feature_name):
     fig.update_xaxes(title="Study")
     fig.update_yaxes(title="Intensity")
     fig.update_traces(textposition="outside",
-                      hovertemplate=f"{feature_name}" + "<br>Study: %{x} <br>Intensity: %{text}<br>")
+                      hovertemplate=f"{metabolite_name}" + "<br>Study: %{x} <br>Intensity: %{text}<br>")
 
     return fig
