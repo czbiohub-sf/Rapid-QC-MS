@@ -334,154 +334,86 @@ def serve_layout():
                             dbc.ModalBody(id="loading-modal-body")
                         ]),
 
-                        # Modal for setting up a new user or new instrument
-                        dbc.Modal(id="setup-user-modal", size="lg", centered=True, is_open=False, scrollable=True,
+                        # Modal for first-time setup
+                        dbc.Modal(id="setup-user-modal", size="lg", centered=True, is_open=True, scrollable=True,
                                   keyboard=False, backdrop="static", children=[
                             dbc.ModalHeader(dbc.ModalTitle("Welcome", id="setup-user-modal-title"), close_button=False),
                             dbc.ModalBody(id="setup-user-modal-body", className="modal-styles-2", children=[
 
                                 html.Div([
-                                    dbc.Label(
-                                        "Looks like this is your first time using MS-AutoQC on this device. Let's help you get started."),
+                                    html.H5("Let's help you get started."),
+                                    html.P("Looks like this is a new installation. What would you like to do today?"),
                                     dbc.Accordion(start_collapsed=True, children=[
 
-                                        # First time setup screen
-                                        dbc.AccordionItem(title="I'm setting up MS-AutoQC for the first time", children=[
-                                            html.Div([
-                                                dbc.Label("Instrument name"),
-                                                dbc.Input(placeholder="Ex: Thermo Q-Exactive HF", type="text"),
-                                                dbc.FormText("Please enter a unique name for this instrument."),
-                                            ]), html.Br(),
+                                        # Setting up MS-AutoQC for the first time
+                                        dbc.AccordionItem(title="I'm setting up MS-AutoQC on a new instrument", children=[
+                                            html.Div(className="modal-styles-3", children=[
 
-                                            html.Div([
-                                                dbc.Label("Add chromatography"),
-                                                dbc.Input(placeholder="Ex: HILIC, RP (12 mins), RP (30 mins), etc.", type="text"),
-                                                dbc.FormText(
-                                                    "Please enter the name of one chromatography method you would like to " +
-                                                    "add internal standards for. You can specify internal standards for more " +
-                                                    "chromatographies later."),
-                                            ]), html.Br(),
-
-                                            html.Div([
-                                                dbc.Label("Positive (+) mode internal standards"),
-                                                dbc.InputGroup([
-                                                    dbc.Input(placeholder="No MSP file selected",
-                                                        id="setup-add-pos-istd-msp-text-field"),
-                                                    dbc.Button("Browse Files", color="secondary",
-                                                        id="setup-add-pos-istd-msp-button", n_clicks=0),
-                                                ]),
-                                                dbc.FormText(
-                                                    "Please ensure that each internal standard has a name, m/z, RT, and MS/MS spectrum."),
-                                            ]), html.Br(),
-
-                                            html.Div([
-                                                dbc.Label("Add negative (–) mode internal standards"),
-                                                dbc.InputGroup([
-                                                    dbc.Input(placeholder="No MSP file selected",
-                                                        id="setup-add-neg-istd-msp-text-field"),
-                                                    dbc.Button("Browse Files", color="secondary",
-                                                        id="setup-add-neg-istd-msp-button", n_clicks=0),
-                                                ]),
-                                                dbc.FormText(
-                                                    "Please ensure that each internal standard has a name, m/z, RT, and MS/MS spectrum."),
-                                            ]), html.Br(),
-
-                                            html.Div([
-                                                dbc.Label("Add biological standard (optional)"),
-                                                dbc.Input(placeholder="Ex: Human urine", type="text"),
-                                                dbc.FormText(
-                                                    "Please enter the name of one biological standard you would like to track " +
-                                                    "instrument performance with. You can add more later."),
-                                            ]), html.Br(),
-
-                                            html.Div([
-                                                dbc.Label(
-                                                    "Positive (+) mode targeted features (for biological standard)"),
-                                                dbc.InputGroup([
-                                                    dbc.Input(placeholder="No MSP file selected",
-                                                        id="setup-add-pos-istd-msp-text-field-2"),
-                                                    dbc.Button("Browse Files", color="secondary", outline=False,
-                                                        id="setup-add-pos-istd-msp-button-2", n_clicks=0),
-                                                ]),
-                                                dbc.FormText(
-                                                    "If you are adding a biological standard, please ensure that " +
-                                                    "each targeted feature has a name, m/z, RT, and MS/MS spectrum."),
-                                            ]), html.Br(),
-
-                                            html.Div([
-                                                dbc.Label(
-                                                    "Negative (–) mode targeted features (for biological standard)"),
-                                                dbc.InputGroup([
-                                                    dbc.Input(placeholder="No MSP file selected",
-                                                        id="setup-add-neg-istd-msp-text-field-2"),
-                                                    dbc.Button("Browse Files", color="secondary", outline=False,
-                                                        id="setup-add-neg-istd-msp-button-2", n_clicks=0),
-                                                ]),
-                                                dbc.FormText(
-                                                    "If you are adding a biological standard, please ensure that " +
-                                                    "each targeted feature has a name, m/z, RT, and MS/MS spectrum."),
-                                            ]), html.Br(),
-
-                                            html.Div([
-                                                dbc.Label("Enable cloud sync (recommended)"), html.Br(),
-                                                dbc.Button("Sign in to Google Drive", id="setup-google-drive-sync-button",
-                                                    color="primary", outline=False), html.Br(),
-                                                dbc.FormText(
-                                                    "This will allow you to monitor your instrument runs on other devices."),
-                                            ]), html.Br(),
-
-                                            html.Div([
+                                                # Instrument name text field
                                                 html.Div([
-                                                    dbc.Button("Complete setup", style={"line-height": "1.75"}, color="success"),
-                                                ], className="d-grid gap-2 col-12 mx-auto"),
-                                            ])
-                                        ]),
+                                                    dbc.Label("Instrument name"),
+                                                    dbc.Input(id="first-time-instrument-id",
+                                                              placeholder="Ex: Thermo Q-Exactive HF 1", type="text"),
+                                                    dbc.FormText("Please enter a unique name for this instrument."),
 
-                                        # Adding an instrument to the workspace
-                                        dbc.AccordionItem(title="I'm adding a new instrument to my workspace", children=[
-                                            html.Div([
-                                                dbc.Label("Instrument name"),
-                                                dbc.Input(placeholder="Ex: Thermo Q-Exactive HF", type="text"),
-                                                dbc.FormText("Please enter a unique name for this instrument."),
-                                            ]), html.Br(),
+                                                ]),
 
-                                            html.Div([
-                                                dbc.Label("Sync with Google Drive"), html.Br(),
-                                                dbc.Button("Sign in to Google Drive", id="setup-google-drive-sync-button-2",
-                                                   color="primary", outline=False), html.Br(),
-                                                dbc.FormText(
-                                                    "Please ensure that your Google account has been registered to access " +
-                                                    "your MS-AutoQC workspace by visiting Settings > General on the instrument computer."),
-                                            ]), html.Br(),
+                                                html.Br(),
 
-                                            html.Div([
+                                                # Google Drive authentication button
                                                 html.Div([
-                                                    dbc.Button("Add instrument to workspace",
-                                                        style={"line-height": "1.75"}, color="success"),
-                                                ], className="d-grid gap-2 col-12 mx-auto"),
-                                            ])
+                                                    dbc.Label("Sync with Google Drive (recommended)"),
+                                                    html.Br(),
+                                                    dbc.Button("Sign in to Google Drive", id="setup-google-drive-button-1",
+                                                       color="primary", outline=True),
+                                                    html.Br(),
+                                                    dbc.FormText("This will allow you to access your QC results from any device."),
+                                                    dbc.Tooltip("If you have Google Drive sync enabled on an instrument already, " +
+                                                        "please sign in with the same Google account to merge workspaces.",
+                                                        target="setup-google-drive-button-1", placement="bottom")
+                                                ]),
+
+                                                html.Br(),
+
+                                                # Complete setup button
+                                                html.Div([
+                                                    html.Div([
+                                                        dbc.Button("Complete setup", id="first-time-complete-setup-button",
+                                                            disabled=True, style={"line-height": "1.75"}, color="success"),
+                                                    ], className="d-grid gap-2 col-12 mx-auto"),
+                                                ])
+                                            ]),
                                         ]),
 
                                         # Signing in from another device
-                                        dbc.AccordionItem(title="I'm trying to view my run from another computer", children=[
-                                            html.Div([
-                                                dbc.Label("Sign in to access MS-AutoQC"), html.Br(),
-                                                dbc.Button("Sign in to Google Drive", id="setup-google-drive-sync-button-3",
-                                                    color="primary", outline=False), html.Br(),
-                                                dbc.FormText(
-                                                    "Please ensure that your Google account has been registered to access " +
-                                                    "your MS-AutoQC workspace by visiting Settings > General on the instrument computer."),
-                                            ]), html.Br(),
+                                        dbc.AccordionItem(title="I'm trying to view QC results from a non-instrument device", children=[
+                                            html.Div(className="modal-styles-3", children=[
 
-                                            html.Div([
+                                                # Google Drive authentication button
                                                 html.Div([
-                                                    dbc.Button("Sign in to MS-AutoQC workspace",
-                                                        style={"line-height": "1.75"}, color="success"),
-                                                ], className="d-grid gap-2 col-12 mx-auto"),
-                                            ])
+                                                    dbc.Label("Sign in to access MS-AutoQC"),
+                                                    html.Br(),
+                                                    dbc.Button("Sign in to Google Drive", id="setup-google-drive-button-2",
+                                                        color="primary", outline=False),
+                                                    html.Br(),
+                                                    dbc.FormText(
+                                                        "Please ensure that your Google account has been registered to access your " +
+                                                        "MS-AutoQC workspace by visiting Settings > General on the instrument computer."),
+                                                ]),
+
+                                                html.Br(),
+
+                                                # Complete setup button
+                                                html.Div([
+                                                    html.Div([
+                                                        dbc.Button("Sign in to MS-AutoQC workspace", disabled=True,
+                                                            style={"line-height": "1.75"}, color="success"),
+                                                    ], className="d-grid gap-2 col-12 mx-auto"),
+                                                ])
+                                            ]),
                                         ]),
                                     ]),
-                                ]), html.Br(),
+                                ]),
                             ])
                         ]),
 
@@ -1309,7 +1241,8 @@ def get_instrument_tabs(instruments):
     # Create tabs for each instrument
     instrument_tabs = []
     for instrument in instrument_list:
-        instrument_tabs.append(dcc.Tab(label=instrument, value=instrument))
+        instrument_tabs.append(
+            dcc.Tab(label=instrument, value=instrument))
 
     return instrument_tabs, instrument_list[0]
 
@@ -1386,7 +1319,7 @@ def load_data(active_cell, table_data):
         study_id = table_data[active_cell["row"]][active_cell["column_id"]]
         return get_qc_results(study_id)
     else:
-        return no_data
+        raise PreventUpdate
 
 
 @app.callback(Output("loading-modal", "is_open"),
@@ -1456,7 +1389,7 @@ def populate_sample_tables(samples):
               Output("mz-plot-sample-dropdown", "options"),
               Output("intensity-plot-sample-dropdown", "options"),
               Input("polarity-options", "value"),
-              Input("sample-table", "data"),
+              State("sample-table", "data"),
               State("samples", "data"),
               State("bio-intensity-pos", "data"),
               State("bio-intensity-neg", "data"),
