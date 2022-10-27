@@ -16,23 +16,21 @@ local_stylesheet = {
     "rel": "stylesheet"
 }
 
-bootstrap_colors = {
-    "blue": "rgb(0, 123, 255)",
-    "red": "rgb(220, 53, 69)",
-    "green": "rgb(40, 167, 69)",
-    "yellow": "rgb(255, 193, 7)",
-    "blue-low-opacity": "rgba(0, 123, 255, 0.4)",
-    "red-low-opacity": "rgba(220, 53, 69, 0.4)",
-    "green-low-opacity": "rgba(40, 167, 69, 0.4)",
-    "yellow-low-opacity": "rgba(255, 193, 7, 0.4)"
-}
+# Google Drive authentication
+gauth = GoogleAuth()
+drive = GoogleDrive(gauth)
+current_directory = os.getcwd()
+GoogleAuth.DEFAULT_SETTINGS["client_config_file"] = current_directory + "/assets/client_secrets.json"
+
+"""
+Dash app layout
+"""
 
 # Initialize Dash app
 app = dash.Dash(__name__, external_stylesheets=[local_stylesheet, dbc.themes.BOOTSTRAP],
                 meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}])
 app.title = "MS-AutoQC"
 
-# Create Dash app layout
 def serve_layout():
 
     biohub_logo = "https://user-images.githubusercontent.com/7220175/184942387-0acf5deb-d81e-4962-ab27-05b453c7a688.png"
@@ -112,7 +110,7 @@ def serve_layout():
 
                                 # Button to start monitoring a new run
                                 html.Div(className="d-grid gap-2", children=[
-                                    dbc.Button("Setup New AutoQC Job",
+                                    dbc.Button("New MS-AutoQC Job",
                                                id="setup-new-run-button",
                                                style={"margin-top": "15px",
                                                       "line-height": "1.75"},
@@ -334,10 +332,10 @@ def serve_layout():
                             dbc.ModalBody(id="loading-modal-body")
                         ]),
 
-                        # Modal for first-time setup
-                        dbc.Modal(id="setup-user-modal", size="lg", centered=True, is_open=True, scrollable=True,
+                        # Modal for first-time workspace setup
+                        dbc.Modal(id="workspace-setup-modal", size="lg", centered=True, scrollable=True,
                                   keyboard=False, backdrop="static", children=[
-                            dbc.ModalHeader(dbc.ModalTitle("Welcome", id="setup-user-modal-title"), close_button=False),
+                            dbc.ModalHeader(dbc.ModalTitle("Welcome to MS-AutoQC", id="setup-user-modal-title"), close_button=False),
                             dbc.ModalBody(id="setup-user-modal-body", className="modal-styles-2", children=[
 
                                 html.Div([
@@ -352,10 +350,19 @@ def serve_layout():
                                                 # Instrument name text field
                                                 html.Div([
                                                     dbc.Label("Instrument name"),
-                                                    dbc.Input(id="first-time-instrument-id",
-                                                              placeholder="Ex: Thermo Q-Exactive HF 1", type="text"),
-                                                    dbc.FormText("Please enter a unique name for this instrument."),
-
+                                                    dbc.InputGroup([
+                                                        dbc.Input(id="first-time-instrument-id", type="text",
+                                                                  placeholder="Ex: Thermo Q-Exactive HF 1"),
+                                                        dbc.DropdownMenu(id="first-time-instrument-vendor",
+                                                            label="Choose Vendor", color="primary", children=[
+                                                                dbc.DropdownMenuItem("Thermo Fisher", id="thermo-fisher-item"),
+                                                                dbc.DropdownMenuItem("Agilent", id="agilent-item"),
+                                                                dbc.DropdownMenuItem("Bruker", id="bruker-item"),
+                                                                dbc.DropdownMenuItem("Sciex", id="sciex-item"),
+                                                                dbc.DropdownMenuItem("Waters", id="waters-item")
+                                                        ]),
+                                                    ]),
+                                                    dbc.FormText("Please choose a name and vendor for this instrument."),
                                                 ]),
 
                                                 html.Br(),
@@ -419,7 +426,7 @@ def serve_layout():
 
                         # Modal for starting an instrument run listener
                         dbc.Modal(id="setup-new-run-modal", size="lg", centered=True, is_open=False, scrollable=True, children=[
-                            dbc.ModalHeader(dbc.ModalTitle(id="setup-new-run-modal-title", children="Setup New AutoQC Job"), close_button=True),
+                            dbc.ModalHeader(dbc.ModalTitle(id="setup-new-run-modal-title", children="New MS-AutoQC Job"), close_button=True),
                             dbc.ModalBody(id="setup-new-run-modal-body", className="modal-styles-2", children=[
 
                                 # Text field for entering your run ID
@@ -1221,28 +1228,192 @@ def serve_layout():
             dcc.Store(id="msdial-parameters-saved"),
             dcc.Store(id="msdial-parameters-reset"),
             dcc.Store(id="msdial-directory-data"),
+
+            # Dummy inputs for Google Drive authentication
+            dcc.Store(id="google-drive-authenticated"),
+            dcc.Store(id="workspace-has-been-setup")
         ])
     ])
 
 # Serve app layout
 app.layout = serve_layout
 
+"""
+Dash callbacks
+"""
+
+@app.callback(Output("google-drive-authenticated", "data"),
+              Input("setup-google-drive-button-1", "n_clicks"),
+              Input("setup-google-drive-button-2", "n_clicks"),
+              Input("google-drive-sync-button", "n_clicks"))
+def launch_google_drive_authentication(setup_auth_button_clicks, sign_in_auth_button_clicks, settings_button_clicks):
+
+    """
+    Launches Google Drive authentication window from first-time setup
+    """
+
+    # Try to load saved client credentials
+    credentials_file = current_directory + "/assets/credentials.txt"
+    gauth.LoadCredentialsFile(credentials_file)
+
+    # If user clicks a sign-in button, launch Google authentication page
+    if setup_auth_button_clicks or sign_in_auth_button_clicks or settings_button_clicks:
+
+        # Authenticate if they're not there
+        if gauth.credentials is None:
+            gauth.LocalWebserverAuth()
+
+        # Refresh them if expired
+        elif gauth.access_token_expired:
+            gauth.Refresh()
+
+        # Initialize the saved creds
+        else:
+            gauth.Authorize()
+
+        # Save the current credentials to a file
+        gauth.SaveCredentialsFile(credentials_file)
+
+    return os.path.exists(credentials_file)
+
+
+@app.callback(Output("setup-google-drive-button-1", "children"),
+              Output("setup-google-drive-button-1", "color"),
+              Output("setup-google-drive-button-1", "outline"),
+              Input("google-drive-authenticated", "data"), prevent_initial_call=True)
+def check_first_time_google_drive_authentication(google_drive_is_authenticated):
+
+    """
+    UI feedback for Google Drive authentication in Welcome > Setup New Instrument page
+    """
+
+    if google_drive_is_authenticated:
+        return "You're signed in!", "success", False
+    else:
+        return "Sign in to Google Drive", "primary", True
+
+
+@app.callback(Output("first-time-instrument-vendor", "label"),
+              Output("thermo-fisher-item", "n_clicks"),
+              Output("agilent-item", "n_clicks"),
+              Output("bruker-item", "n_clicks"),
+              Output("sciex-item", "n_clicks"),
+              Output("waters-item", "n_clicks"),
+              Input("thermo-fisher-item", "n_clicks"),
+              Input("agilent-item", "n_clicks"),
+              Input("bruker-item", "n_clicks"),
+              Input("sciex-item", "n_clicks"),
+              Input("waters-item", "n_clicks"), prevent_initial_call=True)
+def vendor_dropdown_handling(thermo_fisher_click, agilent_click, bruker_click, sciex_click, waters_click):
+
+    """
+    Why didn't Dash Bootstrap Components implement this themselves?
+    The world may never know...
+    """
+
+    thermo_selected = "Thermo Fisher", 0, 0, 0, 0, 0
+    agilent_selected = "Agilent", 0, 0, 0, 0, 0,
+    bruker_selected = "Bruker", 0, 0, 0, 0, 0
+    sciex_selected = "Sciex", 0, 0, 0, 0, 0
+    waters_selected = "Waters", 0, 0, 0, 0, 0
+
+    inputs = [thermo_fisher_click, agilent_click, bruker_click, sciex_click, waters_click]
+    outputs = [thermo_selected, agilent_selected, bruker_selected, sciex_selected, waters_selected]
+
+    for index, input in enumerate(inputs):
+        if input is not None:
+            if input > 0:
+                return outputs[index]
+
+
+@app.callback(Output("first-time-complete-setup-button", "disabled"),
+              Output("first-time-instrument-id", "valid"),
+              Input("first-time-instrument-id", "value"),
+              Input("first-time-instrument-vendor", "label"), prevent_initial_call=True)
+def enable_complete_setup_button(instrument_name, instrument_vendor):
+
+    """
+    Enables "Complete setup" button upon form completion in Welcome > Setup New Instrument page
+    """
+
+    valid = False, True
+    invalid = True, False
+
+    if instrument_name is not None and instrument_vendor != "Choose Vendor":
+        if len(instrument_name) > 3:
+            return valid
+        else:
+            return invalid
+    else:
+        return invalid
+
+
+@app.callback(Output("workspace-has-been-setup", "data"),
+              Input("first-time-complete-setup-button", "n_clicks"),
+              State("first-time-instrument-id", "value"),
+              State("first-time-instrument-vendor", "label"),
+              State("google-drive-authenticated", "data"), prevent_initial_call=True)
+def complete_first_time_setup(button_click, instrument_id, instrument_vendor, google_drive_authenticated):
+
+    """
+    Upon "Complete setup" button click, this callback completes the following:
+    1. If database DOES exist in Google Drive, downloads database
+    2. If database DOES NOT exist in Google Drive, initializes new SQLite database in /data
+    3. Adds instrument to "instruments" table
+    4. Uploads database to Google Drive folder
+    5. Dismisses setup window
+    """
+
+    if button_click:
+        # Check for database in Google Drive
+        gdrive_folder = ""
+
+        # Initialize a new database if one does not exist
+        if not db.is_valid():
+            db.create_database()
+
+        # Add instrument to database
+        if google_drive_authenticated:
+            db.insert_new_instrument(instrument_id, instrument_vendor, gdrive_folder)
+        else:
+            db.insert_new_instrument(instrument_id, instrument_vendor)
+
+        # Upload database to Google Drive folder
+
+        # Dismiss setup window by returning True for workspace_has_been_setup boolean
+        return db.is_valid()
+
+
+@app.callback(Output("workspace-setup-modal", "is_open"),
+              Input("workspace-has-been-setup", "data"))
+def dismiss_setup_window(workspace_has_been_setup):
+
+    """
+    Checks for a valid database on every start and dismisses setup window if found
+    """
+
+    return not db.is_valid()
+
+
 @app.callback(Output("tabs", "children"),
               Output("tabs", "value"),
-              Input("instruments", "data"))
-def get_instrument_tabs(instruments):
+              Input("instruments", "data"),
+              Input("workspace-setup-modal", "is_open"))
+def get_instrument_tabs(instruments, check_workspace_setup):
 
     """
     Retrieves all instruments on a user installation of MS-AutoQC
     """
 
-    instrument_list = db.get_instruments_list()
+    if db.is_valid():
+        # Get list of instruments from database
+        instrument_list = db.get_instruments_list()
 
-    # Create tabs for each instrument
-    instrument_tabs = []
-    for instrument in instrument_list:
-        instrument_tabs.append(
-            dcc.Tab(label=instrument, value=instrument))
+        # Create tabs for each instrument
+        instrument_tabs = []
+        for instrument in instrument_list:
+            instrument_tabs.append(
+                dcc.Tab(label=instrument, value=instrument))
 
     return instrument_tabs, instrument_list[0]
 
@@ -1274,7 +1445,7 @@ def populate_instrument_runs_table(instrument):
     df_instrument_runs = db.get_instrument_runs(instrument)
 
     if len(df_instrument_runs) == 0:
-        empty_table = [{"Run ID": "None", "Chromatography": "N/A", "Status": "N/A"}]
+        empty_table = [{"Run ID": "N/A", "Chromatography": "N/A", "Status": "N/A"}]
         return empty_table, {"display": "block"}, {"display": "none"}
 
     # DataFrame refactoring

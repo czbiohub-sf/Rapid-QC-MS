@@ -5,15 +5,16 @@ from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
 import DatabaseFunctions as db
 
-# Authenticate with Google Drive
-gauth = GoogleAuth()
-drive = GoogleDrive(gauth)
-
-# Get directory for files
-current_directory = os.getcwd()
-
-# Define client secrets file
-GoogleAuth.DEFAULT_SETTINGS["client_config_file"] = current_directory + "/assets/client_secrets.json"
+bootstrap_colors = {
+    "blue": "rgb(0, 123, 255)",
+    "red": "rgb(220, 53, 69)",
+    "green": "rgb(40, 167, 69)",
+    "yellow": "rgb(255, 193, 7)",
+    "blue-low-opacity": "rgba(0, 123, 255, 0.4)",
+    "red-low-opacity": "rgba(220, 53, 69, 0.4)",
+    "green-low-opacity": "rgba(40, 167, 69, 0.4)",
+    "yellow-low-opacity": "rgba(255, 193, 7, 0.4)"
+}
 
 no_data = (None, None, None, None, None, None, None, None, None,
            None, None, None, None, None, None, None, None, None)
@@ -23,9 +24,6 @@ def get_qc_results(run_id):
     """
     Loads QC results for samples and biological standards from either the SQLite database or Google Drive
     """
-
-    positive = "Positive Mode"
-    negative = "Negative Mode"
 
     # Get run metadata from database
     df_run = db.get_instrument_run(run_id)

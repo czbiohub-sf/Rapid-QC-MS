@@ -1,8 +1,190 @@
 import os, io, shutil
 import pandas as pd
 import sqlalchemy as sa
+from sqlalchemy import INTEGER, REAL, TEXT
 
 sqlite_db_location = "sqlite:///data/QC Database.db"
+
+def is_valid():
+
+    """
+    Confirms that all required tables are present
+    """
+
+    if len(sa.create_engine(sqlite_db_location).table_names()) > 0:
+        return True
+    else:
+        return False
+
+
+def create_database():
+
+    """
+    Initializes a new, empty SQLite database
+    """
+
+    # Initialize SQLAlchemy
+    engine = sa.create_engine(sqlite_db_location)
+    db_metadata = sa.MetaData()
+
+    # Create tables
+    bio_qc_results = sa.Table(
+        "bio_qc_results", db_metadata,
+        sa.Column("id", INTEGER, primary_key=True),
+        sa.Column("sample_id", TEXT),
+        sa.Column("run_id", TEXT),
+        sa.Column("precursor_mz", TEXT),
+        sa.Column("retention_time", TEXT),
+        sa.Column("intensity", TEXT),
+        sa.Column("md5", TEXT),
+        sa.Column("qc_result", TEXT),
+        sa.Column("biological_standard", TEXT),
+        sa.Column("position", TEXT)
+    )
+
+    biological_standards = sa.Table(
+        "biological_standards", db_metadata,
+        sa.Column("id", INTEGER, primary_key=True),
+        sa.Column("name", TEXT),
+        sa.Column("identifier", TEXT),
+        sa.Column("chromatography", TEXT),
+        sa.Column("num_pos_features", INTEGER),
+        sa.Column("num_neg_features", INTEGER),
+        sa.Column("pos_bio_msp_file", TEXT),
+        sa.Column("neg_bio_msp_file", TEXT),
+        sa.Column("pos_parameter_file", TEXT),
+        sa.Column("neg_parameter_file", TEXT),
+        sa.Column("msdial_config_id", TEXT)
+    )
+
+    chromatography_methods = sa.Table(
+        "chromatography_methods", db_metadata,
+        sa.Column("id", INTEGER, primary_key=True),
+        sa.Column("method_id", TEXT),
+        sa.Column("num_pos_standards", INTEGER),
+        sa.Column("num_neg_standards", INTEGER),
+        sa.Column("pos_istd_msp_file", TEXT),
+        sa.Column("neg_istd_msp_file", TEXT),
+        sa.Column("pos_parameter_file", TEXT),
+        sa.Column("neg_parameter_file", TEXT),
+        sa.Column("msdial_config_id", TEXT)
+    )
+
+    gdrive_users = sa.Table(
+        "gdrive_users", db_metadata,
+        sa.Column("id", INTEGER, primary_key=True),
+        sa.Column("email", TEXT)
+    )
+
+    instruments = sa.Table(
+        "instruments", db_metadata,
+        sa.Column("id", INTEGER, primary_key=True),
+        sa.Column("name", TEXT),
+        sa.Column("vendor", TEXT),
+        sa.Column("gdrive_folder", TEXT)
+    )
+
+    internal_standards = sa.Table(
+        "internal_standards", db_metadata,
+        sa.Column("id", INTEGER, primary_key=True),
+        sa.Column("name", TEXT),
+        sa.Column("chromatography", TEXT),
+        sa.Column("polarity", TEXT),
+        sa.Column("precursor_mz", REAL),
+        sa.Column("retention_time", REAL),
+        sa.Column("ms2_spectrum", TEXT),
+        sa.Column("inchikey", TEXT)
+    )
+
+    msdial_parameters = sa.Table(
+        "msdial_parameters", db_metadata,
+        sa.Column("id", INTEGER, primary_key=True),
+        sa.Column("config_name", TEXT),
+        sa.Column("rt_begin", INTEGER),
+        sa.Column("rt_end", INTEGER),
+        sa.Column("mz_begin", INTEGER),
+        sa.Column("mz_end", INTEGER),
+        sa.Column("ms1_centroid_tolerance", REAL),
+        sa.Column("ms2_centroid_tolerance", REAL),
+        sa.Column("smoothing_method", TEXT),
+        sa.Column("smoothing_level", INTEGER),
+        sa.Column("min_peak_width", INTEGER),
+        sa.Column("min_peak_height", INTEGER),
+        sa.Column("mass_slice_width", REAL),
+        sa.Column("post_id_rt_tolerance", REAL),
+        sa.Column("post_id_mz_tolerance", REAL),
+        sa.Column("post_id_score_cutoff", REAL),
+        sa.Column("alignment_rt_tolerance", REAL),
+        sa.Column("alignment_mz_tolerance", REAL),
+        sa.Column("alignment_rt_factor", REAL),
+        sa.Column("alignment_mz_factor", REAL),
+        sa.Column("peak_count_filter", INTEGER),
+        sa.Column("qc_at_least_filter", TEXT),
+        sa.Column("msdial_directory", TEXT)
+    )
+
+    qc_parameters = sa.Table(
+        "qc_parameters", db_metadata,
+        sa.Column("id", INTEGER, primary_key=True),
+        sa.Column("config_name", TEXT),
+        sa.Column("intensity_dropouts_cutoff", INTEGER),
+        sa.Column("max_rt_shift", REAL),
+        sa.Column("allowed_delta_rt_trends", INTEGER)
+    )
+
+    runs = sa.Table(
+        "runs", db_metadata,
+        sa.Column("id", INTEGER, primary_key=True),
+        sa.Column("run_id", TEXT),
+        sa.Column("instrument_id", TEXT),
+        sa.Column("chromatography", TEXT),
+        sa.Column("sequence", TEXT),
+        sa.Column("metadata", TEXT),
+        sa.Column("status", TEXT),
+        sa.Column("samples", INTEGER),
+        sa.Column("completed", INTEGER),
+        sa.Column("passes", INTEGER),
+        sa.Column("fails", INTEGER),
+        sa.Column("latest_sample", TEXT),
+        sa.Column("qc_config_id", TEXT),
+        sa.Column("biological_standards", TEXT),
+    )
+
+    sample_qc_results = sa.Table(
+        "sample_qc_results", db_metadata,
+        sa.Column("id", INTEGER, primary_key=True),
+        sa.Column("sample_id", TEXT),
+        sa.Column("run_id", TEXT),
+        sa.Column("precursor_mz", TEXT),
+        sa.Column("retention_time", TEXT),
+        sa.Column("intensity", TEXT),
+        sa.Column("md5", TEXT),
+        sa.Column("qc_result", TEXT),
+        sa.Column("position", TEXT)
+    )
+
+    targeted_features = sa.Table(
+        "targeted_features", db_metadata,
+        sa.Column("id", INTEGER, primary_key=True),
+        sa.Column("name", TEXT),
+        sa.Column("chromatography", TEXT),
+        sa.Column("polarity", TEXT),
+        sa.Column("biological_standard", TEXT),
+        sa.Column("precursor_mz", REAL),
+        sa.Column("retention_time", REAL),
+        sa.Column("ms2_spectrum", TEXT),
+        sa.Column("inchikey", TEXT)
+    )
+
+    # Insert tables into database
+    db_metadata.create_all(engine)
+
+    # Insert default configurations for MS-DIAL and MS-AutoQC
+    add_msdial_configuration("Default", "")
+    add_qc_configuration("Default")
+
+    return sqlite_db_location
+
 
 def connect_to_database():
 
@@ -25,6 +207,30 @@ def get_table(table_name):
 
     engine = sa.create_engine(sqlite_db_location)
     return pd.read_sql("SELECT * FROM " + table_name, engine)
+
+
+def insert_new_instrument(name, vendor, gdrive_folder=None):
+
+    """
+    Inserts a new instrument into the "instruments" table
+    """
+
+    # Connect to database
+    db_metadata, connection = connect_to_database()
+
+    # Get "instruments" table
+    instruments_table = sa.Table("instruments", db_metadata, autoload=True)
+
+    # Prepare insert of new instrument
+    insert_instrument = instruments_table.insert().values(
+        {"name": name,
+         "vendor": vendor,
+         "gdrive_folder": gdrive_folder}
+    )
+
+    # Execute the insert, then close the connection
+    connection.execute(insert_instrument)
+    connection.close()
 
 
 def get_instruments_list():
@@ -1224,7 +1430,10 @@ def add_qc_configuration(qc_config_name):
 
     # Prepare insert of user-inputted run data
     insert_config = qc_parameters_table.insert().values(
-        {"config_name": qc_config_name}
+        {"config_name": qc_config_name,
+         "intensity_dropouts_cutoff": 4,
+         "max_rt_shift": 0.1,
+         "allowed_delta_rt_trends": 3}
     )
 
     # Execute INSERT to database, then close the connection
