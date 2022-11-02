@@ -2,7 +2,7 @@ import io, sys, subprocess, time
 import base64, webbrowser, json
 import pandas as pd
 import sqlalchemy as sa
-from dash import dash, dcc, html, dash_table, Input, Output, State
+from dash import dash, dcc, html, dash_table, Input, Output, State, ctx
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from QCPlotGeneration import *
@@ -17,10 +17,10 @@ local_stylesheet = {
 }
 
 # Google Drive authentication
-gauth = GoogleAuth()
-drive = GoogleDrive(gauth)
+gauth_holder = [GoogleAuth()]
 current_directory = os.getcwd()
 GoogleAuth.DEFAULT_SETTINGS["client_config_file"] = current_directory + "/assets/client_secrets.json"
+credentials_file = current_directory + "/assets/credentials.txt"
 
 """
 Dash app layout
@@ -377,7 +377,9 @@ def serve_layout():
                                                     dbc.FormText("This will allow you to access your QC results from any device."),
                                                     dbc.Tooltip("If you have Google Drive sync enabled on an instrument already, " +
                                                         "please sign in with the same Google account to merge workspaces.",
-                                                        target="setup-google-drive-button-1", placement="bottom")
+                                                        target="setup-google-drive-button-1", placement="left"),
+                                                    dbc.Popover(id="google-drive-button-1-popover", is_open=False,
+                                                        target="setup-google-drive-button-1", placement="right")
                                                 ]),
 
                                                 html.Br(),
@@ -385,7 +387,7 @@ def serve_layout():
                                                 # Complete setup button
                                                 html.Div([
                                                     html.Div([
-                                                        dbc.Button("Complete setup", id="first-time-complete-setup-button",
+                                                        dbc.Button(children="Complete setup", id="first-time-complete-setup-button",
                                                             disabled=True, style={"line-height": "1.75"}, color="success"),
                                                     ], className="d-grid gap-2 col-12 mx-auto"),
                                                 ])
@@ -393,7 +395,7 @@ def serve_layout():
                                         ]),
 
                                         # Signing in from another device
-                                        dbc.AccordionItem(title="I'm trying to view QC results from a non-instrument device", children=[
+                                        dbc.AccordionItem(title="I'm signing in to an existing MS-AutoQC workspace", children=[
                                             html.Div(className="modal-styles-3", children=[
 
                                                 # Google Drive authentication button
@@ -404,17 +406,19 @@ def serve_layout():
                                                         color="primary", outline=False),
                                                     html.Br(),
                                                     dbc.FormText(
-                                                        "Please ensure that your Google account has been registered to access your " +
-                                                        "MS-AutoQC workspace by visiting Settings > General on the instrument computer."),
+                                                        "Please ensure that your Google account has been registered to " +
+                                                        "access your MS-AutoQC workspace by visiting Settings > General."),
+                                                    dbc.Popover(id="google-drive-button-2-popover", is_open=False,
+                                                                target="setup-google-drive-button-2", placement="right")
                                                 ]),
 
                                                 html.Br(),
 
-                                                # Complete setup button
+                                                # Workspace sign-in button
                                                 html.Div([
                                                     html.Div([
-                                                        dbc.Button("Sign in to MS-AutoQC workspace", disabled=True,
-                                                            style={"line-height": "1.75"}, color="success"),
+                                                        dbc.Button("Sign in to MS-AutoQC workspace", id="first-time-sign-in-button",
+                                                            disabled=True, style={"line-height": "1.75"}, color="success"),
                                                     ], className="d-grid gap-2 col-12 mx-auto"),
                                                 ])
                                             ]),
@@ -1183,6 +1187,7 @@ def serve_layout():
 
             # Dummy input object for callbacks on page load
             dcc.Store(id="on-page-load"),
+            dcc.Store(id="dummy-store"),
 
             # Storage of all DataFrames necessary for QC plot generation
             dcc.Store(id="istd-rt-pos"),
@@ -1230,8 +1235,17 @@ def serve_layout():
             dcc.Store(id="msdial-directory-data"),
 
             # Dummy inputs for Google Drive authentication
-            dcc.Store(id="google-drive-authenticated"),
-            dcc.Store(id="workspace-has-been-setup")
+            dcc.Store(id="workspace-has-been-setup-1"),
+            dcc.Store(id="workspace-has-been-setup-2"),
+            dcc.Store(id="google-drive-authenticated-1"),
+            dcc.Store(id="gdrive-folder-id-1"),
+            dcc.Store(id="gdrive-database-file-id-1"),
+            dcc.Store(id="google-drive-authenticated-2"),
+            dcc.Store(id="gdrive-folder-id-2"),
+            dcc.Store(id="gdrive-database-file-id-2"),
+            dcc.Store(id="google-drive-authenticated-3"),
+            dcc.Store(id="gdrive-folder-id-3"),
+            dcc.Store(id="gdrive-database-file-id-3"),
         ])
     ])
 
@@ -1242,7 +1256,34 @@ app.layout = serve_layout
 Dash callbacks
 """
 
-@app.callback(Output("google-drive-authenticated", "data"),
+@app.callback(Output("dummy-store", "data"),
+              Input("on-page-load", "data"))
+def authenticate_with_google_drive(on_page_load):
+
+    """
+    Authenticates with Google Drive if the credentials file is found
+    """
+
+    gauth_holder[0] = GoogleAuth()
+    gauth = gauth_holder[0]
+
+    # Try to load saved client credentials
+    gauth.LoadCredentialsFile(credentials_file)
+
+    if gauth.credentials is not None:
+        if gauth.access_token_expired:
+            # Refresh credentials if expired
+            gauth.Refresh()
+        else:
+            # Initialize saved credentials
+            gauth.Authorize()
+
+    return None
+
+
+@app.callback(Output("google-drive-authenticated-1", "data"),
+              Output("google-drive-authenticated-2", "data"),
+              Output("google-drive-authenticated-3", "data"),
               Input("setup-google-drive-button-1", "n_clicks"),
               Input("setup-google-drive-button-2", "n_clicks"),
               Input("google-drive-sync-button", "n_clicks"))
@@ -1252,35 +1293,34 @@ def launch_google_drive_authentication(setup_auth_button_clicks, sign_in_auth_bu
     Launches Google Drive authentication window from first-time setup
     """
 
-    # Try to load saved client credentials
-    credentials_file = current_directory + "/assets/credentials.txt"
-    gauth.LoadCredentialsFile(credentials_file)
+    # Get the correct authentication button
+    button_id = ctx.triggered_id
 
     # If user clicks a sign-in button, launch Google authentication page
-    if setup_auth_button_clicks or sign_in_auth_button_clicks or settings_button_clicks:
+    if button_id is not None:
+        # Authenticate, then save the credentials to a file
+        gauth_holder[0] = GoogleAuth()
+        gauth = gauth_holder[0]
+        gauth.LocalWebserverAuth()
 
-        # Authenticate if they're not there
-        if gauth.credentials is None:
-            gauth.LocalWebserverAuth()
-
-        # Refresh them if expired
-        elif gauth.access_token_expired:
-            gauth.Refresh()
-
-        # Initialize the saved creds
-        else:
-            gauth.Authorize()
-
-        # Save the current credentials to a file
-        gauth.SaveCredentialsFile(credentials_file)
-
-    return os.path.exists(credentials_file)
+    if button_id == "setup-google-drive-button-1":
+        return True, None, None
+    elif button_id == "setup-google-drive-button-2":
+        return None, True, None
+    elif button_id == "google-drive-sync-button":
+        return None, None, True
+    else:
+        raise PreventUpdate
 
 
 @app.callback(Output("setup-google-drive-button-1", "children"),
               Output("setup-google-drive-button-1", "color"),
               Output("setup-google-drive-button-1", "outline"),
-              Input("google-drive-authenticated", "data"), prevent_initial_call=True)
+              Output("google-drive-button-1-popover", "children"),
+              Output("google-drive-button-1-popover", "is_open"),
+              Output("gdrive-folder-id-1", "data"),
+              Output("gdrive-database-file-id-1", "data"),
+              Input("google-drive-authenticated-1", "data"), prevent_initial_call=True)
 def check_first_time_google_drive_authentication(google_drive_is_authenticated):
 
     """
@@ -1288,9 +1328,35 @@ def check_first_time_google_drive_authentication(google_drive_is_authenticated):
     """
 
     if google_drive_is_authenticated:
-        return "You're signed in!", "success", False
+
+        drive = GoogleDrive(gauth_holder[0])
+
+        # Initial values
+        gdrive_folder_id = None
+        gdrive_database_file_id = None
+        popover_message = [dbc.PopoverHeader("No existing workspace found."),
+                           dbc.PopoverBody("A new MS-AutoQC workspace will be created.")]
+
+        # Check for database in Google Drive
+        for file in drive.ListFile({"q": "'root' in parents and trashed=false"}).GetList():
+            if file["title"] == "MS-AutoQC":
+                gdrive_folder_id = file["id"]
+                break
+
+        # If Google Drive folder is found, look for database next
+        if gdrive_folder_id is not None:
+            for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
+                if file["title"] == "QC Database.db":
+                    file.GetContentFile(file["title"])
+                    gdrive_database_file_id = file["id"]
+                    popover_message = [dbc.PopoverHeader("Workspace found!"),
+                        dbc.PopoverBody("This instrument will be added to the existing MS-AutoQC workspace.")]
+                    break
+
+        return "You're signed in!", "success", False, popover_message, True, gdrive_folder_id, gdrive_database_file_id
+
     else:
-        return "Sign in to Google Drive", "primary", True
+        return "Sign in to Google Drive", "primary", True, "", False, "", ""
 
 
 @app.callback(Output("first-time-instrument-vendor", "label"),
@@ -1339,8 +1405,8 @@ def enable_complete_setup_button(instrument_name, instrument_vendor):
     valid = False, True
     invalid = True, False
 
-    if instrument_name is not None and instrument_vendor != "Choose Vendor":
-        if len(instrument_name) > 3:
+    if instrument_name is not None:
+        if len(instrument_name) > 3 and instrument_vendor != "Choose Vendor":
             return valid
         else:
             return invalid
@@ -1348,12 +1414,26 @@ def enable_complete_setup_button(instrument_name, instrument_vendor):
         return invalid
 
 
-@app.callback(Output("workspace-has-been-setup", "data"),
-              Input("first-time-complete-setup-button", "n_clicks"),
+@app.callback(Output("first-time-complete-setup-button", "children"),
+              Input("first-time-complete-setup-button", "n_clicks"), prevent_initial_call=True)
+def ui_feedback_for_complete_setup_button(button_click):
+
+    """
+    Returns loading feedback on complete setup button
+    """
+
+    return [dbc.Spinner(size="sm"), " Finishing up, please wait..."]
+
+
+@app.callback(Output("workspace-has-been-setup-1", "data"),
+              Input("first-time-complete-setup-button", "children"),
               State("first-time-instrument-id", "value"),
               State("first-time-instrument-vendor", "label"),
-              State("google-drive-authenticated", "data"), prevent_initial_call=True)
-def complete_first_time_setup(button_click, instrument_id, instrument_vendor, google_drive_authenticated):
+              State("google-drive-authenticated-1", "data"),
+              State("gdrive-folder-id-1", "data"),
+              State("gdrive-database-file-id-1", "data"), prevent_initial_call=True)
+def complete_first_time_setup(button_click, instrument_id, instrument_vendor, google_drive_authenticated,
+                              gdrive_folder_id, gdrive_file_id):
 
     """
     Upon "Complete setup" button click, this callback completes the following:
@@ -1365,34 +1445,151 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
     """
 
     if button_click:
-        # Check for database in Google Drive
-        gdrive_folder = ""
+
+        drive = GoogleDrive(gauth_holder[0])
 
         # Initialize a new database if one does not exist
         if not db.is_valid():
             db.create_database()
 
         # Add instrument to database
-        if google_drive_authenticated:
-            db.insert_new_instrument(instrument_id, instrument_vendor, gdrive_folder)
-        else:
-            db.insert_new_instrument(instrument_id, instrument_vendor)
+        db.insert_new_instrument(instrument_id, instrument_vendor, gdrive_folder_id, gdrive_file_id)
 
-        # Upload database to Google Drive folder
+        # Handle Google Drive sync
+        if google_drive_authenticated:
+
+            # Create an MS-AutoQC folder if not found
+            if gdrive_folder_id is None:
+                folder_metadata = {
+                    "title": "MS-AutoQC",
+                    "mimeType": "application/vnd.google-apps.folder"
+                }
+                folder = drive.CreateFile(folder_metadata)
+                folder.Upload()
+
+                # Get Google Drive ID of folder
+                for file in drive.ListFile({"q": "'root' in parents and trashed=false"}).GetList():
+                    if file["title"] == "MS-AutoQC":
+                        gdrive_folder_id = file["id"]
+                        break
+
+            # Update database in Google Drive folder
+            if gdrive_file_id is not None:
+                file = drive.CreateFile({"id": gdrive_file_id})
+            else:
+                metadata = {
+                    "title": "QC Database.db",
+                    "parents": [{"id": gdrive_folder_id}],
+                }
+                file = drive.CreateFile(metadata=metadata)
+
+            file.SetContentFile("QC Database.db")
+            file.Upload()
+
+            # Save user credentials
+            gauth_holder[0].SaveCredentialsFile(credentials_file)
 
         # Dismiss setup window by returning True for workspace_has_been_setup boolean
         return db.is_valid()
 
+    else:
+        raise PreventUpdate
+
+
+@app.callback(Output("setup-google-drive-button-2", "children"),
+              Output("setup-google-drive-button-2", "color"),
+              Output("setup-google-drive-button-2", "outline"),
+              Output("google-drive-button-2-popover", "children"),
+              Output("google-drive-button-2-popover", "is_open"),
+              Output("gdrive-folder-id-2", "data"),
+              Output("gdrive-database-file-id-2", "data"),
+              Input("google-drive-authenticated-2", "data"), prevent_initial_call=True)
+def check_workspace_login_google_drive_authentication(google_drive_is_authenticated):
+
+    """
+    UI feedback for Google Drive authentication in Welcome > Sign In To Workspace page
+    """
+
+    if google_drive_is_authenticated:
+
+        drive = GoogleDrive(gauth_holder[0])
+
+        # Initial values
+        gdrive_folder_id = None
+        gdrive_database_file_id = None
+        button_text = "Sign in to Google Drive"
+        button_color = "danger"
+        popover_message = [dbc.PopoverHeader("No workspace found"),
+                           dbc.PopoverBody("Double-check that your Google account has access in " +
+                                           "Settings > General, or sign in from a different account.")]
+
+        # Check for database in Google Drive
+        for file in drive.ListFile({"q": "'root' in parents and trashed=false"}).GetList():
+            if file["title"] == "MS-AutoQC":
+                gdrive_folder_id = file["id"]
+                break
+
+        # If Google Drive folder is found, look for database next
+        if gdrive_folder_id is not None:
+            for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
+                if file["title"] == "QC Database.db":
+                    file.GetContentFile(file["title"])
+                    gdrive_database_file_id = file["id"]
+                    button_text = "Signed in to Google Drive"
+                    button_color = "success"
+                    popover_message = [dbc.PopoverHeader("Workspace found!"),
+                        dbc.PopoverBody("Click the button below to sign in.")]
+                    break
+
+        return button_text, button_color, False, popover_message, True, gdrive_folder_id, gdrive_database_file_id
+
+    else:
+        return "Sign in to Google Drive", "primary", True, "", False, "", ""
+
+
+@app.callback(Output("first-time-sign-in-button", "disabled"),
+              Input("setup-google-drive-button-2", "children"), prevent_initial_call=True)
+def enable_workspace_login_button(button_text):
+
+    """
+    Enables "Sign in to workspace" button upon form completion in Welcome > Sign In To Workspace page
+    """
+
+    if button_text is not None:
+        if button_text == "Signed in to Google Drive":
+            return False
+        else:
+            return True
+    else:
+        return True
+
+
+@app.callback(Output("workspace-has-been-setup-2", "data"),
+              Input("first-time-sign-in-button", "n_clicks"), prevent_initial_call=True)
+def ui_feedback_for_workspace_login_button(button_click):
+
+    """
+    Dismisses setup window and signs in to MS-AutoQC workspace
+    """
+
+    gauth_holder[0].SaveCredentialsFile(credentials_file)
+    return True
+
 
 @app.callback(Output("workspace-setup-modal", "is_open"),
-              Input("workspace-has-been-setup", "data"))
-def dismiss_setup_window(workspace_has_been_setup):
+              Output("on-page-load", "data"),
+              Input("workspace-has-been-setup-1", "data"),
+              Input("workspace-has-been-setup-2", "data"))
+def dismiss_setup_window(workspace_has_been_setup_1, workspace_has_been_setup_2):
 
     """
     Checks for a valid database on every start and dismisses setup window if found
     """
 
-    return not db.is_valid()
+    # Check if setup is complete
+    is_valid = db.is_valid()
+
+    return not is_valid, is_valid
 
 
 @app.callback(Output("tabs", "children"),
@@ -1406,6 +1603,7 @@ def get_instrument_tabs(instruments, check_workspace_setup):
     """
 
     if db.is_valid():
+
         # Get list of instruments from database
         instrument_list = db.get_instruments_list()
 
@@ -1415,7 +1613,10 @@ def get_instrument_tabs(instruments, check_workspace_setup):
             instrument_tabs.append(
                 dcc.Tab(label=instrument, value=instrument))
 
-    return instrument_tabs, instrument_list[0]
+        return instrument_tabs, instrument_list[0]
+
+    else:
+        raise PreventUpdate
 
 
 @app.callback(Output("instrument-run-table", "active_cell"),
@@ -1441,23 +1642,27 @@ def populate_instrument_runs_table(instrument):
     Dash callback for populating tables with list of past/active instrument runs
     """
 
-    # Get instrument runs from database
-    df_instrument_runs = db.get_instrument_runs(instrument)
+    if instrument != "tab-1":
+        # Get instrument runs from database
+        df_instrument_runs = db.get_instrument_runs(instrument)
 
-    if len(df_instrument_runs) == 0:
-        empty_table = [{"Run ID": "N/A", "Chromatography": "N/A", "Status": "N/A"}]
-        return empty_table, {"display": "block"}, {"display": "none"}
+        if len(df_instrument_runs) == 0:
+            empty_table = [{"Run ID": "N/A", "Chromatography": "N/A", "Status": "N/A"}]
+            return empty_table, {"display": "block"}, {"display": "none"}
 
-    # DataFrame refactoring
-    df_instrument_runs = df_instrument_runs[["run_id", "chromatography", "status"]]
-    df_instrument_runs = df_instrument_runs.rename(
-        columns={"run_id": "Run ID",
-                 "chromatography": "Chromatography",
-                 "status": "Status"})
+        # DataFrame refactoring
+        df_instrument_runs = df_instrument_runs[["run_id", "chromatography", "status"]]
+        df_instrument_runs = df_instrument_runs.rename(
+            columns={"run_id": "Run ID",
+                     "chromatography": "Chromatography",
+                     "status": "Status"})
 
-    # Convert DataFrame into a dictionary
-    instrument_runs = df_instrument_runs.to_dict("records")
-    return instrument_runs, {"display": "block"}, {"display": "block"}
+        # Convert DataFrame into a dictionary
+        instrument_runs = df_instrument_runs.to_dict("records")
+        return instrument_runs, {"display": "block"}, {"display": "block"}
+
+    else:
+        raise PreventUpdate
 
 
 @app.callback(Output("istd-rt-pos", "data"),
@@ -2054,31 +2259,36 @@ def add_chromatography_method(on_page_load, button_click, chromatography_method,
     Add chromatography method to database
     """
 
-    # Add chromatography method to database
-    method_added = ""
-    if chromatography_method is not None:
-        db.insert_chromatography_method(chromatography_method)
-        method_added = "Added"
+    if db.is_valid():
 
-    # Update table
-    df_methods = db.get_chromatography_methods()
+        # Add chromatography method to database
+        method_added = ""
+        if chromatography_method is not None:
+            db.insert_chromatography_method(chromatography_method)
+            method_added = "Added"
 
-    df_methods = df_methods.rename(
-        columns={"method_id": "Method ID",
-        "num_pos_standards": "Pos (+) Standards",
-        "num_neg_standards": "Neg (–) Standards",
-        "msdial_config_id": "MS-DIAL Config"})
+        # Update table
+        df_methods = db.get_chromatography_methods()
 
-    df_methods = df_methods[["Method ID", "Pos (+) Standards", "Neg (–) Standards", "MS-DIAL Config"]]
+        df_methods = df_methods.rename(
+            columns={"method_id": "Method ID",
+            "num_pos_standards": "Pos (+) Standards",
+            "num_neg_standards": "Neg (–) Standards",
+            "msdial_config_id": "MS-DIAL Config"})
 
-    methods_table = dbc.Table.from_dataframe(df_methods, striped=True, hover=True)
+        df_methods = df_methods[["Method ID", "Pos (+) Standards", "Neg (–) Standards", "MS-DIAL Config"]]
 
-    # Update dropdown
-    dropdown_options = []
-    for method in df_methods["Method ID"].astype(str).tolist():
-        dropdown_options.append({"label": method, "value": method})
+        methods_table = dbc.Table.from_dataframe(df_methods, striped=True, hover=True)
 
-    return methods_table, dropdown_options, dropdown_options, None, method_added
+        # Update dropdown
+        dropdown_options = []
+        for method in df_methods["Method ID"].astype(str).tolist():
+            dropdown_options.append({"label": method, "value": method})
+
+        return methods_table, dropdown_options, dropdown_options, None, method_added
+
+    else:
+        raise PreventUpdate
 
 
 @app.callback(Output("chromatography-removed", "data"),
@@ -2217,7 +2427,10 @@ def get_msdial_directory(on_page_load):
     Returns (previously inputted by user) location of MS-DIAL directory
     """
 
-    return db.get_msdial_configuration_parameters("Default")[-1]
+    if db.is_valid():
+        return db.get_msdial_configuration_parameters("Default")[-1]
+    else:
+        raise PreventUpdate
 
 
 @app.callback(Output("msdial-config-added", "data"),
@@ -2268,16 +2481,21 @@ def get_msdial_configs_for_dropdown(on_page_load, on_config_added, on_config_rem
     Retrieves list of user-created configurations of MS-DIAL parameters from database
     """
 
-    # Get MS-DIAL configurations from database
-    msdial_configurations = db.get_msdial_configurations()
+    if db.is_valid():
 
-    # Create and return options for dropdown
-    config_options = []
+        # Get MS-DIAL configurations from database
+        msdial_configurations = db.get_msdial_configurations()
 
-    for config in msdial_configurations:
-        config_options.append({"label": config, "value": config})
+        # Create and return options for dropdown
+        config_options = []
 
-    return config_options, "Default"
+        for config in msdial_configurations:
+            config_options.append({"label": config, "value": config})
+
+        return config_options, "Default"
+
+    else:
+        raise PreventUpdate
 
 
 @app.callback(Output("msdial-config-addition-alert", "is_open"),
@@ -2486,16 +2704,21 @@ def get_qc_configs_for_dropdown(on_page_load, qc_config_added, qc_config_removed
     Retrieves list of user-created configurations of QC parameters from database
     """
 
-    # Get QC configurations from database
-    qc_configurations = db.get_qc_configurations_list()
+    if db.is_valid():
 
-    # Create and return options for dropdown
-    config_options = []
+        # Get QC configurations from database
+        qc_configurations = db.get_qc_configurations_list()
 
-    for config in qc_configurations:
-        config_options.append({"label": config, "value": config})
+        # Create and return options for dropdown
+        config_options = []
 
-    return config_options, "Default"
+        for config in qc_configurations:
+            config_options.append({"label": config, "value": config})
+
+        return config_options, "Default"
+
+    else:
+        raise PreventUpdate
 
 
 @app.callback(Output("qc-config-addition-alert", "is_open"),
@@ -2625,30 +2848,34 @@ def get_biological_standards(on_page_load, on_standard_added, on_standard_remove
     Populates dropdown and table of biological standards
     """
 
-    # Populate dropdown
-    dropdown_options = []
+    if db.is_valid():
 
-    for biological_standard in db.get_biological_standards_list():
-        dropdown_options.append({"label": biological_standard, "value": biological_standard})
+        # Populate dropdown
+        dropdown_options = []
+        for biological_standard in db.get_biological_standards_list():
+            dropdown_options.append({"label": biological_standard, "value": biological_standard})
 
-    # Populate table
-    df_biological_standards = db.get_biological_standards()
+        # Populate table
+        df_biological_standards = db.get_biological_standards()
 
-    # DataFrame refactoring
-    df_biological_standards = df_biological_standards.rename(
-        columns={"name": "Name",
-            "identifier": "Identifier",
-            "chromatography": "Method ID",
-            "num_pos_features": "Pos (+) Metabolites",
-            "num_neg_features": "Neg (–) Metabolites",
-            "msdial_config_id": "MS-DIAL Config"})
+        # DataFrame refactoring
+        df_biological_standards = df_biological_standards.rename(
+            columns={"name": "Name",
+                "identifier": "Identifier",
+                "chromatography": "Method ID",
+                "num_pos_features": "Pos (+) Metabolites",
+                "num_neg_features": "Neg (–) Metabolites",
+                "msdial_config_id": "MS-DIAL Config"})
 
-    df_biological_standards = df_biological_standards[
-        ["Name", "Identifier", "Method ID", "Pos (+) Metabolites", "Neg (–) Metabolites", "MS-DIAL Config"]]
+        df_biological_standards = df_biological_standards[
+            ["Name", "Identifier", "Method ID", "Pos (+) Metabolites", "Neg (–) Metabolites", "MS-DIAL Config"]]
 
-    biological_standards_table = dbc.Table.from_dataframe(df_biological_standards, striped=True, hover=True)
+        biological_standards_table = dbc.Table.from_dataframe(df_biological_standards, striped=True, hover=True)
 
-    return dropdown_options, biological_standards_table
+        return dropdown_options, biological_standards_table
+
+    else:
+        raise PreventUpdate
 
 
 @app.callback(Output("bio-standard-added", "data"),
@@ -2820,12 +3047,17 @@ def populate_msdial_configs_for_biological_standard(msdial_config_added, msdial_
     In Settings > Biological Standards, populates the MS-DIAL configurations dropdown
     """
 
-    options = []
+    if db.is_valid():
 
-    for config in db.get_msdial_configurations():
-        options.append({"label": config, "value": config})
+        options = []
 
-    return options, options
+        for config in db.get_msdial_configurations():
+            options.append({"label": config, "value": config})
+
+        return options, options
+
+    else:
+        raise PreventUpdate
 
 
 @app.callback(Output("bio-standard-msdial-config-added", "data"),

@@ -3,7 +3,8 @@ import pandas as pd
 import sqlalchemy as sa
 from sqlalchemy import INTEGER, REAL, TEXT
 
-sqlite_db_location = "sqlite:///data/QC Database.db"
+# Location of SQLite database
+sqlite_db_location = "sqlite:///QC Database.db"
 
 def is_valid():
 
@@ -81,7 +82,8 @@ def create_database():
         sa.Column("id", INTEGER, primary_key=True),
         sa.Column("name", TEXT),
         sa.Column("vendor", TEXT),
-        sa.Column("gdrive_folder", TEXT)
+        sa.Column("gdrive_folder_id", TEXT),
+        sa.Column("gdrive_file_id", TEXT)
     )
 
     internal_standards = sa.Table(
@@ -209,7 +211,7 @@ def get_table(table_name):
     return pd.read_sql("SELECT * FROM " + table_name, engine)
 
 
-def insert_new_instrument(name, vendor, gdrive_folder=None):
+def insert_new_instrument(name, vendor, gdrive_file_id=None, gdrive_folder_id=None):
 
     """
     Inserts a new instrument into the "instruments" table
@@ -225,7 +227,8 @@ def insert_new_instrument(name, vendor, gdrive_folder=None):
     insert_instrument = instruments_table.insert().values(
         {"name": name,
          "vendor": vendor,
-         "gdrive_folder": gdrive_folder}
+         "gdrive_folder_id": gdrive_folder_id,
+         "gdrive_file_id": gdrive_file_id}
     )
 
     # Execute the insert, then close the connection
@@ -923,7 +926,7 @@ def generate_msdial_parameters_file(chromatography, polarity, msp_file_path, bio
         "Ion mode: " + polarity,
         "DIA file:", "\n"
 
-        "#Data collection parameters",
+                     "#Data collection parameters",
         "Retention time begin: " + str(parameters[0]),
         "Retention time end: " + str(parameters[1]),
         "Mass range begin: " + str(parameters[2]),
@@ -980,14 +983,14 @@ def generate_msdial_parameters_file(chromatography, polarity, msp_file_path, bio
             update_parameter_file = (
                 sa.update(biological_standards_table)
                     .where((biological_standards_table.c.chromatography == chromatography)
-                            & (biological_standards_table.c.name == bio_standard))
+                           & (biological_standards_table.c.name == bio_standard))
                     .values(pos_parameter_file=parameters_file)
             )
         elif polarity == "Negative":
             update_parameter_file = (
                 sa.update(biological_standards_table)
                     .where((biological_standards_table.c.chromatography == chromatography)
-                            & (biological_standards_table.c.name == bio_standard))
+                           & (biological_standards_table.c.name == bio_standard))
                     .values(neg_parameter_file=parameters_file)
             )
     # For processing samples with internal standards
@@ -1150,7 +1153,6 @@ def update_msdial_configuration(config_name, rt_begin, rt_end, mz_begin, mz_end,
 
 
 def get_msp_file_paths(chromatography, polarity, bio_standard=None):
-
     """
     Returns file paths of MSPs for a selected chromatography / polarity (both stored
     in the methods folder upon user upload) for MS-DIAL parameter file generation
@@ -1551,7 +1553,6 @@ def parse_internal_standard_data(run_id, result_type, polarity):
 
     # For each JSON-ified result,
     for index, result in enumerate(results):
-
         # Convert to DataFrame
         df = pd.read_json(result, orient="split")
 
@@ -1594,7 +1595,6 @@ def parse_biological_standard_data(result_type, polarity, biological_standard):
 
     # For each JSON-ified result,
     for index, result in enumerate(results):
-
         # Convert to DataFrame
         df = pd.read_json(result, orient="split")
 
