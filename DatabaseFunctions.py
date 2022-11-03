@@ -1,6 +1,8 @@
 import os, io, shutil
 import pandas as pd
 import sqlalchemy as sa
+from pydrive2.auth import GoogleAuth
+from pydrive2.drive import GoogleDrive
 from sqlalchemy import INTEGER, REAL, TEXT
 
 # Location of SQLite database
@@ -16,6 +18,27 @@ def is_valid():
         return True
     else:
         return False
+
+
+def sync_is_enabled():
+
+    """
+    Confirms whether Google Drive sync is enabled
+    """
+
+    if not is_valid():
+        return False
+
+    # Get Google Drive ID's for the MS-AutoQC folder and database file
+    df_instruments = get_table("instruments")
+    gdrive_folder_id = df_instruments["gdrive_folder_id"].astype(str).tolist()
+
+    # Update existing database in Google Drive
+    if len(gdrive_folder_id) > 0:
+        if gdrive_folder_id[0] != "None":
+            return True
+
+    return False
 
 
 def create_database():
@@ -211,7 +234,73 @@ def get_table(table_name):
     return pd.read_sql("SELECT * FROM " + table_name, engine)
 
 
-def insert_new_instrument(name, vendor, gdrive_file_id=None, gdrive_folder_id=None):
+def sync_to_google_drive(drive, sync_settings=False):
+
+    """
+    Uploads database file and methods directory to Google Drive
+    """
+
+    # Get Google Drive ID's for the MS-AutoQC folder and database file
+    df_instruments = get_table("instruments")
+    gdrive_folder_id = df_instruments["gdrive_folder_id"].astype(str).tolist()
+    gdrive_file_id = df_instruments["gdrive_file_id"].astype(str).tolist()
+
+    # Update existing database in Google Drive
+    if len(gdrive_file_id) > 0:
+        if gdrive_file_id[0] != "None":
+            file = drive.CreateFile({"id": gdrive_file_id[0]})
+            file.SetContentFile("QC Database.db")
+            file.Upload()
+
+    if sync_settings == True:
+        # Get dictionary of files in local methods directory
+        methods_dir = os.getcwd() + "/methods"
+        file_list = [f for f in os.listdir(methods_dir)
+                     if os.path.isfile(os.path.join(methods_dir, f))]
+        full_path_file_list = [os.path.join(methods_dir, f) for f in file_list]
+
+        # Dictionary with pairs of file name and corresponding file path
+        local_file_dict = {file_list[i]: full_path_file_list[i] for i in range(len(file_list))}
+
+        # Iterate through and update existing methods folder in Google Drive
+        if len(gdrive_folder_id) > 0:
+            if gdrive_folder_id[0] != "None":
+
+                # Find MS-AutoQC > methods directory
+                drive_file_list = drive.ListFile({"q": "'" + gdrive_folder_id[0] + "' in parents and trashed=false"}).GetList()
+                for file in drive_file_list:
+                    if file["title"] == "methods":
+                        methods_dir_id = file["id"]
+
+                # Get files in MS-AutoQC > methods directory
+                drive_file_list = drive.ListFile({"q": "'" + methods_dir_id + "' in parents and trashed=false"}).GetList()
+
+                # Dictionary with pairs of file name and corresponding file ID
+                drive_file_dict = {file["title"]: file["id"] for file in drive_file_list}
+
+                # For each file in the local methods directory,
+                for filename in file_list:
+
+                    # Update the existing file in Google Drive
+                    if filename in drive_file_dict.keys():
+                        file_to_upload = drive.CreateFile({"id": drive_file_dict[filename]})
+
+                    # Or upload it as a new file to Google Drive
+                    else:
+                        metadata = {
+                            "title": filename,
+                            "parents": [{"id": methods_dir_id}],
+                        }
+                        file_to_upload = drive.CreateFile(metadata=metadata)
+
+                    # Execute upload
+                    file_to_upload.SetContentFile(local_file_dict[filename])
+                    file_to_upload.Upload()
+
+    return None
+
+
+def insert_new_instrument(name, vendor, gdrive_folder_id=None, gdrive_file_id=None):
 
     """
     Inserts a new instrument into the "instruments" table
@@ -494,7 +583,8 @@ def insert_chromatography_method(method_id):
          "pos_istd_msp_file": "",
          "neg_istd_msp_file": "",
          "pos_parameter_file": "",
-         "neg_parameter_file": ""})
+         "neg_parameter_file": "",
+         "msdial_config_id": "Default"})
 
     connection.execute(insert_method)
 
@@ -509,7 +599,8 @@ def insert_chromatography_method(method_id):
             "identifier": identifiers[index],
             "chromatography": method_id,
             "num_pos_features": 0,
-            "num_neg_features": 0})
+            "num_neg_features": 0,
+            "msdial_config_id": "Default"})
         connection.execute(insert_method_for_bio_standard)
 
     # Execute INSERT to database, then close the connection

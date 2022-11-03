@@ -1,0 +1,10 @@
+client_config_backend: settings
+client_config:
+  client_id: 208748260819-78bkeunlrfgtvas3n8njhhifr75pfst8.apps.googleusercontent.com
+  client_secret: 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
+
+save_credentials: True
+save_credentials_backend: file
+save_credentials_file: assets/credentials.txt
+
+get_refresh_token: True

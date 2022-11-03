@@ -17,8 +17,9 @@ local_stylesheet = {
 }
 
 # Google Drive authentication
-gauth_holder = [GoogleAuth()]
 current_directory = os.getcwd()
+drive_settings_file = current_directory + "/assets/settings.yaml"
+gauth_holder = [GoogleAuth(settings_file=drive_settings_file)]
 GoogleAuth.DEFAULT_SETTINGS["client_config_file"] = current_directory + "/assets/client_secrets.json"
 credentials_file = current_directory + "/assets/credentials.txt"
 
@@ -330,6 +331,15 @@ def serve_layout():
                                   keyboard=False, backdrop="static", children=[
                             dbc.ModalHeader(dbc.ModalTitle(id="loading-modal-title"), close_button=False),
                             dbc.ModalBody(id="loading-modal-body")
+                        ]),
+
+                        dbc.Modal(id="google-drive-sync-modal", size="md", centered=True, is_open=False, scrollable=True,
+                            keyboard=True, backdrop="static", children=[
+                                dbc.ModalHeader(dbc.ModalTitle(
+                                    html.Div(children=[
+                                        dbc.Spinner(color="primary"), " Syncing to Google Drive"])),
+                                    close_button=False),
+                                dbc.ModalBody("This may take a few seconds...")
                         ]),
 
                         # Modal for first-time workspace setup
@@ -1187,7 +1197,9 @@ def serve_layout():
 
             # Dummy input object for callbacks on page load
             dcc.Store(id="on-page-load"),
-            dcc.Store(id="dummy-store"),
+            dcc.Store(id="google-drive-authenticated"),
+            dcc.Store(id="google-drive-sync-finished"),
+            dcc.Store(id="close-sync-modal"),
 
             # Storage of all DataFrames necessary for QC plot generation
             dcc.Store(id="istd-rt-pos"),
@@ -1256,7 +1268,7 @@ app.layout = serve_layout
 Dash callbacks
 """
 
-@app.callback(Output("dummy-store", "data"),
+@app.callback(Output("google-drive-authenticated", "data"),
               Input("on-page-load", "data"))
 def authenticate_with_google_drive(on_page_load):
 
@@ -1264,21 +1276,38 @@ def authenticate_with_google_drive(on_page_load):
     Authenticates with Google Drive if the credentials file is found
     """
 
-    gauth_holder[0] = GoogleAuth()
-    gauth = gauth_holder[0]
+    if db.sync_is_enabled():
 
-    # Try to load saved client credentials
-    gauth.LoadCredentialsFile(credentials_file)
+        # Create Google Drive instance
+        gauth_holder[0] = GoogleAuth(settings_file=drive_settings_file)
+        gauth = gauth_holder[0]
 
-    if gauth.credentials is not None:
-        if gauth.access_token_expired:
-            # Refresh credentials if expired
-            gauth.Refresh()
-        else:
-            # Initialize saved credentials
+        # If no credentials file, make user authenticate
+        if not os.path.exists(credentials_file) and db.is_valid():
+            gauth.LocalWebserverAuth()
+
+        # Try to load saved client credentials
+        gauth.LoadCredentialsFile(credentials_file)
+
+        # Initialize saved credentials
+        if gauth.credentials is not None:
             gauth.Authorize()
 
-    return None
+        # Refresh credentials if expired
+        elif gauth.access_token_expired:
+            gauth.Refresh()
+
+        # Make user authenticate again
+        elif gauth.credentials is None:
+            gauth.LocalWebserverAuth()
+
+        if db.is_valid():
+            gauth.SaveCredentialsFile(credentials_file)
+
+        return os.path.exists(credentials_file)
+
+    else:
+        raise PreventUpdate
 
 
 @app.callback(Output("google-drive-authenticated-1", "data"),
@@ -1299,7 +1328,7 @@ def launch_google_drive_authentication(setup_auth_button_clicks, sign_in_auth_bu
     # If user clicks a sign-in button, launch Google authentication page
     if button_id is not None:
         # Authenticate, then save the credentials to a file
-        gauth_holder[0] = GoogleAuth()
+        gauth_holder[0] = GoogleAuth(settings_file=drive_settings_file)
         gauth = gauth_holder[0]
         gauth.LocalWebserverAuth()
 
@@ -1445,21 +1474,19 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
     """
 
     if button_click:
-
         drive = GoogleDrive(gauth_holder[0])
 
         # Initialize a new database if one does not exist
         if not db.is_valid():
             db.create_database()
 
-        # Add instrument to database
-        db.insert_new_instrument(instrument_id, instrument_vendor, gdrive_folder_id, gdrive_file_id)
-
         # Handle Google Drive sync
         if google_drive_authenticated:
 
-            # Create an MS-AutoQC folder if not found
+            # Create necessary folders if not found
             if gdrive_folder_id is None:
+
+                # Create MS-AutoQC folder
                 folder_metadata = {
                     "title": "MS-AutoQC",
                     "mimeType": "application/vnd.google-apps.folder"
@@ -1472,6 +1499,15 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
                     if file["title"] == "MS-AutoQC":
                         gdrive_folder_id = file["id"]
                         break
+
+                # Create methods folder inside of MS-AutoQC folder
+                folder_metadata = {
+                    "title": "methods",
+                    "parents": [{"id": gdrive_folder_id}],
+                    "mimeType": "application/vnd.google-apps.folder"
+                }
+                folder = drive.CreateFile(folder_metadata)
+                folder.Upload()
 
             # Update database in Google Drive folder
             if gdrive_file_id is not None:
@@ -1486,8 +1522,23 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
             file.SetContentFile("QC Database.db")
             file.Upload()
 
+            if gdrive_file_id is None:
+                # Get Google Drive ID of database file
+                for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
+                    if file["title"] == "QC Database.db":
+                        gdrive_file_id = file["id"]
+                        break
+
+            # Add instrument to database
+            db.insert_new_instrument(instrument_id, instrument_vendor, gdrive_folder_id, gdrive_file_id)
+
             # Save user credentials
             gauth_holder[0].SaveCredentialsFile(credentials_file)
+
+        # Create local methods directory
+        methods_directory = os.path.join(current_directory, "methods")
+        if not os.path.exists(methods_directory):
+            os.makedirs(methods_directory)
 
         # Dismiss setup window by returning True for workspace_has_been_setup boolean
         return db.is_valid()
@@ -1511,12 +1562,14 @@ def check_workspace_login_google_drive_authentication(google_drive_is_authentica
     """
 
     if google_drive_is_authenticated:
-
         drive = GoogleDrive(gauth_holder[0])
 
         # Initial values
         gdrive_folder_id = None
         gdrive_database_file_id = None
+        methods_folder_id = None
+
+        # Failed popover message
         button_text = "Sign in to Google Drive"
         button_color = "danger"
         popover_message = [dbc.PopoverHeader("No workspace found"),
@@ -1532,14 +1585,40 @@ def check_workspace_login_google_drive_authentication(google_drive_is_authentica
         # If Google Drive folder is found, look for database next
         if gdrive_folder_id is not None:
             for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
+
+                # If database is found,
                 if file["title"] == "QC Database.db":
+                    # Download database
                     file.GetContentFile(file["title"])
                     gdrive_database_file_id = file["id"]
+
+                    # Popover alert
                     button_text = "Signed in to Google Drive"
                     button_color = "success"
                     popover_message = [dbc.PopoverHeader("Workspace found!"),
                         dbc.PopoverBody("Click the button below to sign in.")]
-                    break
+
+                # If methods directory is found, save ID
+                elif file["title"] == "methods":
+                    methods_folder_id = file["id"]
+
+        # Use ID to download contents of methods directory
+        if methods_folder_id is not None:
+
+            # Create methods directory if it does not exist
+            methods_directory = os.path.join(current_directory, "methods")
+            if not os.path.exists(methods_directory):
+                os.makedirs(methods_directory)
+
+            # Change to methods directory
+            os.chdir(methods_directory)
+
+            # Download files
+            for file in drive.ListFile({"q": "'" + methods_folder_id + "' in parents and trashed=false"}).GetList():
+                file.GetContentFile(file["title"])
+
+            # Change back to root directory
+            os.chdir(current_directory)
 
         return button_text, button_color, False, popover_message, True, gdrive_folder_id, gdrive_database_file_id
 
@@ -2240,6 +2319,62 @@ def toggle_settings_modal(button_click):
     """
 
     return True
+
+
+@app.callback(Output("google-drive-sync-modal", "is_open"),
+              Input("settings-modal", "is_open"),
+              State("google-drive-authenticated", "data"),
+              State("google-drive-sync-modal", "is_open"),
+              Input("close-sync-modal", "data"), prevent_initial_call=True)
+def show_sync_modal(settings_is_open, google_drive_authenticated, sync_modal_is_open, sync_finished):
+    
+    """
+    Launches progress modal, which syncs database and methods directory to Google Drive
+    """
+
+    # If sync modal is open
+    if sync_modal_is_open:
+        # If sync is finished
+        if sync_finished:
+            # Close the modal
+            return False
+
+    # Check if settings modal has been closed
+    if not settings_is_open:
+        # Check if user is logged into Google Drive
+        if google_drive_authenticated:
+            # Open Google Drive sync modal
+            return True
+
+    return False
+
+
+@app.callback(Output("google-drive-sync-finished", "data"),
+              Input("settings-modal", "is_open"),
+              State("google-drive-authenticated", "data"), prevent_initial_call=True)
+def sync_settings_to_google_drive(settings_modal_is_open, google_drive_authenticated):
+
+    """
+    Syncs settings and methods files to Google Drive
+    """
+
+    if not settings_modal_is_open:
+        if google_drive_authenticated:
+            db.sync_to_google_drive(drive=GoogleDrive(gauth_holder[0]), sync_settings=True)
+            return True
+        else:
+            return False
+    else:
+        return False
+
+
+@app.callback(Output("close-sync-modal", "data"),
+              Input("google-drive-sync-finished", "data"), prevent_initial_call=True)
+def close_sync_modal(sync_finished):
+
+    # You've reached Dash callback purgatory :/
+    if sync_finished:
+        return True
 
 
 @app.callback(Output("chromatography-methods-table", "children"),
