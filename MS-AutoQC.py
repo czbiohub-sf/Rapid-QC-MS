@@ -20,7 +20,7 @@ local_stylesheet = {
 current_directory = os.getcwd()
 drive_settings_file = current_directory + "/assets/settings.yaml"
 gauth_holder = [GoogleAuth(settings_file=drive_settings_file)]
-GoogleAuth.DEFAULT_SETTINGS["client_config_file"] = current_directory + "/assets/client_secrets.json"
+# GoogleAuth.DEFAULT_SETTINGS["client_config_file"] = current_directory + "/assets/client_secrets.json"
 credentials_file = current_directory + "/assets/credentials.txt"
 
 """
@@ -145,6 +145,7 @@ def serve_layout():
                                             inputClassName="btn-check",
                                             labelClassName="btn btn-outline-primary",
                                             inputCheckedClassName="active",
+                                            value="all",
                                             options=[
                                                 {"label": "All", "value": "all"},
                                                 {"label": "Samples", "value": "samples"},
@@ -447,7 +448,7 @@ def serve_layout():
                                 html.Div([
                                     dbc.Label("Instrument run ID"),
                                     dbc.Input(id="instrument-run-id", placeholder="NEW_RUN_001", type="text"),
-                                    dbc.FormText("Please enter a unique ID for this run."),
+                                    dbc.FormFeedback("Please enter a unique ID for this run.", type="invalid"),
                                 ]),
 
                                 html.Br(),
@@ -457,6 +458,10 @@ def serve_layout():
                                     dbc.Label("Select chromatography"),
                                     dbc.Select(id="start-run-chromatography-dropdown",
                                                placeholder="No chromatography selected"),
+                                    dbc.FormFeedback(
+                                        "Please ensure that your chromatography method has identification files "
+                                        "(MSP or CSV) configured for positive and negative mode in Settings > "
+                                        "Internal Standards.", type="invalid")
                                 ]),
 
                                 html.Br(),
@@ -465,6 +470,10 @@ def serve_layout():
                                 html.Div(children=[
                                     dbc.Label("Select biological standards (optional)"),
                                     dbc.Checklist(id="start-run-bio-standards-checklist"),
+                                    dbc.FormFeedback(
+                                        "Please ensure that your biological standard has MSP files configured "
+                                        "for both positive and negative mode in Settings > Biological Standards.",
+                                        type="invalid")
                                 ]),
 
                                 html.Br(),
@@ -482,22 +491,15 @@ def serve_layout():
                                 html.Div([
                                     dbc.Label("Acquisition sequence (.csv)"),
                                     dbc.InputGroup([
-                                        # dbc.DropdownMenu([
-                                        #     dbc.DropdownMenuItem("Thermo Xcalibur"),
-                                        #     dbc.DropdownMenuItem("Agilent MassHunter")],
-                                        #     id="vendor-software", label="Vendor", color="secondary"),
                                         dbc.Input(id="sequence-path",
                                                   placeholder="No file selected"),
                                         dbc.Button(dcc.Upload(
                                             id="sequence-upload-button",
                                             children=[html.A("Browse Files")]),
                                             color="secondary"),
+                                        dbc.FormFeedback("Please ensure that the sequence file is a CSV file "
+                                            "and in the correct vendor format.", type="invalid"),
                                     ]),
-                                    dbc.FormText(
-                                        "Please ensure you have selected the correct vendor software for this sequence."),
-                                    dbc.FormFeedback("Looks good!", type="valid"),
-                                    dbc.FormFeedback(
-                                        "Please ensure you have selected the correct vendor software for this sequence.", type="invalid"),
                                 ]),
 
                                 html.Br(),
@@ -512,11 +514,10 @@ def serve_layout():
                                             id="metadata-upload-button",
                                             children=[html.A("Browse Files")]),
                                             color="secondary"),
+                                        dbc.FormFeedback("Please ensure that the metadata file is a CSV and contains "
+                                            "the following columns: Sample Name, Species, Matrix, Treatment, "
+                                            "and Growth-Harvest Conditions", type="invalid"),
                                     ]),
-                                    dbc.FormText("Please ensure you have the following columns: " +
-                                                 "Sample Name, Species, Matrix, Treatment, and Conditions"),
-                                    dbc.FormFeedback("Looks good!", type="valid"),
-                                    dbc.FormFeedback("Please make sure your metadata file has the required columns.", type="invalid"),
                                 ]),
 
                                 html.Br(),
@@ -527,8 +528,11 @@ def serve_layout():
                                     dbc.InputGroup([
                                         dbc.Input(placeholder="C:/Users/Data/NEW_RUN_001",
                                                   id="data-acquisition-folder-path"),
+                                        dbc.FormFeedback(
+                                            "This path does not exist. Please enter a valid path.", type="invalid"),
                                     ]),
                                     dbc.FormText("Please type the folder path to which incoming data files will be saved."),
+
                                 ]),
 
                                 html.Br(),
@@ -547,7 +551,7 @@ def serve_layout():
                                 html.Br(),
 
                                 html.Div([
-                                    dbc.Button("Start monitoring this run", id="monitor-new-run-button",
+                                    dbc.Button("Start monitoring instrument run", id="monitor-new-run-button", disabled=True,
                                     style={"line-height": "1.75"}, color="primary")],
                                 className="d-grid gap-2")
                             ]),
@@ -2323,21 +2327,25 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
 
 @app.callback(Output("setup-new-run-modal", "is_open"),
               Output("setup-new-run-button", "n_clicks"),
+              Output("setup-new-run-modal-title", "children"),
               Input("setup-new-run-button", "n_clicks"),
               Input("start-run-monitor-modal", "is_open"),
-              Input("start-bulk-qc-modal", "is_open"), prevent_initial_call=True)
-def toggle_new_run_modal(button_clicks, success, success_2):
+              Input("start-bulk-qc-modal", "is_open"),
+              State("tabs", "value"), prevent_initial_call=True)
+def toggle_new_run_modal(button_clicks, success, success_2, instrument_name):
 
     """
     Toggles modal for setting up AutoQC monitoring for a new instrument run
     """
 
+    modal_title = "New AutoQC Job – " + instrument_name
+
     if success or success_2:
-        return False, 0
+        return False, 0, modal_title
     elif (not success or not success_2) and button_clicks != 0:
-        return True, 1
+        return True, 1, modal_title
     else:
-        return False, 0
+        return False, 0, modal_title
 
 
 @app.callback(Output("settings-modal", "is_open"),
@@ -3367,50 +3375,137 @@ def capture_uploaded_metadata(contents, filename):
     return filename, metadata
 
 
+@app.callback(Output("monitor-new-run-button", "children"),
+              Input("autoqc-job-type", "value"), prevent_initial_call=True)
+def update_new_job_button_text(job_type):
+
+    """
+    Updates New AutoQC Job form submit button based on job type
+    """
+
+    if job_type == "active":
+        return "Start monitoring instrument run"
+    elif job_type == "completed":
+        return "Start QC processing data files"
+
+
 @app.callback(Output("instrument-run-id", "valid"),
+              Output("instrument-run-id", "invalid"),
               Output("start-run-chromatography-dropdown", "valid"),
+              Output("start-run-chromatography-dropdown", "invalid"),
               Output("start-run-qc-configs-dropdown", "valid"),
+              Output("start-run-qc-configs-dropdown", "invalid"),
               Output("sequence-path", "valid"),
+              Output("sequence-path", "invalid"),
               Output("metadata-path", "valid"),
+              Output("metadata-path", "invalid"),
               Output("data-acquisition-folder-path", "valid"),
+              Output("data-acquisition-folder-path", "invalid"),
               Input("instrument-run-id", "value"),
               Input("start-run-chromatography-dropdown", "value"),
               Input("start-run-qc-configs-dropdown", "value"),
-              Input("sequence-path", "value"),
-              Input("metadata-path", "value"),
+              Input("sequence-upload-button", "contents"),
+              State("sequence-upload-button", "filename"),
+              Input("metadata-upload-button", "contents"),
+              State("metadata-upload-button", "filename"),
               Input("data-acquisition-folder-path", "value"),
               State("instrument-run-id", "valid"),
+              State("instrument-run-id", "invalid"),
               State("start-run-chromatography-dropdown", "valid"),
+              State("start-run-chromatography-dropdown", "invalid"),
               State("start-run-qc-configs-dropdown", "valid"),
+              State("start-run-qc-configs-dropdown", "invalid"),
               State("sequence-path", "valid"),
+              State("sequence-path", "invalid"),
               State("metadata-path", "valid"),
-              State("data-acquisition-folder-path", "valid"), prevent_initial_call=True)
-def validation_feedback_for_new_run_setup_form(run_id, chromatography, qc_config, sequence, metadata, data_acquisition_path,
-    run_id_valid, chromatography_valid, qc_config_valid, sequence_valid, metadata_valid, data_acquisition_path_valid):
+              State("metadata-path", "invalid"),
+              State("data-acquisition-folder-path", "valid"),
+              State("data-acquisition-folder-path", "invalid"),
+              State("tabs", "value"), prevent_initial_call=True)
+def validation_feedback_for_new_run_setup_form(run_id, chromatography, qc_config, sequence_contents, sequence_filename,
+    metadata_contents, metadata_filename, data_acquisition_path, run_id_valid, run_id_invalid, chromatography_valid,
+    chromatography_invalid, qc_config_valid, qc_config_invalid, sequence_valid, sequence_invalid, metadata_valid,
+    metadata_invalid, path_valid, path_invalid, instrument):
 
     """
-    Form validation feedback for the Setup New AutoQC Job page
+    Extensive form validation and feedback for setting up a new MS-AutoQC job
     """
 
+    # Instrument run ID validation
     if run_id is not None:
-        run_id_valid = True
 
+        # Get run ID's for instrument
+        run_ids = db.get_instrument_runs(instrument)["run_id"].astype(str).tolist()
+
+        # Check if run ID is unique
+        if run_id not in run_ids:
+            run_id_valid, run_id_invalid = True, False
+        else:
+            run_id_valid, run_id_invalid = False, True
+
+    # Chromatography validation
     if chromatography is not None:
-        chromatography_valid = True
+        if qc.chromatography_is_valid(chromatography):
+            chromatography_valid, chromatography_invalid = True, False
+        else:
+            chromatography_valid, chromatography_invalid = False, True
 
+    # QC configuration validation
     if qc_config is not None:
         qc_config_valid = True
 
-    if sequence is not None:
-        sequence_valid = True
+    # Instrument sequence file validation
+    if sequence_contents is not None:
 
-    if metadata is not None:
-        metadata_valid = True
+        content_type, content_string = sequence_contents.split(",")
+        decoded = base64.b64decode(content_string)
+        sequence_contents = io.StringIO(decoded.decode("utf-8"))
 
+        if qc.sequence_is_valid(sequence_filename, sequence_contents):
+            sequence_valid, sequence_invalid = True, False
+        else:
+            sequence_valid, sequence_invalid = False, True
+
+    # Metadata file validation
+    if metadata_contents is not None:
+
+        content_type, content_string = metadata_contents.split(",")
+        decoded = base64.b64decode(content_string)
+        metadata_contents = io.StringIO(decoded.decode("utf-8"))
+
+        if qc.metadata_is_valid(metadata_filename, metadata_contents):
+            metadata_valid, metadata_invalid = True, False
+        else:
+            metadata_valid, metadata_invalid = False, True
+
+    # Validate that data acquisition path exists
     if data_acquisition_path is not None:
-        data_acquisition_path_valid = True
+        if os.path.exists(data_acquisition_path):
+            path_valid, path_invalid = True, False
+        else:
+            path_valid, path_invalid = False, True
 
-    return run_id_valid, chromatography_valid, qc_config_valid, sequence_valid, metadata_valid, data_acquisition_path_valid
+    return run_id_valid, run_id_invalid, chromatography_valid, chromatography_invalid, qc_config_valid, qc_config_invalid, \
+           sequence_valid, sequence_invalid, metadata_valid, metadata_invalid, path_valid, path_invalid
+
+
+@app.callback(Output("monitor-new-run-button", "disabled"),
+              Input("instrument-run-id", "valid"),
+              Input("start-run-chromatography-dropdown", "valid"),
+              Input("start-run-qc-configs-dropdown", "valid"),
+              Input("sequence-path", "valid"),
+              Input("metadata-path", "valid"),
+              Input("data-acquisition-folder-path", "valid"), prevent_initial_call=True)
+def enable_new_autoqc_job_button(run_id_valid, chromatography_valid, qc_config_valid, sequence_valid, metadata_valid, path_valid):
+
+    """
+    Enables "submit" button for New AutoQC Job form
+    """
+
+    if run_id_valid and chromatography_valid and qc_config_valid and sequence_valid and metadata_valid and path_valid:
+        return False
+    else:
+        return True
 
 
 @app.callback(Output("start-run-monitor-modal", "is_open"),

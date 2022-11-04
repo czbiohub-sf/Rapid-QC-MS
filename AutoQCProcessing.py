@@ -2,14 +2,101 @@ import os, time, shutil
 import pandas as pd
 import DatabaseFunctions as db
 
-def convert_sequence_to_json(sequence_contents, vendor_software="Thermo Xcalibur"):
+def sequence_is_valid(filename, contents, vendor="Thermo Fisher"):
+
+    """
+    Validates that instrument sequence file contains the correct columns
+    """
+
+    if ".csv" not in filename:
+        return False
+
+    # Select columns from sequence using correct vendor software nomenclature
+    if vendor == "Thermo Fisher":
+
+        # Attempt to load sequence file as a pandas DataFrame
+        try:
+            df_sequence = pd.read_csv(contents, index_col=False)
+        except Exception as error:
+            print("Sequence file could not be read:", error)
+            return False
+
+        df_sequence.columns = df_sequence.iloc[0]
+        df_sequence = df_sequence.drop(df_sequence.index[0])
+
+        # Define required columns and columns found in sequence file
+        required_columns = ["File Name", "Path", "Instrument Method", "Position", "Inj Vol"]
+        sequence_file_columns = df_sequence.columns.tolist()
+
+        # Check that the required columns are present
+        for column in required_columns:
+            if column not in sequence_file_columns:
+                return False
+
+    return True
+
+
+def metadata_is_valid(filename, contents):
+
+    """
+    Validates that metadata file contains the required columns
+    """
+
+    if ".csv" not in filename:
+        return False
+
+    # Attempt to load metadata file as a pandas DataFrame
+    try:
+        df_metadata = pd.read_csv(contents, index_col=False)
+    except Exception as error:
+        print("Metadata file could not be read:", error)
+        return False
+
+    # Define required columns and columns found in metadata file
+    required_columns = ["Filename", "Name from collaborator", "Sample Name", "Species",
+                        "Matrix", "Growth-Harvest Conditions", "Treatment"]
+    metadata_file_columns = df_metadata.columns.tolist()
+
+    # Check that the required columns are present
+    for column in required_columns:
+        if column not in metadata_file_columns:
+            return False
+
+    return True
+
+
+def chromatography_is_valid(chromatography):
+
+    """
+    Validates that the given chromatography method's MSP / TXT files exist, and that
+    the MSP files exist for the selected biological standard(s) as well
+    """
+
+    # Get chromatography method from database
+    df_methods = db.get_chromatography_methods()
+    df_methods = df_methods.loc[df_methods["method_id"] == chromatography]
+
+    if len(df_methods) == 0:
+        return False
+
+    # Check whether the method's MSP / TXT files exist
+    pos_msp_file = df_methods["pos_istd_msp_file"].astype(str).values[0]
+    neg_msp_file = df_methods["neg_istd_msp_file"].astype(str).values[0]
+
+    if not os.path.exists(pos_msp_file) or not os.path.exists(neg_msp_file):
+        return False
+
+    return True
+
+
+def convert_sequence_to_json(sequence_contents, vendor="Thermo Fisher"):
 
     """
     Converts sequence table to JSON string for database storage
     """
 
     # Select columns from sequence using correct vendor software nomenclature
-    if vendor_software == "Thermo Xcalibur":
+    if vendor == "Thermo Fisher":
         df_sequence = pd.read_csv(sequence_contents, index_col=False)
         df_sequence.columns = df_sequence.iloc[0]
         df_sequence = df_sequence.drop(df_sequence.index[0])
