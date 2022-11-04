@@ -1204,6 +1204,7 @@ def serve_layout():
             dcc.Store(id="google-drive-authenticated"),
             dcc.Store(id="google-drive-sync-finished"),
             dcc.Store(id="close-sync-modal"),
+            dcc.Store(id="database-md5"),
 
             # Storage of all DataFrames necessary for QC plot generation
             dcc.Store(id="istd-rt-pos"),
@@ -1295,13 +1296,16 @@ def authenticate_with_google_drive(on_page_load):
 
         # Initialize saved credentials
         if gauth.credentials is not None:
-            gauth.Authorize()
 
-        # Refresh credentials if expired
-        elif gauth.access_token_expired:
-            gauth.Refresh()
+            # Refresh credentials if expired
+            if gauth.access_token_expired:
+                gauth.Refresh()
 
-        # Make user authenticate again
+            # Otherwise, authorize saved credentials
+            else:
+                gauth.Authorize()
+
+        # If no saved credentials, make user authenticate again
         elif gauth.credentials is None:
             gauth.LocalWebserverAuth()
 
@@ -1533,9 +1537,6 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
                         gdrive_file_id = file["id"]
                         break
 
-            # Add instrument to database
-            db.insert_new_instrument(instrument_id, instrument_vendor, gdrive_folder_id, gdrive_file_id)
-
             # Save user credentials
             gauth_holder[0].SaveCredentialsFile(credentials_file)
 
@@ -1543,6 +1544,9 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
         methods_directory = os.path.join(current_directory, "methods")
         if not os.path.exists(methods_directory):
             os.makedirs(methods_directory)
+
+        # Add instrument to database
+        db.insert_new_instrument(instrument_id, instrument_vendor, gdrive_folder_id, gdrive_file_id)
 
         # Dismiss setup window by returning True for workspace_has_been_setup boolean
         return db.is_valid()
@@ -1797,7 +1801,7 @@ def load_data(active_cell, table_data):
     """
 
     if active_cell:
-        study_id = table_data[active_cell["row"]][active_cell["column_id"]]
+        study_id = table_data[active_cell["row"]]["Run ID"]
         return get_qc_results(study_id)
     else:
         raise PreventUpdate
@@ -1824,6 +1828,8 @@ def loading_data_feedback(active_cell, table_data, placeholder_input, modal_is_o
             study_name = json.loads(study_resources)["run_id"]
             if table_data[active_cell["row"]][active_cell["column_id"]] != study_name:
                 study_name = table_data[active_cell["row"]]["Run ID"]
+            else:
+                return False, None, None
         else:
             study_name = table_data[active_cell["row"]]["Run ID"]
 
@@ -2360,11 +2366,13 @@ def toggle_settings_modal(button_click):
 
 
 @app.callback(Output("google-drive-sync-modal", "is_open"),
+              Output("database-md5", "data"),
               Input("settings-modal", "is_open"),
               State("google-drive-authenticated", "data"),
               State("google-drive-sync-modal", "is_open"),
-              Input("close-sync-modal", "data"), prevent_initial_call=True)
-def show_sync_modal(settings_is_open, google_drive_authenticated, sync_modal_is_open, sync_finished):
+              Input("close-sync-modal", "data"),
+              State("database-md5", "data"), prevent_initial_call=True)
+def show_sync_modal(settings_is_open, google_drive_authenticated, sync_modal_is_open, sync_finished, md5_checksum):
     
     """
     Launches progress modal, which syncs database and methods directory to Google Drive
@@ -2375,22 +2383,35 @@ def show_sync_modal(settings_is_open, google_drive_authenticated, sync_modal_is_
         # If sync is finished
         if sync_finished:
             # Close the modal
-            return False
+            return False, None
 
     # Check if settings modal has been closed
-    if not settings_is_open:
+    if settings_is_open:
+        return False, db.get_md5_for_database()
+
+    elif not settings_is_open:
+
         # Check if user is logged into Google Drive
         if google_drive_authenticated:
-            # Open Google Drive sync modal
-            return True
 
-    return False
+            # Get MD5 checksum after use closes settings
+            new_md5_checksum = db.get_md5_for_database()
+
+            # Compare new MD5 checksum to old MD5 checksum
+            if md5_checksum != new_md5_checksum:
+                return True, new_md5_checksum
+            else:
+                return False, new_md5_checksum
+
+        else:
+            return False, None
 
 
 @app.callback(Output("google-drive-sync-finished", "data"),
               Input("settings-modal", "is_open"),
-              State("google-drive-authenticated", "data"), prevent_initial_call=True)
-def sync_settings_to_google_drive(settings_modal_is_open, google_drive_authenticated):
+              State("google-drive-authenticated", "data"),
+              State("database-md5", "data"), prevent_initial_call=True)
+def sync_settings_to_google_drive(settings_modal_is_open, google_drive_authenticated, md5_checksum):
 
     """
     Syncs settings and methods files to Google Drive
@@ -2398,12 +2419,11 @@ def sync_settings_to_google_drive(settings_modal_is_open, google_drive_authentic
 
     if not settings_modal_is_open:
         if google_drive_authenticated:
-            db.sync_to_google_drive(drive=GoogleDrive(gauth_holder[0]), sync_settings=True)
-            return True
-        else:
-            return False
-    else:
-        return False
+            if db.was_modified(md5_checksum):
+                db.sync_to_google_drive(drive=GoogleDrive(gauth_holder[0]), sync_settings=True)
+                return True
+
+    return False
 
 
 @app.callback(Output("close-sync-modal", "data"),

@@ -1,4 +1,4 @@
-import os, io, shutil
+import os, io, shutil, hashlib
 import pandas as pd
 import sqlalchemy as sa
 from pydrive2.auth import GoogleAuth
@@ -11,7 +11,7 @@ sqlite_db_location = "sqlite:///QC Database.db"
 def is_valid():
 
     """
-    Confirms that all required tables are present
+    Checks that all required tables are present
     """
 
     if len(sa.create_engine(sqlite_db_location).table_names()) > 0:
@@ -23,7 +23,7 @@ def is_valid():
 def sync_is_enabled():
 
     """
-    Confirms whether Google Drive sync is enabled
+    Checks whether Google Drive sync is enabled
     """
 
     if not is_valid():
@@ -39,6 +39,33 @@ def sync_is_enabled():
             return True
 
     return False
+
+
+def get_md5_for_database():
+
+    """
+    Returns MD5 checksum for a given file
+    """
+
+    hash_md5 = hashlib.md5()
+
+    with open("QC Database.db", "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+
+    return hash_md5.hexdigest()
+
+
+def was_modified(md5_checksum):
+
+    """
+    Checks whether database file has been modified
+    """
+
+    if md5_checksum != get_md5_for_database():
+        return True
+    else:
+        return False
 
 
 def create_database():
@@ -602,6 +629,9 @@ def insert_chromatography_method(method_id):
             "num_neg_features": 0,
             "msdial_config_id": "Default"})
         connection.execute(insert_method_for_bio_standard)
+
+    # Indicate that database was modified
+    modified = True
 
     # Execute INSERT to database, then close the connection
     connection.close()
