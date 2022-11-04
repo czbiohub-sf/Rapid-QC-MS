@@ -218,7 +218,7 @@ def load_istd_intensity_plot(dataframe, samples, internal_standard, text, treatm
     return fig
 
 
-def load_istd_delta_mz_plot(dataframe, samples, internal_standard):
+def load_istd_delta_mz_plot(dataframe, samples, internal_standard, chromatography, polarity):
 
     """
     Returns scatter plot figure of delta m/z vs. sample for internal standards
@@ -227,8 +227,12 @@ def load_istd_delta_mz_plot(dataframe, samples, internal_standard):
     # Get precursor m/z results for selected samples
     df_filtered_by_samples = dataframe.loc[dataframe["Sample"].isin(samples)]
 
-    # Get delta m/z (experimental m/z minus reference m/z)
+    # Get internal standards for chromatography method and polarity
     df_istd = db.get_table("internal_standards")
+    df_istd = df_istd.loc[
+        (df_istd["chromatography"] == chromatography) & (df_istd["polarity"] == polarity)]
+
+    # Get delta m/z (experimental m/z minus reference m/z)
     reference_mz = df_istd.loc[df_istd["name"] == internal_standard]["precursor_mz"].astype(float).values[0]
     df_filtered_by_samples[internal_standard] = df_filtered_by_samples[internal_standard].astype(float) - reference_mz
 

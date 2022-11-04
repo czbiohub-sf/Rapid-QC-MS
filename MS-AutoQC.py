@@ -1585,10 +1585,8 @@ def check_workspace_login_google_drive_authentication(google_drive_is_authentica
         # If Google Drive folder is found, look for database next
         if gdrive_folder_id is not None:
             for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
-
-                # If database is found,
+                # Download database if found
                 if file["title"] == "QC Database.db":
-                    # Download database
                     file.GetContentFile(file["title"])
                     gdrive_database_file_id = file["id"]
 
@@ -1597,28 +1595,6 @@ def check_workspace_login_google_drive_authentication(google_drive_is_authentica
                     button_color = "success"
                     popover_message = [dbc.PopoverHeader("Workspace found!"),
                         dbc.PopoverBody("Click the button below to sign in.")]
-
-                # If methods directory is found, save ID
-                elif file["title"] == "methods":
-                    methods_folder_id = file["id"]
-
-        # Use ID to download contents of methods directory
-        if methods_folder_id is not None:
-
-            # Create methods directory if it does not exist
-            methods_directory = os.path.join(current_directory, "methods")
-            if not os.path.exists(methods_directory):
-                os.makedirs(methods_directory)
-
-            # Change to methods directory
-            os.chdir(methods_directory)
-
-            # Download files
-            for file in drive.ListFile({"q": "'" + methods_folder_id + "' in parents and trashed=false"}).GetList():
-                file.GetContentFile(file["title"])
-
-            # Change back to root directory
-            os.chdir(current_directory)
 
         return button_text, button_color, False, popover_message, True, gdrive_folder_id, gdrive_database_file_id
 
@@ -1643,16 +1619,62 @@ def enable_workspace_login_button(button_text):
         return True
 
 
-@app.callback(Output("workspace-has-been-setup-2", "data"),
+@app.callback(Output("first-time-sign-in-button", "children"),
               Input("first-time-sign-in-button", "n_clicks"), prevent_initial_call=True)
 def ui_feedback_for_workspace_login_button(button_click):
+
+    """
+    UI feedback for workspace sign in button in Setup > Login To Workspace
+    """
+
+    return [dbc.Spinner(size="sm"), " Signing in, please wait..."]
+
+
+@app.callback(Output("workspace-has-been-setup-2", "data"),
+              Input("first-time-sign-in-button", "children"),
+              State("gdrive-folder-id-2", "data"), prevent_initial_call=True)
+def ui_feedback_for_workspace_login_button(button_click, gdrive_folder_id):
 
     """
     Dismisses setup window and signs in to MS-AutoQC workspace
     """
 
-    gauth_holder[0].SaveCredentialsFile(credentials_file)
-    return True
+    if button_click:
+
+        drive = GoogleDrive(gauth_holder[0])
+        methods_folder_id = None
+
+        # Find methods directory in Google Drive
+        if gdrive_folder_id is not None:
+            for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
+                if file["title"] == "methods":
+                    methods_folder_id = file["id"]
+
+        # Use ID to download contents of methods directory
+        if methods_folder_id is not None:
+
+            # Create methods directory if it does not exist
+            methods_directory = os.path.join(current_directory, "methods")
+            if not os.path.exists(methods_directory):
+                os.makedirs(methods_directory)
+
+            # Change to methods directory
+            os.chdir(methods_directory)
+
+            # Download files
+            for file in drive.ListFile({"q": "'" + methods_folder_id + "' in parents and trashed=false"}).GetList():
+                file.GetContentFile(file["title"])
+
+            # Change back to root directory
+            os.chdir(current_directory)
+
+        # Save Google Drive credentials
+        gauth_holder[0].SaveCredentialsFile(credentials_file)
+
+        return True
+
+    else:
+        raise PreventUpdate
 
 
 @app.callback(Output("workspace-setup-modal", "is_open"),
@@ -1845,11 +1867,11 @@ def populate_sample_tables(samples):
               Output("intensity-plot-sample-dropdown", "options"),
               Input("polarity-options", "value"),
               State("sample-table", "data"),
-              State("samples", "data"),
+              Input("samples", "data"),
               State("bio-intensity-pos", "data"),
               State("bio-intensity-neg", "data"),
               State("pos-internal-standards", "data"),
-              State("neg-internal-standards", "data"), prevent_initial_call=True)
+              State("neg-internal-standards", "data"))
 def update_dropdowns_on_polarity_change(polarity, table_data, samples, bio_intensity_pos, bio_intensity_neg,
     pos_internal_standards, neg_internal_standards):
 
@@ -2049,7 +2071,7 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
         df_istd_intensity = df_istd_intensity_pos
     elif polarity == "Neg":
         samples = [x for x in samples if "Neg" in x]
-        internal_standard = json.loads(neg_internal_standards)
+        internal_standards = json.loads(neg_internal_standards)
         df_istd_intensity = df_istd_intensity_neg
 
     # Set initial internal standard dropdown value when none are selected
@@ -2064,7 +2086,8 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
         df_metadata = df_metadata.loc[df_metadata["Filename"].isin(selected_samples)]
         df_metadata = df_metadata.sort_values(by=["Treatment"])
         treatments = df_metadata["Treatment"].tolist()
-        selected_samples = df_metadata["Filename"].tolist()
+        if len(df_metadata) == len(selected_samples):
+            selected_samples = df_metadata["Filename"].tolist()
 
     try:
         # Generate internal standard intensity vs. sample plot
@@ -2084,13 +2107,17 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
               Input("istd-mz-neg", "data"),
               State("samples", "data"),
               State("pos-internal-standards", "data"),
-              State("neg-internal-standards", "data"), prevent_initial_call=True)
+              State("neg-internal-standards", "data"),
+              State("study-resources", "data"), prevent_initial_call=True)
 def populate_istd_mz_plot(polarity, internal_standard, selected_samples, mz_pos, mz_neg, samples,
-    pos_internal_standards, neg_internal_standards):
+    pos_internal_standards, neg_internal_standards, resources):
 
     """
     Populates internal standard delta m/z vs. sample plot
     """
+
+    # Get chromatography
+    chromatography = json.loads(resources)["chromatography"]
 
     # Get internal standard RT data
     df_istd_mz_pos = pd.DataFrame()
@@ -2114,10 +2141,12 @@ def populate_istd_mz_plot(polarity, internal_standard, selected_samples, mz_pos,
         samples = [x for x in samples if "Pos" in x]
         internal_standards = json.loads(pos_internal_standards)
         df_istd_mz = df_istd_mz_pos
+        pol = "Positive Mode"
     elif polarity == "Neg":
         samples = [x for x in samples if "Neg" in x]
         internal_standards = json.loads(neg_internal_standards)
         df_istd_mz = df_istd_mz_neg
+        pol = "Negative Mode"
 
     # Set initial dropdown values when none are selected
     if not internal_standard:
@@ -2127,7 +2156,8 @@ def populate_istd_mz_plot(polarity, internal_standard, selected_samples, mz_pos,
 
     try:
         # Generate internal standard delta m/z vs. sample plot
-        return load_istd_delta_mz_plot(dataframe=df_istd_mz, samples=selected_samples, internal_standard=internal_standard)
+        return load_istd_delta_mz_plot(dataframe=df_istd_mz, samples=selected_samples,
+                    internal_standard=internal_standard, chromatography=chromatography, polarity=pol)
 
     except Exception as error:
         print("Error in loading delta m/z vs. sample plot:", error)
