@@ -28,9 +28,9 @@ Dash app layout
 """
 
 # Initialize Dash app
-app = dash.Dash(__name__, external_stylesheets=[local_stylesheet, dbc.themes.BOOTSTRAP],
+app = dash.Dash(__name__, title="MS-AutoQC", suppress_callback_exceptions=True,
+                external_stylesheets=[local_stylesheet, dbc.themes.BOOTSTRAP],
                 meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}])
-app.title = "MS-AutoQC"
 
 def serve_layout():
 
@@ -334,6 +334,7 @@ def serve_layout():
                             dbc.ModalBody(id="loading-modal-body")
                         ]),
 
+                        # Modal for progress feedback while database syncs to Google Drive
                         dbc.Modal(id="google-drive-sync-modal", size="md", centered=True, is_open=False, scrollable=True,
                             keyboard=True, backdrop="static", children=[
                                 dbc.ModalHeader(dbc.ModalTitle(
@@ -341,6 +342,14 @@ def serve_layout():
                                         dbc.Spinner(color="primary"), " Syncing to Google Drive"])),
                                     close_button=False),
                                 dbc.ModalBody("This may take a few seconds...")
+                        ]),
+
+                        # Custom file explorer modal
+                        dbc.Modal(id="file-explorer-modal", size="md", centered=True, is_open=False, scrollable=True,
+                            keyboard=True, children=[
+                                dbc.ModalHeader(dbc.ModalTitle(id="file-explorer-modal-title")),
+                                dbc.ModalBody(id="file-explorer-modal-body"),
+                                dbc.ModalFooter(dbc.Button("Select Current Folder", id="file-explorer-modal-button"))
                         ]),
 
                         # Modal for first-time workspace setup
@@ -448,6 +457,7 @@ def serve_layout():
                                 html.Div([
                                     dbc.Label("Instrument run ID"),
                                     dbc.Input(id="instrument-run-id", placeholder="NEW_RUN_001", type="text"),
+                                    dbc.FormFeedback("Looks good!", type="valid"),
                                     dbc.FormFeedback("Please enter a unique ID for this run.", type="invalid"),
                                 ]),
 
@@ -458,6 +468,7 @@ def serve_layout():
                                     dbc.Label("Select chromatography"),
                                     dbc.Select(id="start-run-chromatography-dropdown",
                                                placeholder="No chromatography selected"),
+                                    dbc.FormFeedback("Looks good!", type="valid"),
                                     dbc.FormFeedback(
                                         "Please ensure that your chromatography method has identification files "
                                         "(MSP or CSV) configured for positive and negative mode in Settings > "
@@ -470,6 +481,7 @@ def serve_layout():
                                 html.Div(children=[
                                     dbc.Label("Select biological standards (optional)"),
                                     dbc.Checklist(id="start-run-bio-standards-checklist"),
+                                    dbc.FormFeedback("Looks good!", type="valid"),
                                     dbc.FormFeedback(
                                         "Please ensure that your biological standard has MSP files configured "
                                         "for both positive and negative mode in Settings > Biological Standards.",
@@ -497,6 +509,7 @@ def serve_layout():
                                             id="sequence-upload-button",
                                             children=[html.A("Browse Files")]),
                                             color="secondary"),
+                                        dbc.FormFeedback("Looks good!", type="valid"),
                                         dbc.FormFeedback("Please ensure that the sequence file is a CSV file "
                                             "and in the correct vendor format.", type="invalid"),
                                     ]),
@@ -514,6 +527,7 @@ def serve_layout():
                                             id="metadata-upload-button",
                                             children=[html.A("Browse Files")]),
                                             color="secondary"),
+                                        dbc.FormFeedback("Looks good!", type="valid"),
                                         dbc.FormFeedback("Please ensure that the metadata file is a CSV and contains "
                                             "the following columns: Sample Name, Species, Matrix, Treatment, "
                                             "and Growth-Harvest Conditions", type="invalid"),
@@ -524,14 +538,18 @@ def serve_layout():
 
                                 # Button and field for selecting the data acquisition directory
                                 html.Div([
-                                    dbc.Label("Data file directory"),
+                                    dbc.Label("Data file directory", id="data-acquisition-path-title"),
                                     dbc.InputGroup([
-                                        dbc.Input(placeholder="C:/Users/Data/NEW_RUN_001",
+                                        dbc.Input(placeholder="Browse folders or enter the folder path",
                                                   id="data-acquisition-folder-path"),
+                                        dbc.Button("Browse Folders", id="data-acquisition-folder-button",
+                                                  color="secondary"),
+                                        dbc.FormFeedback("Looks good!", type="valid"),
                                         dbc.FormFeedback(
                                             "This path does not exist. Please enter a valid path.", type="invalid"),
                                     ]),
-                                    dbc.FormText("Please type the folder path to which incoming data files will be saved."),
+                                    dbc.FormText(id="data-acquisition-path-form-text",
+                                        children="Please type the folder path to which incoming data files will be saved."),
 
                                 ]),
 
@@ -1205,6 +1223,7 @@ def serve_layout():
             dcc.Store(id="google-drive-sync-finished"),
             dcc.Store(id="close-sync-modal"),
             dcc.Store(id="database-md5"),
+            dcc.Store(id="selected-folder"),
 
             # Storage of all DataFrames necessary for QC plot generation
             dcc.Store(id="istd-rt-pos"),
@@ -1744,7 +1763,7 @@ def reset_instrument_table(instrument):
 @app.callback(Output("instrument-run-table", "data"),
               Output("table-container", "style"),
               Output("plot-container", "style"),
-              Input("tabs", "value"), suppress_callback_exceptions=True)
+              Input("tabs", "value"))
 def populate_instrument_runs_table(instrument):
 
     """
@@ -2329,29 +2348,6 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
         return False, title, body, None, None, None, None
     else:
         return True, title, body, None, None, None, None
-
-
-@app.callback(Output("setup-new-run-modal", "is_open"),
-              Output("setup-new-run-button", "n_clicks"),
-              Output("setup-new-run-modal-title", "children"),
-              Input("setup-new-run-button", "n_clicks"),
-              Input("start-run-monitor-modal", "is_open"),
-              Input("start-bulk-qc-modal", "is_open"),
-              State("tabs", "value"), prevent_initial_call=True)
-def toggle_new_run_modal(button_clicks, success, success_2, instrument_name):
-
-    """
-    Toggles modal for setting up AutoQC monitoring for a new instrument run
-    """
-
-    modal_title = "New AutoQC Job – " + instrument_name
-
-    if success or success_2:
-        return False, 0, modal_title
-    elif (not success or not success_2) and button_clicks != 0:
-        return True, 1, modal_title
-    else:
-        return False, 0, modal_title
 
 
 @app.callback(Output("settings-modal", "is_open"),
@@ -3325,6 +3321,42 @@ def ui_feedback_for_setting_msdial_config_for_chromatography(config_added, chrom
     return False, ""
 
 
+@app.callback(Output("setup-new-run-modal", "is_open"),
+              Output("setup-new-run-button", "n_clicks"),
+              Output("setup-new-run-modal-title", "children"),
+              Output("data-acquisition-folder-button", "n_clicks"),
+              Output("file-explorer-modal-button", "n_clicks"),
+              Input("setup-new-run-button", "n_clicks"),
+              Input("start-run-monitor-modal", "is_open"),
+              Input("start-bulk-qc-modal", "is_open"),
+              State("tabs", "value"),
+              Input("data-acquisition-folder-button", "n_clicks"),
+              Input("file-explorer-modal-button", "n_clicks"), prevent_initial_call=True)
+def toggle_new_run_modal(button_clicks, success, success_2, instrument_name, browse_folder_button, file_explorer_button):
+
+    """
+    Toggles modal for setting up AutoQC monitoring for a new instrument run
+    """
+
+    modal_title = "New AutoQC Job – " + instrument_name
+
+    open_modal = True, 1, modal_title, None, None
+    close_modal = False, 0, modal_title, None, None
+
+    if file_explorer_button is not None:
+        return True, 1, modal_title, browse_folder_button, None
+
+    elif browse_folder_button is not None:
+        return False, 0, modal_title, None, file_explorer_button
+
+    if success or success_2:
+        return close_modal
+    elif (not success or not success_2) and button_clicks != 0:
+        return open_modal
+    else:
+        return close_modal
+
+
 @app.callback(Output("start-run-chromatography-dropdown", "options"),
               Output("start-run-bio-standards-checklist", "options"),
               Output("start-run-qc-configs-dropdown", "options"),
@@ -3396,6 +3428,8 @@ def capture_uploaded_metadata(contents, filename):
 
 
 @app.callback(Output("monitor-new-run-button", "children"),
+              Output("data-acquisition-path-title", "children"),
+              Output("data-acquisition-path-form-text", "children"),
               Input("autoqc-job-type", "value"), prevent_initial_call=True)
 def update_new_job_button_text(job_type):
 
@@ -3404,9 +3438,15 @@ def update_new_job_button_text(job_type):
     """
 
     if job_type == "active":
-        return "Start monitoring instrument run"
+        button_text = "Start monitoring instrument run"
+        text_field_title = "Data acquisition path"
+        form_text = "Please enter the folder path to which incoming raw data files will be saved."
     elif job_type == "completed":
-        return "Start QC processing data files"
+        button_text = "Start QC processing data files"
+        text_field_title = "Data file path"
+        form_text = "Please enter the folder path where your data files are saved."
+
+    return button_text, text_field_title, form_text
 
 
 @app.callback(Output("instrument-run-id", "valid"),
@@ -3650,6 +3690,148 @@ def start_bulk_qc_processing(modal_open, progress_intervals, data_file_directory
 
     else:
         return 0, "", "", False
+
+
+@app.callback(Output("file-explorer-modal", "is_open"),
+              Input("data-acquisition-folder-button", "n_clicks"),
+              Input("file-explorer-modal-button", "n_clicks"),
+              State("setup-new-run-modal", "is_open"), prevent_initial_call=True)
+def open_file_explorer(new_job_browse_folder_button, select_folder_button, new_run_modal_is_open):
+
+    """
+    Opens custom file explorer modal
+    """
+
+    if select_folder_button is None and not new_run_modal_is_open:
+        return True
+    elif new_job_browse_folder_button is None:
+        return False
+    else:
+        raise PreventUpdate
+
+
+@app.callback(Output("file-explorer-modal-body", "children"),
+              Input("file-explorer-modal", "is_open"),
+              Input("selected-folder", "data"), prevent_initial_call=True)
+def list_directories_in_file_explorer(file_explorer_is_open, selected_folder):
+
+    """
+    Lists directories for a user to select in the file explorer modal
+    """
+
+    if file_explorer_is_open:
+
+        link_components = []
+
+        if selected_folder is not None:
+            start_folder = selected_folder
+        else:
+            if sys.platform == "win32":
+                start_folder = "C:/Users/"
+            elif sys.platform == "darwin":
+                start_folder = "/Users/"
+
+        folders = [f.path for f in os.scandir(start_folder) if f.is_dir()]
+
+        if len(folders) > 0:
+            for index, folder in enumerate(folders):
+                link = html.A(folder, href="#", id="dir-" + str(index + 1))
+                link_components.append(link)
+                link_components.append(html.Br())
+
+            for index in range(len(folders), 30):
+                link_components.append(html.A("", id="dir-" + str(index + 1)))
+        else:
+            link_components = []
+
+        return link_components
+
+    else:
+        raise PreventUpdate
+
+
+@app.callback(Output("selected-folder", "data"),
+              Input("dir-1", "n_clicks"), Input("dir-2", "n_clicks"), Input("dir-3", "n_clicks"),
+              Input("dir-4", "n_clicks"), Input("dir-5", "n_clicks"), Input("dir-6", "n_clicks"),
+              Input("dir-7", "n_clicks"), Input("dir-8", "n_clicks"), Input("dir-9", "n_clicks"),
+              Input("dir-10", "n_clicks"), Input("dir-11", "n_clicks"), Input("dir-12", "n_clicks"),
+              Input("dir-13", "n_clicks"), Input("dir-14", "n_clicks"), Input("dir-15", "n_clicks"),
+              Input("dir-16", "n_clicks"), Input("dir-17", "n_clicks"), Input("dir-18", "n_clicks"),
+              Input("dir-19", "n_clicks"), Input("dir-20", "n_clicks"), Input("dir-21", "n_clicks"),
+              Input("dir-22", "n_clicks"), Input("dir-23", "n_clicks"), Input("dir-24", "n_clicks"),
+              Input("dir-25", "n_clicks"), Input("dir-26", "n_clicks"), Input("dir-27", "n_clicks"),
+              Input("dir-28", "n_clicks"), Input("dir-29", "n_clicks"), Input("dir-30", "n_clicks"),
+              State("dir-1", "children"), State("dir-2", "children"), State("dir-3", "children"),
+              State("dir-4", "children"), State("dir-5", "children"), State("dir-6", "children"),
+              State("dir-7", "children"), State("dir-8", "children"), State("dir-9", "children"),
+              State("dir-10", "children"), State("dir-11", "children"), State("dir-12", "children"),
+              State("dir-13", "children"), State("dir-14", "children"), State("dir-15", "children"),
+              State("dir-16", "children"), State("dir-17", "children"), State("dir-18", "children"),
+              State("dir-19", "children"), State("dir-20", "children"), State("dir-21", "children"),
+              State("dir-22", "children"), State("dir-23", "children"), State("dir-24", "children"),
+              State("dir-25", "children"), State("dir-26", "children"), State("dir-27", "children"),
+              State("dir-28", "children"), State("dir-29", "children"), State("dir-30", "children"),
+              Input("selected-folder", "data"), prevent_initial_call=True)
+def the_most_inefficient_callback_in_history(com_1, com_2, com_3, com_4, com_5, com_6, com_7, com_8, com_9, com_10,
+    com_11, com_12, com_13, com_14, com_15, com_16, com_17, com_18, com_19, com_20, com_21, com_22, com_23, com_24,
+    com_25, com_26, com_27, com_28, com_29, com_30, dir_1, dir_2, dir_3, dir_4, dir_5, dir_6, dir_7, dir_8, dir_9, dir_10,
+    dir_11, dir_12, dir_13, dir_14, dir_15, dir_16, dir_17, dir_18, dir_19, dir_20, dir_21, dir_22, dir_23, dir_24,
+    dir_25, dir_26, dir_27, dir_28, dir_29, dir_30, selected_folder):
+
+    """
+    Handles user selection of folder in the file explorer modal (I'm sorry)
+    """
+
+    print("Triggered")
+
+    # Get <a> component that triggered callback
+    selected_component = ctx.triggered_id
+
+    # Create a dictionary with all link components and their values
+    components = ("dir-1", "dir-2", "dir-3", "dir-4", "dir-5", "dir-6", "dir-7", "dir-8", "dir-9", "dir-10", "dir-11", "dir-12",
+        "dir-13", "dir-14", "dir-15", "dir-16", "dir-17", "dir-18", "dir-19", "dir-20", "dir-21", "dir-22", "dir-23", "dir-24",
+        "dir-25", "dir-26", "dir-27", "dir-28", "dir-29", "dir-30")
+    values = (dir_1, dir_2, dir_3, dir_4, dir_5, dir_6, dir_7, dir_8, dir_9, dir_10, dir_11, dir_12, dir_13, dir_14, dir_15,
+        dir_16, dir_17, dir_18, dir_19, dir_20, dir_21, dir_22, dir_23, dir_24, dir_25, dir_26, dir_27, dir_28, dir_29, dir_30)
+    folders = {components[i]: values[i] for i in range(len(components))}
+
+    if selected_folder is None:
+        if sys.platform == "win32":
+            return "C:/Users/"
+        elif sys.platform == "darwin":
+            return "/Users/"
+
+    # Append to selected folder path by indexing set
+    selected_folder = folders[selected_component]
+
+    # Return selected folder and all folder values
+    return selected_folder
+
+
+@app.callback(Output("file-explorer-modal-title", "children"),
+              Input("selected-folder", "data"), prevent_initial_call=True)
+def update_file_explorer_title(selected_folder):
+
+    """
+    Populates data acquisition path text field with user selection
+    """
+
+    if selected_folder is not None:
+        return selected_folder
+    else:
+        raise PreventUpdate
+
+
+@app.callback(Output("data-acquisition-folder-path", "value"),
+              Input("file-explorer-modal-button", "n_clicks"),
+              State("selected-folder", "data"), prevent_initial_call=True)
+def update_data_acquisition_path_text_field(select_folder_button, selected_folder):
+
+    """
+    Populates data acquisition path text field with user selection
+    """
+
+    return selected_folder
 
 
 if __name__ == "__main__":
