@@ -459,7 +459,7 @@ def serve_layout():
                                 # Text field for entering your run ID
                                 html.Div([
                                     dbc.Label("Instrument run ID"),
-                                    dbc.Input(id="instrument-run-id", placeholder="NEW_RUN_001", type="text"),
+                                    dbc.Input(id="instrument-run-id", placeholder="Give your instrument run a unique name", type="text"),
                                     dbc.FormFeedback("Looks good!", type="valid"),
                                     dbc.FormFeedback("Please enter a unique ID for this run.", type="invalid"),
                                 ]),
@@ -616,34 +616,48 @@ def serve_layout():
                                     # General settings
                                     dbc.Tab(label="General", className="modal-styles", children=[
 
+                                        html.Br(),
+
+                                        dbc.Label("Manage workspace access", style={"font-weight": "bold"}),
+                                        html.Br(),
+
                                         # Google Drive cloud storage
+                                        dbc.Label("Cloud sync with Google Drive"),
                                         html.Br(),
-                                        dbc.Label("Cloud sync"),
+                                        dbc.Button("Sync with Google Drive",
+                                            id="google-drive-sync-button", color="primary", outline=False),
                                         html.Br(),
-                                        dbc.Button("Sync with Google Drive", id="google-drive-sync-button",
-                                                   color="primary", outline=False),
-                                        html.Br(),
-                                        dbc.FormText("This will allow you to monitor your instrument runs on other devices."),
+                                        dbc.FormText(id="google-drive-sync-form-text", children=
+                                            "This will allow you to monitor your instrument runs on other devices."),
                                         html.Br(), html.Br(),
 
+                                        # Alerts for modifying workspace access
+                                        dbc.Alert(id="user-addition-alert", color="success", is_open=False, duration=4000),
+                                        dbc.Alert(id="user-deletion-alert", color="primary", is_open=False, duration=4000),
+
                                         # Google Drive sharing
-                                        dbc.Label("Add new users"),
+                                        dbc.Label("Add / remove workspace users"),
                                         html.Br(),
                                         dbc.InputGroup([
                                             dbc.Input(placeholder="example@gmail.com",
                                                       id="add-user-text-field"),
                                             dbc.Button("Add user", color="primary", outline=True,
                                                        id="add-user-button", n_clicks=0),
+                                            dbc.Button("Delete user", color="danger", outline=True,
+                                                       id="delete-user-button", n_clicks=0),
                                         ]),
                                         dbc.FormText(
-                                            "Adding new users grants full read-and-write access to MS-AutoQC."),
+                                            "Adding new users grants full read-and-write access to this MS-AutoQC workspace."),
+                                        html.Br(), html.Br(),
+
+                                        # Table of users with workspace access
+                                        html.Div(id="workspace-users-table"),
                                         html.Br(),
 
-                                        # Table of registered instruments
-                                        dbc.Table(),
+                                        dbc.Label("Notifications", style={"font-weight": "bold"}),
+                                        html.Br(),
 
                                         # Slack notifications
-                                        html.Br(),
                                         dbc.Label("Slack notifications"),
                                         html.Br(),
                                         dbc.Button("Sign in with Slack", color="primary",
@@ -677,10 +691,10 @@ def serve_layout():
                                         ]),
                                         dbc.FormText(
                                             "Please enter a valid email address to register for email notifications."),
-                                        html.Br(),
+                                        html.Br(), html.Br(),
 
-                                        # Table of registered users
-                                        dbc.Table()
+                                        # Table of users registered for email notifications
+                                        html.Div(id="email-notification-users-table")
                                     ]),
 
                                     # Internal standards
@@ -692,6 +706,10 @@ def serve_layout():
                                         dbc.Alert(id="chromatography-addition-alert", color="success", is_open=False, duration=4000),
                                         dbc.Alert(id="chromatography-removal-alert", color="primary", is_open=False, duration=4000),
 
+                                        dbc.Label("Manage chromatography methods", style={"font-weight": "bold"}),
+                                        html.Br(),
+
+                                        # Add new chromatography method
                                         html.Div([
                                             dbc.Label("Add new chromatography method"),
                                             dbc.InputGroup([
@@ -703,6 +721,16 @@ def serve_layout():
                                             dbc.FormText("Example: HILIC, Reverse Phase, RP (30 mins)"),
                                         ]), html.Br(),
 
+                                        # Chromatography methods table
+                                        dbc.Label("Chromatography methods", style={"font-weight": "bold"}),
+                                        html.Br(),
+                                        html.Div(id="chromatography-methods-table"),
+                                        html.Br(),
+
+                                        dbc.Label("Configure chromatography methods", style={"font-weight": "bold"}),
+                                        html.Br(),
+
+                                        # Select chromatography
                                         html.Div([
                                             dbc.Label("Select chromatography to modify"),
                                             dbc.InputGroup([
@@ -745,6 +773,15 @@ def serve_layout():
 
                                         html.Br(),
 
+                                        # UI feedback on adding MSP to chromatography method
+                                        dbc.Alert(id="chromatography-msp-success-alert", color="success", is_open=False,
+                                                  duration=4000),
+                                        dbc.Alert(id="chromatography-msp-error-alert", color="danger", is_open=False,
+                                                  duration=4000),
+
+                                        dbc.Label("Add internal standard identification files", style={"font-weight": "bold"}),
+                                        html.Br(),
+
                                         html.Div([
                                             dbc.Label("Add internal standards (MSP or CSV format)"),
                                             dbc.InputGroup([
@@ -758,14 +795,6 @@ def serve_layout():
                                             dbc.FormText(
                                                 "Please ensure that each internal standard has a name, m/z, RT, and MS/MS spectrum."),
                                         ]),
-
-                                        html.Br(),
-
-                                        # UI feedback on adding MSP to chromatography method
-                                        dbc.Alert(id="chromatography-msp-success-alert", color="success", is_open=False, duration=4000),
-                                        dbc.Alert(id="chromatography-msp-error-alert", color="danger", is_open=False, duration=4000),
-
-                                        html.Div(id="chromatography-methods-table"),
 
                                         html.Br(),
 
@@ -786,6 +815,9 @@ def serve_layout():
                                         dbc.Alert(id="bio-standard-addition-alert", is_open=False, duration=4000),
                                         dbc.Alert(id="bio-standard-removal-alert", color="primary", is_open=False, duration=4000),
 
+                                        dbc.Label("Manage biological standards", style={"font-weight": "bold"}),
+                                        html.Br(),
+
                                         html.Div([
                                             dbc.Label("Add new biological standard"),
                                             dbc.InputGroup([
@@ -802,6 +834,14 @@ def serve_layout():
 
                                         html.Br(),
 
+                                        # Table of biological standards
+                                        dbc.Label("Biological standards", style={"font-weight": "bold"}),
+                                        html.Br(),
+
+                                        html.Div(id="biological-standards-table"),
+                                        html.Br(),
+
+                                        # Select biological standard
                                         html.Div([
                                             dbc.Label("Select biological standard"),
                                             dbc.InputGroup([
@@ -811,10 +851,14 @@ def serve_layout():
                                                            id="remove-bio-standard-button", n_clicks=0),
                                                 dbc.Popover("You are about to delete this biological standard and "
                                                             "all of its corresponding MSP files. Are you sure?",
-                                                            target="remove-bio-standard-button", trigger="hover", body=True)
+                                                            target="remove-bio-standard-button", trigger="hover",
+                                                            body=True)
                                             ]),
                                         ]),
 
+                                        html.Br(),
+
+                                        dbc.Label("Configure biological standards and add MSP files", style={"font-weight": "bold"}),
                                         html.Br(),
 
                                         html.Div([
@@ -855,8 +899,14 @@ def serve_layout():
 
                                         html.Br(),
 
+                                        # UI feedback on adding MSP to biological standard
+                                        dbc.Alert(id="bio-msp-success-alert", color="success", is_open=False,
+                                                  duration=4000),
+                                        dbc.Alert(id="bio-msp-error-alert", color="danger", is_open=False,
+                                                  duration=4000),
+
                                         html.Div([
-                                            dbc.Label("Edit targeted feature list (MSP format)"),
+                                            dbc.Label("Edit targeted metabolites list (MSP format)"),
                                             html.Br(),
                                             dbc.InputGroup([
                                                 dbc.Input(placeholder="No MSP file selected",
@@ -869,14 +919,6 @@ def serve_layout():
                                             dbc.FormText(
                                                 "Please ensure that each feature has a name, m/z, RT, and MS/MS spectrum."),
                                         ]),
-
-                                        html.Br(),
-
-                                        # UI feedback on adding MSP to biological standard
-                                        dbc.Alert(id="bio-msp-success-alert", color="success", is_open=False, duration=4000),
-                                        dbc.Alert(id="bio-msp-error-alert", color="danger", is_open=False, duration=4000),
-
-                                        html.Div(id="biological-standards-table"),
 
                                         html.Br(),
 
@@ -896,6 +938,9 @@ def serve_layout():
                                         # UI feedback on adding / removing QC configurations
                                         dbc.Alert(id="qc-config-addition-alert", is_open=False, duration=4000),
                                         dbc.Alert(id="qc-config-removal-alert", is_open=False, duration=4000),
+
+                                        dbc.Label("Manage QC configurations", style={"font-weight": "bold"}),
+                                        html.Br(),
 
                                         html.Div([
                                             dbc.Label("Add new QC configuration"),
@@ -923,6 +968,9 @@ def serve_layout():
                                             ])
                                         ]),
 
+                                        html.Br(),
+
+                                        dbc.Label("Edit QC configuration parameters", style={"font-weight": "bold"}),
                                         html.Br(),
 
                                         html.Div([
@@ -981,6 +1029,9 @@ def serve_layout():
                                         dbc.Alert(id="msdial-config-addition-alert", is_open=False, duration=4000),
                                         dbc.Alert(id="msdial-config-removal-alert", is_open=False, duration=4000),
 
+                                        dbc.Label("MS-DIAL installation", style={"font-weight": "bold"}),
+                                        html.Br(),
+
                                         # Button and field for selecting the data acquisition directory
                                         html.Div([
                                             dbc.Label("MS-DIAL download location"),
@@ -994,6 +1045,9 @@ def serve_layout():
                                                 "Browse for (or type) the path of your downloaded MS-DIAL folder."),
                                         ]),
 
+                                        html.Br(),
+
+                                        dbc.Label("Manage configurations", style={"font-weight": "bold"}),
                                         html.Br(),
 
                                         html.Div([
@@ -1225,11 +1279,6 @@ def serve_layout():
             # Dummy input object for callbacks on page load
             dcc.Store(id="on-page-load"),
             dcc.Store(id="google-drive-authenticated"),
-            dcc.Store(id="google-drive-sync-finished"),
-            dcc.Store(id="close-sync-modal"),
-            dcc.Store(id="database-md5"),
-            dcc.Store(id="selected-data-folder"),
-            dcc.Store(id="selected-msdial-folder"),
 
             # Storage of all DataFrames necessary for QC plot generation
             dcc.Store(id="istd-rt-pos"),
@@ -1275,6 +1324,13 @@ def serve_layout():
             dcc.Store(id="msdial-parameters-saved"),
             dcc.Store(id="msdial-parameters-reset"),
             dcc.Store(id="msdial-directory-data"),
+            dcc.Store(id="google-drive-sync-finished"),
+            dcc.Store(id="close-sync-modal"),
+            dcc.Store(id="database-md5"),
+            dcc.Store(id="selected-data-folder"),
+            dcc.Store(id="selected-msdial-folder"),
+            dcc.Store(id="google-drive-user-added"),
+            dcc.Store(id="google-drive-user-deleted"),
 
             # Dummy inputs for Google Drive authentication
             dcc.Store(id="workspace-has-been-setup-1"),
@@ -1348,7 +1404,7 @@ def authenticate_with_google_drive(on_page_load):
               Output("google-drive-authenticated-3", "data"),
               Input("setup-google-drive-button-1", "n_clicks"),
               Input("setup-google-drive-button-2", "n_clicks"),
-              Input("google-drive-sync-button", "n_clicks"))
+              Input("google-drive-sync-button", "n_clicks"), prevent_initial_call=True)
 def launch_google_drive_authentication(setup_auth_button_clicks, sign_in_auth_button_clicks, settings_button_clicks):
 
     """
@@ -1357,6 +1413,7 @@ def launch_google_drive_authentication(setup_auth_button_clicks, sign_in_auth_bu
 
     # Get the correct authentication button
     button_id = ctx.triggered_id
+    print(button_id)
 
     # If user clicks a sign-in button, launch Google authentication page
     if button_id is not None:
@@ -1371,6 +1428,24 @@ def launch_google_drive_authentication(setup_auth_button_clicks, sign_in_auth_bu
         return None, True, None
     elif button_id == "google-drive-sync-button":
         return None, None, True
+    else:
+        raise PreventUpdate
+
+
+@app.callback(Output("google-drive-sync-button", "color"),
+              Output("google-drive-sync-button", "children"),
+              Output("google-drive-sync-form-text", "children"),
+              Input("google-drive-authenticated-3", "data"),
+              Input("google-drive-authenticated", "data"), prevent_initial_call=True)
+def update_google_drive_sync_status_in_settings(google_drive_is_authenticated, google_drive_is_authenticated_on_start):
+
+    """
+    Updates Google Drive sync status in user settings on user authentication
+    """
+
+    if google_drive_is_authenticated or google_drive_is_authenticated_on_start:
+        form_text = "Cloud sync is enabled! You can now sign in to this MS-AutoQC workspace from any device."
+        return "success", "Signed in to Google Drive", form_text
     else:
         raise PreventUpdate
 
@@ -2437,6 +2512,108 @@ def close_sync_modal(sync_finished):
         return True
 
 
+@app.callback(Output("workspace-users-table", "children"),
+              Input("on-page-load", "data"),
+              Input("google-drive-user-added", "data"),
+              Input("google-drive-user-deleted", "data"))
+def get_users_with_workspace_access(on_page_load, user_added, user_deleted):
+
+    """
+    Returns table of users that have access to the MS-AutoQC workspace
+    """
+
+    # Get users from database
+    df_gdrive_users = db.get_table("gdrive_users")
+    df_gdrive_users = df_gdrive_users.rename(
+        columns={"id": "User",
+                 "name": "Name",
+                 "email_address": "Google Account Email Address"})
+    df_gdrive_users.drop(["permission_id"], inplace=True, axis=1)
+
+    # Generate and return table
+    if len(df_gdrive_users) > 0:
+        table = dbc.Table.from_dataframe(df_gdrive_users, striped=True, hover=True)
+        return table
+    else:
+        return None
+
+
+@app.callback(Output("google-drive-user-added", "data"),
+              Input("add-user-button", "n_clicks"),
+              State("add-user-text-field", "value"),
+              State("google-drive-authenticated", "data"), prevent_initial_call=True)
+def add_user_to_workspace(button_click, user_email_address, google_drive_is_authenticated):
+
+    """
+    Grants user permission to MS-AutoQC workspace in Google Drive
+    """
+
+    drive = GoogleDrive(gauth_holder[0])
+    db.add_user_to_workspace(drive, user_email_address)
+
+    if user_email_address in db.get_workspace_users_list():
+        return user_email_address
+    else:
+        return "Error"
+
+
+@app.callback(Output("google-drive-user-deleted", "data"),
+              Input("delete-user-button", "n_clicks"),
+              State("add-user-text-field", "value"),
+              State("google-drive-authenticated", "data"), prevent_initial_call=True)
+def delete_user_from_workspace(button_click, user_email_address, google_drive_is_authenticated):
+
+    """
+    Revokes user permission to MS-AutoQC workspace in Google Drive
+    """
+
+    drive = GoogleDrive(gauth_holder[0])
+    db.delete_user_from_workspace(drive, user_email_address)
+
+    if user_email_address in db.get_workspace_users_list():
+        return "Error"
+    else:
+        return user_email_address
+
+
+@app.callback(Output("user-addition-alert", "is_open"),
+              Output("user-addition-alert", "children"),
+              Output("user-addition-alert", "color"),
+              Input("google-drive-user-added", "data"), prevent_initial_call=True)
+def ui_feedback_for_adding_gdrive_user(user_added_result):
+
+    """
+    UI alert upon adding a new user to MS-AutoQC workspace
+    """
+
+    if user_added_result is not None:
+        if user_added_result != "Error" and user_added_result != "User already exists":
+            return True, user_added_result + " has been granted access to the workspace.", "success"
+        elif user_added_result == "User already exists":
+            return True, "Error: " + user_added_result + " already has access to the workspace.", "danger"
+        else:
+            return True, "Error: cannot grant access.", "danger"
+
+
+@app.callback(Output("user-deletion-alert", "is_open"),
+              Output("user-deletion-alert", "children"),
+              Output("user-deletion-alert", "color"),
+              Input("google-drive-user-deleted", "data"), prevent_initial_call=True)
+def ui_feedback_for_deleting_gdrive_user(user_deleted_result):
+
+    """
+    UI alert upon adding a new user to MS-AutoQC workspace
+    """
+
+    if user_deleted_result is not None:
+        if user_deleted_result != "Error" and user_deleted_result != "User does not exist":
+            return True, "Revoked workspace access for " + user_deleted_result + ".", "primary"
+        elif user_deleted_result == "User does not exist":
+            return True, "Error: " + user_deleted_result + " cannot be deleted because they are not in the workspace.", "danger"
+        else:
+            return True, "Error: cannot revoke access.", "danger"
+
+
 @app.callback(Output("chromatography-methods-table", "children"),
               Output("select-istd-chromatography-dropdown", "options"),
               Output("select-bio-chromatography-dropdown", "options"),
@@ -2730,7 +2907,7 @@ def show_alert_on_msdial_config_removal(config_removed, selected_config):
 
     if config_removed is not None:
         if config_removed == "Removed":
-            message = "The selected MS-DIAL configuration has been deleted."
+            message = "The selected MS-DIAL configuration was deleted."
             color = "primary"
         if selected_config == "Default":
             message = "Error: The default configuration cannot be deleted."
@@ -2953,7 +3130,7 @@ def show_alert_on_qc_config_removal(config_removed, selected_config):
 
     if config_removed is not None:
         if config_removed == "Removed":
-            message = "The selected QC configuration has been deleted."
+            message = "The selected QC configuration was deleted."
             color = "primary"
         if selected_config == "Default":
             message = "Error: The default configuration cannot be deleted."
@@ -3199,7 +3376,7 @@ def show_alert_on_bio_standard_removal(bio_standard_removed):
 
     if bio_standard_removed is not None:
         if bio_standard_removed == "Removed":
-            return True, "The selected biological standard has been deleted."
+            return True, "The selected biological standard was deleted."
 
     return False, None
 

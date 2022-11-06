@@ -124,7 +124,9 @@ def create_database():
     gdrive_users = sa.Table(
         "gdrive_users", db_metadata,
         sa.Column("id", INTEGER, primary_key=True),
-        sa.Column("email", TEXT)
+        sa.Column("name", TEXT),
+        sa.Column("email_address", TEXT),
+        sa.Column("permission_id", TEXT),
     )
 
     instruments = sa.Table(
@@ -1727,3 +1729,88 @@ def parse_biological_standard_data(result_type, polarity, biological_standard):
 
     # Return DataFrame as JSON string
     return df_results.to_json(orient="split")
+
+
+def get_workspace_users_list():
+
+    """
+    Returns a list of users that have access to the MS-AutoQC workspace
+    """
+
+    return get_table("gdrive_users")["email_address"].astype(str).tolist()
+
+
+def add_user_to_workspace(drive, email_address):
+
+    """
+    Gives user access to workspace in Google Drive, stores email in database
+    """
+
+    if email_address in get_workspace_users_list():
+        return "User already exists"
+
+    # Get ID of MS-AutoQC folder in Google Drive
+    gdrive_folder_id = get_table("instruments")["gdrive_folder_id"].astype(str).tolist()
+
+    if len(gdrive_folder_id) > 0:
+        gdrive_folder_id = gdrive_folder_id[0]
+    else:
+        return "Error"
+
+    # Add user access by updating permissions
+    folder = drive.CreateFile({"id": gdrive_folder_id})
+    permission = folder.InsertPermission({
+        "type": "user",
+        "role": "writer",
+        "value": email_address})
+
+    # Insert user email address in "gdrive_users" table
+    db_metadata, connection = connect_to_database()
+    gdrive_users_table = sa.Table("gdrive_users", db_metadata, autoload=True)
+
+    insert_user_email = gdrive_users_table.insert().values(
+        {"name": permission["name"],
+         "email_address": email_address,
+         "permission_id": permission["id"]})
+
+    connection.execute(insert_user_email)
+    connection.close()
+
+
+def delete_user_from_workspace(drive, email_address):
+
+    """
+    Removes user access to workspace in Google Drive, deletes email in database
+    """
+
+    if email_address not in get_workspace_users_list():
+        return "User does not exist"
+
+    # Get ID of MS-AutoQC folder in Google Drive
+    gdrive_folder_id = get_table("instruments")["gdrive_folder_id"].astype(str).tolist()
+
+    if len(gdrive_folder_id) > 0:
+        gdrive_folder_id = gdrive_folder_id[0]
+    else:
+        return None
+
+    # Get permission ID of user from database
+    folder = drive.CreateFile({"id": gdrive_folder_id})
+    df_gdrive_users = get_table("gdrive_users")
+    df_gdrive_users = df_gdrive_users.loc[df_gdrive_users["email_address"] == email_address]
+    permission_id = df_gdrive_users["permission_id"].astype(str).values[0]
+
+    # Delete user access by updating permissions
+    folder.DeletePermission(permission_id)
+
+    # Delete user email address in "gdrive_users" table
+    db_metadata, connection = connect_to_database()
+    gdrive_users_table = sa.Table("gdrive_users", db_metadata, autoload=True)
+
+    delete_user_email = (
+        sa.delete(gdrive_users_table)
+            .where((gdrive_users_table.c.email_address == email_address))
+    )
+
+    connection.execute(delete_user_email)
+    connection.close()
