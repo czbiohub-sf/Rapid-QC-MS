@@ -618,6 +618,19 @@ def serve_layout():
 
                                         html.Br(),
 
+                                        dbc.Alert(id="google-drive-sign-in-from-settings-alert", is_open=False,
+                                        dismissable=True, color="danger", children=[
+                                            html.H4(
+                                                "This Google account already has an MS-AutoQC workspace."),
+                                            html.P(
+                                                "Please sign in with a different Google account to enable cloud "
+                                                "sync for this workspace."),
+                                            html.P(
+                                                "Or, if you'd like to add a new instrument to an existing MS-AutoQC "
+                                                "workspace, please reinstall MS-AutoQC on this instrument and enable "
+                                                "cloud sync during setup.")
+                                        ]),
+
                                         dbc.Label("Manage workspace access", style={"font-weight": "bold"}),
                                         html.Br(),
 
@@ -1431,24 +1444,6 @@ def launch_google_drive_authentication(setup_auth_button_clicks, sign_in_auth_bu
         raise PreventUpdate
 
 
-@app.callback(Output("google-drive-sync-button", "color"),
-              Output("google-drive-sync-button", "children"),
-              Output("google-drive-sync-form-text", "children"),
-              Input("google-drive-authenticated-3", "data"),
-              Input("google-drive-authenticated", "data"), prevent_initial_call=True)
-def update_google_drive_sync_status_in_settings(google_drive_is_authenticated, google_drive_is_authenticated_on_start):
-
-    """
-    Updates Google Drive sync status in user settings on user authentication
-    """
-
-    if google_drive_is_authenticated or google_drive_is_authenticated_on_start:
-        form_text = "Cloud sync is enabled! You can now sign in to this MS-AutoQC workspace from any device."
-        return "success", "Signed in to Google Drive", form_text
-    else:
-        raise PreventUpdate
-
-
 @app.callback(Output("setup-google-drive-button-1", "children"),
               Output("setup-google-drive-button-1", "color"),
               Output("setup-google-drive-button-1", "outline"),
@@ -1689,7 +1684,7 @@ def check_workspace_login_google_drive_authentication(google_drive_is_authentica
                 gdrive_folder_id = file["id"]
                 break
 
-        # TODO: If it's not there, check "Shared With Me" and copy it over to root directory
+        # If it's not there, check "Shared With Me" and copy it over to root directory
         if gdrive_folder_id is None:
             for file in drive.ListFile({"q": "sharedWithMe and mimeType='application/vnd.google-apps.folder' and trashed=false"}).GetList():
                 if file["title"] == "MS-AutoQC":
@@ -1805,6 +1800,107 @@ def dismiss_setup_window(workspace_has_been_setup_1, workspace_has_been_setup_2)
     is_valid = db.is_valid()
 
     return not is_valid, is_valid
+
+
+@app.callback(Output("google-drive-sync-button", "color"),
+              Output("google-drive-sync-button", "children"),
+              Output("google-drive-sync-form-text", "children"),
+              Output("google-drive-sign-in-from-settings-alert", "is_open"),
+              Input("google-drive-authenticated-3", "data"),
+              Input("google-drive-authenticated", "data"),
+              State("google-drive-sync-form-text", "children"), prevent_initial_call=True)
+def update_google_drive_sync_status_in_settings(google_drive_authenticated, google_drive_authenticated_on_start, form_text):
+
+    """
+    Updates Google Drive sync status in user settings on user authentication
+    """
+
+    auth_source = ctx.triggered_id
+
+    # Authenticated on app startup
+    if auth_source == "google-drive-authenticated":
+        form_text = "Cloud sync is enabled! You can now sign in to this MS-AutoQC workspace from any device."
+        return "success", "Signed in to Google Drive", form_text, False
+
+    # Authenticated from "Sign in to Google Drive" button in Settings > General
+    elif auth_source == "google-drive-authenticated-3" and google_drive_authenticated_on_start is None:
+
+        drive = GoogleDrive(gauth_holder[0])
+        gdrive_folder_id = None
+        gdrive_file_id = None
+
+        # Check for MS-AutoQC folder in Google Drive root directory
+        for file in drive.ListFile({"q": "'root' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"}).GetList():
+            if file["title"] == "MS-AutoQC":
+                gdrive_folder_id = file["id"]
+                break
+
+        # If it's not there, check "Shared With Me" and copy it over to root directory
+        if gdrive_folder_id is None:
+            for file in drive.ListFile({"q": "sharedWithMe and mimeType='application/vnd.google-apps.folder' and trashed=false"}).GetList():
+                if file["title"] == "MS-AutoQC":
+                    gdrive_folder_id = file["id"]
+                    break
+
+        # If Google Drive folder is found, alert user that they need to sign in with a different Google account
+        if gdrive_folder_id is not None:
+            os.remove(credentials_file)
+            return "danger", "Sign in to Google Drive", form_text, True
+
+        # If no workspace found, all good to create one
+        else:
+            # Create MS-AutoQC folder
+            folder_metadata = {
+                "title": "MS-AutoQC",
+                "mimeType": "application/vnd.google-apps.folder"
+            }
+            folder = drive.CreateFile(folder_metadata)
+            folder.Upload()
+
+            # Get Google Drive ID of folder
+            for file in drive.ListFile({"q": "'root' in parents and trashed=false"}).GetList():
+                if file["title"] == "MS-AutoQC":
+                    gdrive_folder_id = file["id"]
+                    break
+
+            # Create methods folder inside of MS-AutoQC folder
+            folder_metadata = {
+                "title": "methods",
+                "parents": [{"id": gdrive_folder_id}],
+                "mimeType": "application/vnd.google-apps.folder"
+            }
+            folder = drive.CreateFile(folder_metadata)
+            folder.Upload()
+
+            # Update database in Google Drive folder
+            metadata = {
+                "title": "QC Database.db",
+                "parents": [{"id": gdrive_folder_id}],
+            }
+            file = drive.CreateFile(metadata=metadata)
+            file.SetContentFile("QC Database.db")
+            file.Upload()
+
+            # Get Google Drive ID of database file
+            for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
+                if file["title"] == "QC Database.db":
+                    gdrive_file_id = file["id"]
+                    break
+
+            # Put Google Drive ID's into database
+            db.insert_google_drive_ids(gdrive_folder_id, gdrive_file_id)
+
+            # Sync database
+            db.sync_to_google_drive(drive=drive, sync_settings=True)
+
+            # Save user credentials
+            gauth_holder[0].SaveCredentialsFile(credentials_file)
+
+        form_text = "Cloud sync is enabled! You can now sign in to this MS-AutoQC workspace from any device."
+        return "success", "Signed in to Google Drive", form_text, False
+
+    else:
+        raise PreventUpdate
 
 
 @app.callback(Output("tabs", "children"),
@@ -2493,15 +2589,16 @@ def show_sync_modal(settings_is_open, google_drive_authenticated, sync_modal_is_
 @app.callback(Output("google-drive-sync-finished", "data"),
               Input("settings-modal", "is_open"),
               State("google-drive-authenticated", "data"),
+              State("google-drive-authenticated-3", "data"),
               State("database-md5", "data"), prevent_initial_call=True)
-def sync_settings_to_google_drive(settings_modal_is_open, google_drive_authenticated, md5_checksum):
+def sync_settings_to_google_drive(settings_modal_is_open, google_drive_authenticated, auth_in_app, md5_checksum):
 
     """
     Syncs settings and methods files to Google Drive
     """
 
     if not settings_modal_is_open:
-        if google_drive_authenticated:
+        if google_drive_authenticated or auth_in_app:
             if db.was_modified(md5_checksum):
                 db.sync_to_google_drive(drive=GoogleDrive(gauth_holder[0]), sync_settings=True)
                 return True
@@ -2529,19 +2626,22 @@ def get_users_with_workspace_access(on_page_load, user_added, user_deleted):
     """
 
     # Get users from database
-    df_gdrive_users = db.get_table("gdrive_users")
-    df_gdrive_users = df_gdrive_users.rename(
-        columns={"id": "User",
-                 "name": "Name",
-                 "email_address": "Google Account Email Address"})
-    df_gdrive_users.drop(["permission_id"], inplace=True, axis=1)
+    if db.is_valid():
+        df_gdrive_users = db.get_table("gdrive_users")
+        df_gdrive_users = df_gdrive_users.rename(
+            columns={"id": "User",
+                     "name": "Name",
+                     "email_address": "Google Account Email Address"})
+        df_gdrive_users.drop(["permission_id"], inplace=True, axis=1)
 
-    # Generate and return table
-    if len(df_gdrive_users) > 0:
-        table = dbc.Table.from_dataframe(df_gdrive_users, striped=True, hover=True)
-        return table
+        # Generate and return table
+        if len(df_gdrive_users) > 0:
+            table = dbc.Table.from_dataframe(df_gdrive_users, striped=True, hover=True)
+            return table
+        else:
+            return None
     else:
-        return None
+        raise PreventUpdate
 
 
 @app.callback(Output("google-drive-user-added", "data"),
@@ -3829,7 +3929,7 @@ def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, b
     elif job_type == "completed":
         return False, True, False, json.dumps(filenames)
 
-    # TODO: Handle form validation errors
+    # Handle form validation errors
     else:
         return False, False, True, ""
 

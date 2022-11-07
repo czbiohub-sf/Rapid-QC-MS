@@ -35,7 +35,7 @@ def sync_is_enabled():
 
     # Update existing database in Google Drive
     if len(gdrive_folder_id) > 0:
-        if gdrive_folder_id[0] != "None":
+        if gdrive_folder_id[0] != "None" and gdrive_folder_id[0] != "":
             return True
 
     return False
@@ -276,7 +276,7 @@ def sync_to_google_drive(drive, sync_settings=False):
 
     # Update existing database in Google Drive
     if len(gdrive_file_id) > 0:
-        if gdrive_file_id[0] != "None":
+        if gdrive_file_id[0] != "None" and gdrive_file_id[0] != "":
             file = drive.CreateFile({"id": gdrive_file_id[0]})
             file.SetContentFile("QC Database.db")
             file.Upload()
@@ -293,7 +293,7 @@ def sync_to_google_drive(drive, sync_settings=False):
 
         # Iterate through and update existing methods folder in Google Drive
         if len(gdrive_folder_id) > 0:
-            if gdrive_folder_id[0] != "None":
+            if gdrive_folder_id[0] != "None" and gdrive_folder_id[0] != "":
 
                 # Find MS-AutoQC > methods directory
                 drive_file_list = drive.ListFile({"q": "'" + gdrive_folder_id[0] + "' in parents and trashed=false"}).GetList()
@@ -327,6 +327,26 @@ def sync_to_google_drive(drive, sync_settings=False):
                     file_to_upload.Upload()
 
     return None
+
+
+def insert_google_drive_ids(gdrive_folder_id, gdrive_file_id):
+
+    """
+    Inserts Google Drive ID's into "instruments" table
+    """
+
+    db_metadata, connection = connect_to_database()
+    instruments_table = sa.Table("instruments", db_metadata, autoload=True)
+
+    insert_google_drive_ids = (
+        sa.update(instruments_table)
+            .where((instruments_table.c.name != "None") & (instruments_table.c.name != ""))
+            .values(gdrive_folder_id=gdrive_folder_id,
+                    gdrive_file_id=gdrive_file_id)
+    )
+
+    connection.execute(insert_google_drive_ids)
+    connection.close()
 
 
 def insert_new_instrument(name, vendor, gdrive_folder_id=None, gdrive_file_id=None):
