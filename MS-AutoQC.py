@@ -1390,7 +1390,7 @@ def authenticate_with_google_drive(on_page_load):
         elif gauth.credentials is None:
             gauth.LocalWebserverAuth()
 
-        if db.is_valid():
+        if not os.path.exists(credentials_file) and db.is_valid():
             gauth.SaveCredentialsFile(credentials_file)
 
         return os.path.exists(credentials_file)
@@ -1413,7 +1413,6 @@ def launch_google_drive_authentication(setup_auth_button_clicks, sign_in_auth_bu
 
     # Get the correct authentication button
     button_id = ctx.triggered_id
-    print(button_id)
 
     # If user clicks a sign-in button, launch Google authentication page
     if button_id is not None:
@@ -1684,11 +1683,18 @@ def check_workspace_login_google_drive_authentication(google_drive_is_authentica
                            dbc.PopoverBody("Double-check that your Google account has access in " +
                                            "Settings > General, or sign in from a different account.")]
 
-        # Check for database in Google Drive
-        for file in drive.ListFile({"q": "'root' in parents and trashed=false"}).GetList():
+        # Check for MS-AutoQC folder in Google Drive root directory
+        for file in drive.ListFile({"q": "'root' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"}).GetList():
             if file["title"] == "MS-AutoQC":
                 gdrive_folder_id = file["id"]
                 break
+
+        # TODO: If it's not there, check "Shared With Me" and copy it over to root directory
+        if gdrive_folder_id is None:
+            for file in drive.ListFile({"q": "sharedWithMe and mimeType='application/vnd.google-apps.folder' and trashed=false"}).GetList():
+                if file["title"] == "MS-AutoQC":
+                    gdrive_folder_id = file["id"]
+                    break
 
         # If Google Drive folder is found, look for database next
         if gdrive_folder_id is not None:
