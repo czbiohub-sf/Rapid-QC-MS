@@ -29,7 +29,7 @@ Dash app layout
 
 # Initialize Dash app
 app = dash.Dash(__name__, title="MS-AutoQC", suppress_callback_exceptions=True,
-                external_stylesheets=[local_stylesheet, dbc.themes.BOOTSTRAP],
+                external_stylesheets=[local_stylesheet, dbc.themes.BOOTSTRAP, dbc.icons.BOOTSTRAP],
                 meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}])
 
 def serve_layout():
@@ -211,16 +211,28 @@ def serve_layout():
 
                                     html.Div(className="plot-container", children=[
 
-                                        # Dropdown for selecting an internal standard for the RT vs. sample plot
-                                        dcc.Dropdown(
-                                            id="istd-rt-dropdown",
-                                            options=[],
-                                            placeholder="Select internal standards...",
-                                            style={"text-align": "left",
-                                                   "height": "35px",
-                                                   "width": "100%",
-                                                   "display": "inline-block"}
-                                        ),
+                                        # Internal standard selection controls
+                                        html.Div(style={"width": "100%"}, children=[
+                                            # Dropdown for selecting an internal standard for the RT vs. sample plot
+                                            html.Div(className="istd-dropdown-style", children=[
+                                                dcc.Dropdown(
+                                                    id="istd-rt-dropdown",
+                                                    options=[],
+                                                    placeholder="Select internal standards...",
+                                                    style={"text-align": "left",
+                                                           "height": "1.5",
+                                                           "width": "100%"}
+                                                )]
+                                            ),
+
+                                            # Buttons for skipping through the internal standards
+                                            html.Div(className="istd-button-style", children=[
+                                                dbc.Button(html.I(className="bi bi-arrow-left"),
+                                                    id="rt-prev-button", color="light", className="me-1"),
+                                                dbc.Button(html.I(className="bi bi-arrow-right"),
+                                                    id="rt-next-button", color="light", className="me-1"),
+                                            ]),
+                                        ]),
 
                                         # Dropdown for filtering by sample for the RT vs. sample plot
                                         dcc.Dropdown(
@@ -228,26 +240,39 @@ def serve_layout():
                                             options=[],
                                             placeholder="Select samples...",
                                             style={"text-align": "left",
-                                                   "height": "35px",
+                                                   "height": "1.5",
                                                    "width": "100%",
                                                    "display": "inline-block"},
                                             multi=True),
 
                                         # Scatter plot of internal standard retention times vs. samples
-                                        dcc.Graph(id="istd-rt-plot")
+                                        dcc.Graph(id="istd-rt-plot"),
                                     ]),
 
                                     html.Div(className="plot-container", children=[
 
-                                        # Dropdown for internal standard intensity plot
-                                        dcc.Dropdown(
-                                            id="istd-intensity-dropdown",
-                                            options=[],
-                                            placeholder="Select internal standard...",
-                                            style={"text-align": "left",
-                                                   "height": "35px",
-                                                   "width": "100%",
-                                                   "display": "inline-block"}),
+                                        # Internal standard selection controls
+                                        html.Div(style={"width": "100%"}, children=[
+                                            # Dropdown for selecting an internal standard for the intensity vs. sample plot
+                                            html.Div(className="istd-dropdown-style", children=[
+                                                dcc.Dropdown(
+                                                    id="istd-intensity-dropdown",
+                                                    options=[],
+                                                    placeholder="Select internal standards...",
+                                                    style={"text-align": "left",
+                                                           "height": "1.5",
+                                                           "width": "100%"}
+                                                )]
+                                            ),
+
+                                            # Buttons for skipping through the internal standards
+                                            html.Div(className="istd-button-style", children=[
+                                                dbc.Button(html.I(className="bi bi-arrow-left"),
+                                                    id="intensity-prev-button", color="light", className="me-1"),
+                                                dbc.Button(html.I(className="bi bi-arrow-right"),
+                                                    id="intensity-next-button", color="light", className="me-1"),
+                                            ]),
+                                        ]),
 
                                         # Dropdown for filtering by sample for the intensity vs. sample plot
                                         dcc.Dropdown(
@@ -255,10 +280,11 @@ def serve_layout():
                                             options=[],
                                             placeholder="Select samples...",
                                             style={"text-align": "left",
-                                                   "height": "35px",
+                                                   "height": "1.5",
                                                    "width": "100%",
                                                    "display": "inline-block"},
-                                            multi=True),
+                                            multi=True,
+                                        ),
 
                                         # Bar plot of internal standard intensity vs. samples
                                         dcc.Graph(id="istd-intensity-plot")
@@ -266,16 +292,28 @@ def serve_layout():
 
                                     html.Div(className="plot-container", children=[
 
-                                        # Dropdown for internal standard delta m/z plot
-                                        dcc.Dropdown(
-                                            id="istd-mz-dropdown",
-                                            options=[],
-                                            placeholder="Select internal standards...",
-                                            style={"text-align": "left",
-                                                   "height": "35px",
-                                                   "width": "100%",
-                                                   "display": "inline-block"},
-                                        ),
+                                        # Internal standard selection controls
+                                        html.Div(style={"width": "100%"}, children=[
+                                            # Dropdown for selecting an internal standard for the delta m/z vs. sample plot
+                                            html.Div(className="istd-dropdown-style", children=[
+                                                dcc.Dropdown(
+                                                    id="istd-mz-dropdown",
+                                                    options=[],
+                                                    placeholder="Select internal standards...",
+                                                    style={"text-align": "left",
+                                                           "height": "1.5",
+                                                           "width": "100%"}
+                                                )]
+                                            ),
+
+                                            # Buttons for skipping through the internal standards
+                                            html.Div(className="istd-button-style", children=[
+                                                dbc.Button(html.I(className="bi bi-arrow-left"),
+                                                    id="mz-prev-button", color="light", className="me-1"),
+                                                dbc.Button(html.I(className="bi bi-arrow-right"),
+                                                    id="mz-next-button", color="light", className="me-1"),
+                                            ]),
+                                        ]),
 
                                         # Dropdown for filtering by sample for the delta m/z vs. sample plot
                                         dcc.Dropdown(
@@ -283,7 +321,7 @@ def serve_layout():
                                             options=[],
                                             placeholder="Select samples...",
                                             style={"text-align": "left",
-                                                   "height": "35px",
+                                                   "height": "1.5",
                                                    "width": "100%",
                                                    "display": "inline-block"},
                                             multi=True),
@@ -856,7 +894,7 @@ def serve_layout():
 
                                         # Select biological standard
                                         html.Div([
-                                            dbc.Label("Select biological standard"),
+                                            dbc.Label("Select biological standard to modify"),
                                             dbc.InputGroup([
                                                 dbc.Select(id="select-bio-standard-dropdown",
                                                            placeholder="No biological standard selected"),
@@ -2173,6 +2211,9 @@ def apply_sample_filter_to_plots(filter, polarity, samples, metadata):
 
 
 @app.callback(Output("istd-rt-plot", "figure"),
+              Output("rt-prev-button", "n_clicks"),
+              Output("rt-next-button", "n_clicks"),
+              Output("istd-rt-dropdown", "value"),
               Input("polarity-options", "value"),
               Input("istd-rt-dropdown", "value"),
               Input("rt-plot-sample-dropdown", "value"),
@@ -2181,9 +2222,11 @@ def apply_sample_filter_to_plots(filter, polarity, samples, metadata):
               State("samples", "data"),
               State("study-resources", "data"),
               State("pos-internal-standards", "data"),
-              State("neg-internal-standards", "data"), prevent_initial_call=True)
+              State("neg-internal-standards", "data"),
+              Input("rt-prev-button", "n_clicks"),
+              Input("rt-next-button", "n_clicks"), prevent_initial_call=True)
 def populate_istd_rt_plot(polarity, internal_standard, selected_samples, rt_pos, rt_neg, samples, resources,
-    pos_internal_standards, neg_internal_standards):
+    pos_internal_standards, neg_internal_standards, previous, next):
 
     """
     Populates internal standard retention time vs. sample plot
@@ -2192,6 +2235,8 @@ def populate_istd_rt_plot(polarity, internal_standard, selected_samples, rt_pos,
     # if files["resources"]["instrument"] is not None:
     #     if files["resources"]["instrument"] != instrument:
     #         raise PreventUpdate
+
+    trigger = ctx.triggered_id
 
     # Get internal standard RT data
     df_istd_rt_pos = pd.DataFrame()
@@ -2226,13 +2271,22 @@ def populate_istd_rt_plot(polarity, internal_standard, selected_samples, rt_pos,
     # Set initial dropdown values when none are selected
     if not internal_standard:
         internal_standard = internal_standards[0]
+
     if not selected_samples:
         selected_samples = samples
+
+    # Calculate index of internal standard from button clicks
+    if trigger == "rt-prev-button" or trigger == "rt-next-button":
+        index = get_internal_standard_index(previous, next, len(internal_standards))
+        internal_standard = internal_standards[index]
+    else:
+        index = next
 
     try:
         # Generate internal standard RT vs. sample plot
         return load_istd_rt_plot(dataframe=df_istd_rt, samples=selected_samples,
-        internal_standard=internal_standard, retention_times=retention_times)
+            internal_standard=internal_standard, retention_times=retention_times), \
+                None, index, internal_standard
 
     except Exception as error:
         print("Error in loading RT vs. sample plot:", error)
@@ -2240,6 +2294,9 @@ def populate_istd_rt_plot(polarity, internal_standard, selected_samples, rt_pos,
 
 
 @app.callback(Output("istd-intensity-plot", "figure"),
+              Output("intensity-prev-button", "n_clicks"),
+              Output("intensity-next-button", "n_clicks"),
+              Output("istd-intensity-dropdown", "value"),
               Input("polarity-options", "value"),
               Input("istd-intensity-dropdown", "value"),
               Input("intensity-plot-sample-dropdown", "value"),
@@ -2248,13 +2305,17 @@ def populate_istd_rt_plot(polarity, internal_standard, selected_samples, rt_pos,
               State("samples", "data"),
               State("metadata", "data"),
               State("pos-internal-standards", "data"),
-              State("neg-internal-standards", "data"), prevent_initial_call=True)
+              State("neg-internal-standards", "data"),
+              Input("intensity-prev-button", "n_clicks"),
+              Input("intensity-next-button", "n_clicks"), prevent_initial_call=True)
 def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, intensity_pos, intensity_neg, samples, metadata,
-    pos_internal_standards, neg_internal_standards):
+    pos_internal_standards, neg_internal_standards, previous, next):
 
     """
     Populates internal standard intensity vs. sample plot
     """
+
+    trigger = ctx.triggered_id
 
     # Get internal standard intensity data
     df_istd_intensity_pos = pd.DataFrame()
@@ -2301,10 +2362,18 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
         if len(df_metadata) == len(selected_samples):
             selected_samples = df_metadata["Filename"].tolist()
 
+    # Calculate index of internal standard from button clicks
+    if trigger == "intensity-prev-button" or trigger == "intensity-next-button":
+        index = get_internal_standard_index(previous, next, len(internal_standards))
+        internal_standard = internal_standards[index]
+    else:
+        index = next
+
     try:
         # Generate internal standard intensity vs. sample plot
         return load_istd_intensity_plot(dataframe=df_istd_intensity, samples=selected_samples,
-        internal_standard=internal_standard, text=selected_samples, treatments=treatments)
+        internal_standard=internal_standard, text=selected_samples, treatments=treatments), \
+               None, index, internal_standard
 
     except Exception as error:
         print("Error in loading intensity vs. sample plot:", error)
@@ -2312,6 +2381,9 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
 
 
 @app.callback(Output("istd-mz-plot", "figure"),
+              Output("mz-prev-button", "n_clicks"),
+              Output("mz-next-button", "n_clicks"),
+              Output("istd-mz-dropdown", "value"),
               Input("polarity-options", "value"),
               Input("istd-mz-dropdown", "value"),
               Input("mz-plot-sample-dropdown", "value"),
@@ -2320,13 +2392,17 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
               State("samples", "data"),
               State("pos-internal-standards", "data"),
               State("neg-internal-standards", "data"),
-              State("study-resources", "data"), prevent_initial_call=True)
+              State("study-resources", "data"),
+              Input("mz-prev-button", "n_clicks"),
+              Input("mz-next-button", "n_clicks"), prevent_initial_call=True)
 def populate_istd_mz_plot(polarity, internal_standard, selected_samples, mz_pos, mz_neg, samples,
-    pos_internal_standards, neg_internal_standards, resources):
+    pos_internal_standards, neg_internal_standards, resources, previous, next):
 
     """
     Populates internal standard delta m/z vs. sample plot
     """
+
+    trigger = ctx.triggered_id
 
     # Get chromatography
     chromatography = json.loads(resources)["chromatography"]
@@ -2366,10 +2442,18 @@ def populate_istd_mz_plot(polarity, internal_standard, selected_samples, mz_pos,
     if not selected_samples:
         selected_samples = samples
 
+    # Calculate index of internal standard from button clicks
+    if trigger == "mz-prev-button" or trigger == "mz-next-button":
+        index = get_internal_standard_index(previous, next, len(internal_standards))
+        internal_standard = internal_standards[index]
+    else:
+        index = next
+
     try:
         # Generate internal standard delta m/z vs. sample plot
         return load_istd_delta_mz_plot(dataframe=df_istd_mz, samples=selected_samples,
-                    internal_standard=internal_standard, chromatography=chromatography, polarity=pol)
+            internal_standard=internal_standard, chromatography=chromatography, polarity=pol), \
+               None, index, internal_standard
 
     except Exception as error:
         print("Error in loading delta m/z vs. sample plot:", error)

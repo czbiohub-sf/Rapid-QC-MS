@@ -355,3 +355,27 @@ def load_bio_benchmark_plot(dataframe, metabolite_name):
                       hovertemplate=f"{metabolite_name}" + "<br>Study: %{x} <br>Intensity: %{text}<br>")
 
     return fig
+
+
+def get_internal_standard_index(previous, next, max):
+
+    """
+    Button functionality for seeking through internal standards
+    """
+
+    if previous is not None:
+        if next is None or next == 0:
+            return max - 1
+
+    if previous is None:
+        if next is None:
+            index = 0
+        else:
+            index = next
+    elif previous is not None:
+        index = next - previous
+
+    if index < 0 or index >= max:
+        index = 0
+
+    return index

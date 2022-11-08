@@ -86,6 +86,21 @@ h2 {
     font-size: 1.15rem;
 }
 
+.istd-dropdown-style {
+    display: inline-block;
+    vertical-align: middle;
+    width: 89%;
+    margin-bottom: 5px;
+    margin-right: 1%;
+}
+
+.istd-button-style {
+    display: inline-block;
+    vertical-align: middle;
+    width: 10%;
+    margin-bottom: 5px;
+}
+
 /* Radio items */
 .radio-group-container {
     width: 100%;
