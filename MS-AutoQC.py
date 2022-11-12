@@ -1365,6 +1365,12 @@ def serve_layout():
             dcc.Store(id="istd-intensity-neg"),
             dcc.Store(id="istd-mz-pos"),
             dcc.Store(id="istd-mz-neg"),
+            dcc.Store(id="istd-delta-rt-pos"),
+            dcc.Store(id="istd-delta-rt-neg"),
+            dcc.Store(id="istd-in-run-delta-rt-pos"),
+            dcc.Store(id="istd-in-run-delta-rt-neg"),
+            dcc.Store(id="istd-delta-mz-pos"),
+            dcc.Store(id="istd-delta-mz-neg"),
             dcc.Store(id="sequence"),
             dcc.Store(id="metadata"),
             dcc.Store(id="bio-rt-pos"),
@@ -2059,6 +2065,12 @@ def populate_instrument_runs_table(instrument):
               Output("samples", "data"),
               Output("pos-internal-standards", "data"),
               Output("neg-internal-standards", "data"),
+              Output("istd-delta-rt-pos", "data"),
+              Output("istd-delta-rt-neg", "data"),
+              Output("istd-in-run-delta-rt-pos", "data"),
+              Output("istd-in-run-delta-rt-neg", "data"),
+              Output("istd-delta-mz-pos", "data"),
+              Output("istd-delta-mz-neg", "data"),
               Input("instrument-run-table", "active_cell"),
               State("instrument-run-table", "data"), prevent_initial_call=True, suppress_callback_exceptions=True)
 def load_data(active_cell, table_data):
@@ -2578,10 +2590,17 @@ def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_p
               State("istd-intensity-neg", "data"),
               State("istd-mz-pos", "data"),
               State("istd-mz-neg", "data"),
+              State("istd-delta-rt-pos", "data"),
+              State("istd-delta-rt-neg", "data"),
+              State("istd-in-run-delta-rt-pos", "data"),
+              State("istd-in-run-delta-rt-neg", "data"),
+              State("istd-delta-mz-pos", "data"),
+              State("istd-delta-mz-neg", "data"),
               State("sequence", "data"),
               State("metadata", "data"), prevent_initial_call=True)
-def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_click, mz_click,
-                       rt_pos, rt_neg, intensity_pos, intensity_neg, mz_pos, mz_neg, sequence, metadata):
+def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_click, mz_click, rt_pos, rt_neg, intensity_pos,
+    intensity_neg, mz_pos, mz_neg, delta_rt_pos, delta_rt_neg, in_run_delta_rt_pos, in_run_delta_rt_neg, delta_mz_pos, delta_mz_neg,
+    sequence, metadata):
 
     """
     Opens information modal when a sample is clicked from the sample table
@@ -2614,20 +2633,23 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
 
     # Generate DataFrames with iSTD and metadata info for selected sample
     if polarity == "Pos":
-        df_rt_pos = pd.read_json(rt_pos, orient="split")
-        df_intensity_pos = pd.read_json(intensity_pos, orient="split")
-        df_mz_pos = pd.read_json(mz_pos, orient="split")
-
-        df_sample_istd, df_sample_info = generate_sample_metadata_dataframe(
-            clicked_sample, df_rt_pos, df_mz_pos, df_intensity_pos, df_sequence, df_metadata)
+        df_rt = pd.read_json(rt_pos, orient="split")
+        df_intensity = pd.read_json(intensity_pos, orient="split")
+        df_mz = pd.read_json(mz_pos, orient="split")
+        df_delta_rt = pd.read_json(delta_rt_pos, orient="split")
+        df_in_run_delta_rt = pd.read_json(in_run_delta_rt_pos, orient="split")
+        df_delta_mz = pd.read_json(delta_mz_pos, orient="split")
 
     elif polarity == "Neg":
-        df_rt_neg = pd.read_json(rt_neg, orient="split")
-        df_intensity_neg = pd.read_json(intensity_neg, orient="split")
-        df_mz_neg = pd.read_json(mz_neg, orient="split")
+        df_rt = pd.read_json(rt_neg, orient="split")
+        df_intensity = pd.read_json(intensity_neg, orient="split")
+        df_mz = pd.read_json(mz_neg, orient="split")
+        df_delta_rt = pd.read_json(delta_rt_neg, orient="split")
+        df_in_run_delta_rt = pd.read_json(in_run_delta_rt_neg, orient="split")
+        df_delta_mz = pd.read_json(delta_mz_neg, orient="split")
 
-        df_sample_istd, df_sample_info = generate_sample_metadata_dataframe(
-            clicked_sample, df_rt_neg, df_mz_neg, df_intensity_neg, df_sequence, df_metadata)
+    df_sample_istd, df_sample_info = generate_sample_metadata_dataframe(clicked_sample, df_rt, df_mz, df_intensity,
+        df_delta_rt, df_in_run_delta_rt, df_delta_mz, df_sequence, df_metadata)
 
     # Create tables from DataFrames
     metadata_table = dbc.Table.from_dataframe(df_sample_info, striped=True, bordered=True, hover=True)

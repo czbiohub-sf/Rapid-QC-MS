@@ -434,8 +434,8 @@ def process_data_file(path, filename, extension, run_id):
     json_mz = df_peak_list[["Name", "Precursor m/z"]].to_json(orient="split")
     json_rt = df_peak_list[["Name", "RT (min)"]].to_json(orient="split")
     json_intensity = df_peak_list[["Name", "Height"]].to_json(orient="split")
+    qc_dataframe = qc_dataframe.to_json(orient="split")
 
     # Write QC results to database and upload to Google Drive
     db.write_qc_results(filename, run_id, json_mz, json_rt, json_intensity, qc_dataframe, qc_result, is_bio_standard)
-
-    return
+    return None

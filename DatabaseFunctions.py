@@ -1724,7 +1724,7 @@ def get_samples_in_run(run_id, sample_type="Both"):
 def parse_internal_standard_data(run_id, result_type, polarity, as_json=True):
 
     """
-    Returns JSON-ified DataFrame of samples (as columns) vs. internal standards (as rows)
+    Returns JSON-ified DataFrame of samples (as rows) vs. internal standards (as columns)
     """
 
     # Get relevant QC results table from database
@@ -1792,6 +1792,50 @@ def parse_biological_standard_data(result_type, polarity, biological_standard, a
 
         # Refactor so that each row is a sample, and each column is an internal standard
         df.rename(columns={df.columns[1]: run_ids[index]}, inplace=True)
+
+        # Append result to df_results
+        df_results = pd.concat([df_results, df], ignore_index=True)
+
+    # Return DataFrame as JSON string
+    if as_json:
+        return df_results.to_json(orient="split")
+    else:
+        return df_results
+
+
+def parse_internal_standard_qc_data(run_id, polarity, result_type, as_json=True):
+
+    """
+    Returns JSON-ified DataFrame of samples (as rows) vs. internal standards (as columns)
+    """
+
+    # Get relevant QC results table from database
+    df_samples = get_samples_in_run(run_id, "Sample")
+
+    # Filter by polarity
+    df_samples = df_samples.loc[df_samples["sample_id"].str.contains(polarity)]
+
+    # Get list of results using result type
+    sample_ids = df_samples["sample_id"].astype(str).tolist()
+    results = df_samples["qc_dataframe"].tolist()
+
+    # Prepare unified results DataFrame
+    df_results = pd.DataFrame()
+
+    # For each JSON-ified result,
+    for index, result in enumerate(results):
+
+        # Convert to DataFrame
+        df = pd.read_json(result, orient="split")
+        df = df[["Name", result_type]]
+
+        # Refactor so that each row is a sample, and each column is an internal standard
+        df.rename(columns={df.columns[1]: sample_ids[index]}, inplace=True)
+        df = df.transpose()
+        df.columns = df.iloc[0]
+        df = df.drop(df.index[0])
+        df.reset_index(inplace=True)
+        df.rename(columns={"index": "Sample"}, inplace=True)
 
         # Append result to df_results
         df_results = pd.concat([df_results, df], ignore_index=True)
