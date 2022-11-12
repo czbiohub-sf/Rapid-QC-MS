@@ -29,14 +29,27 @@ def sync_is_enabled():
     if not is_valid():
         return False
 
-    # Get Google Drive ID's for the MS-AutoQC folder and database file
     df_instruments = get_table("instruments")
     gdrive_folder_id = df_instruments["gdrive_folder_id"].astype(str).tolist()
 
-    # Update existing database in Google Drive
     if len(gdrive_folder_id) > 0:
         if gdrive_folder_id[0] != "None" and gdrive_folder_id[0] != "":
             return True
+
+    return False
+
+
+def notifications_are_enabled():
+
+    """
+    Checks whether Slack / email notifications are enabled
+    """
+
+    if not is_valid():
+        return False
+
+    if len(get_table("notifications")) > 0:
+        return True
 
     return False
 
@@ -88,6 +101,7 @@ def create_database():
         sa.Column("retention_time", TEXT),
         sa.Column("intensity", TEXT),
         sa.Column("md5", TEXT),
+        sa.Column("qc_dataframe", TEXT),
         sa.Column("qc_result", TEXT),
         sa.Column("biological_standard", TEXT),
         sa.Column("position", TEXT)
@@ -177,13 +191,26 @@ def create_database():
         sa.Column("msdial_directory", TEXT)
     )
 
+    notifications = sa.Table(
+        "notifications", db_metadata,
+        sa.Column("id", INTEGER, primary_key=True),
+        sa.Column("email_address", TEXT),
+        sa.Column("slack_channel", TEXT),
+    )
+
     qc_parameters = sa.Table(
         "qc_parameters", db_metadata,
         sa.Column("id", INTEGER, primary_key=True),
         sa.Column("config_name", TEXT),
+        sa.Column("enabled", TEXT),
         sa.Column("intensity_dropouts_cutoff", INTEGER),
-        sa.Column("max_rt_shift", REAL),
-        sa.Column("allowed_delta_rt_trends", INTEGER)
+        sa.Column("library_rt_shift_cutoff", REAL),
+        sa.Column("in_run_rt_shift_cutoff", REAL),
+        sa.Column("library_mz_shift_cutoff", REAL),
+        sa.Column("intensity_enabled", INTEGER),
+        sa.Column("library_rt_enabled", INTEGER),
+        sa.Column("in_run_rt_enabled", INTEGER),
+        sa.Column("library_mz_enabled", INTEGER)
     )
 
     runs = sa.Table(
@@ -209,12 +236,13 @@ def create_database():
         sa.Column("id", INTEGER, primary_key=True),
         sa.Column("sample_id", TEXT),
         sa.Column("run_id", TEXT),
+        sa.Column("position", TEXT),
+        sa.Column("md5", TEXT),
         sa.Column("precursor_mz", TEXT),
         sa.Column("retention_time", TEXT),
         sa.Column("intensity", TEXT),
-        sa.Column("md5", TEXT),
-        sa.Column("qc_result", TEXT),
-        sa.Column("position", TEXT)
+        sa.Column("qc_dataframe", TEXT),
+        sa.Column("qc_result", TEXT)
     )
 
     targeted_features = sa.Table(
@@ -559,7 +587,7 @@ def update_md5_checksum(sample_id, md5_checksum):
     connection.close()
 
 
-def write_qc_results(sample_id, run_id, json_mz, json_rt, json_intensity, qc_result, is_bio_standard):
+def write_qc_results(sample_id, run_id, json_mz, json_rt, json_intensity, qc_dataframe, qc_result, is_bio_standard):
 
     """
     Updates m/z, RT, and intensity info (as JSON strings) in appropriate table upon MS-DIAL processing completion
@@ -582,6 +610,7 @@ def write_qc_results(sample_id, run_id, json_mz, json_rt, json_intensity, qc_res
             .values(precursor_mz=json_mz,
                     retention_time=json_rt,
                     intensity=json_intensity,
+                    qc_dataframe=qc_dataframe,
                     qc_result=qc_result)
     )
 
@@ -1383,10 +1412,10 @@ def get_internal_standards_dict(chromatography, value_type):
     return dict
 
 
-def get_internal_standards_list(chromatography, polarity):
+def get_internal_standards(chromatography, polarity):
 
     """
-    Returns list of internal standards for a given chromatography method and polarity
+    Returns DataFrame of internal standards for a given chromatography method and polarity
     """
 
     engine = sa.create_engine(sqlite_db_location)
@@ -1394,14 +1423,13 @@ def get_internal_standards_list(chromatography, polarity):
     query = "SELECT * FROM internal_standards " + \
             "WHERE chromatography='" + chromatography + "' AND polarity='" + polarity + "'"
 
-    df_internal_standards = pd.read_sql(query, engine)
-    return df_internal_standards["name"].astype(str).tolist()
+    return pd.read_sql(query, engine)
 
 
-def get_targeted_features_list(biological_standard, chromatography, polarity):
+def get_targeted_features(biological_standard, chromatography, polarity):
 
     """
-    Returns list of metabolite targets for a given biological standard, chromatography, and polarity
+    Returns DataFrame of metabolite targets for a given biological standard, chromatography, and polarity
     """
 
     engine = sa.create_engine(sqlite_db_location)
@@ -1411,8 +1439,7 @@ def get_targeted_features_list(biological_standard, chromatography, polarity):
             "' AND polarity='" + polarity + \
             "' AND biological_standard ='" + biological_standard + "'"
 
-    df_targeted_features = pd.read_sql(query, engine)
-    return df_targeted_features["name"].astype(str).tolist()
+    return pd.read_sql(query, engine)
 
 
 def get_biological_standards():
@@ -1577,8 +1604,13 @@ def add_qc_configuration(qc_config_name):
     insert_config = qc_parameters_table.insert().values(
         {"config_name": qc_config_name,
          "intensity_dropouts_cutoff": 4,
-         "max_rt_shift": 0.1,
-         "allowed_delta_rt_trends": 3}
+         "library_rt_shift_cutoff": 0.1,
+         "in_run_rt_shift_cutoff": 0.05,
+         "library_mz_shift_cutoff": 0.005,
+         "intensity_enabled": True,
+         "library_rt_enabled": True,
+         "in_run_rt_enabled": True,
+         "library_mz_enabled": True}
     )
 
     # Execute INSERT to database, then close the connection
@@ -1609,26 +1641,35 @@ def remove_qc_configuration(qc_config_name):
     connection.close()
 
 
-def get_qc_configuration_parameters(config_name):
+def get_qc_configuration_parameters(config_name=None, run_id=None):
 
     """
-    Returns tuple of parameters for a selected QC configuration
+    Returns DataFrame of parameters for a selected QC configuration
     """
 
-    # Get "qc_parameters" table from database as a DataFrame
     df_configurations = get_table("qc_parameters")
 
     # Get selected configuration
-    selected_config = df_configurations.loc[
-        df_configurations["config_name"] == config_name]
+    if config_name is not None:
+        selected_config = df_configurations.loc[df_configurations["config_name"] == config_name]
+    elif run_id is not None:
+        df_runs = get_table("runs")
+        config_name = df_runs.loc[df_runs["run_id"] == run_id]["qc_config_id"].values[0]
+        selected_config = df_configurations.loc[df_configurations["config_name"] == config_name]
 
-    selected_config.drop(["id", "config_name"], inplace=True, axis=1)
+    selected_config.drop(inplace=True, columns=["id", "config_name"])
+
+    # Probably not the most efficient way to do this...
+    for column in ["intensity_enabled", "library_rt_enabled", "in_run_rt_enabled", "library_mz_enabled"]:
+        selected_config.loc[selected_config[column] == 1, column] = True
+        selected_config.loc[selected_config[column] == 0, column] = False
 
     # Return parameters of selected configuration as a tuple
-    return tuple(selected_config.to_records(index=False)[0])
+    return selected_config
 
 
-def update_qc_configuration(config_name, intensity_dropouts_cutoff, max_rt_shift, allowed_delta_rt_trends):
+def update_qc_configuration(config_name, intensity_dropouts_cutoff, library_rt_shift_cutoff, in_run_rt_shift_cutoff,
+    library_mz_shift_cutoff, intensity_enabled, library_rt_enabled, in_run_rt_enabled, library_mz_enabled):
 
     """
     Updates parameters for a given QC configuration
@@ -1645,8 +1686,13 @@ def update_qc_configuration(config_name, intensity_dropouts_cutoff, max_rt_shift
         sa.update(qc_parameters_table)
             .where(qc_parameters_table.c.config_name == config_name)
             .values(intensity_dropouts_cutoff=intensity_dropouts_cutoff,
-                    max_rt_shift=max_rt_shift,
-                    allowed_delta_rt_trends=allowed_delta_rt_trends)
+                    library_rt_shift_cutoff=library_rt_shift_cutoff,
+                    in_run_rt_shift_cutoff=in_run_rt_shift_cutoff,
+                    library_mz_shift_cutoff=library_mz_shift_cutoff,
+                    intensity_enabled=intensity_enabled,
+                    library_rt_enabled=library_rt_enabled,
+                    in_run_rt_enabled=in_run_rt_enabled,
+                    library_mz_enabled=library_mz_enabled)
     )
 
     # Execute UPDATE to database, then close the connection
@@ -1675,7 +1721,7 @@ def get_samples_in_run(run_id, sample_type="Both"):
     return df.loc[df["run_id"] == run_id]
 
 
-def parse_internal_standard_data(run_id, result_type, polarity):
+def parse_internal_standard_data(run_id, result_type, polarity, as_json=True):
 
     """
     Returns JSON-ified DataFrame of samples (as columns) vs. internal standards (as rows)
@@ -1711,10 +1757,13 @@ def parse_internal_standard_data(run_id, result_type, polarity):
         df_results = pd.concat([df_results, df], ignore_index=True)
 
     # Return DataFrame as JSON string
-    return df_results.to_json(orient="split")
+    if as_json:
+        return df_results.to_json(orient="split")
+    else:
+        return df_results
 
 
-def parse_biological_standard_data(result_type, polarity, biological_standard):
+def parse_biological_standard_data(result_type, polarity, biological_standard, as_json=True):
 
     """
     Returns JSON-ified DataFrame of instrument runs (as columns) vs. targeted features (as rows)
@@ -1748,7 +1797,10 @@ def parse_biological_standard_data(result_type, polarity, biological_standard):
         df_results = pd.concat([df_results, df], ignore_index=True)
 
     # Return DataFrame as JSON string
-    return df_results.to_json(orient="split")
+    if as_json:
+        return df_results.to_json(orient="split")
+    else:
+        return df_results
 
 
 def get_workspace_users_list():

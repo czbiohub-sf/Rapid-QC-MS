@@ -1,5 +1,6 @@
 import os, time, shutil
 import pandas as pd
+import numpy as np
 import DatabaseFunctions as db
 
 def sequence_is_valid(filename, contents, vendor="Thermo Fisher"):
@@ -212,7 +213,7 @@ def peak_list_to_dataframe(sample_peak_list, internal_standards=None, targeted_f
     return df_peak_list
 
 
-def qc_sample(df_peak_list, is_bio_standard):
+def qc_sample(run_id, polarity, df_peak_list, df_features, is_bio_standard):
 
     """
     Main algorithm that performs QC checks on sample data
@@ -220,10 +221,140 @@ def qc_sample(df_peak_list, is_bio_standard):
 
     # Handles sample QC checks
     if not is_bio_standard:
-        return "Pass"
+
+        # Handle duplicate features by picking the one with the highest intensity
+        # Note: if strict RT and m/z tolerances are specified in the MS-DIAL configuration, this should not be a problem
+        duplicates_list = df_peak_list.loc[df_peak_list.duplicated(subset="Name")]["Name"].tolist()
+
+        # If duplicates are found,
+        if len(duplicates_list) > 0:
+
+            # For each duplicate feature,
+            for duplicate in duplicates_list:
+
+                # Index the duplicates of that feature and keep the one with the highest intensity
+                df_duplicates = df_peak_list.loc[df_peak_list["Name"] == duplicate]
+
+                duplicates_to_drop = df_peak_list.loc[
+                    (df_peak_list["Name"] == duplicate) & (df_peak_list["Height"] != df_duplicates["Height"].max())]
+
+                df_peak_list.drop(duplicates_to_drop.index, inplace=True)
+
+        # Refactor internal standards DataFrame
+        df_features = df_features.rename(
+            columns={"name": "Name",
+                     "chromatography": "Chromatography",
+                     "polarity": "Polarity",
+                     "precursor_mz": "Library m/z",
+                     "retention_time": "Library RT",
+                     "ms2_spectrum": "Library MS2",
+                     "inchikey": "Library INCHIKEY"})
+
+        # Get delta RT and delta m/z values for each internal standard
+        df_compare = pd.merge(df_features, df_peak_list, on="Name")
+        df_compare["Delta RT"] = df_compare["RT (min)"].astype(float) - df_compare["Library RT"].astype(float)
+        df_compare["Delta m/z"] = df_compare["Precursor m/z"].astype(float) - df_compare["Library m/z"].astype(float)
+
+        # Get in-run RT average for each internal standard
+        df_compare["In-run RT average"] = np.nan
+        df_run_retention_times = db.parse_internal_standard_data(run_id, "retention_time", polarity, False)
+
+        for internal_standard in df_run_retention_times.columns:
+            if internal_standard == "Sample":
+                continue
+            in_run_average = df_run_retention_times[internal_standard].astype(float).mean()
+            df_compare.loc[df_compare["Name"] == internal_standard, "In-run RT average"] = in_run_average
+
+        # Compare each internal standard RT to in-run RT average
+        df_compare["In-run delta RT"] = df_compare["RT (min)"].astype(float) - df_compare["In-run RT average"]
+
+        # Prepare final DataFrame
+        qc_dataframe = df_compare[["Name", "Delta m/z", "Delta RT", "In-run delta RT"]]
+
+        # Count internal standard intensity dropouts
+        qc_dataframe["Intensity dropout"] = 0
+        for feature in df_features["Name"].astype(str).tolist():
+            if feature not in df_peak_list["Name"].astype(str).tolist():
+                row = {"Name": feature,
+                       "Delta m/z": np.nan,
+                       "Delta RT": np.nan,
+                       "In-run delta RT": np.nan,
+                       "Intensity dropout": 1}
+                qc_dataframe = qc_dataframe.append(row, ignore_index=True)
+
+        # Determine pass / fail based on user criteria
+        qc_config = db.get_qc_configuration_parameters(run_id=run_id)
+        qc_result = "Pass"
+
+        # QC of internal standard intensity dropouts
+        if qc_config["intensity_enabled"].values[0] == 1:
+
+            # Count intensity dropouts
+            intensity_dropouts = qc_dataframe["Intensity dropout"].astype(int).sum()
+            intensity_dropouts_cutoff = qc_config["intensity_dropouts_cutoff"].astype(int).values[0]
+
+            # Compare to user-defined cutoff
+            if intensity_dropouts >= intensity_dropouts_cutoff:
+                qc_result = "Fail"
+            elif intensity_dropouts == intensity_dropouts_cutoff - 1:
+                qc_result = "Warning"
+
+        # QC of internal standard RT's against library RT's
+        if qc_config["library_rt_enabled"].values[0] == 1:
+
+            # Check if delta RT's are outside of user-defined cutoff
+            library_rt_shift_cutoff = qc_config["library_rt_shift_cutoff"].astype(float).values[0]
+
+            delta_rts_for_fail = qc_dataframe.loc[
+                qc_dataframe["Delta RT"].abs() > library_rt_shift_cutoff]
+            delta_rts_for_warning = qc_dataframe.loc[
+                ((library_rt_shift_cutoff / 1.5) < qc_dataframe["Delta RT"].abs()) &
+                ((qc_dataframe["Delta RT"].abs()) < library_rt_shift_cutoff)]
+
+            if len(delta_rts_for_fail) > 0:
+                qc_result = "Fail"
+            elif len(delta_rts_for_warning) > 0:
+                qc_result = "Warning"
+
+        # QC of internal standard RT's against in-run RT average
+        if qc_config["in_run_rt_enabled"].values[0] == 1:
+
+            # Check if in-run delta RT's are outside of user-defined cutoff
+            in_run_rt_shift_cutoff = qc_config["in_run_rt_shift_cutoff"].astype(float).values[0]
+
+            delta_rts_for_fail = qc_dataframe.loc[
+                qc_dataframe["In-run delta RT"].abs() > in_run_rt_shift_cutoff]
+            delta_rts_for_warning = qc_dataframe.loc[
+                ((in_run_rt_shift_cutoff / 1.25) < qc_dataframe["In-run delta RT"].abs()) &
+                (qc_dataframe["In-run delta RT"].abs() < in_run_rt_shift_cutoff)]
+
+            if len(delta_rts_for_fail) > 0:
+                qc_result = "Fail"
+            elif len(delta_rts_for_warning) > 0:
+                qc_result = "Warning"
+
+        # QC of internal standard precursor m/z against library m/z
+        if qc_config["library_mz_enabled"].values[0] == 1:
+
+            # Check if delta m/z's are outside of user-defined cutoff
+            library_mz_shift_cutoff = qc_config["library_mz_shift_cutoff"].astype(float).values[0]
+
+            delta_mzs_for_fail = qc_dataframe.loc[
+                qc_dataframe["Delta m/z"].abs() > library_mz_shift_cutoff]
+            delta_mzs_for_warning = qc_dataframe.loc[
+                ((library_mz_shift_cutoff / 1.25) < qc_dataframe["Delta m/z"].abs()) &
+                (qc_dataframe["Delta m/z"].abs() < library_mz_shift_cutoff)]
+
+            if len(delta_mzs_for_fail) > 0:
+                qc_result = "Fail"
+            elif len(delta_mzs_for_warning) > 0:
+                qc_result = "Warning"
+
     # Handles biological standard QC checks
     else:
-        return "Pass"
+        pass
+
+    return qc_dataframe, qc_result
 
 
 def process_data_file(path, filename, extension, run_id):
@@ -233,7 +364,7 @@ def process_data_file(path, filename, extension, run_id):
     2. Process data file using MS-DIAL and user-defined parameter configuration
     3a. Write QC results to "sample_qc_results" table
     3b. Write QC results to "bio_qc_results" table if sample is biological standard
-    4. Upload CSV file with QC results (as JSON) to Google Drive
+    4. Upload CSV file with QC results to Google Drive
     """
 
     # Create the necessary directories
@@ -269,16 +400,19 @@ def process_data_file(path, filename, extension, run_id):
 
         # Get parameters and features for that biological standard type
         msdial_parameters = db.get_parameter_file_path(chromatography, polarity, biological_standard)
-        feature_list = db.get_targeted_features_list(biological_standard, chromatography, polarity + " Mode")
+        df_features = db.get_targeted_features(biological_standard, chromatography, polarity + " Mode")
         is_bio_standard = True
 
     elif filename in df_samples["sample_id"].astype(str).tolist():
         msdial_parameters = db.get_parameter_file_path(chromatography, polarity)
-        feature_list = db.get_internal_standards_list(chromatography, polarity + " Mode")
+        df_features = db.get_internal_standards(chromatography, polarity + " Mode")
         is_bio_standard = False
 
     else:
         return
+
+    # Get list of features
+    feature_list = df_features["name"].astype(str).tolist()
 
     # Get MS-DIAL directory
     msdial_location = db.get_msdial_directory("Default")
@@ -288,13 +422,13 @@ def process_data_file(path, filename, extension, run_id):
 
     # Run MS-DIAL
     peak_list = run_msdial_processing(filename, msdial_location, msdial_parameters,
-                                      str(mzml_file_directory), str(qc_results_directory))
+        str(mzml_file_directory), str(qc_results_directory))
 
     # Convert peak list to DataFrame
     df_peak_list = peak_list_to_dataframe(peak_list, feature_list)
 
-    # Perform QC checks
-    qc_result = qc_sample(df_peak_list, is_bio_standard)
+    # Execute AutoQC algorithm
+    qc_dataframe, qc_result = qc_sample(run_id, polarity, df_peak_list, df_features, is_bio_standard)
 
     # Get m/z, RT, and intensity info as JSON strings
     json_mz = df_peak_list[["Name", "Precursor m/z"]].to_json(orient="split")
@@ -302,6 +436,6 @@ def process_data_file(path, filename, extension, run_id):
     json_intensity = df_peak_list[["Name", "Height"]].to_json(orient="split")
 
     # Write QC results to database and upload to Google Drive
-    db.write_qc_results(filename, run_id, json_mz, json_rt, json_intensity, qc_result, is_bio_standard)
+    db.write_qc_results(filename, run_id, json_mz, json_rt, json_intensity, qc_dataframe, qc_result, is_bio_standard)
 
     return

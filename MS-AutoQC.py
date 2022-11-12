@@ -1026,29 +1026,56 @@ def serve_layout():
 
                                         html.Div([
                                             dbc.Label("Cutoff for intensity dropouts"),
-                                            dbc.Input(id="intensity-dropout-text-field", type="number",
-                                                      placeholder="4"),
-                                            dbc.FormText("The minimum number of missing internal standards required for a QC fail."),
+                                            dbc.InputGroup(children=[
+                                                dbc.Input(
+                                                    id="intensity-dropouts-cutoff", type="number", placeholder="4"),
+                                                dbc.InputGroupText(
+                                                    dbc.Switch(id="intensity-cutoff-enabled", label="Enabled")),
+                                            ]),
+                                            dbc.FormText("The minimum number of missing internal " +
+                                                         "standards in a sample to trigger a QC fail."),
                                         ]),
 
                                         html.Br(),
 
                                         html.Div([
-                                            dbc.Label("Cutoff for RT shift from run average (min)"),
-                                            dbc.Input(id="run-rt-shift-text-field",
-                                                      placeholder="0.1"),
+                                            dbc.Label("Cutoff for RT shift from library value"),
+                                            dbc.InputGroup(children=[
+                                                dbc.Input(id="library-rt-shift-cutoff", type="number", placeholder="0.1"),
+                                                dbc.InputGroupText(
+                                                    dbc.Switch(id="library-rt-shift-cutoff-enabled", label="Enabled")),
+                                            ]),
                                             dbc.FormText(
-                                                "The minimum retention time shift from the run average (in minutes) required for a QC fail."),
+                                                "The minimum shift in retention time (in minutes) from " +
+                                                "the library value to trigger a QC fail."),
                                         ]),
 
                                         html.Br(),
 
                                         html.Div([
-                                            dbc.Label("Allowed number of samples where delta RT is increasing"),
-                                            dbc.Input(id="allowed-delta-rt-trends-text-field", type="number",
-                                                      placeholder="3"),
+                                            dbc.Label("Cutoff for RT shift from in-run average"),
+                                            dbc.InputGroup(children=[
+                                                dbc.Input(id="in-run-rt-shift-cutoff", type="number", placeholder="0.05"),
+                                                dbc.InputGroupText(
+                                                    dbc.Switch(id="in-run-rt-shift-cutoff-enabled", label="Enabled")),
+                                            ]),
                                             dbc.FormText(
-                                                "If the delta RT is growing in X consecutive samples, you will be sent a warning."),
+                                                "The minimum shift in retention time (in minutes) from " +
+                                                "the in-run average to trigger a QC fail."),
+                                        ]),
+
+                                        html.Br(),
+
+                                        html.Div([
+                                            dbc.Label("Cutoff for m/z shift from library value"),
+                                            dbc.InputGroup(children=[
+                                                dbc.Input(id="library-mz-shift-cutoff", type="number", placeholder="0.005"),
+                                                dbc.InputGroupText(
+                                                    dbc.Switch(id="library-mz-shift-cutoff-enabled", label="Enabled")),
+                                            ]),
+                                            dbc.FormText(
+                                                "The minimum shift in precursor m/z (in minutes) from " +
+                                                "the library value to trigger a QC fail."),
                                         ]),
 
                                         html.Br(),
@@ -3330,48 +3357,63 @@ def show_alert_on_qc_config_removal(config_removed, selected_config):
         return False, "", "danger"
 
 
-@app.callback(Output("intensity-dropout-text-field", "value"),
-              Output("run-rt-shift-text-field", "value"),
-              Output("allowed-delta-rt-trends-text-field", "value"),
+@app.callback(Output("intensity-dropouts-cutoff", "value"),
+              Output("library-rt-shift-cutoff", "value"),
+              Output("in-run-rt-shift-cutoff", "value"),
+              Output("library-mz-shift-cutoff", "value"),
+              Output("intensity-cutoff-enabled", "value"),
+              Output("library-rt-shift-cutoff-enabled", "value"),
+              Output("in-run-rt-shift-cutoff-enabled", "value"),
+              Output("library-mz-shift-cutoff-enabled", "value"),
               Input("qc-configs-dropdown", "value"),
               Input("qc-parameters-saved", "data"),
               Input("qc-parameters-reset", "data"), prevent_initial_call=True)
-def get_qc_parameters_for_config(qc_config_id, on_parameters_saved, on_parameters_reset):
+def get_qc_parameters_for_config(qc_config_name, on_parameters_saved, on_parameters_reset):
 
     """
     In Settings > QC Configurations, fills text fields with placeholders
     of current parameter values stored in the database.
     """
 
-    return db.get_qc_configuration_parameters(qc_config_id)
+    selected_config = db.get_qc_configuration_parameters(config_name=qc_config_name)
+    return tuple(selected_config.to_records(index=False)[0])
 
 
 @app.callback(Output("qc-parameters-saved", "data"),
               Input("save-changes-qc-parameters-button", "n_clicks"),
               State("qc-configs-dropdown", "value"),
-              State("intensity-dropout-text-field", "value"),
-              State("run-rt-shift-text-field", "value"),
-              State("allowed-delta-rt-trends-text-field", "value"), prevent_initial_call=True)
-def write_qc_parameters_to_database(button_clicks, config_name, intensity_dropouts_cutoff, max_rt_shift, allowed_delta_rt_trends):
+              State("intensity-dropouts-cutoff", "value"),
+              State("library-rt-shift-cutoff", "value"),
+              State("in-run-rt-shift-cutoff", "value"),
+              State("library-mz-shift-cutoff", "value"),
+              State("intensity-cutoff-enabled", "value"),
+              State("library-rt-shift-cutoff-enabled", "value"),
+              State("in-run-rt-shift-cutoff-enabled", "value"),
+              State("library-mz-shift-cutoff-enabled", "value"), prevent_initial_call=True)
+def write_qc_parameters_to_database(button_clicks, qc_config_name, intensity_dropouts_cutoff, library_rt_shift_cutoff,
+    in_run_rt_shift_cutoff, library_mz_shift_cutoff, intensity_enabled, library_rt_enabled, in_run_rt_enabled, library_mz_enabled):
 
     """
     Saves QC parameters to respective configuration in database
     """
 
-    db.update_qc_configuration(config_name, intensity_dropouts_cutoff, max_rt_shift, allowed_delta_rt_trends)
+    db.update_qc_configuration(qc_config_name, intensity_dropouts_cutoff, library_rt_shift_cutoff, in_run_rt_shift_cutoff,
+        library_mz_shift_cutoff, intensity_enabled, library_rt_enabled, in_run_rt_enabled, library_mz_enabled)
     return "Saved"
 
 
 @app.callback(Output("qc-parameters-reset", "data"),
               Input("reset-default-qc-parameters-button", "n_clicks"),
               State("qc-configs-dropdown", "value"), prevent_initial_call=True)
-def reset_msdial_parameters_to_default(button_clicks, config_name):
+def reset_msdial_parameters_to_default(button_clicks, qc_config_name):
 
     """
     Resets parameters for selected QC configuration to default settings
     """
 
-    db.update_qc_configuration(config_name, 4, 0.1, 3)
+    db.update_qc_configuration(config_name=qc_config_name, intensity_dropouts_cutoff=4,
+        library_rt_shift_cutoff=0.1, in_run_rt_shift_cutoff=0.05, library_mz_shift_cutoff=0.005,
+        intensity_enabled=True, library_rt_enabled=True, in_run_rt_enabled=True, library_mz_enabled=True)
     return "Reset"
 
 
@@ -4056,6 +4098,8 @@ def start_bulk_qc_processing(modal_open, progress_intervals, data_file_directory
 
         # Once the last file has been processed, terminate the job
         if index == len(filenames):
+            if db.sync_is_enabled():
+                db.sync_to_google_drive(drive=GoogleDrive(gauth_holder[0]), sync_settings=False)
             return 100, "100%", "Processing complete!", True
 
         # Prepare update of progress bar
@@ -4269,4 +4313,4 @@ if __name__ == "__main__":
     #     webbrowser.get("chrome").open("http://127.0.0.1:8050/", new=1)
 
     # Start Dash app
-    app.run_server(threaded=False, debug=False)
+    app.run_server(threaded=False, debug=False, port=8050)
