@@ -19,7 +19,7 @@ Developed at the [Mass Spectrometry Platform of CZ Biohub San Francisco](https:/
 1. [Installation](https://github.com/czbiohub/MS-AutoQC/wiki/Installation)
 2. [Getting Started](https://github.com/czbiohub/MS-AutoQC/wiki/Getting-Started)
 3. [Features](https://github.com/czbiohub/MS-AutoQC/wiki/Features)
-4. [Troubleshooting](https://github.com/czbiohub/MS-AutoQC/wiki/Support)
+4. [Troubleshooting](https://github.com/czbiohub/MS-AutoQC/wiki/Troubleshooting)
 5. [Frequently Asked Questions](https://github.com/czbiohub/MS-AutoQC/wiki/FAQ)
 6. [Documentation](https://github.com/czbiohub/MS-AutoQC/wiki/Documentation)
 7. [Source](https://github.com/czbiohub/MS-AutoQC)
