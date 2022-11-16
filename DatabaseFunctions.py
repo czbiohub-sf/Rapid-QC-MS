@@ -824,6 +824,7 @@ def add_msp_to_database(msp_file, chromatography, polarity, bio_standard=None):
                 list_of_features.append(feature)
 
         features_dict = {}
+        added_features = []
 
         # Iterate through features in MSP
         for feature_index, feature in enumerate(list_of_features):
@@ -840,24 +841,29 @@ def add_msp_to_database(msp_file, chromatography, polarity, bio_standard=None):
             for data_index, feature_data in enumerate(feature):
 
                 # Capture, name, inchikey, m/z, and RT
-                if "Name" in feature_data:
-                    features_dict[feature_index]["Name"] = feature_data.replace("Name: ", "")
+                if "NAME" in feature_data.upper():
+                    feature_name = feature_data.split(": ")[-1]
+                    if feature_name not in added_features:
+                        added_features.append(feature_name)
+                        features_dict[feature_index]["Name"] = feature_name
+                        continue
+                    else:
+                        break
+                elif "PRECURSORMZ" in feature_data.upper():
+                    features_dict[feature_index]["Precursor m/z"] = feature_data.split(": ")[-1]
                     continue
-                elif "Precursormz" in feature_data:
-                    features_dict[feature_index]["Precursor m/z"] = feature_data.replace("Precursormz: ", "")
+                elif "INCHIKEY" in feature_data.upper():
+                    features_dict[feature_index]["INCHIKEY"] = feature_data.split(": ")[-1]
                     continue
-                elif "InChIKey" in feature_data:
-                    features_dict[feature_index]["INCHIKEY"] = feature_data.replace("InChIKey: ", "")
-                    continue
-                elif "RETENTIONTIME" in feature_data:
-                    features_dict[feature_index]["Retention time"] = feature_data.replace("RETENTIONTIME: ", "")
+                elif "RETENTIONTIME" in feature_data.upper():
+                    features_dict[feature_index]["Retention time"] = feature_data.split(": ")[-1]
                     continue
 
                 # Capture MS2 spectrum
                 elif "Num Peaks" in feature_data:
 
                     # Get number of peaks in MS2 spectrum
-                    num_peaks = int(feature_data.replace("Num Peaks: ", ""))
+                    num_peaks = int(feature_data.split(": ")[-1])
 
                     # Each line in the MSP corresponds to a peak
                     start_index = data_index + 1
@@ -870,6 +876,8 @@ def add_msp_to_database(msp_file, chromatography, polarity, bio_standard=None):
 
                     features_dict[feature_index]["MS2 spectrum"] = str(peaks_in_spectrum)
                     break
+
+    features_dict = { key:value for key, value in features_dict.items() if value["Name"] is not None }
 
     # Adding MSP for biological standards
     if bio_standard is not None:
@@ -1352,7 +1360,7 @@ def update_msdial_configuration(config_name, rt_begin, rt_end, mz_begin, mz_end,
     connection.close()
 
 
-def get_msp_file_paths(chromatography, polarity, bio_standard=None):
+def get_msp_file_path(chromatography, polarity, bio_standard=None):
 
     """
     Returns file paths of MSPs for a selected chromatography / polarity (both stored

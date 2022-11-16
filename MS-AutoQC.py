@@ -892,6 +892,10 @@ def serve_layout():
                                         html.Div(id="biological-standards-table"),
                                         html.Br(),
 
+                                        dbc.Label("Configure biological standards and add MSP files",
+                                                  style={"font-weight": "bold"}),
+                                        html.Br(),
+
                                         # Select biological standard
                                         html.Div([
                                             dbc.Label("Select biological standard to modify"),
@@ -907,9 +911,6 @@ def serve_layout():
                                             ]),
                                         ]),
 
-                                        html.Br(),
-
-                                        dbc.Label("Configure biological standards and add MSP files", style={"font-weight": "bold"}),
                                         html.Br(),
 
                                         html.Div([
@@ -3588,7 +3589,7 @@ def capture_uploaded_bio_msp(button_click, contents, filename, chromatography, p
         file = io.StringIO(decoded.decode("utf-8"))
 
         # Add MSP file to database
-        if button_click is not None:
+        if button_click is not None and chromatography is not None and polarity is not None and bio_standard is not None:
             if filename.endswith(".msp"):
                 db.add_msp_to_database(file, chromatography, polarity, bio_standard=bio_standard)
 
@@ -3596,7 +3597,9 @@ def capture_uploaded_bio_msp(button_click, contents, filename, chromatography, p
             if bio_standard in db.get_biological_standards_list():
                 return "Added"
             else:
-                return "Error"
+                return "Error 1"
+        else:
+            return "Error 2"
 
         return "Ready"
 
@@ -3653,8 +3656,10 @@ def ui_feedback_for_adding_msp_to_bio_standard(bio_standard_msp_added):
     if bio_standard_msp_added is not None:
         if bio_standard_msp_added == "Added":
             return True, "Success! Your MSP was added to the biological standard.", False, ""
-        elif bio_standard_msp_added == "Error":
+        elif bio_standard_msp_added == "Error 1":
             return False, "", True, "Error: Unable to add MSP to biological standard."
+        elif bio_standard_msp_added == "Error 2":
+            return False, "", True, "Error: Please select a biological standard, chromatography, and polarity first."
     else:
         return False, "", False, ""
 
@@ -4053,13 +4058,13 @@ def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, b
     for polarity in ["Positive", "Negative"]:
 
         # Generate parameters files for processing samples
-        msp_file_path = db.get_msp_file_paths(chromatography, polarity)
+        msp_file_path = db.get_msp_file_path(chromatography, polarity)
         db.generate_msdial_parameters_file(chromatography, polarity, msp_file_path)
 
         # Generate parameters files for processing each biological standard
         if bio_standards is not None:
             for bio_standard in bio_standards:
-                msp_file_path = db.get_msp_file_paths(chromatography, polarity, bio_standard)
+                msp_file_path = db.get_msp_file_path(chromatography, polarity, bio_standard)
                 db.generate_msdial_parameters_file(chromatography, polarity, msp_file_path, bio_standard)
 
     # Get filenames from sequence and filter out preblanks, wash, shutdown, etc.
