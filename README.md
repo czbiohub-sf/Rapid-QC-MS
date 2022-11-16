@@ -3,7 +3,7 @@
 
 It offers a fast, straightforward approach to ensure collection of high-quality data, allowing for less time extracting ion chromatograms and more time conducting experiments.
 
-![MANA 2022 Poster](https://user-images.githubusercontent.com/7220175/190062493-129b2640-2e60-4787-8460-16f653655365.jpg)
+<img width="1624" alt="Screenshot 2022-11-09 at 8 37 05 AM" src="https://user-images.githubusercontent.com/7220175/200887970-d8bcc29e-3a9a-4a51-912a-56a223d50f8a.png"><br>
 
 # Features
 Developed at the [Mass Spectrometry Platform of CZ Biohub San Francisco](https://www.czbiohub.org/mass-spec/), MS-AutoQC provides a host of key features to streamline untargeted metabolomics research, such as:
@@ -12,8 +12,9 @@ Developed at the [Mass Spectrometry Platform of CZ Biohub San Francisco](https:/
 - Realtime updates on QC fails in the form of Slack or email notifications
 - Interactive data visualization of internal standard retention time, precursor _m/z_, and intensity across samples
 - Google Drive cloud sync and secure, Google-authenticated access to QC results from any device
+<br>
 
-<img width="1624" alt="Screenshot 2022-11-09 at 8 37 05 AM" src="https://user-images.githubusercontent.com/7220175/200887970-d8bcc29e-3a9a-4a51-912a-56a223d50f8a.png"><br>
+![MANA 2022 Poster](https://user-images.githubusercontent.com/7220175/190062493-129b2640-2e60-4787-8460-16f653655365.jpg)
 
 # Navigation
 1. [Installation](https://github.com/czbiohub/MS-AutoQC/wiki/Installation)
