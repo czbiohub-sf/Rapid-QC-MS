@@ -52,8 +52,8 @@ def serve_layout():
                 # Settings button
                 dbc.Row([
                     dbc.Nav([
-                        dbc.NavItem(dbc.NavLink("About", href="#", id="about-button", className="navbar-button")),
-                        dbc.NavItem(dbc.NavLink("Help", href="#", id="help-button", className="navbar-button")),
+                        dbc.NavItem(dbc.NavLink("About", href="https://github.com/czbiohub/MS-AutoQC", className="navbar-button")),
+                        dbc.NavItem(dbc.NavLink("Help", href="https://github.com/czbiohub/MS-AutoQC/wiki", className="navbar-button")),
                         dbc.NavItem(dbc.NavLink("Settings", href="#", id="settings-button", className="navbar-button")),
                     ], className="me-auto")
                 ], className="g-0 ms-auto flex-nowrap mt-3 mt-md-0")
@@ -100,10 +100,10 @@ def serve_layout():
                                         "border": "1px solid " + bootstrap_colors["blue"]
                                         }],
                                     style_cell_conditional=[
-                                        {"if": {"column_id": "Study"},
-                                        "width": "50%"},
-                                        {"if": {"column_id": "Type"},
-                                            "width": "25%"},
+                                        {"if": {"column_id": "Run ID"},
+                                        "width": "40%"},
+                                        {"if": {"column_id": "Chromatography"},
+                                            "width": "35%"},
                                         {"if": {"column_id": "Status"},
                                         "width": "25%"}
                                     ]
@@ -192,11 +192,11 @@ def serve_layout():
                                     ],
                                     style_cell_conditional=[
                                         {"if": {"column_id": "Sample"},
-                                        "width": "65%"},
+                                        "width": "60%"},
                                         {"if": {"column_id": "Position"},
                                         "width": "20%"},
                                         {"if": {"column_id": "QC"},
-                                        "width": "15%"},
+                                        "width": "20%"},
                                     ]
                                 )
                             ]),
@@ -1118,6 +1118,8 @@ def serve_layout():
                                                     id="msdial-directory"),
                                                 dbc.Button("Browse Folders", id="msdial-folder-button",
                                                     color="secondary"),
+                                                dbc.Button("Save changes", id="msdial-folder-save-button",
+                                                    color="primary", outline=True)
                                             ]),
                                             dbc.FormText(
                                                 "Browse for (or type) the path of your downloaded MS-DIAL folder."),
@@ -3474,8 +3476,10 @@ def show_alert_on_qc_parameter_reset(parameters_reset):
               Input("bio-standard-removed", "data"),
               Input("chromatography-added", "data"),
               Input("chromatography-removed", "data"),
-              Input("bio-msp-added", "data"))
-def get_biological_standards(on_page_load, on_standard_added, on_standard_removed, on_method_added, on_method_removed, on_msp_added):
+              Input("bio-msp-added", "data"),
+              Input("bio-standard-msdial-config-added", "data"))
+def get_biological_standards(on_page_load, on_standard_added, on_standard_removed, on_method_added, on_method_removed,
+    on_msp_added, on_bio_standard_msdial_config_added):
 
     """
     Populates dropdown and table of biological standards
@@ -4053,20 +4057,13 @@ def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, b
         db.generate_msdial_parameters_file(chromatography, polarity, msp_file_path)
 
         # Generate parameters files for processing each biological standard
-        for bio_standard in bio_standards:
-            msp_file_path = db.get_msp_file_paths(chromatography, polarity, bio_standard)
-            db.generate_msdial_parameters_file(chromatography, polarity, msp_file_path, bio_standard)
+        if bio_standards is not None:
+            for bio_standard in bio_standards:
+                msp_file_path = db.get_msp_file_paths(chromatography, polarity, bio_standard)
+                db.generate_msdial_parameters_file(chromatography, polarity, msp_file_path, bio_standard)
 
     # Get filenames from sequence and filter out preblanks, wash, shutdown, etc.
-    filenames = qc.get_filenames_from_sequence(sequence)
-
-    for filename in filenames.copy():
-        if "_BK_" and "_pre_" in filename:
-            filenames.remove(filename)
-        elif "wash" in filename:
-            filenames.remove(filename)
-        elif "shutdown" in filename:
-            filenames.remove(filename)
+    filenames = db.get_filenames_from_sequence(sequence)["File Name"].astype(str).tolist()
 
     # If this is for an active run, initialize run monitoring at the given directory
     if job_type == "active":
@@ -4116,13 +4113,13 @@ def start_bulk_qc_processing(modal_open, progress_intervals, data_file_directory
         else:
             index = 0
 
-        filename = filenames[index]
-
         # Once the last file has been processed, terminate the job
         if index == len(filenames):
             if db.sync_is_enabled():
                 db.sync_to_google_drive(drive=GoogleDrive(gauth_holder[0]), sync_settings=False)
             return 100, "100%", "Processing complete!", True
+
+        filename = filenames[index]
 
         # Prepare update of progress bar
         progress = int(min(((index + 1) / len(filenames)) * 100, 100))
@@ -4136,7 +4133,8 @@ def start_bulk_qc_processing(modal_open, progress_intervals, data_file_directory
             return progress, progress_label, new_title, False
 
         # Otherwise, process the data file
-        qc.process_data_file(path=path, filename=filename, extension="raw", run_id=run_id)
+        if os.path.exists(path + filename + ".raw"):
+            qc.process_data_file(path=path, filename=filename, extension="raw", run_id=run_id)
         return progress, progress_label, new_title, False
 
     else:

@@ -117,7 +117,7 @@ def get_qc_results(run_id):
         df_delta_mz_neg = None
 
     # Parse m/z, RT, and intensity data for biological standards into DataFrames
-    if len(biological_standards) > 0:
+    if biological_standards is not None:
 
         biological_standard = biological_standards[0]
 
@@ -231,7 +231,7 @@ def generate_sample_metadata_dataframe(sample, df_rt, df_mz, df_intensity, df_de
     # Intensities
     df_intensity = df_intensity.loc[df_intensity["Sample"] == sample][columns]
     df_intensity.drop(columns=["Sample"], inplace=True)
-    intensities = df_intensity.iloc[0].fillna("0").values.tolist()
+    intensities = df_intensity.iloc[0].fillna(0).values.tolist()
     df_sample_istd["Intensity"] = ["{:.2e}".format(x) for x in intensities]
 
     # Precursor m/z

@@ -81,8 +81,8 @@ def chromatography_is_valid(chromatography):
         return False
 
     # Check whether the method's MSP / TXT files exist
-    pos_msp_file = df_methods["pos_istd_msp_file"].astype(str).values[0]
-    neg_msp_file = df_methods["neg_istd_msp_file"].astype(str).values[0]
+    pos_msp_file = db.get_msp_file_path(chromatography, "Positive")
+    neg_msp_file = db.get_msp_file_path(chromatography, "Negative")
 
     if not os.path.exists(pos_msp_file) or not os.path.exists(neg_msp_file):
         return False
@@ -119,17 +119,6 @@ def convert_metadata_to_json(metadata_contents):
     # Convert DataFrames to JSON strings
     metadata = df_metadata.to_json(orient="split")
     return metadata
-
-
-def get_filenames_from_sequence(sequence):
-
-    """
-    Takes sequence file as JSON string and returns list of filenames
-    """
-
-    df_sequence = pd.read_json(sequence, orient="split")
-    samples = df_sequence["File Name"].astype(str).tolist()
-    return samples
 
 
 def run_msconvert(path, filename, extension, output_folder):
@@ -258,6 +247,7 @@ def qc_sample(run_id, polarity, df_peak_list, df_features, is_bio_standard):
         # Get in-run RT average for each internal standard
         df_compare["In-run RT average"] = np.nan
         df_run_retention_times = db.parse_internal_standard_data(run_id, "retention_time", polarity, False)
+        df_run_retention_times = df_run_retention_times.dropna()
 
         for internal_standard in df_run_retention_times.columns:
             if internal_standard == "Sample":
@@ -266,7 +256,7 @@ def qc_sample(run_id, polarity, df_peak_list, df_features, is_bio_standard):
             df_compare.loc[df_compare["Name"] == internal_standard, "In-run RT average"] = in_run_average
 
         # Compare each internal standard RT to in-run RT average
-        df_compare["In-run delta RT"] = df_compare["RT (min)"].astype(float) - df_compare["In-run RT average"]
+        df_compare["In-run delta RT"] = df_compare["RT (min)"].astype(float) - df_compare["In-run RT average"].astype(float)
 
         # Prepare final DataFrame
         qc_dataframe = df_compare[["Name", "Delta m/z", "Delta RT", "In-run delta RT"]]
@@ -296,7 +286,7 @@ def qc_sample(run_id, polarity, df_peak_list, df_features, is_bio_standard):
             # Compare to user-defined cutoff
             if intensity_dropouts >= intensity_dropouts_cutoff:
                 qc_result = "Fail"
-            elif intensity_dropouts == intensity_dropouts_cutoff - 1:
+            elif intensity_dropouts >= intensity_dropouts_cutoff - 1:
                 qc_result = "Warning"
 
         # QC of internal standard RT's against library RT's
@@ -352,7 +342,8 @@ def qc_sample(run_id, polarity, df_peak_list, df_features, is_bio_standard):
 
     # Handles biological standard QC checks
     else:
-        pass
+        qc_dataframe = pd.DataFrame()
+        qc_result = "Pass"
 
     return qc_dataframe, qc_result
 
@@ -438,4 +429,11 @@ def process_data_file(path, filename, extension, run_id):
 
     # Write QC results to database and upload to Google Drive
     db.write_qc_results(filename, run_id, json_mz, json_rt, json_intensity, qc_dataframe, qc_result, is_bio_standard)
+
+    # Delete MS-DIAL result file
+    try:
+        os.remove(qc_results_directory + filename + ".msdial")
+    except Exception as error:
+        print(error)
+
     return None

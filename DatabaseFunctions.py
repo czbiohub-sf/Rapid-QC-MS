@@ -1,5 +1,6 @@
 import os, io, shutil, hashlib
 import pandas as pd
+import numpy as np
 import sqlalchemy as sa
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
@@ -202,7 +203,6 @@ def create_database():
         "qc_parameters", db_metadata,
         sa.Column("id", INTEGER, primary_key=True),
         sa.Column("config_name", TEXT),
-        sa.Column("enabled", TEXT),
         sa.Column("intensity_dropouts_cutoff", INTEGER),
         sa.Column("library_rt_shift_cutoff", REAL),
         sa.Column("in_run_rt_shift_cutoff", REAL),
@@ -418,6 +418,27 @@ def get_instruments_list():
     return df_instruments["name"].astype(str).tolist()
 
 
+def get_filenames_from_sequence(sequence):
+
+    """
+    Takes sequence file as JSON string and returns filtered DataFrame
+    """
+
+    df_sequence = pd.read_json(sequence, orient="split")
+
+    # Filter out preblanks
+    df_sequence = df_sequence.loc[
+        ~((df_sequence["File Name"].str.contains(r"_BK_", na=False)) &
+          (df_sequence["File Name"].str.contains(r"_pre_", na=False)))]
+
+    # Filter out wash and shutdown
+    df_sequence = df_sequence.loc[
+        ~(df_sequence["File Name"].str.contains(r"_wash_", na=False)) &
+        ~(df_sequence["File Name"].str.contains(r"shutdown", na=False))]
+
+    return df_sequence
+
+
 def insert_new_run(run_id, instrument_id, chromatography, bio_standards, sequence, metadata, qc_config_id):
 
     """
@@ -427,20 +448,10 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, sequenc
     """
 
     # Get list of samples from sequence
-    df_sequence = pd.read_json(sequence, orient="split")
+    df_sequence = get_filenames_from_sequence(sequence)
+
     samples = df_sequence["File Name"].astype(str).tolist()
     positions = df_sequence["Position"].astype(str).tolist()
-
-    for index, sample in enumerate(samples.copy()):
-        if "_BK_" and "_pre_" in sample:
-            samples.remove(sample)
-            positions.remove(positions[index])
-        elif "wash" in sample:
-            samples.remove(sample)
-            positions.remove(positions[index])
-        elif "shutdown" in sample:
-            samples.remove(sample)
-            positions.remove(positions[index])
 
     num_samples = len(samples)
 
@@ -698,6 +709,21 @@ def remove_chromatography_method(method_id):
     5. Deletes corresponding MSPs from folders
     """
 
+    # Delete corresponding MSPs from "methods" directory
+    df = get_table("chromatography_methods")
+    df = df.loc[df["method_id"] == method_id]
+
+    df2 = get_table("biological_standards")
+    df2 = df2.loc[df2["chromatography"] == method_id]
+
+    files_to_delete = df["pos_istd_msp_file"].astype(str).tolist() + df["neg_istd_msp_file"].astype(str).tolist() + \
+        df2["pos_bio_msp_file"].astype(str).tolist() + df2["neg_bio_msp_file"].astype(str).tolist()
+
+    methods_directory = os.path.join(os.getcwd(), "methods")
+    for file in os.listdir(methods_directory):
+        if file in files_to_delete:
+            os.remove(os.path.join(methods_directory, file))
+
     # Connect to database and get relevant tables
     db_metadata, connection = connect_to_database()
     chromatography_table = sa.Table("chromatography_methods", db_metadata, autoload=True)
@@ -768,16 +794,16 @@ def add_msp_to_database(msp_file, chromatography, polarity, bio_standard=None):
 
     if bio_standard is not None:
         if polarity == "Positive Mode":
-            msp_file_path = os.path.join(methods_directory, bio_standard.replace(" ", "_")
-                                         + "_" + chromatography + "_Pos.msp")
+            filename = bio_standard.replace(" ", "_") + "_" + chromatography + "_Pos.msp"
         elif polarity == "Negative Mode":
-            msp_file_path = os.path.join(methods_directory, bio_standard.replace(" ", "_")
-                                         + "_" + chromatography + "_Neg.msp")
+            filename = bio_standard.replace(" ", "_") + "_" + chromatography + "_Neg.msp"
     else:
         if polarity == "Positive Mode":
-            msp_file_path = os.path.join(methods_directory, chromatography + "_Pos.msp")
+            filename = chromatography + "_Pos.msp"
         elif polarity == "Negative Mode":
-            msp_file_path = os.path.join(methods_directory, chromatography + "_Neg.msp")
+            filename = chromatography + "_Neg.msp"
+
+    msp_file_path = os.path.join(methods_directory, filename)
 
     with open(msp_file_path, "w") as file:
         msp_file.seek(0)
@@ -885,7 +911,7 @@ def add_msp_to_database(msp_file, chromatography, polarity, bio_standard=None):
                     .where((biological_standards_table.c.chromatography == chromatography)
                            & (biological_standards_table.c.name == bio_standard))
                     .values(num_pos_features=len(features_dict),
-                            pos_bio_msp_file=msp_file_path)
+                            pos_bio_msp_file=filename)
             )
         elif polarity == "Negative Mode":
             update_msp_file = (
@@ -893,7 +919,7 @@ def add_msp_to_database(msp_file, chromatography, polarity, bio_standard=None):
                     .where((biological_standards_table.c.chromatography == chromatography)
                            & (biological_standards_table.c.name == bio_standard))
                     .values(num_neg_features=len(features_dict),
-                            neg_bio_msp_file=msp_file_path)
+                            neg_bio_msp_file=filename)
             )
 
         # Execute UPDATE of MSP file location
@@ -936,14 +962,14 @@ def add_msp_to_database(msp_file, chromatography, polarity, bio_standard=None):
                 sa.update(chromatography_table)
                     .where(chromatography_table.c.method_id == chromatography)
                     .values(num_pos_standards=len(features_dict),
-                            pos_istd_msp_file=msp_file_path)
+                            pos_istd_msp_file=filename)
             )
         elif polarity == "Negative Mode":
             update_msp_file = (
                 sa.update(chromatography_table)
                     .where(chromatography_table.c.method_id == chromatography)
                     .values(num_neg_standards=len(features_dict),
-                            neg_istd_msp_file=msp_file_path)
+                            neg_istd_msp_file=filename)
             )
 
         # Execute UPDATE of MSP file location
@@ -971,9 +997,11 @@ def add_csv_to_database(csv_file, chromatography, polarity):
 
     # Name file accordingly
     if polarity == "Positive Mode":
-        txt_file_path = os.path.join(methods_directory, chromatography + "_Pos.txt")
+        filename = chromatography + "_Pos.txt"
     elif polarity == "Negative Mode":
-        txt_file_path = os.path.join(methods_directory, chromatography + "_Neg.txt")
+        filename = chromatography + "_Neg.txt"
+
+    txt_file_path = os.path.join(methods_directory, filename)
 
     # Write CSV columns to tab-delimited text file
     df_internal_standards.to_csv(txt_file_path, sep="\t", index=False)
@@ -1013,14 +1041,14 @@ def add_csv_to_database(csv_file, chromatography, polarity):
             sa.update(chromatography_table)
                 .where(chromatography_table.c.method_id == chromatography)
                 .values(num_pos_standards=len(internal_standards_dict),
-                        pos_istd_msp_file=txt_file_path)
+                        pos_istd_msp_file=filename)
         )
     elif polarity == "Negative Mode":
         update_msp_file = (
             sa.update(chromatography_table)
                 .where(chromatography_table.c.method_id == chromatography)
                 .values(num_neg_standards=len(internal_standards_dict),
-                        neg_istd_msp_file=txt_file_path)
+                        neg_istd_msp_file=filename)
         )
 
     # Execute UPDATE of CSV file location
@@ -1098,7 +1126,7 @@ def generate_msdial_parameters_file(chromatography, polarity, msp_file_path, bio
         "Ion mode: " + polarity,
         "DIA file:", "\n"
 
-                     "#Data collection parameters",
+        "#Data collection parameters",
         "Retention time begin: " + str(parameters[0]),
         "Retention time end: " + str(parameters[1]),
         "Mass range begin: " + str(parameters[2]),
@@ -1325,6 +1353,7 @@ def update_msdial_configuration(config_name, rt_begin, rt_end, mz_begin, mz_end,
 
 
 def get_msp_file_paths(chromatography, polarity, bio_standard=None):
+
     """
     Returns file paths of MSPs for a selected chromatography / polarity (both stored
     in the methods folder upon user upload) for MS-DIAL parameter file generation
@@ -1354,6 +1383,9 @@ def get_msp_file_paths(chromatography, polarity, bio_standard=None):
             msp_file_path = df_methods["pos_istd_msp_file"].astype(str).values[0]
         elif polarity == "Negative":
             msp_file_path = df_methods["neg_istd_msp_file"].astype(str).values[0]
+
+    methods_directory = os.path.join(os.getcwd(), "methods")
+    msp_file_path = os.path.join(methods_directory, msp_file_path)
 
     # Return file path
     return msp_file_path
@@ -1498,6 +1530,16 @@ def remove_biological_standard(name):
     """
     Deletes biological standard (and corresponding MSPs) from database
     """
+
+    # Delete corresponding MSPs from "methods" directory
+    df = get_table("biological_standards")
+    df = df.loc[df["name"] == name]
+    files_to_delete = df["pos_bio_msp_file"].astype(str).tolist() + df["neg_bio_msp_file"].astype(str).tolist()
+
+    methods_directory = os.path.join(os.getcwd(), "methods")
+    for file in os.listdir(methods_directory):
+        if name in files_to_delete:
+            os.remove(os.path.join(methods_directory, file))
 
     # Connect to database and get relevant tables
     db_metadata, connection = connect_to_database()
@@ -1742,8 +1784,17 @@ def parse_internal_standard_data(run_id, result_type, polarity, as_json=True):
 
     # For each JSON-ified result,
     for index, result in enumerate(results):
+
         # Convert to DataFrame
-        df = pd.read_json(result, orient="split")
+        if result is not None:
+            df = pd.read_json(result, orient="split")
+        else:
+            empty_row = [np.nan for x in df_results.columns.tolist()]
+            empty_row[0] = sample_ids[index]
+            empty_row = [empty_row]
+            empty_df = pd.DataFrame(empty_row, columns=df_results.columns.tolist())
+            df_results = df_results.append(empty_df, ignore_index=True)
+            continue
 
         # Refactor so that each row is a sample, and each column is an internal standard
         df.rename(columns={df.columns[1]: sample_ids[index]}, inplace=True)
@@ -1826,8 +1877,16 @@ def parse_internal_standard_qc_data(run_id, polarity, result_type, as_json=True)
     for index, result in enumerate(results):
 
         # Convert to DataFrame
-        df = pd.read_json(result, orient="split")
-        df = df[["Name", result_type]]
+        if result is not None:
+            df = pd.read_json(result, orient="split")
+            df = df[["Name", result_type]]
+        else:
+            empty_row = [np.nan for x in df_results.columns.tolist()]
+            empty_row[0] = sample_ids[index]
+            empty_row = [empty_row]
+            empty_df = pd.DataFrame(empty_row, columns=df_results.columns.tolist())
+            df_results = df_results.append(empty_df, ignore_index=True)
+            continue
 
         # Refactor so that each row is a sample, and each column is an internal standard
         df.rename(columns={df.columns[1]: sample_ids[index]}, inplace=True)
