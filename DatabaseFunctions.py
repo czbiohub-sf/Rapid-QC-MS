@@ -1822,7 +1822,7 @@ def parse_internal_standard_data(run_id, result_type, polarity, as_json=True):
         return df_results
 
 
-def parse_biological_standard_data(result_type, polarity, biological_standard, as_json=True):
+def parse_biological_standard_data(instrument, run_id, result_type, polarity, biological_standard, as_json=True):
 
     """
     Returns JSON-ified DataFrame of instrument runs (as columns) vs. targeted features (as rows)
@@ -1837,8 +1837,17 @@ def parse_biological_standard_data(result_type, polarity, biological_standard, a
     # Filter by polarity
     df_samples = df_samples.loc[df_samples["sample_id"].str.contains(polarity)]
 
-    # Get list of results using result type
+    # Filter by instrument
+    df_runs = get_table("runs")
+    chromatography = df_runs.loc[
+        (df_runs["run_id"] == run_id) & (df_runs["instrument_id"] == instrument)]["chromatography"].values[0]
+
+    # Filter by chromatography
+    run_ids = df_runs.loc[df_runs["chromatography"] == chromatography]["run_id"].astype(str).tolist()
+    df_samples = df_samples.loc[df_samples["run_id"].isin(run_ids)]
     run_ids = df_samples["run_id"].astype(str).tolist()
+
+    # Get list of results using result type
     results = df_samples[result_type].tolist()
 
     # Prepare unified results DataFrame
@@ -1846,6 +1855,7 @@ def parse_biological_standard_data(result_type, polarity, biological_standard, a
 
     # For each JSON-ified result,
     for index, result in enumerate(results):
+
         # Convert to DataFrame
         df = pd.read_json(result, orient="split")
 
@@ -1997,3 +2007,19 @@ def delete_user_from_workspace(drive, email_address):
 
     connection.execute(delete_user_email)
     connection.close()
+
+
+def get_qc_results(sample_list, is_bio_standard=False):
+
+    """
+    Returns DataFrame of QC results for a given sample list
+    """
+
+    if is_bio_standard:
+        df = get_table("bio_qc_results")
+    else:
+        df = get_table("sample_qc_results")
+
+    df = df.loc[df["sample_id"].isin(sample_list)]
+    df = df[["sample_id", "qc_result"]]
+    return df

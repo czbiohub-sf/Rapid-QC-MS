@@ -521,7 +521,11 @@ def serve_layout():
                                 # Select biological standard used in this study
                                 html.Div(children=[
                                     dbc.Label("Select biological standards (optional)"),
-                                    dbc.Checklist(id="start-run-bio-standards-checklist"),
+                                    dcc.Dropdown(id="start-run-bio-standards-dropdown",
+                                        options=[], placeholder="Select biological standards...",
+                                        style={"text-align": "left", "height": "1.5", "font-size": "1rem",
+                                            "width": "100%", "display": "inline-block"},
+                                        multi=True),
                                     dbc.FormFeedback("Looks good!", type="valid"),
                                     dbc.FormFeedback(
                                         "Please ensure that your biological standard has MSP files configured "
@@ -560,7 +564,7 @@ def serve_layout():
 
                                 # Button and field for selecting a sample metadata file
                                 html.Div([
-                                    dbc.Label("Sample metadata (.csv)"),
+                                    dbc.Label("Sample metadata (.csv) (optional)"),
                                     dbc.InputGroup([
                                         dbc.Input(id="metadata-path",
                                                   placeholder="No file selected"),
@@ -683,8 +687,8 @@ def serve_layout():
                                         html.Br(), html.Br(),
 
                                         # Alerts for modifying workspace access
-                                        dbc.Alert(id="user-addition-alert", color="success", is_open=False, duration=4000),
-                                        dbc.Alert(id="user-deletion-alert", color="primary", is_open=False, duration=4000),
+                                        dbc.Alert(id="user-addition-alert", color="success", is_open=False, duration=6000),
+                                        dbc.Alert(id="user-deletion-alert", color="primary", is_open=False, duration=6000),
 
                                         # Google Drive sharing
                                         dbc.Label("Add / remove workspace users"),
@@ -754,8 +758,8 @@ def serve_layout():
                                         html.Br(),
 
                                         # Alerts for user feedback on biological standard addition/removal
-                                        dbc.Alert(id="chromatography-addition-alert", color="success", is_open=False, duration=4000),
-                                        dbc.Alert(id="chromatography-removal-alert", color="primary", is_open=False, duration=4000),
+                                        dbc.Alert(id="chromatography-addition-alert", color="success", is_open=False, duration=6000),
+                                        dbc.Alert(id="chromatography-removal-alert", color="primary", is_open=False, duration=6000),
 
                                         dbc.Label("Manage chromatography methods", style={"font-weight": "bold"}),
                                         html.Br(),
@@ -808,7 +812,7 @@ def serve_layout():
 
                                         html.Br(),
 
-                                        dbc.Alert(id="istd-config-success-alert", color="success", is_open=False, duration=4000),
+                                        dbc.Alert(id="istd-config-success-alert", color="success", is_open=False, duration=6000),
 
                                         # Set MS-DIAL configuration for selected chromatography
                                         html.Div(children=[
@@ -826,9 +830,9 @@ def serve_layout():
 
                                         # UI feedback on adding MSP to chromatography method
                                         dbc.Alert(id="chromatography-msp-success-alert", color="success", is_open=False,
-                                                  duration=4000),
+                                                  duration=6000),
                                         dbc.Alert(id="chromatography-msp-error-alert", color="danger", is_open=False,
-                                                  duration=4000),
+                                                  duration=6000),
 
                                         dbc.Label("Add internal standard identification files", style={"font-weight": "bold"}),
                                         html.Br(),
@@ -863,8 +867,7 @@ def serve_layout():
                                         html.Br(),
 
                                         # UI feedback for biological standard addition/removal
-                                        dbc.Alert(id="bio-standard-addition-alert", is_open=False, duration=4000),
-                                        dbc.Alert(id="bio-standard-removal-alert", color="primary", is_open=False, duration=4000),
+                                        dbc.Alert(id="bio-standard-addition-alert", is_open=False, duration=6000),
 
                                         dbc.Label("Manage biological standards", style={"font-weight": "bold"}),
                                         html.Br(),
@@ -891,6 +894,8 @@ def serve_layout():
 
                                         html.Div(id="biological-standards-table"),
                                         html.Br(),
+
+                                        dbc.Alert(id="bio-standard-removal-alert", color="primary", is_open=False, duration=6000),
 
                                         dbc.Label("Configure biological standards and add MSP files",
                                                   style={"font-weight": "bold"}),
@@ -935,7 +940,7 @@ def serve_layout():
 
                                         html.Br(), html.Br(),
 
-                                        dbc.Alert(id="bio-config-success-alert", color="success", is_open=False, duration=4000),
+                                        dbc.Alert(id="bio-config-success-alert", color="success", is_open=False, duration=6000),
 
                                         # Set MS-DIAL configuration for selected biological standard
                                         html.Div(children=[
@@ -953,9 +958,9 @@ def serve_layout():
 
                                         # UI feedback on adding MSP to biological standard
                                         dbc.Alert(id="bio-msp-success-alert", color="success", is_open=False,
-                                                  duration=4000),
+                                                  duration=6000),
                                         dbc.Alert(id="bio-msp-error-alert", color="danger", is_open=False,
-                                                  duration=4000),
+                                                  duration=6000),
 
                                         html.Div([
                                             dbc.Label("Edit targeted metabolites list (MSP format)"),
@@ -988,8 +993,8 @@ def serve_layout():
                                         html.Br(),
 
                                         # UI feedback on adding / removing QC configurations
-                                        dbc.Alert(id="qc-config-addition-alert", is_open=False, duration=4000),
-                                        dbc.Alert(id="qc-config-removal-alert", is_open=False, duration=4000),
+                                        dbc.Alert(id="qc-config-addition-alert", is_open=False, duration=6000),
+                                        dbc.Alert(id="qc-config-removal-alert", is_open=False, duration=6000),
 
                                         dbc.Label("Manage QC configurations", style={"font-weight": "bold"}),
                                         html.Br(),
@@ -1083,11 +1088,11 @@ def serve_layout():
 
                                         # UI feedback on saving changes to MS-DIAL parameters
                                         dbc.Alert(id="qc-parameters-success-alert",
-                                                  color="success", is_open=False, duration=4000),
+                                                  color="success", is_open=False, duration=6000),
                                         dbc.Alert(id="qc-parameters-reset-alert",
-                                                  color="primary", is_open=False, duration=4000),
+                                                  color="primary", is_open=False, duration=6000),
                                         dbc.Alert(id="qc-parameters-error-alert",
-                                                  color="danger", is_open=False, duration=4000),
+                                                  color="danger", is_open=False, duration=6000),
 
                                         html.Div([
                                             html.Div([
@@ -1105,8 +1110,8 @@ def serve_layout():
                                         html.Br(),
 
                                         # UI feedback on configuration addition/removal
-                                        dbc.Alert(id="msdial-config-addition-alert", is_open=False, duration=4000),
-                                        dbc.Alert(id="msdial-config-removal-alert", is_open=False, duration=4000),
+                                        dbc.Alert(id="msdial-config-addition-alert", is_open=False, duration=6000),
+                                        dbc.Alert(id="msdial-config-removal-alert", is_open=False, duration=6000),
 
                                         dbc.Label("MS-DIAL installation", style={"font-weight": "bold"}),
                                         html.Br(),
@@ -1334,11 +1339,11 @@ def serve_layout():
                                         html.Div([
                                             # UI feedback on saving changes to MS-DIAL parameters
                                             dbc.Alert(id="msdial-parameters-success-alert",
-                                                      color="success", is_open=False, duration=4000),
+                                                      color="success", is_open=False, duration=6000),
                                             dbc.Alert(id="msdial-parameters-reset-alert",
-                                                      color="primary", is_open=False, duration=4000),
+                                                      color="primary", is_open=False, duration=6000),
                                             dbc.Alert(id="msdial-parameters-error-alert",
-                                                      color="danger", is_open=False, duration=4000),
+                                                      color="danger", is_open=False, duration=6000),
                                         ]),
 
                                         html.Div([
@@ -2274,9 +2279,8 @@ def populate_istd_rt_plot(polarity, internal_standard, selected_samples, rt_pos,
     Populates internal standard retention time vs. sample plot
     """
 
-    # if files["resources"]["instrument"] is not None:
-    #     if files["resources"]["instrument"] != instrument:
-    #         raise PreventUpdate
+    if rt_pos is None and rt_neg is None:
+        return {}, None, None, None
 
     trigger = ctx.triggered_id
 
@@ -2332,7 +2336,7 @@ def populate_istd_rt_plot(polarity, internal_standard, selected_samples, rt_pos,
 
     except Exception as error:
         print("Error in loading RT vs. sample plot:", error)
-        return {}
+        return {}, None, None, None
 
 
 @app.callback(Output("istd-intensity-plot", "figure"),
@@ -2356,6 +2360,9 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
     """
     Populates internal standard intensity vs. sample plot
     """
+
+    if intensity_pos is None and intensity_neg is None:
+        return {}, None, None, None
 
     trigger = ctx.triggered_id
 
@@ -2419,7 +2426,7 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
 
     except Exception as error:
         print("Error in loading intensity vs. sample plot:", error)
-        return {}
+        return {}, None, None, None
 
 
 @app.callback(Output("istd-mz-plot", "figure"),
@@ -2429,20 +2436,23 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
               Input("polarity-options", "value"),
               Input("istd-mz-dropdown", "value"),
               Input("mz-plot-sample-dropdown", "value"),
-              Input("istd-mz-pos", "data"),
-              Input("istd-mz-neg", "data"),
+              Input("istd-delta-mz-pos", "data"),
+              Input("istd-delta-mz-neg", "data"),
               State("samples", "data"),
               State("pos-internal-standards", "data"),
               State("neg-internal-standards", "data"),
               State("study-resources", "data"),
               Input("mz-prev-button", "n_clicks"),
               Input("mz-next-button", "n_clicks"), prevent_initial_call=True)
-def populate_istd_mz_plot(polarity, internal_standard, selected_samples, mz_pos, mz_neg, samples,
+def populate_istd_mz_plot(polarity, internal_standard, selected_samples, delta_mz_pos, delta_mz_neg, samples,
     pos_internal_standards, neg_internal_standards, resources, previous, next):
 
     """
     Populates internal standard delta m/z vs. sample plot
     """
+
+    if delta_mz_pos is None and delta_mz_neg is None:
+        return {}, None, None, None
 
     trigger = ctx.triggered_id
 
@@ -2453,11 +2463,11 @@ def populate_istd_mz_plot(polarity, internal_standard, selected_samples, mz_pos,
     df_istd_mz_pos = pd.DataFrame()
     df_istd_mz_neg = pd.DataFrame()
 
-    if mz_pos is not None:
-        df_istd_mz_pos = pd.read_json(mz_pos, orient="split")
+    if delta_mz_pos is not None:
+        df_istd_mz_pos = pd.read_json(delta_mz_pos, orient="split")
 
-    if mz_neg is not None:
-        df_istd_mz_neg = pd.read_json(mz_neg, orient="split")
+    if delta_mz_neg is not None:
+        df_istd_mz_neg = pd.read_json(delta_mz_neg, orient="split")
 
     # Get samples (and filter out biological standards)
     df_samples = pd.read_json(samples, orient="split")
@@ -2499,7 +2509,7 @@ def populate_istd_mz_plot(polarity, internal_standard, selected_samples, mz_pos,
 
     except Exception as error:
         print("Error in loading delta m/z vs. sample plot:", error)
-        return {}
+        return {}, None, None, None
 
 
 @app.callback(Output("bio-standard-mz-rt-plot", "figure"),
@@ -2519,6 +2529,10 @@ def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, in
     """
     Populates biological standard m/z vs. RT plot
     """
+
+    if rt_pos is None and rt_neg is None:
+        if mz_pos is None and mz_neg is None:
+            return {}, None, None
 
     # Get run ID and chromatography method
     run_id = json.loads(resources)["run_id"]
@@ -2541,9 +2555,13 @@ def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, in
     else:
         selected_feature = None
 
-    # Biological standard metabolites – m/z vs. retention time
-    return load_bio_feature_plot(run_id=run_id, df_rt=df_bio_rt, df_mz=df_bio_mz, df_intensity=df_bio_intensity), \
-           selected_feature, None
+    try:
+        # Biological standard metabolites – m/z vs. retention time
+        return load_bio_feature_plot(run_id=run_id, df_rt=df_bio_rt, df_mz=df_bio_mz, df_intensity=df_bio_intensity), \
+               selected_feature, None
+    except Exception as error:
+        print("Error in loading biological standard m/z-RT plot:", error)
+        return {}, None, None
 
 
 @app.callback(Output("bio-standard-benchmark-plot", "figure"),
@@ -2556,6 +2574,9 @@ def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_p
     """
     Populates biological standard benchmark plot
     """
+
+    if intensity_pos is None and intensity_neg is None:
+        return {}, None, None, None
 
     # Get intensity data
     if polarity == "Pos":
@@ -2570,13 +2591,18 @@ def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_p
     if not selected_feature:
         selected_feature = df_bio_intensity["Name"].astype(str).tolist()[0]
 
-    # Generate biological standard metabolite intensity vs. instrument run plot
-    return load_bio_benchmark_plot(dataframe=df_bio_intensity, metabolite_name=selected_feature)
+    try:
+        # Generate biological standard metabolite intensity vs. instrument run plot
+        return load_bio_benchmark_plot(dataframe=df_bio_intensity, metabolite_name=selected_feature)
+    except Exception as error:
+        print("Error loading biological standard intensity plot:", error)
+        return {}
 
 
 @app.callback(Output("sample-info-modal", "is_open"),
               Output("sample-modal-title", "children"),
               Output("sample-modal-body", "children"),
+              Output("sample-table", "selected_cells"),
               Output("sample-table", "active_cell"),
               Output("istd-rt-plot", "clickData"),
               Output("istd-intensity-plot", "clickData"),
@@ -2599,11 +2625,18 @@ def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_p
               State("istd-in-run-delta-rt-neg", "data"),
               State("istd-delta-mz-pos", "data"),
               State("istd-delta-mz-neg", "data"),
+              State("bio-rt-pos", "data"),
+              State("bio-rt-neg", "data"),
+              State("bio-intensity-pos", "data"),
+              State("bio-intensity-neg", "data"),
+              State("bio-mz-pos", "data"),
+              State("bio-mz-neg", "data"),
               State("sequence", "data"),
-              State("metadata", "data"), prevent_initial_call=True)
+              State("metadata", "data"),
+              State("study-resources", "data"), prevent_initial_call=True)
 def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_click, mz_click, rt_pos, rt_neg, intensity_pos,
     intensity_neg, mz_pos, mz_neg, delta_rt_pos, delta_rt_neg, in_run_delta_rt_pos, in_run_delta_rt_neg, delta_mz_pos, delta_mz_neg,
-    sequence, metadata):
+    bio_rt_pos, bio_rt_neg, bio_intensity_pos, bio_intensity_neg, bio_mz_pos, bio_mz_neg, sequence, metadata, resources):
 
     """
     Opens information modal when a sample is clicked from the sample table
@@ -2626,47 +2659,77 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
         clicked_sample = mz_click["points"][0]["x"]
         clicked_sample = clicked_sample.replace(": Precursor m/z Info", "")
 
+    # Get run ID and chromatography method
+    run_id = json.loads(resources)["run_id"]
+
+    # Get sequence and metadata
     df_sequence = pd.read_json(sequence, orient="split")
     df_metadata = pd.read_json(metadata, orient="split")
 
+    # Get polarity from sample name
     if "Pos" in clicked_sample:
         polarity = "Pos"
     elif "Neg" in clicked_sample:
         polarity = "Neg"
 
-    # Generate DataFrames with iSTD and metadata info for selected sample
-    if polarity == "Pos":
-        df_rt = pd.read_json(rt_pos, orient="split")
-        df_intensity = pd.read_json(intensity_pos, orient="split")
-        df_mz = pd.read_json(mz_pos, orient="split")
-        df_delta_rt = pd.read_json(delta_rt_pos, orient="split")
-        df_in_run_delta_rt = pd.read_json(in_run_delta_rt_pos, orient="split")
-        df_delta_mz = pd.read_json(delta_mz_pos, orient="split")
+    # Check whether sample is a biological standard or not
+    is_bio_standard = False
+    identifiers = db.get_biological_standard_identifiers()
 
-    elif polarity == "Neg":
-        df_rt = pd.read_json(rt_neg, orient="split")
-        df_intensity = pd.read_json(intensity_neg, orient="split")
-        df_mz = pd.read_json(mz_neg, orient="split")
-        df_delta_rt = pd.read_json(delta_rt_neg, orient="split")
-        df_in_run_delta_rt = pd.read_json(in_run_delta_rt_neg, orient="split")
-        df_delta_mz = pd.read_json(delta_mz_neg, orient="split")
+    for identifier in identifiers.keys():
+        if identifier in clicked_sample:
+            is_bio_standard = True
+            break
 
-    df_sample_istd, df_sample_info = generate_sample_metadata_dataframe(clicked_sample, df_rt, df_mz, df_intensity,
-        df_delta_rt, df_in_run_delta_rt, df_delta_mz, df_sequence, df_metadata)
+    # Generate DataFrames with quantified features and metadata for selected sample
+    if not is_bio_standard:
+
+        if polarity == "Pos":
+            df_rt = pd.read_json(rt_pos, orient="split")
+            df_intensity = pd.read_json(intensity_pos, orient="split")
+            df_mz = pd.read_json(mz_pos, orient="split")
+            df_delta_rt = pd.read_json(delta_rt_pos, orient="split")
+            df_in_run_delta_rt = pd.read_json(in_run_delta_rt_pos, orient="split")
+            df_delta_mz = pd.read_json(delta_mz_pos, orient="split")
+
+        elif polarity == "Neg":
+            df_rt = pd.read_json(rt_neg, orient="split")
+            df_intensity = pd.read_json(intensity_neg, orient="split")
+            df_mz = pd.read_json(mz_neg, orient="split")
+            df_delta_rt = pd.read_json(delta_rt_neg, orient="split")
+            df_in_run_delta_rt = pd.read_json(in_run_delta_rt_neg, orient="split")
+            df_delta_mz = pd.read_json(delta_mz_neg, orient="split")
+
+        df_sample_features, df_sample_info = generate_sample_metadata_dataframe(clicked_sample, df_rt, df_mz, df_intensity,
+            df_delta_rt, df_in_run_delta_rt, df_delta_mz, df_sequence, df_metadata)
+
+    elif is_bio_standard:
+
+        if polarity == "Pos":
+            df_rt = pd.read_json(bio_rt_pos, orient="split")
+            df_intensity = pd.read_json(bio_intensity_pos, orient="split")
+            df_mz = pd.read_json(bio_mz_pos, orient="split")
+
+        elif polarity == "Neg":
+            df_rt = pd.read_json(bio_rt_neg, orient="split")
+            df_intensity = pd.read_json(bio_intensity_neg, orient="split")
+            df_mz = pd.read_json(bio_mz_neg, orient="split")
+
+        df_sample_features, df_sample_info = generate_bio_standard_dataframe(clicked_sample, run_id, df_rt, df_mz, df_intensity)
 
     # Create tables from DataFrames
     metadata_table = dbc.Table.from_dataframe(df_sample_info, striped=True, bordered=True, hover=True)
-    istd_table = dbc.Table.from_dataframe(df_sample_istd, striped=True, bordered=True, hover=True)
+    feature_table = dbc.Table.from_dataframe(df_sample_features, striped=True, bordered=True, hover=True)
 
     # Add tables to sample information modal
     title = clicked_sample
-    body = html.Div(children=[metadata_table, istd_table])
+    body = html.Div(children=[metadata_table, feature_table])
 
     # Toggle modal
     if is_open:
-        return False, title, body, None, None, None, None
+        return False, title, body, [], None, None, None, None
     else:
-        return True, title, body, None, None, None, None
+        return True, title, body, [], None, None, None, None
 
 
 @app.callback(Output("settings-modal", "is_open"),
@@ -2953,26 +3016,6 @@ def show_alert_on_chromatography_addition(chromatography_removed):
     return False, None
 
 
-@app.callback(Output("chromatography-msp-success-alert", "is_open"),
-              Output("chromatography-msp-success-alert", "children"),
-              Output("chromatography-msp-error-alert", "is_open"),
-              Output("chromatography-msp-error-alert", "children"),
-              Input("istd-msp-added", "data"), prevent_initial_call=True)
-def ui_feedback_for_adding_msp_to_chromatography(msp_added):
-
-    """
-    UI feedback for adding an MSP to a chromatography method
-    """
-
-    if msp_added is not None:
-        if msp_added == "Added":
-            return True, "Success! Your MSP was added to the selected chromatography.", False, ""
-        elif msp_added == "Error":
-            return False, "", True, "Error: Unable to add MSP to chromatography."
-    else:
-        return False, "", False, ""
-
-
 @app.callback(Output("msp-save-changes-button", "children"),
               Input("select-istd-chromatography-dropdown", "value"),
               Input("select-istd-polarity-dropdown", "value"))
@@ -3020,17 +3063,39 @@ def capture_uploaded_istd_msp(button_click, contents, filename, chromatography, 
         file = io.StringIO(decoded.decode("utf-8"))
 
         # Add identification file to database
-        if button_click is not None:
+        if button_click is not None and chromatography is not None and polarity is not None:
             if filename.endswith(".msp"):
                 db.add_msp_to_database(file, chromatography, polarity)  # Parse MSP files
             elif filename.endswith(".csv") or filename.endswith(".txt"):
                 db.add_csv_to_database(file, chromatography, polarity)  # Parse CSV files
-            return "Added"
+            return "Success! " + filename + " has been added to " + chromatography + " " + polarity + "."
+        else:
+            return "Error"
 
         return "Ready"
 
     # Update dummy dcc.Store object to update chromatography methods table
-    return ""
+    return None
+
+
+@app.callback(Output("chromatography-msp-success-alert", "is_open"),
+              Output("chromatography-msp-success-alert", "children"),
+              Output("chromatography-msp-error-alert", "is_open"),
+              Output("chromatography-msp-error-alert", "children"),
+              Input("istd-msp-added", "data"), prevent_initial_call=True)
+def ui_feedback_for_adding_msp_to_chromatography(msp_added):
+
+    """
+    UI feedback for adding an MSP to a chromatography method
+    """
+
+    if msp_added is not None:
+        if "Success" in msp_added:
+            return True, msp_added, False, ""
+        elif msp_added == "Error":
+            return False, "", True, "Error: Please select a chromatography and polarity."
+    else:
+        return False, "", False, ""
 
 
 @app.callback(Output("msdial-directory", "value"),
@@ -3552,7 +3617,7 @@ def remove_biological_standard(button_click, biological_standard_name):
 
     if biological_standard_name is not None:
         db.remove_biological_standard(biological_standard_name)
-        return "Removed"
+        return "Deleted " + biological_standard_name + " and all corresponding MSP files."
     else:
         return "Error"
 
@@ -3595,7 +3660,7 @@ def capture_uploaded_bio_msp(button_click, contents, filename, chromatography, p
 
             # Check whether MSP was added successfully
             if bio_standard in db.get_biological_standards_list():
-                return "Added"
+                return "Success! Added " + filename + " to " + bio_standard + " in " + chromatography + " " + polarity + "."
             else:
                 return "Error 1"
         else:
@@ -3636,8 +3701,8 @@ def show_alert_on_bio_standard_removal(bio_standard_removed):
     """
 
     if bio_standard_removed is not None:
-        if bio_standard_removed == "Removed":
-            return True, "The selected biological standard was deleted."
+        if "Deleted" in bio_standard_removed:
+            return True, bio_standard_removed
 
     return False, None
 
@@ -3654,8 +3719,8 @@ def ui_feedback_for_adding_msp_to_bio_standard(bio_standard_msp_added):
     """
 
     if bio_standard_msp_added is not None:
-        if bio_standard_msp_added == "Added":
-            return True, "Success! Your MSP was added to the biological standard.", False, ""
+        if "Success" in bio_standard_msp_added:
+            return True, bio_standard_msp_added, False, ""
         elif bio_standard_msp_added == "Error 1":
             return False, "", True, "Error: Unable to add MSP to biological standard."
         elif bio_standard_msp_added == "Error 2":
@@ -3666,15 +3731,18 @@ def ui_feedback_for_adding_msp_to_bio_standard(bio_standard_msp_added):
 
 @app.callback(Output("bio-standard-save-changes-button", "children"),
               Input("select-bio-chromatography-dropdown", "value"),
-              Input("select-bio-polarity-dropdown", "value"))
-def add_msp_to_bio_standard_button_feedback(chromatography, polarity):
+              Input("select-bio-polarity-dropdown", "value"),
+              Input("select-bio-standard-dropdown", "value"))
+def add_msp_to_bio_standard_button_feedback(chromatography, polarity, bio_standard):
 
     """
     "Save changes" button UI feedback for Settings > Biological Standards
     """
 
-    if chromatography is not None and polarity is not None:
-        return "Add MSP to " + chromatography + " " + polarity
+    if bio_standard is not None and chromatography is not None and polarity is not None:
+        return "Add MSP to " + bio_standard + " in " + chromatography + " " + polarity
+    elif bio_standard is not None:
+        return "Added MSP to " + bio_standard
     else:
         return "Add MSP"
 
@@ -3816,7 +3884,7 @@ def toggle_new_run_modal(button_clicks, success, success_2, instrument_name, bro
 
 
 @app.callback(Output("start-run-chromatography-dropdown", "options"),
-              Output("start-run-bio-standards-checklist", "options"),
+              Output("start-run-bio-standards-dropdown", "options"),
               Output("start-run-qc-configs-dropdown", "options"),
               Input("setup-new-run-button", "n_clicks"), prevent_initial_call=True)
 def populate_options_for_new_run(button_click):
@@ -4034,14 +4102,14 @@ def enable_new_autoqc_job_button(run_id_valid, chromatography_valid, qc_config_v
               State("instrument-run-id", "value"),
               State("tabs", "value"),
               State("start-run-chromatography-dropdown", "value"),
-              State("start-run-bio-standards-checklist", "value"),
+              State("start-run-bio-standards-dropdown", "value"),
               State("new-sequence", "data"),
               State("new-metadata", "data"),
               State("data-acquisition-folder-path", "value"),
               State("start-run-qc-configs-dropdown", "value"),
               State("autoqc-job-type", "value"), prevent_initial_call=True)
 def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, bio_standards, sequence, metadata,
-                         acquisition_path, qc_config_id, job_type):
+    acquisition_path, qc_config_id, job_type):
 
     """
     This callback initiates the following:
@@ -4072,7 +4140,7 @@ def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, b
 
     # If this is for an active run, initialize run monitoring at the given directory
     if job_type == "active":
-        listener = subprocess.Popen(["python", "AcquisitionListener.py", acquisition_path, str(filenames), run_id])
+        listener = subprocess.Popen(["py", "AcquisitionListener.py", acquisition_path, str(filenames), run_id])
         return True, False, False, ""
 
     # If this is for a completed run, begin iterating through the files and process them

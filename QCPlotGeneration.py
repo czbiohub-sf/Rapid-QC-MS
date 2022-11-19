@@ -122,42 +122,42 @@ def get_qc_results(run_id):
         biological_standard = biological_standards[0]
 
         try:
-            df_bio_mz_pos = db.parse_biological_standard_data(
+            df_bio_mz_pos = db.parse_biological_standard_data(instrument=instrument, run_id=run_id,
                 result_type="precursor_mz", polarity="Pos", biological_standard=biological_standard)
         except Exception as error:
             print("Error loading positive (–) mode biological standard precursor m/z data:", error)
             df_bio_mz_pos = None
 
         try:
-            df_bio_rt_pos = db.parse_biological_standard_data(
+            df_bio_rt_pos = db.parse_biological_standard_data(instrument=instrument, run_id=run_id,
                 result_type="retention_time", polarity="Pos", biological_standard=biological_standard)
         except Exception as error:
             print("Error loading positive (–) mode biological standard precursor m/z data:", error)
             df_bio_rt_pos = None
 
         try:
-            df_bio_intensity_pos = db.parse_biological_standard_data(
+            df_bio_intensity_pos = db.parse_biological_standard_data(instrument=instrument, run_id=run_id,
                 result_type="intensity", polarity="Pos", biological_standard=biological_standard)
         except Exception as error:
             print("Error loading positive (–) mode biological standard retention time data:", error)
             df_bio_intensity_pos = None
 
         try:
-            df_bio_mz_neg = db.parse_biological_standard_data(
+            df_bio_mz_neg = db.parse_biological_standard_data(instrument=instrument, run_id=run_id,
                 result_type="precursor_mz", polarity="Neg", biological_standard=biological_standard)
         except Exception as error:
             print("Error loading negative (–) mode biological standard precursor m/z data:", error)
             df_bio_mz_neg = None
 
         try:
-            df_bio_rt_neg = db.parse_biological_standard_data(
+            df_bio_rt_neg = db.parse_biological_standard_data(instrument=instrument, run_id=run_id,
                 result_type="retention_time", polarity="Neg", biological_standard=biological_standard)
         except Exception as error:
             print("Error loading positive (–) mode biological standard retention time data:", error)
             df_bio_rt_neg = None
 
         try:
-            df_bio_intensity_neg = db.parse_biological_standard_data(
+            df_bio_intensity_neg = db.parse_biological_standard_data(instrument=instrument, run_id=run_id,
                 result_type="intensity", polarity="Neg", biological_standard=biological_standard)
         except Exception as error:
             print("Error loading negative (–) mode biological standard intensity data:", error)
@@ -207,7 +207,10 @@ def generate_sample_metadata_dataframe(sample, df_rt, df_mz, df_intensity, df_de
     df_delta_mz, df_sequence, df_metadata):
 
     """
-    Creates a DataFrame for a single sample with m/z, RT, intensity and metadata info
+    Aggregates and returns 3 DataFrames for a selected sample:
+    1. QC result and causes
+    2. Sequence and metadata information
+    3. Internal standard m/z, RT, intensity, delta RT, and in-run delta RT
     """
 
     df_sample_istd = pd.DataFrame()
@@ -226,7 +229,7 @@ def generate_sample_metadata_dataframe(sample, df_rt, df_mz, df_intensity, df_de
     # Retention times
     df_rt = df_rt.loc[df_rt["Sample"] == sample][columns]
     df_rt.drop(columns=["Sample"], inplace=True)
-    df_sample_istd["RT"] = df_rt.iloc[0].astype(float).round(3).values.tolist()
+    df_sample_istd["RT"] = df_rt.iloc[0].astype(float).round(2).values.tolist()
 
     # Intensities
     df_intensity = df_intensity.loc[df_intensity["Sample"] == sample][columns]
@@ -272,6 +275,34 @@ def generate_sample_metadata_dataframe(sample, df_rt, df_mz, df_intensity, df_de
     df_sample_info = df_sample_info.transpose()
 
     return df_sample_istd, df_sample_info
+
+
+def generate_bio_standard_dataframe(clicked_sample, run_id, df_rt, df_mz, df_intensity):
+
+    """
+    Aggregates and returns 2 DataFrames for a selected sample:
+    1. QC result and causes
+    2. Targeted metabolite m/z, RT, intensity, delta RT, and percent change
+    """
+
+    df_sample_features = pd.DataFrame()
+    df_sample_features["Metabolite name"] = df_mz["Name"]
+    df_sample_features["Precursor m/z"] = df_mz[run_id]
+    df_sample_features["Retention time (min)"] = df_rt[run_id].astype(float).round(3)
+    intensities = df_intensity[run_id].fillna(0).astype(float).values.tolist()
+    df_sample_features["Intensity"] = ["{:.2e}".format(x) for x in intensities]
+
+    df_sample_info = pd.DataFrame()
+    df_sample_info["Sample ID"] = [clicked_sample]
+    qc_result = db.get_qc_results(sample_list=[clicked_sample], is_bio_standard=True)["qc_result"].values[0]
+    df_sample_info["QC Result"] = [qc_result]
+
+    df_sample_info = df_sample_info.append(df_sample_info.iloc[0])
+    df_sample_info.iloc[0] = df_sample_info.columns.tolist()
+    df_sample_info = df_sample_info.rename(index={0: "Sample Information"})
+    df_sample_info = df_sample_info.transpose()
+
+    return df_sample_features, df_sample_info
 
 
 def load_istd_rt_plot(dataframe, samples, internal_standard, retention_times):
@@ -350,17 +381,8 @@ def load_istd_delta_mz_plot(dataframe, samples, internal_standard, chromatograph
     Returns scatter plot figure of delta m/z vs. sample for internal standards
     """
 
-    # Get precursor m/z results for selected samples
+    # Get delta m/z results for selected samples
     df_filtered_by_samples = dataframe.loc[dataframe["Sample"].isin(samples)]
-
-    # Get internal standards for chromatography method and polarity
-    df_istd = db.get_table("internal_standards")
-    df_istd = df_istd.loc[
-        (df_istd["chromatography"] == chromatography) & (df_istd["polarity"] == polarity)]
-
-    # Get delta m/z (experimental m/z minus reference m/z)
-    reference_mz = df_istd.loc[df_istd["name"] == internal_standard]["precursor_mz"].astype(float).values[0]
-    df_filtered_by_samples[internal_standard] = df_filtered_by_samples[internal_standard].astype(float) - reference_mz
 
     fig = px.line(df_filtered_by_samples,
                   title="Delta m/z vs. Samples – " + internal_standard,
