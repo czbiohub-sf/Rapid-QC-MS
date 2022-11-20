@@ -165,6 +165,7 @@ h2 {
 .modal-styles-fullscreen {
     padding-left: 25vw;
     padding-right: 25vw;
+    padding-bottom: 7.5vh;
 }
 
 .input-group-text .form-label {

@@ -1,28 +1,22 @@
-import os
+import DatabaseFunctions as db
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
-class SlackNotification:
+def send_message(message):
 
     """
-    Class for sending Slack notifications upon QC fail
+    Posts a message to the Slack channel registered for notifications in Settings > General
     """
 
-    def __init__(self):
+    # Retrieve Slack bot token and Slack channel
+    slack_token = db.get_slack_bot_token()
+    client = WebClient(token=slack_token)
 
-        slack_token = "xoxb-105182011382-3832497551799-BbryUFZbyWByPi7kNPy2r22P"
-        self.client = WebClient(token=slack_token)
-
-    def send_message(self, message):
-
-        """
-        Posts Slack message to #ms-auto-qc channel
-        """
-
-        try:
-            response = self.client.chat_postMessage(
-                channel="ms-auto-qc",
-                text=message
-            )
-        except SlackApiError as e:
-            assert e.response["error"]
+    # Send Slack message
+    try:
+        slack_channel = db.get_slack_channel()
+        response = client.chat_postMessage(channel=slack_channel, text=message)
+        return response
+    except SlackApiError as error:
+        print("Slack API error:", error)
+        return error

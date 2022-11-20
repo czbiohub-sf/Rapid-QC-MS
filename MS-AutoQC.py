@@ -9,6 +9,7 @@ from QCPlotGeneration import *
 from AcquisitionListener import *
 import DatabaseFunctions as db
 import AutoQCProcessing as qc
+import SlackNotifications as bot
 
 local_stylesheet = {
     "href": "https://fonts.googleapis.com/css2?"
@@ -20,7 +21,6 @@ local_stylesheet = {
 current_directory = os.getcwd()
 drive_settings_file = current_directory + "/assets/settings.yaml"
 gauth_holder = [GoogleAuth(settings_file=drive_settings_file)]
-# GoogleAuth.DEFAULT_SETTINGS["client_config_file"] = current_directory + "/assets/client_secrets.json"
 credentials_file = current_directory + "/assets/credentials.txt"
 
 """
@@ -209,7 +209,7 @@ def serve_layout():
 
                                 html.Div(className="istd-plot-div", children=[
 
-                                    html.Div(className="plot-container", children=[
+                                    html.Div(id="istd-rt-div", className="plot-container", children=[
 
                                         # Internal standard selection controls
                                         html.Div(style={"width": "100%"}, children=[
@@ -249,7 +249,7 @@ def serve_layout():
                                         dcc.Graph(id="istd-rt-plot"),
                                     ]),
 
-                                    html.Div(className="plot-container", children=[
+                                    html.Div(id="istd-intensity-div", className="plot-container", children=[
 
                                         # Internal standard selection controls
                                         html.Div(style={"width": "100%"}, children=[
@@ -290,7 +290,7 @@ def serve_layout():
                                         dcc.Graph(id="istd-intensity-plot")
                                     ]),
 
-                                    html.Div(className="plot-container", children=[
+                                    html.Div(id="istd-mz-div", className="plot-container", children=[
 
                                         # Internal standard selection controls
                                         html.Div(style={"width": "100%"}, children=[
@@ -335,12 +335,19 @@ def serve_layout():
                                 html.Div(className="bio-plot-div", children=[
 
                                     # Scatter plot for biological standard m/z vs. RT
-                                    html.Div(className="plot-container", children=[
+                                    html.Div(id="bio-standard-mz-rt-div", className="plot-container", children=[
+
+                                        # Dropdown for selecting a biological standard to view
+                                        dcc.Dropdown(id="bio-standards-plot-dropdown",
+                                            options=[], placeholder="Select biological standard...",
+                                            style={"text-align": "left", "height": "1.5", "font-size": "1rem",
+                                                "width": "100%", "display": "inline-block"}),
+
                                         dcc.Graph(id="bio-standard-mz-rt-plot")
                                     ]),
 
                                     # Bar plot for biological standard feature intensity vs. run
-                                    html.Div(className="plot-container", children=[
+                                    html.Div(id="bio-standard-benchmark-div", className="plot-container", children=[
 
                                         # Dropdown for biological standard feature intensity plot
                                         dcc.Dropdown(
@@ -432,9 +439,12 @@ def serve_layout():
                                                 html.Div([
                                                     dbc.Label("Sync with Google Drive (recommended)"),
                                                     html.Br(),
-                                                    dbc.Button("Sign in to Google Drive", id="setup-google-drive-button-1",
-                                                       color="primary", outline=True),
-                                                    html.Br(),
+                                                    dbc.InputGroup([
+                                                        dbc.Input(placeholder="Client ID", id="gdrive-client-id-1"),
+                                                        dbc.Input(placeholder="Client secret", id="gdrive-client-secret-1"),
+                                                        dbc.Button("Sign in to Google Drive", id="setup-google-drive-button-1",
+                                                           color="primary", outline=True),
+                                                    ]),
                                                     dbc.FormText("This will allow you to access your QC results from any device."),
                                                     dbc.Tooltip("If you have Google Drive sync enabled on an instrument already, " +
                                                         "please sign in with the same Google account to merge workspaces.",
@@ -461,11 +471,13 @@ def serve_layout():
 
                                                 # Google Drive authentication button
                                                 html.Div([
-                                                    dbc.Label("Sign in to access MS-AutoQC"),
-                                                    html.Br(),
-                                                    dbc.Button("Sign in to Google Drive", id="setup-google-drive-button-2",
-                                                        color="primary", outline=False),
-                                                    html.Br(),
+                                                    dbc.Label("Sign in to access MS-AutoQC"), html.Br(),
+                                                    dbc.InputGroup([
+                                                        dbc.Input(placeholder="Client ID", id="gdrive-client-id-2"),
+                                                        dbc.Input(placeholder="Client secret", id="gdrive-client-secret-2"),
+                                                        dbc.Button("Sign in to Google Drive", id="setup-google-drive-button-2",
+                                                            color="primary", outline=False),
+                                                    ]),
                                                     dbc.FormText(
                                                         "Please ensure that your Google account has been registered to " +
                                                         "access your MS-AutoQC workspace by visiting Settings > General."),
@@ -673,11 +685,28 @@ def serve_layout():
                                                 "cloud sync during setup.")
                                         ]),
 
+                                        dbc.Alert(id="gdrive-credentials-saved-alert", is_open=False, duration=6000),
+
                                         dbc.Label("Manage workspace access", style={"font-weight": "bold"}),
                                         html.Br(),
 
                                         # Google Drive cloud storage
-                                        dbc.Label("Cloud sync with Google Drive"),
+                                        dbc.Label("Google API client credentials"),
+                                        html.Br(),
+                                        dbc.InputGroup([
+                                            dbc.Input(placeholder="Client ID", id="gdrive-client-id"),
+                                            dbc.Input(placeholder="Client secret", id="gdrive-client-secret"),
+                                            dbc.Button("Set credentials",
+                                                id="set-gdrive-credentials-button", color="primary", outline=True),
+                                        ]),
+                                        dbc.FormText(children=[
+                                            "You can get these credentials from the ",
+                                            html.A("Google Cloud console",
+                                               href="https://console.cloud.google.com/apis/credentials", target="_blank"),
+                                            " in Credentials > OAuth 2.0 Client ID's."]),
+                                        html.Br(), html.Br(),
+
+                                        dbc.Label("Enable cloud sync with Google Drive"),
                                         html.Br(),
                                         dbc.Button("Sync with Google Drive",
                                             id="google-drive-sync-button", color="primary", outline=False),
@@ -694,12 +723,13 @@ def serve_layout():
                                         dbc.Label("Add / remove workspace users"),
                                         html.Br(),
                                         dbc.InputGroup([
-                                            dbc.Input(placeholder="example@gmail.com",
-                                                      id="add-user-text-field"),
+                                            dbc.Input(placeholder="example@gmail.com", id="add-user-text-field"),
                                             dbc.Button("Add user", color="primary", outline=True,
-                                                       id="add-user-button", n_clicks=0),
+                                                id="add-user-button", n_clicks=0),
                                             dbc.Button("Delete user", color="danger", outline=True,
-                                                       id="delete-user-button", n_clicks=0),
+                                                id="delete-user-button", n_clicks=0),
+                                            dbc.Popover("This will revoke user access to the MS-AutoQC workspace. "
+                                                "Are you sure?", target="delete-user-button", trigger="hover", body=True)
                                         ]),
                                         dbc.FormText(
                                             "Adding new users grants full read-and-write access to this MS-AutoQC workspace."),
@@ -709,47 +739,62 @@ def serve_layout():
                                         html.Div(id="workspace-users-table"),
                                         html.Br(),
 
-                                        dbc.Label("Notifications", style={"font-weight": "bold"}),
+                                        dbc.Label("Manage notifications", style={"font-weight": "bold"}),
                                         html.Br(),
 
-                                        # Slack notifications
-                                        dbc.Label("Slack notifications"),
-                                        html.Br(),
-                                        dbc.Button("Sign in with Slack", color="primary",
-                                                   id="slack-sync-button"),
-                                        html.Br(),
-                                        dbc.FormText(
-                                            "This will allow you to be notified of QC fails and warnings via Slack."),
-                                        html.Br(), html.Br(),
+                                        # Alerts for modifying workspace access
+                                        dbc.Alert(id="slack-token-save-alert", is_open=False, duration=6000),
 
                                         # Channel for Slack notifications
-                                        dbc.Label("Slack channels"),
+                                        dbc.Label("Slack API client credentials"),
                                         html.Br(),
                                         dbc.InputGroup([
-                                            dbc.Input(placeholder="#my-slack-channel",
-                                                      id="add-slack-channel-text-field"),
-                                            dbc.Button("Register channel", color="primary", outline=True,
-                                                       id="add-slack-channel-button", n_clicks=0),
+                                            dbc.Input(placeholder="Slack bot user OAuth token", id="slack-bot-token"),
+                                            dbc.Button("Save bot token", color="primary", outline=True,
+                                                       id="save-slack-token-button", n_clicks=0),
+                                        ]),
+                                        dbc.FormText(children=[
+                                            "You can get the Slack bot token from the ",
+                                            html.A("Slack API website",
+                                               href="https://api.slack.com/apps", target="_blank"),
+                                            " in Your App > Settings > Install App."]),
+                                        html.Br(), html.Br(),
+
+                                        dbc.Alert(id="slack-notifications-toggle-alert", is_open=False, duration=6000),
+
+                                        dbc.Label("Slack notifications"),
+                                        dbc.InputGroup(children=[
+                                            dbc.Input(id="slack-channel", placeholder="#my-slack-channel"),
+                                            dbc.InputGroupText(
+                                                dbc.Switch(id="slack-notifications-enabled", label="Enable notifications")),
                                         ]),
                                         dbc.FormText(
-                                            "Please enter the name of the Slack channel for MS-AutoQC Bot to join."),
+                                            "Please enter the Slack channel you'd like to register for Slack notifications."),
                                         html.Br(), html.Br(),
+
+                                        # Alerts for modifying email notification list
+                                        dbc.Alert(id="email-addition-alert", is_open=False, duration=6000),
+                                        dbc.Alert(id="email-deletion-alert", is_open=False, duration=6000),
 
                                         # Email notifications
                                         dbc.Label("Email notifications"),
                                         html.Br(),
                                         dbc.InputGroup([
-                                            dbc.Input(placeholder="name@example.com",
-                                                      id="add-email-text-field"),
+                                            dbc.Input(placeholder="name@example.com", id="email-notifications-text-field"),
                                             dbc.Button("Register email", color="primary", outline=True,
-                                                       id="add-email-button", n_clicks=0),
+                                                id="add-email-button", n_clicks=0),
+                                            dbc.Button("Remove email", color="danger", outline=True,
+                                                id="delete-email-button", n_clicks=0),
+                                            dbc.Popover("This will un-register the email account from MS-AutoQC "
+                                                "notifications. Are you sure?", target="delete-email-button",
+                                                trigger="hover", body=True)
                                         ]),
                                         dbc.FormText(
                                             "Please enter a valid email address to register for email notifications."),
                                         html.Br(), html.Br(),
 
                                         # Table of users registered for email notifications
-                                        html.Div(id="email-notification-users-table")
+                                        html.Div(id="email-notifications-table")
                                     ]),
 
                                     # Internal standards
@@ -1112,6 +1157,7 @@ def serve_layout():
                                         # UI feedback on configuration addition/removal
                                         dbc.Alert(id="msdial-config-addition-alert", is_open=False, duration=6000),
                                         dbc.Alert(id="msdial-config-removal-alert", is_open=False, duration=6000),
+                                        dbc.Alert(id="msdial-directory-saved-alert", is_open=False, duration=6000),
 
                                         dbc.Label("MS-DIAL installation", style={"font-weight": "bold"}),
                                         html.Br(),
@@ -1123,7 +1169,7 @@ def serve_layout():
                                                 dbc.Input(placeholder="C:/Users/Me/Downloads/MS-DIAL",
                                                     id="msdial-directory"),
                                                 dbc.Button("Browse Folders", id="msdial-folder-button",
-                                                    color="secondary"),
+                                                    color="secondary", outline=True),
                                                 dbc.Button("Save changes", id="msdial-folder-save-button",
                                                     color="primary", outline=True)
                                             ]),
@@ -1415,7 +1461,7 @@ def serve_layout():
             dcc.Store(id="msdial-config-removed"),
             dcc.Store(id="msdial-parameters-saved"),
             dcc.Store(id="msdial-parameters-reset"),
-            dcc.Store(id="msdial-directory-data"),
+            dcc.Store(id="msdial-directory-saved"),
             dcc.Store(id="google-drive-sync-finished"),
             dcc.Store(id="close-sync-modal"),
             dcc.Store(id="database-md5"),
@@ -1423,6 +1469,11 @@ def serve_layout():
             dcc.Store(id="selected-msdial-folder"),
             dcc.Store(id="google-drive-user-added"),
             dcc.Store(id="google-drive-user-deleted"),
+            dcc.Store(id="email-added"),
+            dcc.Store(id="email-deleted"),
+            dcc.Store(id="gdrive-credentials-saved"),
+            dcc.Store(id="slack-bot-token-saved"),
+            dcc.Store(id="slack-channel-saved"),
 
             # Dummy inputs for Google Drive authentication
             dcc.Store(id="workspace-has-been-setup-1"),
@@ -1496,8 +1547,15 @@ def authenticate_with_google_drive(on_page_load):
               Output("google-drive-authenticated-3", "data"),
               Input("setup-google-drive-button-1", "n_clicks"),
               Input("setup-google-drive-button-2", "n_clicks"),
-              Input("google-drive-sync-button", "n_clicks"), prevent_initial_call=True)
-def launch_google_drive_authentication(setup_auth_button_clicks, sign_in_auth_button_clicks, settings_button_clicks):
+              Input("google-drive-sync-button", "n_clicks"),
+              State("gdrive-client-id-1", "value"),
+              State("gdrive-client-id-2", "value"),
+              State("gdrive-client-id", "value"),
+              State("gdrive-client-secret-1", "value"),
+              State("gdrive-client-secret-2", "value"),
+              State("gdrive-client-secret", "value"), prevent_initial_call=True)
+def launch_google_drive_authentication(setup_auth_button_clicks, sign_in_auth_button_clicks, settings_button_clicks,
+    client_id_1, client_id_2, client_id_3, client_secret_1, client_secret_2, client_secret_3):
 
     """
     Launches Google Drive authentication window from first-time setup
@@ -1508,6 +1566,17 @@ def launch_google_drive_authentication(setup_auth_button_clicks, sign_in_auth_bu
 
     # If user clicks a sign-in button, launch Google authentication page
     if button_id is not None:
+
+        # Create a settings.yaml file to access Drive API
+        if button_id == "setup-google-drive-button-1":
+            db.generate_client_settings_yaml(client_id_1, client_secret_1)
+        elif button_id == "setup-google-drive-button-2":
+            db.generate_client_settings_yaml(client_id_2, client_secret_2)
+        elif button_id == "google-drive-sync-button":
+            # Regenerate Drive settings file
+            if not os.path.exists(drive_settings_file):
+                db.generate_client_settings_yaml(client_id_3, client_secret_3)
+
         # Authenticate, then save the credentials to a file
         gauth_holder[0] = GoogleAuth(settings_file=drive_settings_file)
         gauth = gauth_holder[0]
@@ -1648,7 +1717,7 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
     """
     Upon "Complete setup" button click, this callback completes the following:
     1. If database DOES exist in Google Drive, downloads database
-    2. If database DOES NOT exist in Google Drive, initializes new SQLite database in /data
+    2. If database DOES NOT exist in Google Drive, initializes new SQLite database
     3. Adds instrument to "instruments" table
     4. Uploads database to Google Drive folder
     5. Dismisses setup window
@@ -1719,7 +1788,8 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
             os.makedirs(methods_directory)
 
         # Add instrument to database
-        db.insert_new_instrument(instrument_id, instrument_vendor, gdrive_folder_id, gdrive_file_id)
+        db.insert_new_instrument(instrument_id, instrument_vendor)
+        db.insert_google_drive_ids(gdrive_folder_id, gdrive_file_id)
 
         # Dismiss setup window by returning True for workspace_has_been_setup boolean
         return db.is_valid()
@@ -1885,6 +1955,8 @@ def dismiss_setup_window(workspace_has_been_setup_1, workspace_has_been_setup_2)
               Output("google-drive-sync-button", "children"),
               Output("google-drive-sync-form-text", "children"),
               Output("google-drive-sign-in-from-settings-alert", "is_open"),
+              Output("gdrive-client-id", "placeholder"),
+              Output("gdrive-client-secret", "placeholder"),
               Input("google-drive-authenticated-3", "data"),
               Input("google-drive-authenticated", "data"),
               State("google-drive-sync-form-text", "children"), prevent_initial_call=True)
@@ -1899,7 +1971,7 @@ def update_google_drive_sync_status_in_settings(google_drive_authenticated, goog
     # Authenticated on app startup
     if auth_source == "google-drive-authenticated":
         form_text = "Cloud sync is enabled! You can now sign in to this MS-AutoQC workspace from any device."
-        return "success", "Signed in to Google Drive", form_text, False
+        return "success", "Signed in to Google Drive", form_text, False, "Client ID (saved)", "Client secret (saved)"
 
     # Authenticated from "Sign in to Google Drive" button in Settings > General
     elif auth_source == "google-drive-authenticated-3" and google_drive_authenticated_on_start is None:
@@ -1924,7 +1996,7 @@ def update_google_drive_sync_status_in_settings(google_drive_authenticated, goog
         # If Google Drive folder is found, alert user that they need to sign in with a different Google account
         if gdrive_folder_id is not None:
             os.remove(credentials_file)
-            return "danger", "Sign in to Google Drive", form_text, True
+            return "danger", "Sign in to Google Drive", form_text, True, "Client ID", "Client secret"
 
         # If no workspace found, all good to create one
         else:
@@ -1976,8 +2048,52 @@ def update_google_drive_sync_status_in_settings(google_drive_authenticated, goog
             gauth_holder[0].SaveCredentialsFile(credentials_file)
 
         form_text = "Cloud sync is enabled! You can now sign in to this MS-AutoQC workspace from any device."
-        return "success", "Signed in to Google Drive", form_text, False
+        return "success", "Signed in to Google Drive", form_text, False, "Client ID (saved)", "Client secret (saved)"
 
+    else:
+        raise PreventUpdate
+
+
+@app.callback(Output("gdrive-credentials-saved", "data"),
+              Input("set-gdrive-credentials-button", "n_clicks"),
+              State("gdrive-client-id", "value"),
+              State("gdrive-client-secret", "value"), prevent_initial_call=True)
+def regenerate_settings_yaml_file(button_click, client_id, client_secret):
+
+    """
+    Regenerates settings.yaml file with new credentials
+    """
+
+    # Ensure user has entered client ID and client secret
+    if client_id is not None and client_secret is not None:
+
+        # Delete existing settings.yaml file (if it exists)
+        if os.path.exists(drive_settings_file):
+            os.remove(drive_settings_file)
+
+        # Regenerate file
+        db.generate_client_settings_yaml(client_id, client_secret)
+        return "Success"
+
+    else:
+        return "Error"
+
+
+@app.callback(Output("gdrive-credentials-saved-alert", "is_open"),
+              Output("gdrive-credentials-saved-alert", "children"),
+              Output("gdrive-credentials-saved-alert", "color"),
+              Input("gdrive-credentials-saved", "data"), prevent_initial_call=True)
+def ui_alert_on_gdrive_credential_save(credential_save_result):
+
+    """
+    Displays UI alert on Google API credential save
+    """
+
+    if credential_save_result is not None:
+        if credential_save_result == "Success":
+            return True, "Your Google API credentials were successfully saved.", "success"
+        elif credential_save_result == "Error":
+            return True, "Error: Please enter both the client ID and client secret first.", "danger"
     else:
         raise PreventUpdate
 
@@ -2177,6 +2293,7 @@ def update_dropdowns_on_polarity_change(polarity, table_data, samples, bio_inten
     """
 
     if samples is not None:
+
         df_samples = pd.read_json(samples, orient="split")
 
         if polarity == "Neg":
@@ -2185,6 +2302,8 @@ def update_dropdowns_on_polarity_change(polarity, table_data, samples, bio_inten
             if bio_intensity_neg is not None:
                 df = pd.read_json(bio_intensity_neg, orient="split")
                 bio_dropdown = df["Name"].astype(str).unique().tolist()
+            else:
+                bio_dropdown = []
 
             df_samples = df_samples.loc[df_samples["Sample"].str.contains("Neg")]
             sample_dropdown = df_samples["Sample"].tolist()
@@ -2195,6 +2314,8 @@ def update_dropdowns_on_polarity_change(polarity, table_data, samples, bio_inten
             if bio_intensity_pos is not None:
                 df = pd.read_json(bio_intensity_pos, orient="split")
                 bio_dropdown = df["Name"].astype(str).unique().tolist()
+            else:
+                bio_dropdown = []
 
             df_samples = df_samples.loc[df_samples["Sample"].str.contains("Pos")]
             sample_dropdown = df_samples["Sample"].tolist()
@@ -2261,6 +2382,7 @@ def apply_sample_filter_to_plots(filter, polarity, samples, metadata):
               Output("rt-prev-button", "n_clicks"),
               Output("rt-next-button", "n_clicks"),
               Output("istd-rt-dropdown", "value"),
+              Output("istd-rt-div", "style"),
               Input("polarity-options", "value"),
               Input("istd-rt-dropdown", "value"),
               Input("rt-plot-sample-dropdown", "value"),
@@ -2280,7 +2402,7 @@ def populate_istd_rt_plot(polarity, internal_standard, selected_samples, rt_pos,
     """
 
     if rt_pos is None and rt_neg is None:
-        return {}, None, None, None
+        return {}, None, None, None, {"display": "none"}
 
     trigger = ctx.triggered_id
 
@@ -2332,17 +2454,18 @@ def populate_istd_rt_plot(polarity, internal_standard, selected_samples, rt_pos,
         # Generate internal standard RT vs. sample plot
         return load_istd_rt_plot(dataframe=df_istd_rt, samples=selected_samples,
             internal_standard=internal_standard, retention_times=retention_times), \
-                None, index, internal_standard
+                None, index, internal_standard, {"display": "block"}
 
     except Exception as error:
         print("Error in loading RT vs. sample plot:", error)
-        return {}, None, None, None
+        return {}, None, None, None, {"display": "none"}
 
 
 @app.callback(Output("istd-intensity-plot", "figure"),
               Output("intensity-prev-button", "n_clicks"),
               Output("intensity-next-button", "n_clicks"),
               Output("istd-intensity-dropdown", "value"),
+              Output("istd-intensity-div", "style"),
               Input("polarity-options", "value"),
               Input("istd-intensity-dropdown", "value"),
               Input("intensity-plot-sample-dropdown", "value"),
@@ -2362,7 +2485,7 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
     """
 
     if intensity_pos is None and intensity_neg is None:
-        return {}, None, None, None
+        return {}, None, None, None, {"display": "none"}
 
     trigger = ctx.triggered_id
 
@@ -2422,17 +2545,18 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
         # Generate internal standard intensity vs. sample plot
         return load_istd_intensity_plot(dataframe=df_istd_intensity, samples=selected_samples,
         internal_standard=internal_standard, text=selected_samples, treatments=treatments), \
-               None, index, internal_standard
+               None, index, internal_standard, {"display": "block"}
 
     except Exception as error:
         print("Error in loading intensity vs. sample plot:", error)
-        return {}, None, None, None
+        return {}, None, None, None, {"display": "none"}
 
 
 @app.callback(Output("istd-mz-plot", "figure"),
               Output("mz-prev-button", "n_clicks"),
               Output("mz-next-button", "n_clicks"),
               Output("istd-mz-dropdown", "value"),
+              Output("istd-mz-div", "style"),
               Input("polarity-options", "value"),
               Input("istd-mz-dropdown", "value"),
               Input("mz-plot-sample-dropdown", "value"),
@@ -2452,7 +2576,7 @@ def populate_istd_mz_plot(polarity, internal_standard, selected_samples, delta_m
     """
 
     if delta_mz_pos is None and delta_mz_neg is None:
-        return {}, None, None, None
+        return {}, None, None, None, {"display": "none"}
 
     trigger = ctx.triggered_id
 
@@ -2505,16 +2629,17 @@ def populate_istd_mz_plot(polarity, internal_standard, selected_samples, delta_m
         # Generate internal standard delta m/z vs. sample plot
         return load_istd_delta_mz_plot(dataframe=df_istd_mz, samples=selected_samples,
             internal_standard=internal_standard, chromatography=chromatography, polarity=pol), \
-               None, index, internal_standard
+               None, index, internal_standard, {"display": "block"}
 
     except Exception as error:
         print("Error in loading delta m/z vs. sample plot:", error)
-        return {}, None, None, None
+        return {}, None, None, None, {"display": "none"}
 
 
 @app.callback(Output("bio-standard-mz-rt-plot", "figure"),
               Output("bio-standard-benchmark-dropdown", "value"),
               Output("bio-standard-mz-rt-plot", "clickData"),
+              Output("bio-standard-mz-rt-div", "style"),
               Input("polarity-options", "value"),
               Input("bio-rt-pos", "data"),
               Input("bio-rt-neg", "data"),
@@ -2532,7 +2657,7 @@ def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, in
 
     if rt_pos is None and rt_neg is None:
         if mz_pos is None and mz_neg is None:
-            return {}, None, None
+            return {}, None, None, {"display": "none"}
 
     # Get run ID and chromatography method
     run_id = json.loads(resources)["run_id"]
@@ -2558,13 +2683,14 @@ def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, in
     try:
         # Biological standard metabolites – m/z vs. retention time
         return load_bio_feature_plot(run_id=run_id, df_rt=df_bio_rt, df_mz=df_bio_mz, df_intensity=df_bio_intensity), \
-               selected_feature, None
+               selected_feature, None, {"display": "block"}
     except Exception as error:
         print("Error in loading biological standard m/z-RT plot:", error)
-        return {}, None, None
+        return {}, None, None, {"display": "none"}
 
 
 @app.callback(Output("bio-standard-benchmark-plot", "figure"),
+              Output("bio-standard-benchmark-div", "style"),
               Input("polarity-options", "value"),
               Input("bio-standard-benchmark-dropdown", "value"),
               Input("bio-intensity-pos", "data"),
@@ -2576,7 +2702,7 @@ def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_p
     """
 
     if intensity_pos is None and intensity_neg is None:
-        return {}, None, None, None
+        return {}, {"display": "none"}
 
     # Get intensity data
     if polarity == "Pos":
@@ -2593,10 +2719,12 @@ def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_p
 
     try:
         # Generate biological standard metabolite intensity vs. instrument run plot
-        return load_bio_benchmark_plot(dataframe=df_bio_intensity, metabolite_name=selected_feature)
+        return load_bio_benchmark_plot(dataframe=df_bio_intensity,
+            metabolite_name=selected_feature), {"display": "block"}
+
     except Exception as error:
         print("Error loading biological standard intensity plot:", error)
-        return {}
+        return {}, {"display": "none"}
 
 
 @app.callback(Output("sample-info-modal", "is_open"),
@@ -2853,6 +2981,9 @@ def add_user_to_workspace(button_click, user_email_address, google_drive_is_auth
     Grants user permission to MS-AutoQC workspace in Google Drive
     """
 
+    if user_email_address in db.get_workspace_users_list():
+        return "User already exists"
+
     drive = GoogleDrive(gauth_holder[0])
     db.add_user_to_workspace(drive, user_email_address)
 
@@ -2871,6 +3002,9 @@ def delete_user_from_workspace(button_click, user_email_address, google_drive_is
     """
     Revokes user permission to MS-AutoQC workspace in Google Drive
     """
+
+    if user_email_address not in db.get_workspace_users_list():
+        return "User does not exist"
 
     drive = GoogleDrive(gauth_holder[0])
     db.delete_user_from_workspace(drive, user_email_address)
@@ -2895,9 +3029,9 @@ def ui_feedback_for_adding_gdrive_user(user_added_result):
         if user_added_result != "Error" and user_added_result != "User already exists":
             return True, user_added_result + " has been granted access to the workspace.", "success"
         elif user_added_result == "User already exists":
-            return True, "Error: " + user_added_result + " already has access to the workspace.", "danger"
+            return True, "Error: This user already has access to the workspace.", "danger"
         else:
-            return True, "Error: cannot grant access.", "danger"
+            return True, "Error: Could not grant access.", "danger"
 
 
 @app.callback(Output("user-deletion-alert", "is_open"),
@@ -2907,16 +3041,236 @@ def ui_feedback_for_adding_gdrive_user(user_added_result):
 def ui_feedback_for_deleting_gdrive_user(user_deleted_result):
 
     """
-    UI alert upon adding a new user to MS-AutoQC workspace
+    UI alert upon deleting a user from the MS-AutoQC workspace
     """
 
     if user_deleted_result is not None:
         if user_deleted_result != "Error" and user_deleted_result != "User does not exist":
             return True, "Revoked workspace access for " + user_deleted_result + ".", "primary"
         elif user_deleted_result == "User does not exist":
-            return True, "Error: " + user_deleted_result + " cannot be deleted because they are not in the workspace.", "danger"
+            return True, "Error: this user cannot be deleted because they are not in the workspace.", "danger"
         else:
-            return True, "Error: cannot revoke access.", "danger"
+            return True, "Error: Could not revoke access.", "danger"
+
+
+@app.callback(Output("slack-bot-token", "value"),
+              Input("slack-bot-token-saved", "data"))
+def get_slack_bot_token(token_save_result):
+
+    """
+    Get Slack bot token saved in database
+    """
+
+    if db.get_slack_bot_token() != "None":
+        return db.get_slack_bot_token()
+    else:
+        raise PreventUpdate
+
+
+@app.callback(Output("slack-bot-token-saved", "data"),
+              Input("save-slack-token-button", "n_clicks"),
+              State("slack-bot-token", "value"), prevent_initial_call=True)
+def save_slack_bot_token(button_click, slack_bot_token):
+
+    """
+    Saves Slack bot user OAuth token in database
+    """
+
+    if slack_bot_token is not None:
+        db.update_slack_bot_token(slack_bot_token)
+        return "Success"
+    else:
+        return "Error"
+
+
+@app.callback(Output("slack-token-save-alert", "is_open"),
+              Output("slack-token-save-alert", "children"),
+              Output("slack-token-save-alert", "color"),
+              Input("slack-bot-token-saved", "data"), prevent_initial_call=True)
+def ui_alert_on_slack_token_save(token_save_result):
+
+    """
+    Displays UI alert on Slack bot token save
+    """
+
+    if token_save_result is not None:
+        if token_save_result == "Success":
+            return True, "Your Slack bot token was successfully saved.", "success"
+        elif token_save_result == "Error":
+            return True, "Error: Please enter your Slack bot token first.", "danger"
+    else:
+        raise PreventUpdate
+
+
+@app.callback(Output("slack-channel", "value"),
+              Output("slack-notifications-enabled", "value"),
+              Input("slack-channel-saved", "data"))
+def get_slack_channel(result):
+
+    """
+    Gets Slack channel and notification toggle setting from database
+    """
+
+    slack_channel = db.get_slack_channel()
+    slack_notifications_enabled = db.get_slack_notifications_toggled()
+
+    if slack_notifications_enabled == 1:
+        return "#" + slack_channel, slack_notifications_enabled
+    else:
+        raise PreventUpdate
+
+
+@app.callback(Output("slack-channel-saved", "data"),
+              Input("slack-notifications-enabled", "value"),
+              State("slack-channel", "value"), prevent_initial_call=True)
+def save_slack_channel(notifications_enabled, slack_channel):
+
+    """
+    1. Registers Slack channel for MS-AutoQC notifications
+    2. Sends a Slack message to confirm registration
+    """
+
+    if slack_channel is not None:
+        if notifications_enabled == 1:
+            if db.get_slack_bot_token() != "None":
+                db.update_slack_channel(slack_channel, notifications_enabled)
+                return "Enabled"
+            else:
+                return "No token"
+        elif notifications_enabled == 0:
+            db.update_slack_channel(slack_channel, notifications_enabled)
+            return "Disabled"
+        else:
+            raise PreventUpdate
+    else:
+        return "Error"
+
+
+@app.callback(Output("slack-notifications-toggle-alert", "is_open"),
+              Output("slack-notifications-toggle-alert", "children"),
+              Output("slack-notifications-toggle-alert", "color"),
+              Input("slack-channel-saved", "data"), prevent_initial_call=True)
+def ui_alert_on_slack_notifications_toggle(result):
+
+    """
+    UI alert on setting Slack channel and toggling Slack notifications
+    """
+
+    if result is not None:
+        if result == "Enabled":
+            return True, "Success! Slack notifications have been enabled.", "success"
+        elif result == "Disabled":
+            return True, "Slack notifications have been disabled.", "primary"
+        elif result == "No token":
+            return True, "Error: Please save your Slack bot token first.", "danger"
+        elif result == "Error":
+            return True, "Error: Please enter a Slack channel first.", "danger"
+    else:
+        raise PreventUpdate
+
+
+@app.callback(Output("email-notifications-table", "children"),
+              Input("on-page-load", "data"),
+              Input("email-added", "data"),
+              Input("email-deleted", "data"))
+def get_emails_registered_for_notifications(on_page_load, email_added, email_deleted):
+
+    """
+    Returns table of emails that are registered for email notifications
+    """
+
+    # Get emails from database
+    if db.is_valid():
+        df_emails = pd.DataFrame()
+        df_emails["Registered Email Addresses"] = db.get_email_notifications_list()
+
+        # Generate and return table
+        if len(df_emails) > 0:
+            table = dbc.Table.from_dataframe(df_emails, striped=True, hover=True)
+            return table
+        else:
+            return None
+    else:
+        raise PreventUpdate
+
+
+@app.callback(Output("email-added", "data"),
+              Input("add-email-button", "n_clicks"),
+              State("email-notifications-text-field", "value"), prevent_initial_call=True)
+def register_email_for_notifications(button_click, user_email_address):
+
+    """
+    Registers email address for MS-AutoQC notifications
+    """
+
+    if user_email_address in db.get_email_notifications_list():
+        return "Email already exists"
+
+    db.register_email_for_notifications(user_email_address)
+
+    if user_email_address in db.get_email_notifications_list():
+        return user_email_address
+    else:
+        return "Error"
+
+
+@app.callback(Output("email-deleted", "data"),
+              Input("delete-email-button", "n_clicks"),
+              State("email-notifications-text-field", "value"), prevent_initial_call=True)
+def delete_email_from_notifications(button_click, user_email_address):
+
+    """
+    Unsubscribes email address from MS-AutoQC notifications
+    """
+
+    if user_email_address not in db.get_email_notifications_list():
+        return "Email does not exist"
+
+    db.delete_email_from_notifications(user_email_address)
+
+    if user_email_address in db.get_email_notifications_list():
+        return "Error"
+    else:
+        return user_email_address
+
+
+@app.callback(Output("email-addition-alert", "is_open"),
+              Output("email-addition-alert", "children"),
+              Output("email-addition-alert", "color"),
+              Input("email-added", "data"), prevent_initial_call=True)
+def ui_feedback_for_registering_email(email_added_result):
+
+    """
+    UI alert upon registering email for email notifications
+    """
+
+    if email_added_result is not None:
+        if email_added_result != "Error" and email_added_result != "Email already exists":
+            return True, email_added_result + " has been registered for MS-AutoQC notifications.", "success"
+        elif email_added_result == "Email already exists":
+            return True, "Error: This email is already registered for MS-AutoQC notifications.", "danger"
+        else:
+            return True, "Error: Could not register email for MS-AutoQC notifications.", "danger"
+
+
+@app.callback(Output("email-deletion-alert", "is_open"),
+              Output("email-deletion-alert", "children"),
+              Output("email-deletion-alert", "color"),
+              Input("email-deleted", "data"), prevent_initial_call=True)
+def ui_feedback_for_deleting_email(email_deleted_result):
+
+    """
+    UI alert upon deleting email from email notifications list
+    """
+
+    if email_deleted_result is not None:
+        if email_deleted_result != "Error" and email_deleted_result != "Email does not exist":
+            return True, "Unsubscribed " + email_deleted_result + " from email notifications.", "primary"
+        elif email_deleted_result == "Email does not exist":
+            message = "Error: Email cannot be deleted because it isn't registered for notifications."
+            return True, message, "danger"
+        else:
+            return True, "Error: Could not unsubscribe email from MS-AutoQC notifications.", "danger"
 
 
 @app.callback(Output("chromatography-methods-table", "children"),
@@ -3114,24 +3468,61 @@ def get_msdial_directory(select_folder_button, settings_modal_is_open, selected_
         return selected_folder
 
     if db.is_valid():
-        return db.get_msdial_configuration_parameters("Default")[-1]
+        return db.get_msdial_directory()
     else:
         raise PreventUpdate
+
+
+@app.callback(Output("msdial-directory-saved", "data"),
+              Input("msdial-folder-save-button", "n_clicks"),
+              State("msdial-directory", "value"), prevent_initial_call=True)
+def update_msdial_directory(button_click, msdial_directory):
+
+    """
+    Updates MS-DIAL directory
+    """
+
+    if msdial_directory is not None:
+        if os.path.exists(msdial_directory):
+            db.update_msdial_directory(msdial_directory)
+            return "Success"
+        else:
+            return "Does not exist"
+    else:
+        return "Error"
+
+
+@app.callback(Output("msdial-directory-saved-alert", "is_open"),
+              Output("msdial-directory-saved-alert", "children"),
+              Output("msdial-directory-saved-alert", "color"),
+              Input("msdial-directory-saved", "data"), prevent_initial_call=True)
+def ui_alert_for_msdial_directory_save(msdial_folder_save_result):
+
+    """
+    Displays alert on MS-DIAL directory update
+    """
+
+    if msdial_folder_save_result is not None:
+        if msdial_folder_save_result == "Success":
+            return True, "The MS-DIAL location was successfully saved.", "success"
+        elif msdial_folder_save_result == "Does not exist":
+            return True, "Error: This directory does not exist on your computer.", "danger"
+        else:
+            return True, "Error: Could not set MS-DIAL directory.", "danger"
 
 
 @app.callback(Output("msdial-config-added", "data"),
               Output("add-msdial-configuration-text-field", "value"),
               Input("add-msdial-configuration-button", "n_clicks"),
-              State("add-msdial-configuration-text-field", "value"),
-              State("msdial-directory", "value"), prevent_initial_call=True)
-def add_msdial_configuration(button_click, msdial_config_id, msdial_directory):
+              State("add-msdial-configuration-text-field", "value"), prevent_initial_call=True)
+def add_msdial_configuration(button_click, msdial_config_id):
 
     """
     Adds new MS-DIAL configuration to the database
     """
 
     if msdial_config_id is not None:
-        db.add_msdial_configuration(msdial_config_id, msdial_directory)
+        db.add_msdial_configuration(msdial_config_id)
         return "Added", None
     else:
         return "", None
@@ -3244,7 +3635,6 @@ def show_alert_on_msdial_config_removal(config_removed, selected_config):
               Output("alignment-mz-factor", "value"),
               Output("peak-count-filter", "value"),
               Output("qc-at-least-filter-dropdown", "value"),
-              Output("msdial-directory-data", "data"),
               Input("msdial-configs-dropdown", "value"),
               Input("msdial-parameters-saved", "data"),
               Input("msdial-parameters-reset", "data"), prevent_initial_call=True)
@@ -3280,12 +3670,11 @@ def get_msdial_parameters_for_config(msdial_config_id, on_parameters_saved, on_p
               State("alignment-rt-factor", "value"),
               State("alignment-mz-factor", "value"),
               State("peak-count-filter", "value"),
-              State("qc-at-least-filter-dropdown", "value"),
-              State("msdial-directory", "value"), prevent_initial_call=True)
+              State("qc-at-least-filter-dropdown", "value"), prevent_initial_call=True)
 def write_msdial_parameters_to_database(button_clicks, config_name, rt_begin, rt_end, mz_begin, mz_end,
     ms1_centroid_tolerance, ms2_centroid_tolerance, smoothing_method, smoothing_level, mass_slice_width, min_peak_width,
     min_peak_height, post_id_rt_tolerance, post_id_mz_tolerance, post_id_score_cutoff, alignment_rt_tolerance,
-    alignment_mz_tolerance, alignment_rt_factor, alignment_mz_factor, peak_count_filter, qc_at_least_filter, msdial_directory):
+    alignment_mz_tolerance, alignment_rt_factor, alignment_mz_factor, peak_count_filter, qc_at_least_filter):
 
     """
     Saves MS-DIAL parameters to respective configuration in database
@@ -3294,23 +3683,22 @@ def write_msdial_parameters_to_database(button_clicks, config_name, rt_begin, rt
     db.update_msdial_configuration(config_name, rt_begin, rt_end, mz_begin, mz_end, ms1_centroid_tolerance,
         ms2_centroid_tolerance, smoothing_method, smoothing_level, mass_slice_width, min_peak_width, min_peak_height,
         post_id_rt_tolerance, post_id_mz_tolerance, post_id_score_cutoff, alignment_rt_tolerance, alignment_mz_tolerance,
-        alignment_rt_factor, alignment_mz_factor, peak_count_filter, qc_at_least_filter, msdial_directory)
+        alignment_rt_factor, alignment_mz_factor, peak_count_filter, qc_at_least_filter)
 
     return "Saved"
 
 
 @app.callback(Output("msdial-parameters-reset", "data"),
               Input("reset-default-msdial-parameters-button", "n_clicks"),
-              State("msdial-configs-dropdown", "value"),
-              State("msdial-directory", "value"), prevent_initial_call=True)
-def reset_msdial_parameters_to_default(button_clicks, msdial_config_name, msdial_directory):
+              State("msdial-configs-dropdown", "value"), prevent_initial_call=True)
+def reset_msdial_parameters_to_default(button_clicks, msdial_config_name):
 
     """
     Resets parameters for selected MS-DIAL configuration to default settings
     """
 
     db.update_msdial_configuration(msdial_config_name, 0, 100, 0, 2000, 0.008, 0.01, "LinearWeightedMovingAverage",
-        3, 3, 35000, 0.1, 0.3, 0.008, 85, 0.05, 0.008, 0.5, 0.5, 0, "True", msdial_directory)
+        3, 3, 35000, 0.1, 0.1, 0.008, 85, 0.05, 0.008, 0.5, 0.5, 0, "True")
 
     return "Reset"
 
@@ -4080,15 +4468,14 @@ def validation_feedback_for_new_run_setup_form(run_id, chromatography, qc_config
               Input("start-run-chromatography-dropdown", "valid"),
               Input("start-run-qc-configs-dropdown", "valid"),
               Input("sequence-path", "valid"),
-              Input("metadata-path", "valid"),
               Input("data-acquisition-folder-path", "valid"), prevent_initial_call=True)
-def enable_new_autoqc_job_button(run_id_valid, chromatography_valid, qc_config_valid, sequence_valid, metadata_valid, path_valid):
+def enable_new_autoqc_job_button(run_id_valid, chromatography_valid, qc_config_valid, sequence_valid, path_valid):
 
     """
     Enables "submit" button for New AutoQC Job form
     """
 
-    if run_id_valid and chromatography_valid and qc_config_valid and sequence_valid and metadata_valid and path_valid:
+    if run_id_valid and chromatography_valid and qc_config_valid and sequence_valid and path_valid:
         return False
     else:
         return True

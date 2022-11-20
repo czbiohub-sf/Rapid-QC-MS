@@ -2,6 +2,7 @@ import os, time, shutil
 import pandas as pd
 import numpy as np
 import DatabaseFunctions as db
+import SlackNotifications as bot
 
 def sequence_is_valid(filename, contents, vendor="Thermo Fisher"):
 
@@ -406,13 +407,13 @@ def process_data_file(path, filename, extension, run_id):
     feature_list = df_features["name"].astype(str).tolist()
 
     # Get MS-DIAL directory
-    msdial_location = db.get_msdial_directory("Default")
+    msdial_directory = db.get_msdial_directory()
 
     # Run MSConvert
     run_msconvert(path, filename, extension, mzml_file_directory)
 
     # Run MS-DIAL
-    peak_list = run_msdial_processing(filename, msdial_location, msdial_parameters,
+    peak_list = run_msdial_processing(filename, msdial_directory, msdial_parameters,
         str(mzml_file_directory), str(qc_results_directory))
 
     # Convert peak list to DataFrame

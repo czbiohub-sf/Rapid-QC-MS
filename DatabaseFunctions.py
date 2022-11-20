@@ -30,29 +30,45 @@ def sync_is_enabled():
     if not is_valid():
         return False
 
-    df_instruments = get_table("instruments")
-    gdrive_folder_id = df_instruments["gdrive_folder_id"].astype(str).tolist()
+    df_workspace = get_table("workspace")
+    gdrive_folder_id = df_workspace["gdrive_folder_id"].astype(str).values[0]
+    gdrive_file_id = df_workspace["gdrive_file_id"].astype(str).values[0]
 
-    if len(gdrive_folder_id) > 0:
-        if gdrive_folder_id[0] != "None" and gdrive_folder_id[0] != "":
+    if gdrive_folder_id is not None and gdrive_file_id is not None:
+        if gdrive_folder_id != "None" and gdrive_folder_id != "":
             return True
 
     return False
 
 
-def notifications_are_enabled():
+def email_notifications_are_enabled():
 
     """
-    Checks whether Slack / email notifications are enabled
+    Checks whether email notifications are enabled
     """
 
     if not is_valid():
         return False
 
-    if len(get_table("notifications")) > 0:
+    if len(get_table("email_notifications")) > 0:
         return True
 
     return False
+
+
+def slack_notifications_are_enabled():
+
+    """
+    Checks whether Slack notifications are enabled
+    """
+
+    if not is_valid():
+        return False
+
+    if get_table("workspace")["slack_enabled"].astype(int).values[0] == 1:
+        return True
+    else:
+        return False
 
 
 def get_md5_for_database():
@@ -148,9 +164,7 @@ def create_database():
         "instruments", db_metadata,
         sa.Column("id", INTEGER, primary_key=True),
         sa.Column("name", TEXT),
-        sa.Column("vendor", TEXT),
-        sa.Column("gdrive_folder_id", TEXT),
-        sa.Column("gdrive_file_id", TEXT)
+        sa.Column("vendor", TEXT)
     )
 
     internal_standards = sa.Table(
@@ -188,15 +202,13 @@ def create_database():
         sa.Column("alignment_rt_factor", REAL),
         sa.Column("alignment_mz_factor", REAL),
         sa.Column("peak_count_filter", INTEGER),
-        sa.Column("qc_at_least_filter", TEXT),
-        sa.Column("msdial_directory", TEXT)
+        sa.Column("qc_at_least_filter", TEXT)
     )
 
-    notifications = sa.Table(
-        "notifications", db_metadata,
+    email_notifications = sa.Table(
+        "email_notifications", db_metadata,
         sa.Column("id", INTEGER, primary_key=True),
         sa.Column("email_address", TEXT),
-        sa.Column("slack_channel", TEXT),
     )
 
     qc_parameters = sa.Table(
@@ -229,6 +241,7 @@ def create_database():
         sa.Column("latest_sample", TEXT),
         sa.Column("qc_config_id", TEXT),
         sa.Column("biological_standards", TEXT),
+        sa.Column("pid", INTEGER)
     )
 
     sample_qc_results = sa.Table(
@@ -258,12 +271,24 @@ def create_database():
         sa.Column("inchikey", TEXT)
     )
 
+    workspace = sa.Table(
+        "workspace", db_metadata,
+        sa.Column("id", INTEGER, primary_key=True),
+        sa.Column("slack_bot_token", TEXT),
+        sa.Column("slack_channel", TEXT),
+        sa.Column("slack_enabled", INTEGER),
+        sa.Column("gdrive_folder_id", TEXT),
+        sa.Column("gdrive_file_id", TEXT),
+        sa.Column("msdial_directory", TEXT)
+    )
+
     # Insert tables into database
     db_metadata.create_all(engine)
 
     # Insert default configurations for MS-DIAL and MS-AutoQC
-    add_msdial_configuration("Default", "")
+    add_msdial_configuration("Default")
     add_qc_configuration("Default")
+    create_workspace_metadata()
 
     return sqlite_db_location
 
@@ -291,6 +316,34 @@ def get_table(table_name):
     return pd.read_sql("SELECT * FROM " + table_name, engine)
 
 
+def generate_client_settings_yaml(client_id, client_secret):
+
+    """
+    Generates a settings.yaml file for Google authentication in /assets directory
+    """
+
+    settings_yaml_file = os.path.join(os.getcwd(), "assets", "settings.yaml")
+
+    lines = [
+        "client_config_backend: settings",
+        "client_config:",
+        "  client_id: " + client_id,
+        "  client_secret: " + client_secret,
+        "\n",
+        "save_credentials: True",
+        "save_credentials_backend: file",
+        "save_credentials_file: assets/credentials.txt",
+        "\n",
+        "get_refresh_token: True",
+    ]
+
+    with open(settings_yaml_file, "w") as file:
+        for line in lines:
+            file.write(line)
+            if line != "\n" and line != lines[-1]:
+                file.write("\n")
+
+
 def sync_to_google_drive(drive, sync_settings=False):
 
     """
@@ -298,14 +351,14 @@ def sync_to_google_drive(drive, sync_settings=False):
     """
 
     # Get Google Drive ID's for the MS-AutoQC folder and database file
-    df_instruments = get_table("instruments")
-    gdrive_folder_id = df_instruments["gdrive_folder_id"].astype(str).tolist()
-    gdrive_file_id = df_instruments["gdrive_file_id"].astype(str).tolist()
+    df_workspace = get_table("workspace")
+    gdrive_folder_id = df_workspace["gdrive_folder_id"].astype(str).values[0]
+    gdrive_file_id = df_workspace["gdrive_file_id"].astype(str).values[0]
 
     # Update existing database in Google Drive
-    if len(gdrive_file_id) > 0:
-        if gdrive_file_id[0] != "None" and gdrive_file_id[0] != "":
-            file = drive.CreateFile({"id": gdrive_file_id[0]})
+    if gdrive_file_id is not None:
+        if gdrive_file_id != "None" and gdrive_file_id != "":
+            file = drive.CreateFile({"id": gdrive_file_id})
             file.SetContentFile("QC Database.db")
             file.Upload()
 
@@ -320,11 +373,11 @@ def sync_to_google_drive(drive, sync_settings=False):
         local_file_dict = {file_list[i]: full_path_file_list[i] for i in range(len(file_list))}
 
         # Iterate through and update existing methods folder in Google Drive
-        if len(gdrive_folder_id) > 0:
-            if gdrive_folder_id[0] != "None" and gdrive_folder_id[0] != "":
+        if gdrive_folder_id is not None:
+            if gdrive_folder_id != "None" and gdrive_folder_id != "":
 
                 # Find MS-AutoQC > methods directory
-                drive_file_list = drive.ListFile({"q": "'" + gdrive_folder_id[0] + "' in parents and trashed=false"}).GetList()
+                drive_file_list = drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList()
                 for file in drive_file_list:
                     if file["title"] == "methods":
                         methods_dir_id = file["id"]
@@ -360,15 +413,15 @@ def sync_to_google_drive(drive, sync_settings=False):
 def insert_google_drive_ids(gdrive_folder_id, gdrive_file_id):
 
     """
-    Inserts Google Drive ID's into "instruments" table
+    Inserts Google Drive ID's for MS-AutoQC folder and QC Database.db into "workspace" table
     """
 
     db_metadata, connection = connect_to_database()
-    instruments_table = sa.Table("instruments", db_metadata, autoload=True)
+    workspace_table = sa.Table("workspace", db_metadata, autoload=True)
 
     insert_google_drive_ids = (
-        sa.update(instruments_table)
-            .where((instruments_table.c.name != "None") & (instruments_table.c.name != ""))
+        sa.update(workspace_table)
+            .where((workspace_table.c.id == 1))
             .values(gdrive_folder_id=gdrive_folder_id,
                     gdrive_file_id=gdrive_file_id)
     )
@@ -377,7 +430,7 @@ def insert_google_drive_ids(gdrive_folder_id, gdrive_file_id):
     connection.close()
 
 
-def insert_new_instrument(name, vendor, gdrive_folder_id=None, gdrive_file_id=None):
+def insert_new_instrument(name, vendor):
 
     """
     Inserts a new instrument into the "instruments" table
@@ -392,9 +445,7 @@ def insert_new_instrument(name, vendor, gdrive_folder_id=None, gdrive_file_id=No
     # Prepare insert of new instrument
     insert_instrument = instruments_table.insert().values(
         {"name": name,
-         "vendor": vendor,
-         "gdrive_folder_id": gdrive_folder_id,
-         "gdrive_file_id": gdrive_file_id}
+         "vendor": vendor}
     )
 
     # Execute the insert, then close the connection
@@ -1220,7 +1271,7 @@ def generate_msdial_parameters_file(chromatography, polarity, msp_file_path, bio
     connection.close()
 
 
-def add_msdial_configuration(msdial_config_name, msdial_directory):
+def add_msdial_configuration(msdial_config_name):
 
     """
     Inserts new user configuration of MS-DIAL parameters into the "msdial_parameters" table
@@ -1246,7 +1297,7 @@ def add_msdial_configuration(msdial_config_name, msdial_directory):
          "min_peak_width": 3,
          "min_peak_height": 35000,
          "mass_slice_width": 0.1,
-         "post_id_rt_tolerance": 0.3,
+         "post_id_rt_tolerance": 0.1,
          "post_id_mz_tolerance": 0.008,
          "post_id_score_cutoff": 85,
          "alignment_rt_tolerance": 0.05,
@@ -1254,8 +1305,7 @@ def add_msdial_configuration(msdial_config_name, msdial_directory):
          "alignment_rt_factor": 0.5,
          "alignment_mz_factor": 0.5,
          "peak_count_filter": 0,
-         "qc_at_least_filter": "True",
-         "msdial_directory": msdial_directory}
+         "qc_at_least_filter": "True"}
     )
 
     # Execute INSERT to database, then close the connection
@@ -1309,7 +1359,7 @@ def get_msdial_configuration_parameters(msdial_config_name):
 def update_msdial_configuration(config_name, rt_begin, rt_end, mz_begin, mz_end, ms1_centroid_tolerance,
     ms2_centroid_tolerance, smoothing_method, smoothing_level, mass_slice_width, min_peak_width, min_peak_height,
     post_id_rt_tolerance, post_id_mz_tolerance, post_id_score_cutoff, alignment_rt_tolerance, alignment_mz_tolerance,
-    alignment_rt_factor, alignment_mz_factor, peak_count_filter, qc_at_least_filter, msdial_directory):
+    alignment_rt_factor, alignment_mz_factor, peak_count_filter, qc_at_least_filter):
 
     """
     Updates parameters of a selected MS-DIAL configuration
@@ -1344,19 +1394,11 @@ def update_msdial_configuration(config_name, rt_begin, rt_end, mz_begin, mz_end,
                     alignment_rt_factor=alignment_rt_factor,
                     alignment_mz_factor=alignment_mz_factor,
                     peak_count_filter=peak_count_filter,
-                    qc_at_least_filter=qc_at_least_filter,
-                    msdial_directory=msdial_directory)
-    )
-
-    update_msdial_location = (
-        sa.update(msdial_parameters_table)
-            .where(msdial_parameters_table.c.config_name == "Default")
-            .values(msdial_directory=msdial_directory)
+                    qc_at_least_filter=qc_at_least_filter)
     )
 
     # Execute UPDATE to database, then close the connection
     connection.execute(update_parameters)
-    connection.execute(update_msdial_location)
     connection.close()
 
 
@@ -1423,13 +1465,32 @@ def get_parameter_file_path(chromatography, polarity, biological_standard=None):
     return parameter_file
 
 
-def get_msdial_directory(config_id):
+def get_msdial_directory():
 
     """
-    Returns location of MS-DIAL "installation" folder
+    Returns location of MS-DIAL folder
     """
 
-    return get_msdial_configuration_parameters(config_id)[-1]
+    return get_table("workspace")["msdial_directory"].astype(str).values[0]
+
+
+def update_msdial_directory(msdial_directory):
+
+    """
+    Updates location of MS-DIAL folder
+    """
+
+    db_metadata, connection = connect_to_database()
+    workspace_table = sa.Table("workspace", db_metadata, autoload=True)
+
+    update_msdial_directory = (
+        sa.update(workspace_table)
+            .where(workspace_table.c.id == 1)
+            .values(msdial_directory=msdial_directory)
+    )
+
+    connection.execute(update_msdial_directory)
+    connection.close()
 
 
 def get_internal_standards_dict(chromatography, value_type):
@@ -1943,31 +2004,30 @@ def add_user_to_workspace(drive, email_address):
         return "User already exists"
 
     # Get ID of MS-AutoQC folder in Google Drive
-    gdrive_folder_id = get_table("instruments")["gdrive_folder_id"].astype(str).tolist()
+    gdrive_folder_id = get_table("workspace")["gdrive_folder_id"].astype(str).values[0]
 
-    if len(gdrive_folder_id) > 0:
-        gdrive_folder_id = gdrive_folder_id[0]
+    if gdrive_folder_id is not None:
+        # Add user access by updating permissions
+        folder = drive.CreateFile({"id": gdrive_folder_id})
+        permission = folder.InsertPermission({
+            "type": "user",
+            "role": "writer",
+            "value": email_address})
+
+        # Insert user email address in "gdrive_users" table
+        db_metadata, connection = connect_to_database()
+        gdrive_users_table = sa.Table("gdrive_users", db_metadata, autoload=True)
+
+        insert_user_email = gdrive_users_table.insert().values(
+            {"name": permission["name"],
+             "email_address": email_address,
+             "permission_id": permission["id"]})
+
+        connection.execute(insert_user_email)
+        connection.close()
+
     else:
         return "Error"
-
-    # Add user access by updating permissions
-    folder = drive.CreateFile({"id": gdrive_folder_id})
-    permission = folder.InsertPermission({
-        "type": "user",
-        "role": "writer",
-        "value": email_address})
-
-    # Insert user email address in "gdrive_users" table
-    db_metadata, connection = connect_to_database()
-    gdrive_users_table = sa.Table("gdrive_users", db_metadata, autoload=True)
-
-    insert_user_email = gdrive_users_table.insert().values(
-        {"name": permission["name"],
-         "email_address": email_address,
-         "permission_id": permission["id"]})
-
-    connection.execute(insert_user_email)
-    connection.close()
 
 
 def delete_user_from_workspace(drive, email_address):
@@ -1980,33 +2040,32 @@ def delete_user_from_workspace(drive, email_address):
         return "User does not exist"
 
     # Get ID of MS-AutoQC folder in Google Drive
-    gdrive_folder_id = get_table("instruments")["gdrive_folder_id"].astype(str).tolist()
+    gdrive_folder_id = get_table("workspace")["gdrive_folder_id"].astype(str).values[0]
 
-    if len(gdrive_folder_id) > 0:
-        gdrive_folder_id = gdrive_folder_id[0]
+    if gdrive_folder_id is not None:
+        # Get permission ID of user from database
+        folder = drive.CreateFile({"id": gdrive_folder_id})
+        df_gdrive_users = get_table("gdrive_users")
+        df_gdrive_users = df_gdrive_users.loc[df_gdrive_users["email_address"] == email_address]
+        permission_id = df_gdrive_users["permission_id"].astype(str).values[0]
+
+        # Delete user access by updating permissions
+        folder.DeletePermission(permission_id)
+
+        # Delete user email address in "gdrive_users" table
+        db_metadata, connection = connect_to_database()
+        gdrive_users_table = sa.Table("gdrive_users", db_metadata, autoload=True)
+
+        delete_user_email = (
+            sa.delete(gdrive_users_table)
+                .where((gdrive_users_table.c.email_address == email_address))
+        )
+
+        connection.execute(delete_user_email)
+        connection.close()
+
     else:
-        return None
-
-    # Get permission ID of user from database
-    folder = drive.CreateFile({"id": gdrive_folder_id})
-    df_gdrive_users = get_table("gdrive_users")
-    df_gdrive_users = df_gdrive_users.loc[df_gdrive_users["email_address"] == email_address]
-    permission_id = df_gdrive_users["permission_id"].astype(str).values[0]
-
-    # Delete user access by updating permissions
-    folder.DeletePermission(permission_id)
-
-    # Delete user email address in "gdrive_users" table
-    db_metadata, connection = connect_to_database()
-    gdrive_users_table = sa.Table("gdrive_users", db_metadata, autoload=True)
-
-    delete_user_email = (
-        sa.delete(gdrive_users_table)
-            .where((gdrive_users_table.c.email_address == email_address))
-    )
-
-    connection.execute(delete_user_email)
-    connection.close()
+        return "Error"
 
 
 def get_qc_results(sample_list, is_bio_standard=False):
@@ -2023,3 +2082,127 @@ def get_qc_results(sample_list, is_bio_standard=False):
     df = df.loc[df["sample_id"].isin(sample_list)]
     df = df[["sample_id", "qc_result"]]
     return df
+
+
+def create_workspace_metadata():
+
+    """
+    Creates row in "workspace" table to store metadata
+    """
+
+    db_metadata, connection = connect_to_database()
+    workspace_table = sa.Table("workspace", db_metadata, autoload=True)
+    insert_metadata = workspace_table.insert().values({"id": 1})
+    connection.execute(insert_metadata)
+    connection.close()
+
+
+def update_slack_bot_token(slack_bot_token):
+
+    """
+    Updates Slack bot user OAuth 2.0 token in "workspace" table
+    """
+
+    db_metadata, connection = connect_to_database()
+    workspace_table = sa.Table("workspace", db_metadata, autoload=True)
+
+    update_slack_bot_token = (
+        sa.update(workspace_table)
+            .where(workspace_table.c.id == 1)
+            .values(slack_bot_token=slack_bot_token)
+    )
+
+    connection.execute(update_slack_bot_token)
+    connection.close()
+
+
+def get_slack_bot_token():
+
+    """
+    Returns Slack bot token stored in database
+    """
+
+    return get_table("workspace")["slack_bot_token"].astype(str).values[0]
+
+
+def update_slack_channel(slack_channel, notifications_enabled):
+
+    """
+    Updates Slack channel registered for notifications
+    """
+
+    db_metadata, connection = connect_to_database()
+    workspace_table = sa.Table("workspace", db_metadata, autoload=True)
+
+    update_slack_channel = (
+        sa.update(workspace_table)
+            .where(workspace_table.c.id == 1)
+            .values(
+                slack_channel=slack_channel.replace("#", ""),
+                slack_enabled=notifications_enabled)
+    )
+
+    connection.execute(update_slack_channel)
+    connection.close()
+
+
+def get_slack_channel():
+
+    """
+    Returns Slack channel registered for notifications
+    """
+
+    return get_table("workspace")["slack_channel"].astype(str).values[0]
+
+
+def get_slack_notifications_toggled():
+
+    """
+    Returns Slack notification toggled setting
+    """
+
+    return get_table("workspace")["slack_enabled"].astype(int).values[0]
+
+
+def get_email_notifications_list():
+
+    """
+    Returns list of emails registered for MS-AutoQC notifications
+    """
+
+    return get_table("email_notifications")["email_address"].astype(str).tolist()
+
+
+def register_email_for_notifications(email_address):
+
+    """
+    Inserts email address into "email_notifications" table
+    """
+
+    db_metadata, connection = connect_to_database()
+    email_notifications_table = sa.Table("email_notifications", db_metadata, autoload=True)
+
+    insert_email_address = email_notifications_table.insert().values({
+        "email_address": email_address
+    })
+
+    connection.execute(insert_email_address)
+    connection.close()
+
+
+def delete_email_from_notifications(email_address):
+
+    """
+    Deletes email address from "email_notifications" table
+    """
+
+    db_metadata, connection = connect_to_database()
+    email_notifications_table = sa.Table("email_notifications", db_metadata, autoload=True)
+
+    delete_email_address = (
+        sa.delete(email_notifications_table)
+            .where((email_notifications_table.c.email_address == email_address))
+    )
+
+    connection.execute(delete_email_address)
+    connection.close()
