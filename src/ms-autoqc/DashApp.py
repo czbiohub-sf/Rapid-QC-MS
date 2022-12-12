@@ -23,6 +23,17 @@ drive_settings_file = current_directory + "/auth/settings.yaml"
 gauth_holder = [GoogleAuth(settings_file=drive_settings_file)]
 credentials_file = current_directory + "/auth/credentials.txt"
 
+# Data and methods directories
+data_directory = os.path.join(current_directory, "data")
+if not os.path.exists(data_directory):
+    os.makedirs(data_directory)
+
+methods_directory = os.path.join(data_directory, "methods")
+if not os.path.exists(methods_directory):
+    os.makedirs(methods_directory)
+
+db_file = os.path.join(current_directory, "data", "QC Database.db")
+
 """
 Dash app layout
 """
@@ -1630,8 +1641,17 @@ def check_first_time_google_drive_authentication(google_drive_is_authenticated):
         if gdrive_folder_id is not None:
             for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
                 if file["title"] == "QC Database.db":
+
+                    # Switch to data directory
+                    os.chdir(data_directory)
+
+                    # Download database
                     file.GetContentFile(file["title"])
                     gdrive_database_file_id = file["id"]
+
+                    # Switch back to root directory
+                    os.chdir(current_directory)
+
                     popover_message = [dbc.PopoverHeader("Workspace found!"),
                         dbc.PopoverBody("This instrument will be added to the existing MS-AutoQC workspace.")]
                     break
@@ -1773,7 +1793,7 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
                 }
                 file = drive.CreateFile(metadata=metadata)
 
-            file.SetContentFile("QC Database.db")
+            file.SetContentFile(db_file)
             file.Upload()
 
             if gdrive_file_id is None:
@@ -1787,7 +1807,6 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
             gauth_holder[0].SaveCredentialsFile(credentials_file)
 
         # Create local methods directory
-        methods_directory = os.path.join(current_directory, "methods")
         if not os.path.exists(methods_directory):
             os.makedirs(methods_directory)
 
@@ -1849,8 +1868,16 @@ def check_workspace_login_google_drive_authentication(google_drive_is_authentica
             for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
                 # Download database if found
                 if file["title"] == "QC Database.db":
+
+                    # Change to data directory
+                    os.chdir(data_directory)
+
+                    # Download database and get file ID
                     file.GetContentFile(file["title"])
                     gdrive_database_file_id = file["id"]
+
+                    # Change to root directory
+                    os.chdir(current_directory)
 
                     # Popover alert
                     button_text = "Signed in to Google Drive"
@@ -1889,7 +1916,7 @@ def ui_feedback_for_workspace_login_button(button_click):
     UI feedback for workspace sign in button in Setup > Login To Workspace
     """
 
-    return [dbc.Spinner(size="sm"), " Signing in, please wait..."]
+    return [dbc.Spinner(size="sm"), " Signing in, this may take a moment..."]
 
 
 @app.callback(Output("workspace-has-been-setup-2", "data"),
@@ -1916,7 +1943,6 @@ def ui_feedback_for_workspace_login_button(button_click, gdrive_folder_id):
         if methods_folder_id is not None:
 
             # Create methods directory if it does not exist
-            methods_directory = os.path.join(current_directory, "methods")
             if not os.path.exists(methods_directory):
                 os.makedirs(methods_directory)
 
@@ -2033,7 +2059,7 @@ def update_google_drive_sync_status_in_settings(google_drive_authenticated, goog
                 "parents": [{"id": gdrive_folder_id}],
             }
             file = drive.CreateFile(metadata=metadata)
-            file.SetContentFile("QC Database.db")
+            file.SetContentFile(db_file)
             file.Upload()
 
             # Get Google Drive ID of database file

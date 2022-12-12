@@ -85,7 +85,7 @@ def chromatography_is_valid(chromatography):
     pos_msp_file = db.get_msp_file_path(chromatography, "Positive")
     neg_msp_file = db.get_msp_file_path(chromatography, "Negative")
 
-    if not os.path.exists(pos_msp_file) or not os.path.exists(neg_msp_file):
+    if not os.path.isfile(pos_msp_file) or not os.path.isfile(neg_msp_file):
         return False
 
     return True

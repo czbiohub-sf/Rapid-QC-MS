@@ -324,7 +324,11 @@ def generate_client_settings_yaml(client_id, client_secret):
     Generates a settings.yaml file for Google authentication in /auth directory
     """
 
-    settings_yaml_file = os.path.join(os.getcwd(), "auth", "settings.yaml")
+    auth_directory = os.path.join(os.getcwd(), "auth")
+    if not os.path.exists(auth_directory):
+        os.makedirs(auth_directory)
+
+    settings_yaml_file = os.path.join(auth_directory, "settings.yaml")
 
     lines = [
         "client_config_backend: settings",
