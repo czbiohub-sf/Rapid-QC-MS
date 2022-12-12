@@ -1,0 +1,41 @@
+# pyproject.toml
+
+[build-system]
+requires      = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ms-autoqc"
+version = "1.0.0"
+description = "Realtime quality control for mass spectrometry data acquisition"
+readme = "README.md"
+authors = [{ name = "Wasim Sandhu", email = "wasim.sandhu@czbiohub.org" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["mass-spectrometry", "mass-spec", "autoqc", "mass-spec-quality-control"]
+dependencies = [
+    "dash==2.6.1",
+    "dash_bootstrap_components==1.2.1",
+    "google-api-python-client==1.8.0",
+    "pandas==1.4.2",
+    "plotly==5.6.0",
+    "pydrive2==1.14.0",
+    "slack_sdk==3.18.1",
+    "sqlalchemy==1.4.32",
+    "watchdog==2.1.9",
+    'tomli; python_version < "3.11"',
+]
+requires-python = ">=3.8"
+
+[project.optional-dependencies]
+dev = []
+
+[project.urls]
+Homepage = "https://ms-autoqc.github.io"
+
+[project.scripts]
+ms-autoqc = "ms-autoqc.__main__:main"

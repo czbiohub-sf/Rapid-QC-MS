@@ -147,5 +147,5 @@ cython_debug/
 # Project resources
 .idea/
 .DS_Store
-methods/
+data/methods/
 data/
