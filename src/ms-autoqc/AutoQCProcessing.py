@@ -1,4 +1,4 @@
-import os, time, shutil
+import os, time, shutil, subprocess, psutil
 import pandas as pd
 import numpy as np
 import DatabaseFunctions as db
@@ -354,9 +354,10 @@ def process_data_file(path, filename, extension, run_id):
     """
     1. Convert data file to mzML format using MSConvert
     2. Process data file using MS-DIAL and user-defined parameter configuration
-    3a. Write QC results to "sample_qc_results" table
-    3b. Write QC results to "bio_qc_results" table if sample is biological standard
-    4. Upload CSV file with QC results to Google Drive
+    3. Load data into pandas DataFrame and execute AutoQC algorithm
+    4. Write QC results to "sample_qc_results" or "bio_qc_results" table accordingly
+    5. Write results to database
+    6. Upload CSV file with QC results to Google Drive
     """
 
     # Create the necessary directories
@@ -385,6 +386,7 @@ def process_data_file(path, filename, extension, run_id):
 
     # Retrieve MS-DIAL parameters, internal standards, and targeted features from database
     if filename in df_biological_standards["sample_id"].astype(str).tolist():
+
         # Get biological standard type
         biological_standard = df_biological_standards.loc[
             df_biological_standards["sample_id"] == filename]
@@ -413,28 +415,78 @@ def process_data_file(path, filename, extension, run_id):
     run_msconvert(path, filename, extension, mzml_file_directory)
 
     # Run MS-DIAL
-    peak_list = run_msdial_processing(filename, msdial_directory, msdial_parameters,
-        str(mzml_file_directory), str(qc_results_directory))
+    try:
+        peak_list = run_msdial_processing(filename, msdial_directory, msdial_parameters,
+            str(mzml_file_directory), str(qc_results_directory))
+    except Exception as error:
+        print("Failed to run MS-DIAL:", error)
+        return
 
     # Convert peak list to DataFrame
-    df_peak_list = peak_list_to_dataframe(peak_list, feature_list)
+    try:
+        df_peak_list = peak_list_to_dataframe(peak_list, feature_list)
+    except Exception as error:
+        print("Failed to convert peak list to DataFrame", error)
+        return
 
     # Execute AutoQC algorithm
-    qc_dataframe, qc_result = qc_sample(run_id, polarity, df_peak_list, df_features, is_bio_standard)
+    try:
+        qc_dataframe, qc_result = qc_sample(run_id, polarity, df_peak_list, df_features, is_bio_standard)
+    except Exception as error:
+        print("Failed to execute AutoQC algorithm:", error)
+        return
 
-    # Get m/z, RT, and intensity info as JSON strings
-    json_mz = df_peak_list[["Name", "Precursor m/z"]].to_json(orient="split")
-    json_rt = df_peak_list[["Name", "RT (min)"]].to_json(orient="split")
-    json_intensity = df_peak_list[["Name", "Height"]].to_json(orient="split")
-    qc_dataframe = qc_dataframe.to_json(orient="split")
+    # Convert m/z, RT, and intensity data to JSON strings
+    try:
+        json_mz = df_peak_list[["Name", "Precursor m/z"]].to_json(orient="split")
+        json_rt = df_peak_list[["Name", "RT (min)"]].to_json(orient="split")
+        json_intensity = df_peak_list[["Name", "Height"]].to_json(orient="split")
+        qc_dataframe = qc_dataframe.to_json(orient="split")
+    except Exception as error:
+        print("Failed to convert data to JSON:", error)
+        return
 
     # Write QC results to database and upload to Google Drive
-    db.write_qc_results(filename, run_id, json_mz, json_rt, json_intensity, qc_dataframe, qc_result, is_bio_standard)
+    try:
+        db.write_qc_results(filename, run_id, json_mz, json_rt, json_intensity, qc_dataframe, qc_result, is_bio_standard)
+    except Exception as error:
+        print("Failed to write QC results to database:", error)
+        return
+
+    # TODO: Upload QC results to Google Drive as a CSV file
 
     # Delete MS-DIAL result file
     try:
         os.remove(qc_results_directory + filename + ".msdial")
     except Exception as error:
-        print(error)
+        print("Failed to remove MS-DIAL result file:", error)
+        return
 
-    return None
+
+def listener_is_running(pid):
+
+    """
+    Check if acquisition listener subprocess is still running
+    """
+
+    time.sleep(1)
+
+    try:
+        if psutil.Process(pid).status() == "running":
+            return True
+        else:
+            return False
+    except Exception as error:
+        print("Error searching for subprocess using given pid", error)
+
+
+def kill_acquisition_listener(pid):
+
+    """
+    Kill acquisition listener subprocess using the pid
+    """
+
+    try:
+        return psutil.Process(pid).kill()
+    except Exception as error:
+        print("Error killing acquisition listener:", error)

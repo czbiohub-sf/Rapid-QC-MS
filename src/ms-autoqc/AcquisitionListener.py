@@ -51,6 +51,9 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
             if filename == self.filenames[-1]:
                 print("Last sample acquired. Instrument run complete.")
                 self.observer.stop()
+                pid = db.get_pid(self.run_id)
+                qc.kill_acquisition_listener(pid)
+                print("Terminated acquisition listener process.")
 
 
     def watch_file(self, path, filename, extension, check_interval=180):

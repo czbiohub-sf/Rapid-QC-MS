@@ -2211,3 +2211,47 @@ def delete_email_from_notifications(email_address):
 
     connection.execute(delete_email_address)
     connection.close()
+
+
+def get_run_progress(run_id):
+
+    """
+    Returns progress of instrument run as a percentage of samples completed
+    """
+
+    df_instrument_run = get_instrument_run(run_id)
+
+    completed = df_instrument_run["completed"].astype(int).values[0]
+    total_samples = df_instrument_run["samples"].astype(int).values[0]
+
+    percent_complete = (completed / total_samples) * 100
+
+    return round(percent_complete, 1)
+
+
+def store_pid(run_id, pid):
+
+    """
+    Store acquisition listener process ID to allow termination later
+    """
+
+    db_metadata, connection = connect_to_database()
+    instrument_runs_table = sa.Table("runs", db_metadata, autoload=True)
+
+    update_pid = (
+        sa.update(instrument_runs_table)
+            .where(instrument_runs_table.c.run_id == run_id)
+            .values(pid=pid)
+    )
+
+    connection.execute(update_pid)
+    connection.close()
+
+
+def get_pid(run_id):
+
+    """
+    Retrieves acquisition listener process ID from "runs" table
+    """
+
+    return get_instrument_run(run_id)["pid"].astype(int).values[0]
