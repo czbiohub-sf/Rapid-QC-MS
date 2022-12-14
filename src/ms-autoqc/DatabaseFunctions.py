@@ -67,7 +67,7 @@ def slack_notifications_are_enabled():
     if not is_valid():
         return False
 
-    if get_table("workspace")["slack_enabled"].astype(int).values[0] == 1:
+    if get_table("workspace")["slack_enabled"].astype(int).tolist()[0] == 1:
         return True
     else:
         return False
@@ -2166,7 +2166,7 @@ def get_slack_notifications_toggled():
     Returns Slack notification toggled setting
     """
 
-    return get_table("workspace")["slack_enabled"].astype(int).values[0]
+    return get_table("workspace")["slack_enabled"].astype(int).tolist()[0]
 
 
 def get_email_notifications_list():
@@ -2213,20 +2213,80 @@ def delete_email_from_notifications(email_address):
     connection.close()
 
 
+def get_completed_samples_count(run_id):
+
+    """
+    Returns tuple containing count for completed samples and total samples in a given run
+    """
+
+    df_instrument_run = get_instrument_run(run_id)
+    completed = df_instrument_run["completed"].astype(int).tolist()[0]
+    total_samples = df_instrument_run["samples"].astype(int).tolist()[0]
+    return (completed, total_samples)
+
+
 def get_run_progress(run_id):
 
     """
     Returns progress of instrument run as a percentage of samples completed
     """
 
-    df_instrument_run = get_instrument_run(run_id)
-
-    completed = df_instrument_run["completed"].astype(int).values[0]
-    total_samples = df_instrument_run["samples"].astype(int).values[0]
-
+    completed, total_samples = get_completed_samples_count(run_id)
     percent_complete = (completed / total_samples) * 100
-
     return round(percent_complete, 1)
+
+
+def update_sample_counters_for_run(run_id, qc_result, latest_sample):
+
+    """
+    Increments "completed" count, as well as "pass" and "fail" counts accordingly
+    """
+
+    df_instrument_run = get_instrument_run(run_id)
+    completed = df_instrument_run["completed"].astype(int).tolist()[0] + 1
+    passes = df_instrument_run["passes"].astype(int).tolist()[0]
+    fails = df_instrument_run["fails"].astype(int).tolist()[0]
+
+    if qc_result == "Pass" or qc_result == "Warning":
+        passes = passes + 1
+    elif qc_result == "Fail":
+        fails = fails + 1
+
+    db_metadata, connection = connect_to_database()
+    instrument_runs_table = sa.Table("runs", db_metadata, autoload=True)
+
+    update_status = (
+        sa.update(instrument_runs_table)
+            .where(instrument_runs_table.c.run_id == run_id)
+            .values(
+                completed=completed,
+                passes=passes,
+                fails=fails,
+                latest_sample=latest_sample
+        )
+    )
+
+    connection.execute(update_status)
+    connection.close()
+
+
+def mark_run_as_completed(run_id):
+
+    """
+    Marks instrument run status as completed
+    """
+
+    db_metadata, connection = connect_to_database()
+    instrument_runs_table = sa.Table("runs", db_metadata, autoload=True)
+
+    update_status = (
+        sa.update(instrument_runs_table)
+            .where(instrument_runs_table.c.run_id == run_id)
+            .values(status="Completed")
+    )
+
+    connection.execute(update_status)
+    connection.close()
 
 
 def store_pid(run_id, pid):
@@ -2254,4 +2314,4 @@ def get_pid(run_id):
     Retrieves acquisition listener process ID from "runs" table
     """
 
-    return get_instrument_run(run_id)["pid"].astype(int).values[0]
+    return get_instrument_run(run_id)["pid"].astype(int).tolist()[0]

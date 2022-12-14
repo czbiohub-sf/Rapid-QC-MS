@@ -1,11 +1,11 @@
-import io, sys, subprocess, time
+import io, sys, psutil, time
 import base64, webbrowser, json
 import pandas as pd
 import sqlalchemy as sa
 from dash import dash, dcc, html, dash_table, Input, Output, State, ctx
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
-from PlotGenerator import *
+from PlotGeneration import *
 from AcquisitionListener import *
 import DatabaseFunctions as db
 import AutoQCProcessing as qc
@@ -17,21 +17,22 @@ local_stylesheet = {
     "rel": "stylesheet"
 }
 
-# Google Drive authentication
+# Initialize directories
 current_directory = os.getcwd()
-drive_settings_file = current_directory + "/auth/settings.yaml"
-gauth_holder = [GoogleAuth(settings_file=drive_settings_file)]
-credentials_file = current_directory + "/auth/credentials.txt"
-
-# Data and methods directories
 data_directory = os.path.join(current_directory, "data")
-if not os.path.exists(data_directory):
-    os.makedirs(data_directory)
-
 methods_directory = os.path.join(data_directory, "methods")
-if not os.path.exists(methods_directory):
-    os.makedirs(methods_directory)
+auth_directory = os.path.join(current_directory, "auth")
 
+for directory in [data_directory, auth_directory, methods_directory]:
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+# Google Drive authentication files
+credentials_file = os.path.join(auth_directory, "credentials.txt")
+drive_settings_file = os.path.join(auth_directory, "settings.yaml")
+gauth_holder = [GoogleAuth(settings_file=drive_settings_file)]
+
+# Database path
 db_file = os.path.join(current_directory, "data", "QC Database.db")
 
 """
@@ -103,7 +104,7 @@ def serve_layout():
                                         "maxWidth": 0},
                                     style_table={
                                         "max-height": "285px",
-                                           "overflowY": "auto"},
+                                        "overflowY": "auto"},
                                     style_data_conditional=[
                                         {"if": {"state": "active"},
                                         "backgroundColor": bootstrap_colors[
@@ -112,22 +113,31 @@ def serve_layout():
                                         }],
                                     style_cell_conditional=[
                                         {"if": {"column_id": "Run ID"},
-                                        "width": "40%"},
+                                            "width": "40%"},
                                         {"if": {"column_id": "Chromatography"},
                                             "width": "35%"},
                                         {"if": {"column_id": "Status"},
-                                        "width": "25%"}
+                                            "width": "25%"}
                                     ]
                                 ),
+
+                                # Progress bar for instrument run
+                                dbc.Card(id="active-run-progress-card", style={"display": "none"}, className="margin-top-15", children=[
+                                    dbc.CardHeader(id="active-run-progress-header", style={"padding": "0.75rem"}),
+                                    dbc.CardBody([
+                                        dcc.Interval(id="refresh-interval", n_intervals=0, interval=5000, disabled=True),
+                                        dbc.Progress(id="active-run-progress-bar", animated=False)
+                                    ])
+                                ]),
 
                                 # Button to start monitoring a new run
                                 html.Div(className="d-grid gap-2", children=[
                                     dbc.Button("New MS-AutoQC Job",
-                                               id="setup-new-run-button",
-                                               style={"margin-top": "15px",
-                                                      "line-height": "1.75"},
-                                               outline=True,
-                                               color="primary"),
+                                        id="setup-new-run-button",
+                                        style={"margin-top": "15px",
+                                            "line-height": "1.75"},
+                                        outline=True,
+                                        color="primary"),
                                 ]),
 
                                 # Polarity filtering options
@@ -813,7 +823,7 @@ def serve_layout():
                                     ]),
 
                                     # Internal standards
-                                    dbc.Tab(label="Internal standards", className="modal-styles", children=[
+                                    dbc.Tab(label="Chromatography methods", className="modal-styles", children=[
 
                                         html.Br(),
 
@@ -2226,16 +2236,31 @@ def populate_instrument_runs_table(instrument):
               Output("istd-delta-mz-pos", "data"),
               Output("istd-delta-mz-neg", "data"),
               Input("instrument-run-table", "active_cell"),
-              State("instrument-run-table", "data"), prevent_initial_call=True, suppress_callback_exceptions=True)
-def load_data(active_cell, table_data):
+              State("instrument-run-table", "data"),
+              Input("refresh-interval", "n_intervals"),
+              State("study-resources", "data"), prevent_initial_call=True, suppress_callback_exceptions=True)
+def load_data(active_cell, table_data, refresh, resources):
 
     """
-    Stores QC results in dcc.Store objects (user's browser session)
+    Updates and stores QC results in dcc.Store objects (user's browser session)
     """
+
+    trigger = ctx.triggered_id
 
     if active_cell:
-        study_id = table_data[active_cell["row"]]["Run ID"]
-        return get_qc_results(study_id)
+        run_id = table_data[active_cell["row"]]["Run ID"]
+
+        # Ensure that refresh does not trigger data parsing if no new samples processed
+        if trigger == "refresh-interval":
+            completed_count_in_cache = json.loads(resources)["samples_completed"]
+            actual_completed_count, total = db.get_completed_samples_count(run_id)
+
+            if completed_count_in_cache == actual_completed_count:
+                raise PreventUpdate
+
+        # Otherwise, begin route: parsed data -> user session cache -> plots
+        return get_qc_results(run_id)
+
     else:
         raise PreventUpdate
 
@@ -2255,31 +2280,24 @@ def loading_data_feedback(active_cell, table_data, placeholder_input, modal_is_o
     """
 
     if active_cell:
-        # status = table_data[active_cell["row"]]["Status"]
 
         if study_resources:
-            study_name = json.loads(study_resources)["run_id"]
-            if table_data[active_cell["row"]][active_cell["column_id"]] != study_name:
-                study_name = table_data[active_cell["row"]]["Run ID"]
+            run_id = json.loads(study_resources)["run_id"]
+            if table_data[active_cell["row"]][active_cell["column_id"]] != run_id:
+                run_id = table_data[active_cell["row"]]["Run ID"]
             else:
                 return False, None, None
         else:
-            study_name = table_data[active_cell["row"]]["Run ID"]
+            run_id = table_data[active_cell["row"]]["Run ID"]
 
         if modal_is_open:
             return False, None, None
 
         title = html.Div([
-            html.Div(children=[dbc.Spinner(color="primary"), " Loading QC results for " + study_name])
+            html.Div(children=[dbc.Spinner(color="primary"), " Loading QC results for " + run_id])
         ])
 
         body = "This may take a few seconds..."
-
-        # if status == "Active":
-        #    return True, title, body
-        # else:
-        #    return False, None, None
-
         return True, title, body
 
     else:
@@ -4555,7 +4573,9 @@ def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, b
 
     # If this is for an active run, initialize run monitoring at the given directory
     if job_type == "active":
-        listener = subprocess.Popen(["py", "AcquisitionListener.py", acquisition_path, str(filenames), run_id])
+        acquisition_listener = os.path.join(os.getcwd(), "src", "ms-autoqc", "AcquisitionListener.py")
+        process = psutil.Popen(["py", acquisition_listener, acquisition_path, str(filenames), run_id])
+        db.store_pid(run_id, process.pid)
         return True, False, False, ""
 
     # If this is for a completed run, begin iterating through the files and process them
@@ -4809,6 +4829,37 @@ def update_folder_path_text_field(select_folder_button, selected_folder, setting
 
     if not settings_is_open:
         return selected_folder
+
+
+@app.callback(Output("active-run-progress-card", "style"),
+              Output("active-run-progress-header", "children"),
+              Output("active-run-progress-bar", "value"),
+              Output("active-run-progress-bar", "label"),
+              Output("refresh-interval", "disabled"),
+              Input("instrument-run-table", "active_cell"),
+              State("instrument-run-table", "data"),
+              Input("refresh-interval", "n_intervals"), prevent_initial_call=True)
+def update_progress_bar_during_active_instrument_run(active_cell, table_data, refresh):
+
+    """
+    Displays and updates progress bar if an active instrument run was selected from the table
+    """
+
+    if active_cell:
+        run_id = table_data[active_cell["row"]]["Run ID"]
+
+        completed, total = db.get_completed_samples_count(run_id)
+        percent_complete = db.get_run_progress(run_id)
+        progress_label = str(percent_complete) + "%"
+        header_text = run_id + " – " + str(completed) + " out of " + str(total) + " samples complete"
+
+        if percent_complete != 100.0:
+            return {"display": "block"}, header_text, percent_complete, progress_label, False
+        else:
+            return {"display": "none"}, None, None, None, True
+
+    else:
+        raise PreventUpdate
 
 
 if __name__ == "__main__":

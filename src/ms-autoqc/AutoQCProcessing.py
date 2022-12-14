@@ -449,6 +449,7 @@ def process_data_file(path, filename, extension, run_id):
     # Write QC results to database and upload to Google Drive
     try:
         db.write_qc_results(filename, run_id, json_mz, json_rt, json_intensity, qc_dataframe, qc_result, is_bio_standard)
+        db.update_sample_counters_for_run(run_id=run_id, qc_result=qc_result, latest_sample=filename)
     except Exception as error:
         print("Failed to write QC results to database:", error)
         return

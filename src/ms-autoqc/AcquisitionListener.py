@@ -41,19 +41,26 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
             # Start watching file until sample acquisition is complete
             sample_acquired = self.watch_file(path, filename, extension)
 
-            # Execute QC processing
+            # Route data file to MS-AutoQC pipeline
             if sample_acquired:
                 print("Data acquisition completed for", filename)
                 qc.process_data_file(event.src_path, filename, extension, self.run_id)
                 print("Data processing complete.")
 
-            # Terminate listener when the last data file is acquired
+            # Check if data file was the last sample in the sequence
             if filename == self.filenames[-1]:
+
+                # If so, stop acquisition listening
                 print("Last sample acquired. Instrument run complete.")
                 self.observer.stop()
+
+                # Mark instrument run as completed
+                db.mark_run_as_completed(run_id=self.run_id)
+
+                # Terminate acquisition listener process
+                print("Terminating acquisition listener process.")
                 pid = db.get_pid(self.run_id)
                 qc.kill_acquisition_listener(pid)
-                print("Terminated acquisition listener process.")
 
 
     def watch_file(self, path, filename, extension, check_interval=180):

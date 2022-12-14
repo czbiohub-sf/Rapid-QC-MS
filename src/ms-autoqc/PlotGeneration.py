@@ -29,6 +29,7 @@ def get_qc_results(run_id):
     chromatography = df_run["chromatography"].values[0]
     df_sequence = df_run["sequence"].values[0]
     df_metadata = df_run["metadata"].values[0]
+    completed = df_run["completed"].astype(int).tolist()[0]
     biological_standards = ast.literal_eval(df_run["biological_standards"].values[0])
 
     # Get internal standards in chromatography method
@@ -40,7 +41,8 @@ def get_qc_results(run_id):
         "run_id": run_id,
         "chromatography": chromatography,
         "precursor_mass_dict": precursor_mz_dict,
-        "retention_times_dict": retention_times_dict
+        "retention_times_dict": retention_times_dict,
+        "samples_completed": completed
     }
 
     # Parse m/z, RT, and intensity data for internal standards into DataFrames
