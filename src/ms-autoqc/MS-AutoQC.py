@@ -1,5 +1,5 @@
 import io, sys, psutil, time
-import base64, webbrowser, json
+import base64, webbrowser, json, ast
 import pandas as pd
 import sqlalchemy as sa
 from dash import dash, dcc, html, dash_table, Input, Output, State, ctx
@@ -582,7 +582,7 @@ def serve_layout():
                                     dbc.Label("Acquisition sequence (.csv)"),
                                     dbc.InputGroup([
                                         dbc.Input(id="sequence-path",
-                                                  placeholder="No file selected"),
+                                            placeholder="No file selected"),
                                         dbc.Button(dcc.Upload(
                                             id="sequence-upload-button",
                                             children=[html.A("Browse Files")]),
@@ -600,7 +600,7 @@ def serve_layout():
                                     dbc.Label("Sample metadata (.csv) (optional)"),
                                     dbc.InputGroup([
                                         dbc.Input(id="metadata-path",
-                                                  placeholder="No file selected"),
+                                            placeholder="No file selected"),
                                         dbc.Button(dcc.Upload(
                                             id="metadata-upload-button",
                                             children=[html.A("Browse Files")]),
@@ -2196,7 +2196,10 @@ def populate_instrument_runs_table(instrument, refresh, resources):
 
     # Ensure that refresh does not trigger data parsing if no new samples processed
     if trigger == "refresh-interval":
-        completed_count_in_cache = json.loads(resources)["samples_completed"]
+        resources = json.loads(resources)
+        run_id = resources["run_id"]
+
+        completed_count_in_cache = resources["samples_completed"]
         actual_completed_count, total = db.get_completed_samples_count(run_id)
 
         if completed_count_in_cache == actual_completed_count:
@@ -2704,6 +2707,20 @@ def populate_istd_mz_plot(polarity, internal_standard, selected_samples, delta_m
         return {}, None, None, None, {"display": "none"}
 
 
+@app.callback(Output("bio-standards-plot-dropdown", "options"),
+              Input("study-resources", "data"), prevent_initial_call=True)
+def populate_biological_standards_dropdown(resources):
+
+    """
+    Retrieves list of biological standards included in run
+    """
+
+    try:
+        return ast.literal_eval(ast.literal_eval(resources)["biological_standards"])
+    except:
+        return []
+
+
 @app.callback(Output("bio-standard-mz-rt-plot", "figure"),
               Output("bio-standard-benchmark-dropdown", "value"),
               Output("bio-standard-mz-rt-plot", "clickData"),
@@ -2716,8 +2733,10 @@ def populate_istd_mz_plot(polarity, internal_standard, selected_samples, delta_m
               State("bio-mz-pos", "data"),
               State("bio-mz-neg", "data"),
               State("study-resources", "data"),
-              Input("bio-standard-mz-rt-plot", "clickData"), prevent_initial_call=True)
-def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, intensity_neg, mz_pos, mz_neg, resources, click_data):
+              Input("bio-standard-mz-rt-plot", "clickData"),
+              Input("bio-standards-plot-dropdown", "value"), prevent_initial_call=True)
+def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, intensity_neg, mz_pos, mz_neg,
+    resources, click_data, selected_bio_standard):
 
     """
     Populates biological standard m/z vs. RT plot
@@ -2727,8 +2746,20 @@ def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, in
         if mz_pos is None and mz_neg is None:
             return {}, None, None, {"display": "none"}
 
-    # Get run ID and chromatography method
-    run_id = json.loads(resources)["run_id"]
+    # Get run ID and status
+    resources = json.loads(resources)
+    run_id = resources["run_id"]
+    status = resources["status"]
+
+    # Get Google Drive instance
+    drive = None
+    if status == "Active":
+        drive = GoogleDrive(gauth_holder[0])
+
+    # Toggle a different biological standard
+    if selected_bio_standard is not None:
+        rt_pos, rt_neg, intensity_pos, intensity_neg, mz_pos, mz_neg = get_qc_results(
+            run_id=run_id, status=status, drive=drive, biological_standard=selected_bio_standard, biological_standards_only=True)
 
     # Get biological standard m/z, RT, and intensity data
     if polarity == "Pos":
@@ -2762,8 +2793,10 @@ def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, in
               Input("polarity-options", "value"),
               Input("bio-standard-benchmark-dropdown", "value"),
               Input("bio-intensity-pos", "data"),
-              Input("bio-intensity-neg", "data"), prevent_initial_call=True)
-def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_pos, intensity_neg):
+              Input("bio-intensity-neg", "data"),
+              Input("bio-standards-plot-dropdown", "value"),
+              State("study-resources", "data"), prevent_initial_call=True)
+def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_pos, intensity_neg, selected_bio_standard, resources):
 
     """
     Populates biological standard benchmark plot
@@ -2771,6 +2804,21 @@ def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_p
 
     if intensity_pos is None and intensity_neg is None:
         return {}, {"display": "none"}
+
+    # Get run ID and status
+    resources = json.loads(resources)
+    run_id = resources["run_id"]
+    status = resources["status"]
+
+    # Get Google Drive instance
+    drive = None
+    if status == "Active":
+        drive = GoogleDrive(gauth_holder[0])
+
+    # Toggle a different biological standard
+    if selected_bio_standard is not None:
+        intensity_pos, intensity_neg = get_qc_results(
+            run_id=run_id, status=status, drive=drive, biological_standard=selected_bio_standard, for_benchmark_plot=True)
 
     # Get intensity data
     if polarity == "Pos":

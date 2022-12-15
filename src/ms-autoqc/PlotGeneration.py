@@ -17,11 +17,12 @@ bootstrap_colors = {
     "yellow-low-opacity": "rgba(255, 193, 7, 0.4)"
 }
 
-def get_qc_results(run_id, status="Complete", drive=None):
+def get_qc_results(run_id, status="Complete", drive=None, biological_standard=None, biological_standards_only=False,
+    for_benchmark_plot=False):
 
     """
-    Loads and parses QC results for samples and biological standards from either CSV files
-    (for active instrument runs) or the SQLite database (for completed runs).
+    Loads and parses QC results for samples and biological standards from either CSV
+    files (for active instrument runs) or the SQLite database (for completed runs)
 
     Input: instrument run ID and status
     Output: tuple of multiple tables encoded as JSON strings
@@ -49,11 +50,74 @@ def get_qc_results(run_id, status="Complete", drive=None):
     resources = {
         "instrument": instrument,
         "run_id": run_id,
+        "status": status,
         "chromatography": chromatography,
         "precursor_mass_dict": precursor_mz_dict,
         "retention_times_dict": retention_times_dict,
-        "samples_completed": completed
+        "samples_completed": completed,
+        "biological_standards": json.dumps(biological_standards)
     }
+
+    # Parse m/z, RT, and intensity data for biological standards into DataFrames
+    if biological_standards is not None:
+
+        if biological_standard is None:
+            biological_standard = biological_standards[0]
+
+        try:
+            df_bio_mz_pos = db.parse_biological_standard_data(instrument=instrument, run_id=run_id,
+                result_type="precursor_mz", polarity="Pos", biological_standard=biological_standard, status=status)
+        except Exception as error:
+            print("Error loading positive (–) mode biological standard precursor m/z data:", error)
+            df_bio_mz_pos = None
+
+        try:
+            df_bio_rt_pos = db.parse_biological_standard_data(instrument=instrument, run_id=run_id,
+                result_type="retention_time", polarity="Pos", biological_standard=biological_standard, status=status)
+        except Exception as error:
+            print("Error loading positive (–) mode biological standard precursor m/z data:", error)
+            df_bio_rt_pos = None
+
+        try:
+            df_bio_intensity_pos = db.parse_biological_standard_data(instrument=instrument, run_id=run_id,
+                result_type="intensity", polarity="Pos", biological_standard=biological_standard, status=status)
+        except Exception as error:
+            print("Error loading positive (–) mode biological standard retention time data:", error)
+            df_bio_intensity_pos = None
+
+        try:
+            df_bio_mz_neg = db.parse_biological_standard_data(instrument=instrument, run_id=run_id,
+                result_type="precursor_mz", polarity="Neg", biological_standard=biological_standard, status=status)
+        except Exception as error:
+            print("Error loading negative (–) mode biological standard precursor m/z data:", error)
+            df_bio_mz_neg = None
+
+        try:
+            df_bio_rt_neg = db.parse_biological_standard_data(instrument=instrument, run_id=run_id,
+                result_type="retention_time", polarity="Neg", biological_standard=biological_standard, status=status)
+        except Exception as error:
+            print("Error loading positive (–) mode biological standard retention time data:", error)
+            df_bio_rt_neg = None
+
+        try:
+            df_bio_intensity_neg = db.parse_biological_standard_data(instrument=instrument, run_id=run_id,
+                result_type="intensity", polarity="Neg", biological_standard=biological_standard, status=status)
+        except Exception as error:
+            print("Error loading negative (–) mode biological standard intensity data:", error)
+            df_bio_intensity_neg = None
+
+    else:
+        df_bio_mz_pos = None
+        df_bio_rt_pos = None
+        df_bio_intensity_pos = None
+        df_bio_mz_neg = None
+        df_bio_rt_neg = None
+        df_bio_intensity_neg = None
+
+    if biological_standards_only:
+        return df_bio_rt_pos, df_bio_rt_neg, df_bio_intensity_pos, df_bio_intensity_neg, df_bio_mz_pos, df_bio_mz_neg
+    elif for_benchmark_plot:
+        return df_bio_intensity_pos, df_bio_intensity_neg
 
     # Parse m/z, RT, and intensity data for internal standards into DataFrames
     try:
@@ -139,61 +203,6 @@ def get_qc_results(run_id, status="Complete", drive=None):
     except Exception as error:
         print("Error loading negative (–) mode delta m/z data:", error)
         df_delta_mz_neg = None
-
-    # Parse m/z, RT, and intensity data for biological standards into DataFrames
-    if biological_standards is not None:
-
-        biological_standard = biological_standards[0]
-
-        try:
-            df_bio_mz_pos = db.parse_biological_standard_data(instrument=instrument, run_id=run_id,
-                result_type="precursor_mz", polarity="Pos", biological_standard=biological_standard, status=status)
-        except Exception as error:
-            print("Error loading positive (–) mode biological standard precursor m/z data:", error)
-            df_bio_mz_pos = None
-
-        try:
-            df_bio_rt_pos = db.parse_biological_standard_data(instrument=instrument, run_id=run_id,
-                result_type="retention_time", polarity="Pos", biological_standard=biological_standard, status=status)
-        except Exception as error:
-            print("Error loading positive (–) mode biological standard precursor m/z data:", error)
-            df_bio_rt_pos = None
-
-        try:
-            df_bio_intensity_pos = db.parse_biological_standard_data(instrument=instrument, run_id=run_id,
-                result_type="intensity", polarity="Pos", biological_standard=biological_standard, status=status)
-        except Exception as error:
-            print("Error loading positive (–) mode biological standard retention time data:", error)
-            df_bio_intensity_pos = None
-
-        try:
-            df_bio_mz_neg = db.parse_biological_standard_data(instrument=instrument, run_id=run_id,
-                result_type="precursor_mz", polarity="Neg", biological_standard=biological_standard, status=status)
-        except Exception as error:
-            print("Error loading negative (–) mode biological standard precursor m/z data:", error)
-            df_bio_mz_neg = None
-
-        try:
-            df_bio_rt_neg = db.parse_biological_standard_data(instrument=instrument, run_id=run_id,
-                result_type="retention_time", polarity="Neg", biological_standard=biological_standard, status=status)
-        except Exception as error:
-            print("Error loading positive (–) mode biological standard retention time data:", error)
-            df_bio_rt_neg = None
-
-        try:
-            df_bio_intensity_neg = db.parse_biological_standard_data(instrument=instrument, run_id=run_id,
-                result_type="intensity", polarity="Neg", biological_standard=biological_standard, status=status)
-        except Exception as error:
-            print("Error loading negative (–) mode biological standard intensity data:", error)
-            df_bio_intensity_neg = None
-
-    else:
-        df_bio_mz_pos = None
-        df_bio_rt_pos = None
-        df_bio_intensity_pos = None
-        df_bio_mz_neg = None
-        df_bio_rt_neg = None
-        df_bio_intensity_neg = None
 
     # Generate DataFrame for sample table
     try:
