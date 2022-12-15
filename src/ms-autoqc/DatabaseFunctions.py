@@ -1,4 +1,5 @@
-import os, io, shutil, hashlib, json, ast
+import os, io, shutil, time
+import hashlib, json, ast
 import pandas as pd
 import numpy as np
 import sqlalchemy as sa
@@ -10,6 +11,18 @@ from sqlalchemy import INTEGER, REAL, TEXT
 sqlite_db_location = "sqlite:///data/QC Database.db"
 db_file = os.path.join(os.getcwd(), "data", "QC Database.db")
 methods_dir = os.path.join(os.getcwd(), "data", "methods")
+
+def connect_to_database():
+
+    """
+    Connects to local SQLite database
+    """
+
+    engine = sa.create_engine(sqlite_db_location)
+    db_metadata = sa.MetaData(bind=engine)
+    connection = engine.connect()
+
+    return db_metadata, connection
 
 def is_valid():
 
@@ -67,10 +80,16 @@ def slack_notifications_are_enabled():
     if not is_valid():
         return False
 
-    if get_table("workspace")["slack_enabled"].astype(int).tolist()[0] == 1:
-        return True
-    else:
-        return False
+    return bool(get_table("workspace")["slack_enabled"].astype(int).tolist()[0])
+
+
+def is_instrument_computer():
+
+    """
+    Checks whether user's device is the instrument computer
+    """
+
+    return bool(get_table("workspace")["is_instrument_computer"].astype(int).tolist()[0])
 
 
 def get_md5_for_database():
@@ -100,7 +119,7 @@ def was_modified(md5_checksum):
         return False
 
 
-def create_database():
+def create_database(is_instrument_computer):
 
     """
     Initializes a new, empty SQLite database
@@ -283,7 +302,8 @@ def create_database():
         sa.Column("slack_enabled", INTEGER),
         sa.Column("gdrive_folder_id", TEXT),
         sa.Column("gdrive_file_id", TEXT),
-        sa.Column("msdial_directory", TEXT)
+        sa.Column("msdial_directory", TEXT),
+        sa.Column("is_instrument_computer", INTEGER)
     )
 
     # Insert tables into database
@@ -293,21 +313,9 @@ def create_database():
     add_msdial_configuration("Default")
     add_qc_configuration("Default")
     create_workspace_metadata()
+    set_device_identity(is_instrument_computer)
 
     return sqlite_db_location
-
-
-def connect_to_database():
-
-    """
-    Connects to local SQLite database
-    """
-
-    engine = sa.create_engine(sqlite_db_location)
-    db_metadata = sa.MetaData(bind=engine)
-    connection = engine.connect()
-
-    return db_metadata, connection
 
 
 def get_table(table_name):
@@ -366,7 +374,7 @@ def sync_to_google_drive(drive, sync_settings=False):
     # Update existing database in Google Drive
     if gdrive_file_id is not None:
         if gdrive_file_id != "None" and gdrive_file_id != "":
-            file = drive.CreateFile({"id": gdrive_file_id})
+            file = drive.CreateFile({"id": gdrive_file_id, "title": "QC Database.db"})
             file.SetContentFile(db_file)
             file.Upload()
 
@@ -400,7 +408,10 @@ def sync_to_google_drive(drive, sync_settings=False):
 
                     # Update the existing file in Google Drive
                     if filename in drive_file_dict.keys():
-                        file_to_upload = drive.CreateFile({"id": drive_file_dict[filename]})
+                        file_to_upload = drive.CreateFile({
+                            "id": drive_file_dict[filename],
+                            "title": filename,
+                        })
 
                     # Or upload it as a new file to Google Drive
                     else:
@@ -414,7 +425,39 @@ def sync_to_google_drive(drive, sync_settings=False):
                     file_to_upload.SetContentFile(local_file_dict[filename])
                     file_to_upload.Upload()
 
-    return None
+    return time.strftime("%H:%M:%S")
+
+
+def sync_database(drive):
+
+    """
+    Downloads database file from Google Drive (for users signed in to workspace externally from instrument PC)
+    """
+
+    root_directory = os.getcwd()
+    data_directory = os.path.join(root_directory, "data")
+
+    # Get Google Drive ID's for the MS-AutoQC folder and database file
+    df_workspace = get_table("workspace")
+    gdrive_folder_id = df_workspace["gdrive_folder_id"].astype(str).values[0]
+    gdrive_file_id = df_workspace["gdrive_file_id"].astype(str).values[0]
+
+    # If Google Drive folder is found, look for database next
+    if gdrive_folder_id is not None and gdrive_file_id is not None:
+        try:
+            for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
+                if file["title"] == "QC Database.db":       # Download database if found
+                    os.chdir(data_directory)                # Change to data directory
+                    file.GetContentFile(file["title"])      # Download database and get file ID
+                    gdrive_database_file_id = file["id"]    # Get database file ID
+                    os.chdir(root_directory)                # Return to root directory
+        except Exception as error:
+            print("Error downloading database from Google Drive:", error)
+            return None
+
+    # Update user device identity
+    set_device_identity(is_instrument_computer=False)
+    return time.strftime("%H:%M:%S")
 
 
 def insert_google_drive_ids(gdrive_folder_id, gdrive_file_id):
@@ -1552,7 +1595,7 @@ def get_targeted_features(biological_standard, chromatography, polarity):
 def get_biological_standards():
 
     """
-    Returns a tailored DataFrame of the "biological_standards" table
+    Returns DataFrame of the "biological_standards" table
     """
 
     # Get table from database as a DataFrame
@@ -1564,7 +1607,7 @@ def get_biological_standards():
 def get_biological_standards_list():
 
     """
-    Returns a list of biological standards in the database
+    Returns list of biological standards in the database
     """
 
     df_biological_standards = get_biological_standards()
@@ -2134,6 +2177,25 @@ def create_workspace_metadata():
     workspace_table = sa.Table("workspace", db_metadata, autoload=True)
     insert_metadata = workspace_table.insert().values({"id": 1})
     connection.execute(insert_metadata)
+    connection.close()
+
+
+def set_device_identity(is_instrument_computer):
+
+    """
+    Indicates whether the user's device is the instrument PC or not
+    """
+
+    db_metadata, connection = connect_to_database()
+    workspace_table = sa.Table("workspace", db_metadata, autoload=True)
+
+    update_identity = (
+        sa.update(workspace_table)
+            .where(workspace_table.c.id == 1)
+            .values(is_instrument_computer=is_instrument_computer)
+    )
+
+    connection.execute(update_identity)
     connection.close()
 
 

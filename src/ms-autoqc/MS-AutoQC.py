@@ -64,8 +64,8 @@ def serve_layout():
                 # Settings button
                 dbc.Row([
                     dbc.Nav([
-                        dbc.NavItem(dbc.NavLink("About", href="https://github.com/czbiohub/MS-AutoQC", className="navbar-button")),
-                        dbc.NavItem(dbc.NavLink("Help", href="https://github.com/czbiohub/MS-AutoQC/wiki", className="navbar-button")),
+                        dbc.NavItem(dbc.NavLink("About", href="https://github.com/czbiohub/MS-AutoQC", className="navbar-button", target="_blank")),
+                        dbc.NavItem(dbc.NavLink("Support", href="https://github.com/czbiohub/MS-AutoQC/wiki", className="navbar-button", target="_blank")),
                         dbc.NavItem(dbc.NavLink("Settings", href="#", id="settings-button", className="navbar-button")),
                     ], className="me-auto")
                 ], className="g-0 ms-auto flex-nowrap mt-3 mt-md-0")
@@ -506,7 +506,9 @@ def serve_layout():
                                                                 target="setup-google-drive-button-2", placement="right")
                                                 ]),
 
-                                                html.Br(),
+                                                # Checkbox for logging in to instrument computer
+                                                dbc.Checkbox(id="device-identity-checkbox", className="checkbox-margin",
+                                                    label="I am signing in from an instrument computer", value=False),
 
                                                 # Workspace sign-in button
                                                 html.Div([
@@ -1501,6 +1503,7 @@ def serve_layout():
             dcc.Store(id="gdrive-credentials-saved"),
             dcc.Store(id="slack-bot-token-saved"),
             dcc.Store(id="slack-channel-saved"),
+            dcc.Store(id="google-drive-sync-update"),
 
             # Dummy inputs for Google Drive authentication
             dcc.Store(id="workspace-has-been-setup-1"),
@@ -1523,6 +1526,35 @@ app.layout = serve_layout
 """
 Dash callbacks
 """
+
+
+@app.callback(Output("google-drive-sync-update", "data"),
+              Input("on-page-load", "data"))
+def sync_with_google_drive(on_page_load):
+
+    """
+    For MS-AutoQC installed on instrument computers, this will upload database to Google Drive on page load
+    For users signed in to MS-AutoQC from an external device, this will download the database on page load
+    """
+
+    # Check if Google Drive sync is enabled
+    if db.sync_is_enabled():
+
+        # Get Google Drive instance
+        drive = GoogleDrive(gauth_holder[0])
+
+        # For instrument computer, upload database to Drive
+        if db.is_instrument_computer():
+            return db.sync_to_google_drive(drive)
+
+        # For external user device, download database from Drive
+        else:
+            return db.sync_database(drive)
+
+    # If Google Drive sync is not enabled, perform no action
+    else:
+        raise PreventUpdate
+
 
 @app.callback(Output("google-drive-authenticated", "data"),
               Input("on-page-load", "data"))
@@ -1764,7 +1796,7 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
 
         # Initialize a new database if one does not exist
         if not db.is_valid():
-            db.create_database()
+            db.create_database(is_instrument_computer=True)
 
         # Handle Google Drive sync
         if google_drive_authenticated:
@@ -1933,8 +1965,9 @@ def ui_feedback_for_workspace_login_button(button_click):
 
 @app.callback(Output("workspace-has-been-setup-2", "data"),
               Input("first-time-sign-in-button", "children"),
+              State("device-identity-checkbox", "value"),
               State("gdrive-folder-id-2", "data"), prevent_initial_call=True)
-def ui_feedback_for_workspace_login_button(button_click, gdrive_folder_id):
+def ui_feedback_for_workspace_login_button(button_click, is_instrument_computer, gdrive_folder_id):
 
     """
     Dismisses setup window and signs in to MS-AutoQC workspace
@@ -1942,31 +1975,38 @@ def ui_feedback_for_workspace_login_button(button_click, gdrive_folder_id):
 
     if button_click:
 
-        drive = GoogleDrive(gauth_holder[0])
-        methods_folder_id = None
+        # If device is instrument computer, need to download methods folder
+        if is_instrument_computer:
 
-        # Find methods directory in Google Drive
-        if gdrive_folder_id is not None:
-            for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
-                if file["title"] == "methods":
-                    methods_folder_id = file["id"]
+            # Get Google Drive instance
+            drive = GoogleDrive(gauth_holder[0])
+            methods_folder_id = None
 
-        # Use ID to download contents of methods directory
-        if methods_folder_id is not None:
+            # Find methods directory in Google Drive
+            if gdrive_folder_id is not None:
+                for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
+                    if file["title"] == "methods":
+                        methods_folder_id = file["id"]
 
-            # Create methods directory if it does not exist
-            if not os.path.exists(methods_directory):
-                os.makedirs(methods_directory)
+            # Use ID to download contents of methods directory
+            if methods_folder_id is not None:
 
-            # Change to methods directory
-            os.chdir(methods_directory)
+                # Create methods directory if it does not exist
+                if not os.path.exists(methods_directory):
+                    os.makedirs(methods_directory)
 
-            # Download files
-            for file in drive.ListFile({"q": "'" + methods_folder_id + "' in parents and trashed=false"}).GetList():
-                file.GetContentFile(file["title"])
+                # Change to methods directory
+                os.chdir(methods_directory)
 
-            # Change back to root directory
-            os.chdir(root_directory)
+                # Download files
+                for file in drive.ListFile({"q": "'" + methods_folder_id + "' in parents and trashed=false"}).GetList():
+                    file.GetContentFile(file["title"])
+
+                # Change back to root directory
+                os.chdir(root_directory)
+
+        # Set device identity and proceed
+        db.set_device_identity(is_instrument_computer)
 
         # Save Google Drive credentials
         gauth_holder[0].SaveCredentialsFile(credentials_file)
@@ -2143,8 +2183,9 @@ def ui_alert_on_gdrive_credential_save(credential_save_result):
 @app.callback(Output("tabs", "children"),
               Output("tabs", "value"),
               Input("instruments", "data"),
-              Input("workspace-setup-modal", "is_open"))
-def get_instrument_tabs(instruments, check_workspace_setup):
+              Input("workspace-setup-modal", "is_open"),
+              Input("google-drive-sync-update", "data"))
+def get_instrument_tabs(instruments, check_workspace_setup, sync_update):
 
     """
     Retrieves all instruments on a user installation of MS-AutoQC
@@ -2158,8 +2199,7 @@ def get_instrument_tabs(instruments, check_workspace_setup):
         # Create tabs for each instrument
         instrument_tabs = []
         for instrument in instrument_list:
-            instrument_tabs.append(
-                dcc.Tab(label=instrument, value=instrument))
+            instrument_tabs.append(dcc.Tab(label=instrument, value=instrument))
 
         return instrument_tabs, instrument_list[0]
 
@@ -2185,8 +2225,9 @@ def reset_instrument_table(instrument):
               Output("plot-container", "style"),
               Input("tabs", "value"),
               Input("refresh-interval", "n_intervals"),
-              State("study-resources", "data"))
-def populate_instrument_runs_table(instrument, refresh, resources):
+              State("study-resources", "data"),
+              Input("google-drive-sync-update", "data"))
+def populate_instrument_runs_table(instrument, refresh, resources, sync_update):
 
     """
     Dash callback for populating tables with list of past/active instrument runs
@@ -2237,7 +2278,7 @@ def populate_instrument_runs_table(instrument, refresh, resources):
 def open_loading_modal(active_cell, table_data, load_finished):
 
     """
-    Opens loading modal
+    Shows loading modal on selection of an instrument run
     """
 
     trigger = ctx.triggered_id
@@ -2364,7 +2405,6 @@ def update_dropdowns_on_polarity_change(polarity, table_data, samples, bio_inten
     """
 
     if samples is not None:
-
         df_samples = pd.read_json(samples, orient="split")
 
         if polarity == "Neg":
@@ -2508,7 +2548,7 @@ def populate_istd_rt_plot(polarity, internal_standard, selected_samples, rt_pos,
     retention_times = json.loads(resources)["retention_times_dict"]
 
     # Set initial dropdown values when none are selected
-    if not internal_standard:
+    if not internal_standard or trigger == "polarity-options":
         internal_standard = internal_standards[0]
 
     if not selected_samples:
@@ -2591,7 +2631,7 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
         df_istd_intensity = df_istd_intensity_neg
 
     # Set initial internal standard dropdown value when none are selected
-    if not internal_standard:
+    if not internal_standard or trigger == "polarity-options":
         internal_standard = internal_standards[0]
 
     # Set initial sample dropdown value when none are selected
@@ -2684,7 +2724,7 @@ def populate_istd_mz_plot(polarity, internal_standard, selected_samples, delta_m
         pol = "Negative Mode"
 
     # Set initial dropdown values when none are selected
-    if not internal_standard:
+    if not internal_standard or trigger == "polarity-options":
         internal_standard = internal_standards[0]
     if not selected_samples:
         selected_samples = samples
@@ -2753,7 +2793,7 @@ def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, in
 
     # Get Google Drive instance
     drive = None
-    if status == "Active":
+    if status == "Active" and db.sync_is_enabled():
         drive = GoogleDrive(gauth_holder[0])
 
     # Toggle a different biological standard
@@ -2812,7 +2852,7 @@ def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_p
 
     # Get Google Drive instance
     drive = None
-    if status == "Active":
+    if status == "Active" and db.sync_is_enabled():
         drive = GoogleDrive(gauth_holder[0])
 
     # Toggle a different biological standard
@@ -3100,8 +3140,9 @@ def add_user_to_workspace(button_click, user_email_address, google_drive_is_auth
     if user_email_address in db.get_workspace_users_list():
         return "User already exists"
 
-    drive = GoogleDrive(gauth_holder[0])
-    db.add_user_to_workspace(drive, user_email_address)
+    if db.sync_is_enabled():
+        drive = GoogleDrive(gauth_holder[0])
+        db.add_user_to_workspace(drive, user_email_address)
 
     if user_email_address in db.get_workspace_users_list():
         return user_email_address
@@ -3122,8 +3163,9 @@ def delete_user_from_workspace(button_click, user_email_address, google_drive_is
     if user_email_address not in db.get_workspace_users_list():
         return "User does not exist"
 
-    drive = GoogleDrive(gauth_holder[0])
-    db.delete_user_from_workspace(drive, user_email_address)
+    if db.sync_is_enabled():
+        drive = GoogleDrive(gauth_holder[0])
+        db.delete_user_from_workspace(drive, user_email_address)
 
     if user_email_address in db.get_workspace_users_list():
         return "Error"
@@ -4362,7 +4404,7 @@ def toggle_new_run_modal(button_clicks, success, success_2, instrument_name, bro
 
     button = ctx.triggered_id
 
-    modal_title = "New AutoQC Job – " + instrument_name
+    modal_title = "New MS-AutoQC Job – " + instrument_name
 
     open_modal = True, 1, modal_title
     close_modal = False, 0, modal_title
@@ -4391,7 +4433,7 @@ def toggle_new_run_modal(button_clicks, success, success_2, instrument_name, bro
 def populate_options_for_new_run(button_click):
 
     """
-    Populates dropdowns and checklists for Setup New AutoQC Job page
+    Populates dropdowns and checklists for Setup New MS-AutoQC Job page
     """
 
     chromatography_methods = []
@@ -4461,7 +4503,7 @@ def capture_uploaded_metadata(contents, filename):
 def update_new_job_button_text(job_type):
 
     """
-    Updates New AutoQC Job form submit button based on job type
+    Updates New MS-AutoQC Job form submit button based on job type
     """
 
     if job_type == "active":
@@ -4585,7 +4627,7 @@ def validation_feedback_for_new_run_setup_form(run_id, chromatography, qc_config
 def enable_new_autoqc_job_button(run_id_valid, chromatography_valid, qc_config_valid, sequence_valid, path_valid):
 
     """
-    Enables "submit" button for New AutoQC Job form
+    Enables "submit" button for New MS-AutoQC Job form
     """
 
     if run_id_valid and chromatography_valid and qc_config_valid and sequence_valid and path_valid:
@@ -4643,6 +4685,10 @@ def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, b
         acquisition_listener = os.path.join(os.getcwd(), "src", "ms-autoqc", "AcquisitionListener.py")
         process = psutil.Popen(["py", acquisition_listener, acquisition_path, str(filenames), run_id])
         db.store_pid(run_id, process.pid)
+
+        if db.is_instrument_computer() and db.sync_is_enabled():
+            return db.sync_to_google_drive(GoogleDrive(gauth_holder[0]), sync_settings=False)
+
         return True, False, False, ""
 
     # If this is for a completed run, begin iterating through the files and process them
@@ -4690,7 +4736,7 @@ def start_bulk_qc_processing(modal_open, progress_intervals, data_file_directory
 
         # Once the last file has been processed, terminate the job
         if index == len(filenames):
-            if db.sync_is_enabled():
+            if db.is_instrument_computer() and db.sync_is_enabled():
                 db.sync_to_google_drive(drive=GoogleDrive(gauth_holder[0]), sync_settings=False)
             return 100, "100%", "Processing complete!", True
 
@@ -4914,9 +4960,12 @@ def update_progress_bar_during_active_instrument_run(active_cell, table_data, re
 
     if active_cell:
 
-        # Get run ID and Google Drive instance
+        # Get run ID
         run_id = table_data[active_cell["row"]]["Run ID"]
-        drive = GoogleDrive(gauth_holder[0])
+
+        # Get Google Drive instance
+        if db.sync_is_enabled():
+            drive = GoogleDrive(gauth_holder[0])
 
         # Construct values for progress bar
         completed, total = db.get_completed_samples_count(run_id)
@@ -4931,6 +4980,21 @@ def update_progress_bar_during_active_instrument_run(active_cell, table_data, re
                 db.delete_active_run_files(drive, run_id)
             return {"display": "none"}, None, None, None, True
 
+    else:
+        raise PreventUpdate
+
+
+@app.callback(Output("settings-button", "style"),
+              Output("setup-new-run-button", "style"),
+              Input("on-page-load", "data"))
+def hide_elements_for_non_instrument_devices(on_page_load):
+
+    """
+    Hides settings and job setup button for users who have signed in from an external device
+    """
+
+    if not db.is_instrument_computer():
+        return {"display": "none"}, {"display": "none"}
     else:
         raise PreventUpdate
 

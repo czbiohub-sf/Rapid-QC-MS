@@ -133,12 +133,18 @@ h2 {
     width: 100%;
 }
 
+/* Lazy CSS styles */
 .margin-top-15 {
     margin-top: 15px;
 }
 
 .margin-top-30 {
     margin-top: 30px;
+}
+
+.checkbox-margin {
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
 }
 
 /* Modal styles */
