@@ -1,4 +1,4 @@
-import os, io, shutil, hashlib
+import os, io, shutil, hashlib, json, ast
 import pandas as pd
 import numpy as np
 import sqlalchemy as sa
@@ -243,7 +243,9 @@ def create_database():
         sa.Column("latest_sample", TEXT),
         sa.Column("qc_config_id", TEXT),
         sa.Column("biological_standards", TEXT),
-        sa.Column("pid", INTEGER)
+        sa.Column("pid", INTEGER),
+        sa.Column("drive_ids", TEXT),
+        sa.Column("sample_status", TEXT)
     )
 
     sample_qc_results = sa.Table(
@@ -534,7 +536,6 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, sequenc
          "completed": 0,
          "passes": 0,
          "fails": 0,
-         "latest_sample": "",
          "qc_config_id": qc_config_id,
          "biological_standards": str(bio_standards)})
 
@@ -1819,7 +1820,7 @@ def update_qc_configuration(config_name, intensity_dropouts_cutoff, library_rt_s
 def get_samples_in_run(run_id, sample_type="Both"):
 
     """
-    Returns DataFrame of samples in a given run
+    Returns DataFrame of samples in a given run using local database
     """
 
     if sample_type == "Sample":
@@ -1837,14 +1838,41 @@ def get_samples_in_run(run_id, sample_type="Both"):
     return df.loc[df["run_id"] == run_id]
 
 
-def parse_internal_standard_data(run_id, result_type, polarity, as_json=True):
+def get_samples_from_csv(run_id, sample_type="Both"):
+
+    """
+    Returns DataFrame of samples in a given run using CSV files from Google Drive
+    """
+
+    samples_csv = os.path.join(os.getcwd(), "data", run_id + "_samples.csv")
+    bio_standards_csv = os.path.join(os.getcwd(), "data", run_id + "_bio_standards.csv")
+
+    if sample_type == "Sample":
+        df = pd.read_csv(samples_csv, index_col=False)
+
+    elif sample_type == "Biological Standard":
+        df = pd.read_csv(bio_standards_csv, index_col=False)
+
+    elif sample_type == "Both":
+        df_samples = pd.read_csv(samples_csv, index_col=False)
+        df_bio_standards = pd.read_csv(bio_standards_csv, index_col=False)
+        df_bio_standards.drop(columns=["biological_standard"], inplace=True)
+        df = df_bio_standards.append(df_samples, ignore_index=True)
+
+    return df.loc[df["run_id"] == run_id]
+
+
+def parse_internal_standard_data(run_id, result_type, polarity, status, as_json=True):
 
     """
     Returns JSON-ified DataFrame of samples (as rows) vs. internal standards (as columns)
     """
 
     # Get relevant QC results table from database
-    df_samples = get_samples_in_run(run_id, "Sample")
+    if status == "Complete":
+        df_samples = get_samples_in_run(run_id, "Sample")
+    elif status == "Active":
+        df_samples = get_samples_from_csv(run_id, "Sample")
 
     # Filter by polarity
     df_samples = df_samples.loc[df_samples["sample_id"].str.contains(polarity)]
@@ -1888,14 +1916,18 @@ def parse_internal_standard_data(run_id, result_type, polarity, as_json=True):
         return df_results
 
 
-def parse_biological_standard_data(instrument, run_id, result_type, polarity, biological_standard, as_json=True):
+def parse_biological_standard_data(instrument, run_id, result_type, polarity, biological_standard, status, as_json=True):
 
     """
     Returns JSON-ified DataFrame of instrument runs (as columns) vs. targeted features (as rows)
     """
 
     # Get relevant QC results table from database
-    df_samples = get_table("bio_qc_results")
+    if status == "Complete":
+        df_samples = get_table("bio_qc_results")
+    elif status == "Active":
+        bio_standards_csv = os.path.join(os.getcwd(), "data", run_id + "_bio_standards.csv")
+        df_samples = pd.read_csv(bio_standards_csv, index_col=False)
 
     # Filter by biological standard type
     df_samples = df_samples.loc[df_samples["biological_standard"] == biological_standard]
@@ -1938,14 +1970,17 @@ def parse_biological_standard_data(instrument, run_id, result_type, polarity, bi
         return df_results
 
 
-def parse_internal_standard_qc_data(run_id, polarity, result_type, as_json=True):
+def parse_internal_standard_qc_data(run_id, polarity, result_type, status, as_json=True):
 
     """
     Returns JSON-ified DataFrame of samples (as rows) vs. internal standards (as columns)
     """
 
     # Get relevant QC results table from database
-    df_samples = get_samples_in_run(run_id, "Sample")
+    if status == "Complete":
+        df_samples = get_samples_in_run(run_id, "Sample")
+    elif status == "Active":
+        df_samples = get_samples_from_csv(run_id, "Sample")
 
     # Filter by polarity
     df_samples = df_samples.loc[df_samples["sample_id"].str.contains(polarity)]
@@ -2282,7 +2317,7 @@ def mark_run_as_completed(run_id):
     update_status = (
         sa.update(instrument_runs_table)
             .where(instrument_runs_table.c.run_id == run_id)
-            .values(status="Completed")
+            .values(status="Complete")
     )
 
     connection.execute(update_status)
@@ -2315,3 +2350,197 @@ def get_pid(run_id):
     """
 
     return get_instrument_run(run_id)["pid"].astype(int).tolist()[0]
+
+
+def upload_to_google_drive(drive, file_dict):
+
+    """
+    Uploads files to MS-AutoQC folder in Google Drive
+    Input: dictionary with key-value structure { filename : file path }
+    Output: dictionary with key-value structure { filename : Google Drive ID }
+    """
+
+    # Get Google Drive ID for the MS-AutoQC folder
+    gdrive_folder_id = get_table("workspace")["gdrive_folder_id"].astype(str).values[0]
+
+    # Validate Google Drive folder ID
+    if gdrive_folder_id is not None:
+        if gdrive_folder_id != "None" and gdrive_folder_id != "":
+
+            # Upload each file to Google Drive
+            for filename in file_dict.keys():
+                if os.path.exists(file_dict[filename]):
+                    metadata = {
+                        "title": filename,
+                        "parents": [{"id": gdrive_folder_id}],
+                    }
+                    file = drive.CreateFile(metadata=metadata)
+                    file.SetContentFile(file_dict[filename])
+                    file.Upload()
+
+    # Get Drive ID's of uploaded file(s)
+    drive_ids = {}
+
+    drive_file_list = drive.ListFile(
+        {"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList()
+
+    drive_file_dict = {file["title"]: file["id"] for file in drive_file_list}
+
+    for filename in drive_file_dict.keys():
+        if filename in file_dict.keys():
+            drive_ids[filename] = drive_file_dict[filename]
+
+    return drive_ids
+
+
+def delete_active_run_files(drive, run_id):
+
+    """
+    Checks for and deletes CSV files from Google Drive at the end of an active instrument run
+    """
+
+    # Get ID's for the instrument run's CSV files in Google Drive
+    try:
+        drive_ids = list(ast.literal_eval(get_instrument_run(run_id)["drive_ids"].astype(str).tolist()[0]).values())
+    except:
+        return
+
+    # Get Google Drive ID for the MS-AutoQC folder
+    gdrive_folder_id = get_table("workspace")["gdrive_folder_id"].astype(str).values[0]
+
+    if gdrive_folder_id is not None:
+        if gdrive_folder_id != "None" and gdrive_folder_id != "":
+
+            # Get list of files in Google Drive folder
+            drive_file_list = drive.ListFile(
+                {"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList()
+
+            # Find CSV files and delete them
+            for file in drive_file_list:
+                if file["id"] in drive_ids:
+                    file.Delete()
+
+    # Delete Drive ID's from database
+    db_metadata, connection = connect_to_database()
+    instrument_runs_table = sa.Table("runs", db_metadata, autoload=True)
+
+    delete_drive_ids = (
+        sa.update(instrument_runs_table)
+            .where((instrument_runs_table.c.run_id == run_id))
+            .values(drive_ids=None)
+    )
+
+    connection.execute(delete_drive_ids)
+    connection.close()
+
+
+def sync_qc_results(drive, run_id):
+    
+    """
+    Uploads QC results for a given run to Google Drive as a CSV file
+    """
+
+    # Define file names and file paths
+    samples_csv_filename = run_id + "_samples.csv"
+    bio_standards_csv_filename = run_id + "_bio_standards.csv"
+
+    samples_csv_path = os.path.join(os.getcwd(), "data", samples_csv_filename)
+    bio_standards_csv_path = os.path.join(os.getcwd(), "data", bio_standards_csv_filename)
+
+    csv_files = {
+        samples_csv_filename: samples_csv_path,
+        bio_standards_csv_filename: bio_standards_csv_path
+    }
+
+    # Get sample and biological standard QC results from database
+    df_samples = get_samples_in_run(run_id=run_id, sample_type="Sample")
+    if len(df_samples) > 0:
+        df_samples.to_csv(samples_csv_path, index=False)
+
+    df_bio_standards = get_table("bio_qc_results")
+    if len(df_bio_standards) > 0:
+        df_bio_standards.to_csv(bio_standards_csv_path, index=False)
+
+    # Get Google Drive ID for the CSV files
+    drive_ids = get_instrument_run(run_id)["drive_ids"].astype(str).tolist()[0]
+
+    # Update existing CSV files in Google Drive
+    try:
+        drive_ids = ast.literal_eval(drive_ids)
+
+        if os.path.exists(samples_csv_path):
+            # If the file exists and has been uploaded already, update existing file
+            if samples_csv_filename in drive_ids.keys():
+                file = drive.CreateFile({"id": drive_ids[samples_csv_filename]})
+                file.SetContentFile(samples_csv_path)
+                file.Upload()
+            # Otherwise, upload the file for the first time
+            else:
+                drive_id = upload_to_google_drive(
+                    drive, {samples_csv_filename: samples_csv_path})
+                drive_ids[samples_csv_filename] = drive_id[samples_csv_filename]
+
+        if os.path.exists(bio_standards_csv_path):
+            # If the file exists and has been uploaded already, update existing file
+            if bio_standards_csv_filename in drive_ids.keys():
+                file = drive.CreateFile({"id": drive_ids[bio_standards_csv_filename]})
+                file.SetContentFile(bio_standards_csv_path)
+                file.Upload()
+            # Otherwise, upload the file for the first time
+            else:
+                drive_id = upload_to_google_drive(
+                    drive, {bio_standards_csv_filename: bio_standards_csv_path})
+                drive_ids[bio_standards_csv_filename] = drive_id[bio_standards_csv_filename]
+
+    # If drive ID's do not exist, upload CSV files to Google Drive for first time
+    except:
+        drive_ids = upload_to_google_drive(drive, csv_files)
+
+    # Store Drive ID's in local database
+    drive_ids = json.dumps(drive_ids)
+
+    db_metadata, connection = connect_to_database()
+    instrument_runs_table = sa.Table("runs", db_metadata, autoload=True)
+
+    update_drive_ids = (
+        sa.update(instrument_runs_table)
+            .where(instrument_runs_table.c.run_id == run_id)
+            .values(drive_ids=drive_ids)
+    )
+
+    connection.execute(update_drive_ids)
+    connection.close()
+
+
+def download_qc_results(drive, run_id):
+
+    """
+    Downloads CSV files of QC results from Google Drive and stores in data directory
+    """
+
+    # Define files
+    samples_csv_file = run_id + "_samples.csv"
+    bio_standards_csv_file = run_id + "_bio_standards.csv"
+
+    # Find and download CSV files from Google Drive
+    gdrive_folder_id = get_table("workspace")["gdrive_folder_id"].astype(str).values[0]
+
+    # Navigate to data directory
+    root_directory = os.getcwd()
+    data_directory = os.path.join(root_directory, "data")
+    os.chdir(data_directory)
+
+    if gdrive_folder_id is not None:
+        if gdrive_folder_id != "None" and gdrive_folder_id != "":
+            for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
+                if file["title"] == samples_csv_file or file["title"] == bio_standards_csv_file:
+                    file.GetContentFile(file["title"])
+
+    # Navigate back to script directory
+    os.chdir(root_directory)
+
+    # Define and return file paths
+    samples_csv = os.path.join(data_directory, samples_csv_file)
+    bio_standards_csv_file = os.path.join(data_directory, bio_standards_csv_file)
+
+    return (samples_csv, bio_standards_csv_file)

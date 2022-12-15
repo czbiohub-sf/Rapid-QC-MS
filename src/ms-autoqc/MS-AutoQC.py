@@ -11,17 +11,11 @@ import DatabaseFunctions as db
 import AutoQCProcessing as qc
 import SlackNotifications as bot
 
-local_stylesheet = {
-    "href": "https://fonts.googleapis.com/css2?"
-            "family=Lato:wght@400;700&display=swap",
-    "rel": "stylesheet"
-}
-
 # Initialize directories
-current_directory = os.getcwd()
-data_directory = os.path.join(current_directory, "data")
+root_directory = os.getcwd()
+data_directory = os.path.join(root_directory, "data")
 methods_directory = os.path.join(data_directory, "methods")
-auth_directory = os.path.join(current_directory, "auth")
+auth_directory = os.path.join(root_directory, "auth")
 
 for directory in [data_directory, auth_directory, methods_directory]:
     if not os.path.exists(directory):
@@ -33,7 +27,13 @@ drive_settings_file = os.path.join(auth_directory, "settings.yaml")
 gauth_holder = [GoogleAuth(settings_file=drive_settings_file)]
 
 # Database path
-db_file = os.path.join(current_directory, "data", "QC Database.db")
+db_file = os.path.join(root_directory, "data", "QC Database.db")
+
+local_stylesheet = {
+    "href": "https://fonts.googleapis.com/css2?"
+            "family=Lato:wght@400;700&display=swap",
+    "rel": "stylesheet"
+}
 
 """
 Dash app layout
@@ -1463,6 +1463,8 @@ def serve_layout():
             dcc.Store(id="pos-internal-standards"),
             dcc.Store(id="neg-internal-standards"),
             dcc.Store(id="instruments"),
+            dcc.Store(id="load-finished"),
+            dcc.Store(id="close-load-modal"),
 
             # Data for starting a new AutoQC job
             dcc.Store(id="new-sequence"),
@@ -1660,7 +1662,7 @@ def check_first_time_google_drive_authentication(google_drive_is_authenticated):
                     gdrive_database_file_id = file["id"]
 
                     # Switch back to root directory
-                    os.chdir(current_directory)
+                    os.chdir(root_directory)
 
                     popover_message = [dbc.PopoverHeader("Workspace found!"),
                         dbc.PopoverBody("This instrument will be added to the existing MS-AutoQC workspace.")]
@@ -1887,7 +1889,7 @@ def check_workspace_login_google_drive_authentication(google_drive_is_authentica
                     gdrive_database_file_id = file["id"]
 
                     # Change to root directory
-                    os.chdir(current_directory)
+                    os.chdir(root_directory)
 
                     # Popover alert
                     button_text = "Signed in to Google Drive"
@@ -1964,7 +1966,7 @@ def ui_feedback_for_workspace_login_button(button_click, gdrive_folder_id):
                 file.GetContentFile(file["title"])
 
             # Change back to root directory
-            os.chdir(current_directory)
+            os.chdir(root_directory)
 
         # Save Google Drive credentials
         gauth_holder[0].SaveCredentialsFile(credentials_file)
@@ -2181,12 +2183,24 @@ def reset_instrument_table(instrument):
 @app.callback(Output("instrument-run-table", "data"),
               Output("table-container", "style"),
               Output("plot-container", "style"),
-              Input("tabs", "value"))
-def populate_instrument_runs_table(instrument):
+              Input("tabs", "value"),
+              Input("refresh-interval", "n_intervals"),
+              State("study-resources", "data"))
+def populate_instrument_runs_table(instrument, refresh, resources):
 
     """
     Dash callback for populating tables with list of past/active instrument runs
     """
+
+    trigger = ctx.triggered_id
+
+    # Ensure that refresh does not trigger data parsing if no new samples processed
+    if trigger == "refresh-interval":
+        completed_count_in_cache = json.loads(resources)["samples_completed"]
+        actual_completed_count, total = db.get_completed_samples_count(run_id)
+
+        if completed_count_in_cache == actual_completed_count:
+            raise PreventUpdate
 
     if instrument != "tab-1":
         # Get instrument runs from database
@@ -2206,6 +2220,38 @@ def populate_instrument_runs_table(instrument):
         # Convert DataFrame into a dictionary
         instrument_runs = df_instrument_runs.to_dict("records")
         return instrument_runs, {"display": "block"}, {"display": "block"}
+
+    else:
+        raise PreventUpdate
+
+
+@app.callback(Output("loading-modal", "is_open"),
+              Output("loading-modal-title", "children"),
+              Output("loading-modal-body", "children"),
+              Input("instrument-run-table", "active_cell"),
+              State("instrument-run-table", "data"),
+              Input("close-load-modal", "data"), prevent_initial_call=True, suppress_callback_exceptions=True)
+def open_loading_modal(active_cell, table_data, load_finished):
+
+    """
+    Opens loading modal
+    """
+
+    trigger = ctx.triggered_id
+
+    if active_cell:
+        run_id = table_data[active_cell["row"]]["Run ID"]
+
+        title = html.Div([
+            html.Div(children=[dbc.Spinner(color="primary"), " Loading QC results for " + run_id])])
+        body = "This may take a few seconds..."
+
+        if trigger == "instrument-run-table":
+            modal_is_open = True
+        elif trigger == "close-load-modal":
+            modal_is_open = False
+
+        return modal_is_open, title, body
 
     else:
         raise PreventUpdate
@@ -2235,11 +2281,12 @@ def populate_instrument_runs_table(instrument):
               Output("istd-in-run-delta-rt-neg", "data"),
               Output("istd-delta-mz-pos", "data"),
               Output("istd-delta-mz-neg", "data"),
+              Output("load-finished", "data"),
+              Input("refresh-interval", "n_intervals"),
               Input("instrument-run-table", "active_cell"),
               State("instrument-run-table", "data"),
-              Input("refresh-interval", "n_intervals"),
               State("study-resources", "data"), prevent_initial_call=True, suppress_callback_exceptions=True)
-def load_data(active_cell, table_data, refresh, resources):
+def load_data(refresh, active_cell, table_data, resources):
 
     """
     Updates and stores QC results in dcc.Store objects (user's browser session)
@@ -2249,6 +2296,7 @@ def load_data(active_cell, table_data, refresh, resources):
 
     if active_cell:
         run_id = table_data[active_cell["row"]]["Run ID"]
+        status = table_data[active_cell["row"]]["Status"]
 
         # Ensure that refresh does not trigger data parsing if no new samples processed
         if trigger == "refresh-interval":
@@ -2258,50 +2306,22 @@ def load_data(active_cell, table_data, refresh, resources):
             if completed_count_in_cache == actual_completed_count:
                 raise PreventUpdate
 
-        # Otherwise, begin route: parsed data -> user session cache -> plots
-        return get_qc_results(run_id)
+        # Otherwise, begin route: raw data -> parsed data -> user session cache -> plots
+        if status == "Active" and db.sync_is_enabled():
+            return get_qc_results(run_id, status, GoogleDrive(gauth_holder[0])) + (True,)
+        else:
+            return get_qc_results(run_id) + (True,)
 
     else:
         raise PreventUpdate
 
 
-@app.callback(Output("loading-modal", "is_open"),
-              Output("loading-modal-title", "children"),
-              Output("loading-modal-body", "children"),
-              Input("instrument-run-table", "active_cell"),
-              State("instrument-run-table", "data"),
-              Input("sample-table", "data"),
-              State("loading-modal", "is_open"),
-              State("study-resources", "data"), prevent_initial_call=True)
-def loading_data_feedback(active_cell, table_data, placeholder_input, modal_is_open, study_resources):
+@app.callback(Output("close-load-modal", "data"),
+              Input("load-finished", "data"), prevent_initial_call=True)
+def signal_load_finished(load_finished):
 
-    """
-    Dash callback for providing user feedback when retrieving data from Google Drive
-    """
-
-    if active_cell:
-
-        if study_resources:
-            run_id = json.loads(study_resources)["run_id"]
-            if table_data[active_cell["row"]][active_cell["column_id"]] != run_id:
-                run_id = table_data[active_cell["row"]]["Run ID"]
-            else:
-                return False, None, None
-        else:
-            run_id = table_data[active_cell["row"]]["Run ID"]
-
-        if modal_is_open:
-            return False, None, None
-
-        title = html.Div([
-            html.Div(children=[dbc.Spinner(color="primary"), " Loading QC results for " + run_id])
-        ])
-
-        body = "This may take a few seconds..."
-        return True, title, body
-
-    else:
-        return False, None, None
+    # Welcome to Dash callback hell :D
+    return True
 
 
 @app.callback(Output("sample-table", "data"),
@@ -3451,8 +3471,7 @@ def bio_standard_msp_text_field_feedback(filename):
 def capture_uploaded_istd_msp(button_click, contents, filename, chromatography, polarity):
 
     """
-    In Settings > Internal Standards, captures contents of
-    uploaded MSP file and calls add_msp_to_database().
+    In Settings > Internal Standards, captures contents of uploaded MSP file and calls add_msp_to_database()
     """
 
     if contents is not None and chromatography is not None and polarity is not None:
@@ -4846,8 +4865,12 @@ def update_progress_bar_during_active_instrument_run(active_cell, table_data, re
     """
 
     if active_cell:
-        run_id = table_data[active_cell["row"]]["Run ID"]
 
+        # Get run ID and Google Drive instance
+        run_id = table_data[active_cell["row"]]["Run ID"]
+        drive = GoogleDrive(gauth_holder[0])
+
+        # Construct values for progress bar
         completed, total = db.get_completed_samples_count(run_id)
         percent_complete = db.get_run_progress(run_id)
         progress_label = str(percent_complete) + "%"
@@ -4856,6 +4879,8 @@ def update_progress_bar_during_active_instrument_run(active_cell, table_data, re
         if percent_complete != 100.0:
             return {"display": "block"}, header_text, percent_complete, progress_label, False
         else:
+            if db.sync_is_enabled():
+                db.delete_active_run_files(drive, run_id)
             return {"display": "none"}, None, None, None, True
 
     else:

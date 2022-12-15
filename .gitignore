@@ -147,6 +147,6 @@ cython_debug/
 # Project resources
 .idea/
 .DS_Store
-data/methods/
-data/
-auth/
+src/ms-autoqc/data/methods/
+src/ms-autoqc/data/
+src/ms-autoqc/auth/
