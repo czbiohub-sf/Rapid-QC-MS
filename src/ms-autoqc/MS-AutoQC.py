@@ -510,6 +510,12 @@ def serve_layout():
                                                 dbc.Checkbox(id="device-identity-checkbox", className="checkbox-margin",
                                                     label="I am signing in from an instrument computer", value=False),
 
+                                                # Dropdown for selecting an instrument
+                                                dbc.Select(id="device-identity-selection", value=None,
+                                                    placeholder="Which instrument?", disabled=True),
+
+                                                html.Br(),
+
                                                 # Workspace sign-in button
                                                 html.Div([
                                                     html.Div([
@@ -1412,19 +1418,19 @@ def serve_layout():
                                         html.Div([
                                             # UI feedback on saving changes to MS-DIAL parameters
                                             dbc.Alert(id="msdial-parameters-success-alert",
-                                                      color="success", is_open=False, duration=5000),
+                                                color="success", is_open=False, duration=5000),
                                             dbc.Alert(id="msdial-parameters-reset-alert",
-                                                      color="primary", is_open=False, duration=5000),
+                                                color="primary", is_open=False, duration=5000),
                                             dbc.Alert(id="msdial-parameters-error-alert",
-                                                      color="danger", is_open=False, duration=5000),
+                                                color="danger", is_open=False, duration=5000),
                                         ]),
 
                                         html.Div([
                                             html.Div([
                                                 dbc.Button("Save changes", id="save-changes-msdial-parameters-button",
-                                                           style={"line-height": "1.75"}, color="primary"),
+                                                    style={"line-height": "1.75"}, color="primary"),
                                                 dbc.Button("Reset default settings", id="reset-default-msdial-parameters-button",
-                                                           style={"line-height": "1.75"}, color="secondary"),
+                                                    style={"line-height": "1.75"}, color="secondary"),
                                             ], className="d-grid gap-2 col-12 mx-auto"),
                                         ]),
                                     ]),
@@ -1472,7 +1478,7 @@ def serve_layout():
             dcc.Store(id="new-sequence"),
             dcc.Store(id="new-metadata"),
             dcc.Store(id="filenames-for-bulk-qc"),
-            
+
             # Dummy inputs for UI update callbacks
             dcc.Store(id="chromatography-added"),
             dcc.Store(id="chromatography-removed"),
@@ -1796,7 +1802,7 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
 
         # Initialize a new database if one does not exist
         if not db.is_valid():
-            db.create_database(is_instrument_computer=True)
+            db.create_database(is_instrument_computer=True, instrument_identity=instrument_id)
 
         # Handle Google Drive sync
         if google_drive_authenticated:
@@ -1872,6 +1878,7 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
               Output("google-drive-button-2-popover", "is_open"),
               Output("gdrive-folder-id-2", "data"),
               Output("gdrive-database-file-id-2", "data"),
+              Output("device-identity-selection", "options"),
               Input("google-drive-authenticated-2", "data"), prevent_initial_call=True)
 def check_workspace_login_google_drive_authentication(google_drive_is_authenticated):
 
@@ -1929,15 +1936,36 @@ def check_workspace_login_google_drive_authentication(google_drive_is_authentica
                     popover_message = [dbc.PopoverHeader("Workspace found!"),
                         dbc.PopoverBody("Click the button below to sign in.")]
 
-        return button_text, button_color, False, popover_message, True, gdrive_folder_id, gdrive_database_file_id
+        instruments = db.get_instruments_list()
+        instrument_options = []
+        for instrument in instruments:
+            instrument_options.append({"label": instrument, "value": instrument})
+
+        return button_text, button_color, False, popover_message, True, gdrive_folder_id, gdrive_database_file_id, instrument_options
 
     else:
         return "Sign in to Google Drive", "primary", True, "", False, "", ""
 
 
+@app.callback(Output("device-identity-selection", "disabled"),
+              Input("device-identity-checkbox", "value"), prevent_initial_call=True)
+def enable_instrument_id_selection(is_instrument_computer):
+
+    """
+    In Welcome > Sign In To Workspace page, enables instrument dropdown selection if user is signing in to instrument
+    """
+
+    if is_instrument_computer:
+        return False
+    else:
+        return True
+
+
 @app.callback(Output("first-time-sign-in-button", "disabled"),
-              Input("setup-google-drive-button-2", "children"), prevent_initial_call=True)
-def enable_workspace_login_button(button_text):
+              Input("setup-google-drive-button-2", "children"),
+              Input("device-identity-checkbox", "value"),
+              Input("device-identity-selection", "value"), prevent_initial_call=True)
+def enable_workspace_login_button(button_text, is_instrument_computer, instrument_id):
 
     """
     Enables "Sign in to workspace" button upon form completion in Welcome > Sign In To Workspace page
@@ -1945,7 +1973,13 @@ def enable_workspace_login_button(button_text):
 
     if button_text is not None:
         if button_text == "Signed in to Google Drive":
-            return False
+            if is_instrument_computer:
+                if instrument_id is not None:
+                    return False
+                else:
+                    return True
+            else:
+                return False
         else:
             return True
     else:
@@ -1966,8 +2000,9 @@ def ui_feedback_for_workspace_login_button(button_click):
 @app.callback(Output("workspace-has-been-setup-2", "data"),
               Input("first-time-sign-in-button", "children"),
               State("device-identity-checkbox", "value"),
+              State("device-identity-selection", "value"),
               State("gdrive-folder-id-2", "data"), prevent_initial_call=True)
-def ui_feedback_for_workspace_login_button(button_click, is_instrument_computer, gdrive_folder_id):
+def ui_feedback_for_workspace_login_button(button_click, is_instrument_computer, instrument_id, gdrive_folder_id):
 
     """
     Dismisses setup window and signs in to MS-AutoQC workspace
@@ -2006,7 +2041,7 @@ def ui_feedback_for_workspace_login_button(button_click, is_instrument_computer,
                 os.chdir(root_directory)
 
         # Set device identity and proceed
-        db.set_device_identity(is_instrument_computer)
+        db.set_device_identity(is_instrument_computer, instrument_id)
 
         # Save Google Drive credentials
         gauth_holder[0].SaveCredentialsFile(credentials_file)
@@ -2352,7 +2387,7 @@ def load_data(refresh, active_cell, table_data, resources):
 
         # Otherwise, begin route: raw data -> parsed data -> user session cache -> plots
         if status == "Active" and db.sync_is_enabled():
-            return get_qc_results(run_id, status, GoogleDrive(gauth_holder[0])) + (True,)
+            return get_qc_results(run_id, status, drive) + (True,)
         else:
             return get_qc_results(run_id) + (True,)
 
@@ -3024,6 +3059,11 @@ def toggle_settings_modal(button_click):
     Toggles global settings modal
     """
 
+    if db.sync_is_enabled():
+        drive = GoogleDrive(gauth_holder[0])
+        if db.database_was_modified(drive):
+            db.sync_database(drive)
+
     return True
 
 
@@ -3035,7 +3075,7 @@ def toggle_settings_modal(button_click):
               Input("close-sync-modal", "data"),
               State("database-md5", "data"), prevent_initial_call=True)
 def show_sync_modal(settings_is_open, google_drive_authenticated, sync_modal_is_open, sync_finished, md5_checksum):
-    
+
     """
     Launches progress modal, which syncs database and methods directory to Google Drive
     """

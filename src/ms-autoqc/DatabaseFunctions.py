@@ -119,7 +119,7 @@ def was_modified(md5_checksum):
         return False
 
 
-def create_database(is_instrument_computer):
+def create_database(is_instrument_computer, instrument_identity=None):
 
     """
     Initializes a new, empty SQLite database
@@ -302,8 +302,10 @@ def create_database(is_instrument_computer):
         sa.Column("slack_enabled", INTEGER),
         sa.Column("gdrive_folder_id", TEXT),
         sa.Column("gdrive_file_id", TEXT),
+        sa.Column("gdrive_last_modified", TEXT),
         sa.Column("msdial_directory", TEXT),
-        sa.Column("is_instrument_computer", INTEGER)
+        sa.Column("is_instrument_computer", INTEGER),
+        sa.Column("instrument_identity", TEXT)
     )
 
     # Insert tables into database
@@ -313,7 +315,7 @@ def create_database(is_instrument_computer):
     add_msdial_configuration("Default")
     add_qc_configuration("Default")
     create_workspace_metadata()
-    set_device_identity(is_instrument_computer)
+    set_device_identity(is_instrument_computer, instrument_identity)
 
     return sqlite_db_location
 
@@ -365,6 +367,9 @@ def sync_to_google_drive(drive, sync_settings=False):
     """
     Uploads database file and methods directory to Google Drive
     """
+
+    if not database_was_modified(drive):
+        return None
 
     # Get Google Drive ID's for the MS-AutoQC folder and database file
     df_workspace = get_table("workspace")
@@ -2180,11 +2185,14 @@ def create_workspace_metadata():
     connection.close()
 
 
-def set_device_identity(is_instrument_computer):
+def set_device_identity(is_instrument_computer, instrument_identity):
 
     """
     Indicates whether the user's device is the instrument PC or not
     """
+
+    if not is_instrument_computer:
+        instrument_identity = None
 
     db_metadata, connection = connect_to_database()
     workspace_table = sa.Table("workspace", db_metadata, autoload=True)
@@ -2192,7 +2200,10 @@ def set_device_identity(is_instrument_computer):
     update_identity = (
         sa.update(workspace_table)
             .where(workspace_table.c.id == 1)
-            .values(is_instrument_computer=is_instrument_computer)
+            .values(
+                is_instrument_computer=is_instrument_computer,
+                instrument_identity=instrument_identity
+        )
     )
 
     connection.execute(update_identity)
@@ -2606,3 +2617,49 @@ def download_qc_results(drive, run_id):
     bio_standards_csv_file = os.path.join(data_directory, bio_standards_csv_file)
 
     return (samples_csv, bio_standards_csv_file)
+
+
+def remember_last_modified(gdrive_last_modified):
+
+    """
+    Stores last modified time of database file in Google Drive (after upload)
+    """
+
+    db_metadata, connection = connect_to_database()
+    workspace_table = sa.Table("workspace", db_metadata, autoload=True)
+
+    update_last_modified = (
+        sa.update(workspace_table)
+            .where((workspace_table.c.id == 1))
+            .values(gdrive_last_modified=gdrive_last_modified)
+    )
+
+    connection.execute(update_last_modified)
+    connection.close()
+
+
+def database_was_modified(drive):
+
+    """
+    Returns True if database was modified by another instrument PC in Google Drive, and False if not
+    """
+
+    # Get Google Drive folder ID from database
+    df_workspace = get_table("workspace")
+    gdrive_folder_id = df_workspace["gdrive_folder_id"].astype(str).values[0]
+
+    # Compare "last modified" values
+    local_last_modified = df_workspace["gdrive_last_modified"].astype(str).tolist()[0]
+    drive_last_modified = None
+
+    if gdrive_folder_id is not None:
+        if gdrive_folder_id != "None" and gdrive_folder_id != "":
+            for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
+                if file["title"] == "QC Database.db":
+                    drive_last_modified = file["modifiedDate"]
+                    break
+
+    if local_last_modified == drive_last_modified:
+        return False
+    else:
+        return True
