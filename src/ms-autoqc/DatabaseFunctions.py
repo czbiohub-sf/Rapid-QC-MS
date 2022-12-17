@@ -362,109 +362,6 @@ def generate_client_settings_yaml(client_id, client_secret):
                 file.write("\n")
 
 
-def sync_to_google_drive(drive, sync_settings=False):
-
-    """
-    Uploads database file and methods directory to Google Drive
-    """
-
-    if not database_was_modified(drive):
-        return None
-
-    # Get Google Drive ID's for the MS-AutoQC folder and database file
-    df_workspace = get_table("workspace")
-    gdrive_folder_id = df_workspace["gdrive_folder_id"].astype(str).values[0]
-    gdrive_file_id = df_workspace["gdrive_file_id"].astype(str).values[0]
-
-    # Update existing database in Google Drive
-    if gdrive_file_id is not None:
-        if gdrive_file_id != "None" and gdrive_file_id != "":
-            file = drive.CreateFile({"id": gdrive_file_id, "title": "QC Database.db"})
-            file.SetContentFile(db_file)
-            file.Upload()
-
-    if sync_settings == True:
-        # Get dictionary of files in local methods directory
-        file_list = [f for f in os.listdir(methods_dir)
-                     if os.path.isfile(os.path.join(methods_dir, f))]
-        full_path_file_list = [os.path.join(methods_dir, f) for f in file_list]
-
-        # Dictionary with pairs of file name and corresponding file path
-        local_file_dict = {file_list[i]: full_path_file_list[i] for i in range(len(file_list))}
-
-        # Iterate through and update existing methods folder in Google Drive
-        if gdrive_folder_id is not None:
-            if gdrive_folder_id != "None" and gdrive_folder_id != "":
-
-                # Find MS-AutoQC > methods directory
-                drive_file_list = drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList()
-                for file in drive_file_list:
-                    if file["title"] == "methods":
-                        methods_dir_id = file["id"]
-
-                # Get files in MS-AutoQC > methods directory
-                drive_file_list = drive.ListFile({"q": "'" + methods_dir_id + "' in parents and trashed=false"}).GetList()
-
-                # Dictionary with pairs of file name and corresponding file ID
-                drive_file_dict = {file["title"]: file["id"] for file in drive_file_list}
-
-                # For each file in the local methods directory,
-                for filename in file_list:
-
-                    # Update the existing file in Google Drive
-                    if filename in drive_file_dict.keys():
-                        file_to_upload = drive.CreateFile({
-                            "id": drive_file_dict[filename],
-                            "title": filename,
-                        })
-
-                    # Or upload it as a new file to Google Drive
-                    else:
-                        metadata = {
-                            "title": filename,
-                            "parents": [{"id": methods_dir_id}],
-                        }
-                        file_to_upload = drive.CreateFile(metadata=metadata)
-
-                    # Execute upload
-                    file_to_upload.SetContentFile(local_file_dict[filename])
-                    file_to_upload.Upload()
-
-    return time.strftime("%H:%M:%S")
-
-
-def sync_database(drive):
-
-    """
-    Downloads database file from Google Drive (for users signed in to workspace externally from instrument PC)
-    """
-
-    root_directory = os.getcwd()
-    data_directory = os.path.join(root_directory, "data")
-
-    # Get Google Drive ID's for the MS-AutoQC folder and database file
-    df_workspace = get_table("workspace")
-    gdrive_folder_id = df_workspace["gdrive_folder_id"].astype(str).values[0]
-    gdrive_file_id = df_workspace["gdrive_file_id"].astype(str).values[0]
-
-    # If Google Drive folder is found, look for database next
-    if gdrive_folder_id is not None and gdrive_file_id is not None:
-        try:
-            for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
-                if file["title"] == "QC Database.db":       # Download database if found
-                    os.chdir(data_directory)                # Change to data directory
-                    file.GetContentFile(file["title"])      # Download database and get file ID
-                    gdrive_database_file_id = file["id"]    # Get database file ID
-                    os.chdir(root_directory)                # Return to root directory
-        except Exception as error:
-            print("Error downloading database from Google Drive:", error)
-            return None
-
-    # Update user device identity
-    set_device_identity(is_instrument_computer=False)
-    return time.strftime("%H:%M:%S")
-
-
 def insert_google_drive_ids(gdrive_folder_id, gdrive_file_id):
 
     """
@@ -2185,6 +2082,15 @@ def create_workspace_metadata():
     connection.close()
 
 
+def get_device_identity():
+
+    """
+    Returns device identity
+    """
+
+    return get_table("workspace")["instrument_identity"].astype(str).tolist()[0]
+
+
 def set_device_identity(is_instrument_computer, instrument_identity):
 
     """
@@ -2192,7 +2098,7 @@ def set_device_identity(is_instrument_computer, instrument_identity):
     """
 
     if not is_instrument_computer:
-        instrument_identity = None
+        instrument_identity = "Shared user"
 
     db_metadata, connection = connect_to_database()
     workspace_table = sa.Table("workspace", db_metadata, autoload=True)
@@ -2208,6 +2114,21 @@ def set_device_identity(is_instrument_computer, instrument_identity):
 
     connection.execute(update_identity)
     connection.close()
+
+
+def run_is_on_instrument_pc(run_id):
+
+    """
+    Validates that the current device is the instrument PC on which the run was started
+    """
+
+    instrument_id = get_instrument_run(run_id)["instrument_id"].astype(str).tolist()[0]
+    device_identity = get_table("workspace")["instrument_identity"].astype(str).tolist()[0]
+
+    if instrument_id == device_identity:
+        return True
+    else:
+        return False
 
 
 def update_slack_bot_token(slack_bot_token):
@@ -2619,11 +2540,144 @@ def download_qc_results(drive, run_id):
     return (samples_csv, bio_standards_csv_file)
 
 
-def remember_last_modified(gdrive_last_modified):
+def upload_database(drive, sync_settings=False):
+
+    """
+    Uploads database file and methods directory to Google Drive
+    """
+
+    # If the database was modified by another instrument, download it first
+    if database_was_modified(drive):
+        download_database(drive)
+
+    # Get Google Drive ID's for the MS-AutoQC folder and database file
+    df_workspace = get_table("workspace")
+    gdrive_folder_id = df_workspace["gdrive_folder_id"].astype(str).values[0]
+    gdrive_file_id = df_workspace["gdrive_file_id"].astype(str).values[0]
+
+    # Ensure that another device is not currently uploading to Google Drive
+    if not safe_to_upload(drive, gdrive_folder_id):
+        return None
+
+    # Send upload signal
+    send_upload_signal(drive, gdrive_folder_id)
+
+    # Upload existing database to Google Drive
+    if gdrive_file_id is not None:
+        if gdrive_file_id != "None" and gdrive_file_id != "":
+            file = drive.CreateFile({"id": gdrive_file_id, "title": "QC Database.db"})
+            file.SetContentFile(db_file)
+            file.Upload()
+
+    # Upload methods directory to Google Drive
+    if sync_settings == True:
+
+        # Get dictionary of files in local methods directory
+        file_list = [f for f in os.listdir(methods_dir)
+                     if os.path.isfile(os.path.join(methods_dir, f))]
+        full_path_file_list = [os.path.join(methods_dir, f) for f in file_list]
+
+        # Dictionary with pairs of file name and corresponding file path
+        local_file_dict = {file_list[i]: full_path_file_list[i] for i in range(len(file_list))}
+
+        # Iterate through and update existing methods folder in Google Drive
+        if gdrive_folder_id is not None:
+            if gdrive_folder_id != "None" and gdrive_folder_id != "":
+
+                # Find MS-AutoQC > methods directory
+                drive_file_list = drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList()
+                for file in drive_file_list:
+                    if file["title"] == "methods":
+                        methods_dir_id = file["id"]
+
+                # Get files in MS-AutoQC > methods directory
+                drive_file_list = drive.ListFile({"q": "'" + methods_dir_id + "' in parents and trashed=false"}).GetList()
+
+                # Dictionary with pairs of file name and corresponding file ID
+                drive_file_dict = {file["title"]: file["id"] for file in drive_file_list}
+
+                # For each file in the local methods directory,
+                for filename in file_list:
+
+                    # Update the existing file in Google Drive
+                    if filename in drive_file_dict.keys():
+                        file_to_upload = drive.CreateFile({
+                            "id": drive_file_dict[filename],
+                            "title": filename,
+                        })
+
+                    # Or upload it as a new file to Google Drive
+                    else:
+                        metadata = {
+                            "title": filename,
+                            "parents": [{"id": methods_dir_id}],
+                        }
+                        file_to_upload = drive.CreateFile(metadata=metadata)
+
+                    # Execute upload
+                    file_to_upload.SetContentFile(local_file_dict[filename])
+                    file_to_upload.Upload()
+
+    # Check and save modifiedDate of database file
+    remember_last_modified(drive)
+
+    # Indicate that uploading is complete
+    remove_upload_signal(drive, gdrive_folder_id)
+
+    return time.strftime("%H:%M:%S")
+
+
+def download_database(drive):
+
+    """
+    Downloads database file from Google Drive (for users signed in to workspace externally from instrument PC)
+    """
+
+    # Get device identity
+    instrument_bool = is_instrument_computer()
+    device_identity = get_device_identity()
+
+    # Get directory paths
+    root_directory = os.getcwd()
+    data_directory = os.path.join(root_directory, "data")
+
+    # Get Google Drive ID's for the MS-AutoQC folder and database file
+    df_workspace = get_table("workspace")
+    gdrive_folder_id = df_workspace["gdrive_folder_id"].astype(str).values[0]
+    gdrive_file_id = df_workspace["gdrive_file_id"].astype(str).values[0]
+
+    # If Google Drive folder is found, look for database next
+    if gdrive_folder_id is not None and gdrive_file_id is not None:
+        try:
+            for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
+                if file["title"] == "QC Database.db":       # Download database if found
+                    os.chdir(data_directory)                # Change to data directory
+                    file.GetContentFile(file["title"])      # Download database and get file ID
+                    gdrive_database_file_id = file["id"]    # Get database file ID
+                    os.chdir(root_directory)                # Return to root directory
+        except Exception as error:
+            print("Error downloading database from Google Drive:", error)
+            return None
+
+    # Update user device identity
+    set_device_identity(is_instrument_computer=instrument_bool, instrument_identity=device_identity)
+    return time.strftime("%H:%M:%S")
+
+
+def remember_last_modified(drive):
 
     """
     Stores last modified time of database file in Google Drive (after upload)
     """
+
+    # Get Google Drive folder ID from database
+    gdrive_folder_id = get_table("workspace")["gdrive_folder_id"].astype(str).values[0]
+    gdrive_last_modified = None
+
+    for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
+        if file["title"] == "QC Database.db":
+            gdrive_last_modified = file["modifiedDate"]
+            break
 
     db_metadata, connection = connect_to_database()
     workspace_table = sa.Table("workspace", db_metadata, autoload=True)
@@ -2652,14 +2706,53 @@ def database_was_modified(drive):
     local_last_modified = df_workspace["gdrive_last_modified"].astype(str).tolist()[0]
     drive_last_modified = None
 
-    if gdrive_folder_id is not None:
-        if gdrive_folder_id != "None" and gdrive_folder_id != "":
-            for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
-                if file["title"] == "QC Database.db":
-                    drive_last_modified = file["modifiedDate"]
-                    break
+    for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
+        if file["title"] == "QC Database.db":
+            drive_last_modified = file["modifiedDate"]
+            break
 
     if local_last_modified == drive_last_modified:
         return False
     else:
         return True
+
+
+def send_upload_signal(drive, folder):
+
+    """
+    Uploads empty file to signal that an instrument PC is syncing to Google Drive
+    """
+
+    try:
+        drive.CreateFile(metadata={"title": "Uploading", "parents": [{"id": folder}]}).Upload()
+        return True
+    except:
+        return False
+
+
+def safe_to_upload(drive, folder):
+
+    """
+    Returns False if another device is currently uploading to Google Drive, else True
+    """
+
+    for file in drive.ListFile({"q": "'" + folder + "' in parents and trashed=false"}).GetList():
+        if file["title"] == "Uploading":
+            return False
+
+    return True
+
+
+def remove_upload_signal(drive, folder):
+
+    """
+    Uploads empty file to signal that an instrument PC is syncing to Google Drive
+    """
+
+    try:
+        for file in drive.ListFile({"q": "'" + folder + "' in parents and trashed=false"}).GetList():
+            if file["title"] == "Uploading":
+                file.Delete()
+        return True
+    except:
+        return False
