@@ -27,7 +27,7 @@ drive_settings_file = os.path.join(auth_directory, "settings.yaml")
 gauth_holder = [GoogleAuth(settings_file=drive_settings_file)]
 
 # Database path
-db_file = os.path.join(root_directory, "data", "QC Database.db")
+db_file = os.path.join(root_directory, "data", "QC Database.zip")
 
 local_stylesheet = {
     "href": "https://fonts.googleapis.com/css2?"
@@ -1688,17 +1688,22 @@ def check_first_time_google_drive_authentication(google_drive_is_authenticated):
         # If Google Drive folder is found, look for database next
         if gdrive_folder_id is not None:
             for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
-                if file["title"] == "QC Database.db":
+                if file["title"] == "QC Database.zip":
 
                     # Switch to data directory
                     os.chdir(data_directory)
 
                     # Download database
                     file.GetContentFile(file["title"])
+
+                    # Get database file ID
                     gdrive_database_file_id = file["id"]
 
                     # Switch back to root directory
                     os.chdir(root_directory)
+
+                    # Unzip database
+                    db.unzip_database()
 
                     popover_message = [dbc.PopoverHeader("Workspace found!"),
                         dbc.PopoverBody("This instrument will be added to the existing MS-AutoQC workspace.")]
@@ -1707,7 +1712,7 @@ def check_first_time_google_drive_authentication(google_drive_is_authenticated):
         return "You're signed in!", "success", False, popover_message, True, gdrive_folder_id, gdrive_database_file_id
 
     else:
-        return "Sign in to Google Drive", "primary", True, "", False, "", ""
+        return "Sign in to Google Drive", "primary", True, "", False, None, None
 
 
 @app.callback(Output("first-time-instrument-vendor", "label"),
@@ -1795,6 +1800,9 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
     5. Dismisses setup window
     """
 
+    print(gdrive_folder_id)
+    print(gdrive_file_id)
+
     if button_click:
         drive = GoogleDrive(gauth_holder[0])
 
@@ -1817,10 +1825,7 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
                 folder.Upload()
 
                 # Get Google Drive ID of folder
-                for file in drive.ListFile({"q": "'root' in parents and trashed=false"}).GetList():
-                    if file["title"] == "MS-AutoQC":
-                        gdrive_folder_id = file["id"]
-                        break
+                gdrive_folder_id = folder["id"]
 
                 # Create methods folder inside of MS-AutoQC folder
                 folder_metadata = {
@@ -1832,11 +1837,13 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
                 folder.Upload()
 
             # Update database in Google Drive folder
+            db.zip_database()
+
             if gdrive_file_id is not None:
                 file = drive.CreateFile({"id": gdrive_file_id})
             else:
                 metadata = {
-                    "title": "QC Database.db",
+                    "title": "QC Database.zip",
                     "parents": [{"id": gdrive_folder_id}],
                 }
                 file = drive.CreateFile(metadata=metadata)
@@ -1844,12 +1851,8 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
             file.SetContentFile(db_file)
             file.Upload()
 
-            if gdrive_file_id is None:
-                # Get Google Drive ID of database file
-                for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
-                    if file["title"] == "QC Database.db":
-                        gdrive_file_id = file["id"]
-                        break
+            # Get Drive ID of database file
+            gdrive_file_id = file["id"]
 
             # Save user credentials
             gauth_holder[0].SaveCredentialsFile(credentials_file)
@@ -1858,9 +1861,15 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
         if not os.path.exists(methods_directory):
             os.makedirs(methods_directory)
 
+        print(gdrive_folder_id)
+        print(gdrive_file_id)
+
         # Add instrument to database
         db.insert_new_instrument(instrument_id, instrument_vendor)
         db.insert_google_drive_ids(gdrive_folder_id, gdrive_file_id)
+
+        # Sync database with Drive again to save Google Drive ID's
+        db.upload_database(drive)
 
         # Dismiss setup window by returning True for workspace_has_been_setup boolean
         return db.is_valid()
@@ -1916,7 +1925,7 @@ def check_workspace_login_google_drive_authentication(google_drive_is_authentica
         if gdrive_folder_id is not None:
             for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
                 # Download database if found
-                if file["title"] == "QC Database.db":
+                if file["title"] == "QC Database.zip":
 
                     # Change to data directory
                     os.chdir(data_directory)
@@ -1927,6 +1936,9 @@ def check_workspace_login_google_drive_authentication(google_drive_is_authentica
 
                     # Change to root directory
                     os.chdir(root_directory)
+
+                    # Unzip database
+                    db.unzip_database()
 
                     # Popover alert
                     button_text = "Signed in to Google Drive"
@@ -1942,7 +1954,7 @@ def check_workspace_login_google_drive_authentication(google_drive_is_authentica
         return button_text, button_color, False, popover_message, True, gdrive_folder_id, gdrive_database_file_id, instrument_options
 
     else:
-        return "Sign in to Google Drive", "primary", True, "", False, "", ""
+        return "Sign in to Google Drive", "primary", True, "", False, "", "", []
 
 
 @app.callback(Output("device-identity-selection", "disabled"),
@@ -2062,7 +2074,6 @@ def dismiss_setup_window(workspace_has_been_setup_1, workspace_has_been_setup_2)
 
     # Check if setup is complete
     is_valid = db.is_valid()
-
     return not is_valid, is_valid
 
 
@@ -2074,14 +2085,19 @@ def dismiss_setup_window(workspace_has_been_setup_1, workspace_has_been_setup_2)
               Output("gdrive-client-secret", "placeholder"),
               Input("google-drive-authenticated-3", "data"),
               Input("google-drive-authenticated", "data"),
+              State("settings-modal", "is_open"),
               State("google-drive-sync-form-text", "children"), prevent_initial_call=True)
-def update_google_drive_sync_status_in_settings(google_drive_authenticated, google_drive_authenticated_on_start, form_text):
+def update_google_drive_sync_status_in_settings(google_drive_authenticated, google_drive_authenticated_on_start,
+    settings_is_open, form_text):
 
     """
     Updates Google Drive sync status in user settings on user authentication
     """
 
     auth_source = ctx.triggered_id
+
+    if not settings_is_open:
+        raise PreventUpdate
 
     # Authenticated on app startup
     if auth_source == "google-drive-authenticated":
@@ -2139,8 +2155,9 @@ def update_google_drive_sync_status_in_settings(google_drive_authenticated, goog
             folder.Upload()
 
             # Update database in Google Drive folder
+            db.zip_database()
             metadata = {
-                "title": "QC Database.db",
+                "title": "QC Database.zip",
                 "parents": [{"id": gdrive_folder_id}],
             }
             file = drive.CreateFile(metadata=metadata)
@@ -2148,10 +2165,7 @@ def update_google_drive_sync_status_in_settings(google_drive_authenticated, goog
             file.Upload()
 
             # Get Google Drive ID of database file
-            for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
-                if file["title"] == "QC Database.db":
-                    gdrive_file_id = file["id"]
-                    break
+            gdrive_file_id = file["id"]
 
             # Put Google Drive ID's into database
             db.insert_google_drive_ids(gdrive_folder_id, gdrive_file_id)
@@ -3255,8 +3269,11 @@ def get_slack_bot_token(token_save_result):
     Get Slack bot token saved in database
     """
 
-    if db.get_slack_bot_token() != "None":
-        return "Slack bot user OAuth token (saved)"
+    if db.is_valid():
+        if db.get_slack_bot_token() != "None":
+            return "Slack bot user OAuth token (saved)"
+        else:
+            raise PreventUpdate
     else:
         raise PreventUpdate
 
@@ -3305,11 +3322,14 @@ def get_slack_channel(result):
     Gets Slack channel and notification toggle setting from database
     """
 
-    slack_channel = db.get_slack_channel()
-    slack_notifications_enabled = db.get_slack_notifications_toggled()
+    if db.is_valid():
+        slack_channel = db.get_slack_channel()
+        slack_notifications_enabled = db.get_slack_notifications_toggled()
 
-    if slack_notifications_enabled == 1:
-        return "#" + slack_channel, slack_notifications_enabled
+        if slack_notifications_enabled == 1:
+            return "#" + slack_channel, slack_notifications_enabled
+        else:
+            raise PreventUpdate
     else:
         raise PreventUpdate
 
@@ -5041,8 +5061,11 @@ def hide_elements_for_non_instrument_devices(on_page_load):
     Hides settings and job setup button for users who have signed in from an external device
     """
 
-    if not db.is_instrument_computer():
-        return {"display": "none"}, {"display": "none"}
+    if db.is_valid():
+        if not db.is_instrument_computer():
+            return {"display": "none"}, {"display": "none"}
+        else:
+            raise PreventUpdate
     else:
         raise PreventUpdate
 

@@ -7,10 +7,15 @@ from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
 from sqlalchemy import INTEGER, REAL, TEXT
 
+# Initialize directories
+root_directory = os.getcwd()
+data_directory = os.path.join(os.getcwd(), "data")
+methods_directory = os.path.join(data_directory, "methods")
+
 # Location of SQLite database
 sqlite_db_location = "sqlite:///data/QC Database.db"
-db_file = os.path.join(os.getcwd(), "data", "QC Database.db")
-methods_dir = os.path.join(os.getcwd(), "data", "methods")
+db_file = os.path.join(data_directory, "QC Database.db")
+zip_file = os.path.join(data_directory, "QC Database.zip")
 
 def connect_to_database():
 
@@ -24,13 +29,20 @@ def connect_to_database():
 
     return db_metadata, connection
 
+
 def is_valid():
 
     """
     Checks that all required tables are present
     """
 
-    if len(sa.create_engine(sqlite_db_location).table_names()) > 0:
+    required_tables = ["bio_qc_results", "biological_standards", "chromatography_methods", "email_notifications",
+     "gdrive_users", "instruments", "internal_standards", "msdial_parameters", "qc_parameters", "runs",
+     "sample_qc_results", "sqlite_sequence", "targeted_features", "workspace"]
+
+    db_tables = sa.create_engine(sqlite_db_location).table_names()
+
+    if len(db_tables) == len(required_tables) or len(db_tables) == len(required_tables) - 1:
         return True
     else:
         return False
@@ -338,6 +350,25 @@ def create_database(is_instrument_computer, instrument_identity=None):
     set_device_identity(is_instrument_computer, instrument_identity)
 
     return sqlite_db_location
+
+
+def zip_database():
+
+    """
+    Zips database file
+    """
+
+    filename = zip_file.replace(".zip", "")
+    shutil.make_archive(filename, "zip", data_directory, "QC Database.db")
+
+
+def unzip_database():
+
+    """
+    Unzips database file
+    """
+
+    shutil.unpack_archive(zip_file, data_directory, "zip")
 
 
 def get_table(table_name):
@@ -767,7 +798,6 @@ def remove_chromatography_method(method_id, drive=None):
     files_to_delete = df["pos_istd_msp_file"].astype(str).tolist() + df["neg_istd_msp_file"].astype(str).tolist() + \
         df2["pos_bio_msp_file"].astype(str).tolist() + df2["neg_bio_msp_file"].astype(str).tolist()
 
-    methods_directory = os.path.join(os.getcwd(), "data", "methods")
     for file in os.listdir(methods_directory):
         if file in files_to_delete:
             os.remove(os.path.join(methods_directory, file))
@@ -843,7 +873,6 @@ def add_msp_to_database(msp_file, chromatography, polarity, bio_standard=None):
     db_metadata, connection = connect_to_database()
 
     # Write MSP file to folder, store file path in database (further down in function)
-    methods_directory = os.path.join(os.getcwd(), "data", "methods")
     if not os.path.exists(methods_directory):
         os.makedirs(methods_directory)
 
@@ -1058,7 +1087,6 @@ def add_csv_to_database(csv_file, chromatography, polarity):
     internal_standards_dict = df_internal_standards.to_dict("index")
 
     # Create methods directory if it doesn't already exist
-    methods_directory = os.path.join(os.getcwd(), "data", "methods")
     if not os.path.exists(methods_directory):
         os.makedirs(methods_directory)
 
@@ -1158,7 +1186,6 @@ def generate_msdial_parameters_file(chromatography, polarity, msp_file_path, bio
     parameters = get_msdial_configuration_parameters(config_name)
 
     # Create "methods" directory if it does not exist
-    methods_directory = os.path.join(os.getcwd(), "data", "methods")
     if not os.path.exists(methods_directory):
         os.makedirs(methods_directory)
 
@@ -1444,7 +1471,6 @@ def get_msp_file_path(chromatography, polarity, bio_standard=None):
         elif polarity == "Negative":
             msp_file_path = df_methods["neg_istd_msp_file"].astype(str).values[0]
 
-    methods_directory = os.path.join(os.getcwd(), "data", "methods")
     msp_file_path = os.path.join(methods_directory, msp_file_path)
 
     # Return file path
@@ -1617,7 +1643,6 @@ def remove_biological_standard(name, drive=None):
     df = df.loc[df["name"] == name]
     files_to_delete = df["pos_bio_msp_file"].astype(str).tolist() + df["neg_bio_msp_file"].astype(str).tolist()
 
-    methods_directory = os.path.join(os.getcwd(), "data", "methods")
     for file in os.listdir(methods_directory):
         if name in files_to_delete:
             os.remove(os.path.join(methods_directory, file))
@@ -2585,8 +2610,6 @@ def download_qc_results(drive, run_id):
     gdrive_folder_id = get_table("workspace")["gdrive_folder_id"].astype(str).values[0]
 
     # Navigate to data directory
-    root_directory = os.getcwd()
-    data_directory = os.path.join(root_directory, "data")
     os.chdir(data_directory)
 
     if gdrive_folder_id is not None:
@@ -2627,9 +2650,10 @@ def upload_database(drive, sync_settings=False):
     if gdrive_file_id is not None:
         if gdrive_file_id != "None" and gdrive_file_id != "":
 
-            # Upload database file
-            file = drive.CreateFile({"id": gdrive_file_id, "title": "QC Database.db"})
-            file.SetContentFile(db_file)
+            # Upload zipped database
+            zip_database()
+            file = drive.CreateFile({"id": gdrive_file_id, "title": "QC Database.zip"})
+            file.SetContentFile(zip_file)
             file.Upload()
 
             # Save modifiedDate of database file
@@ -2643,11 +2667,11 @@ def upload_database(drive, sync_settings=False):
 
         # Get dictionary of modified MSP files in local methods directory
         file_list = [
-            f for f in os.listdir(methods_dir)
-            if os.path.isfile(os.path.join(methods_dir, f)) and f in get_modified_msp_files()
+            f for f in os.listdir(methods_directory)
+            if os.path.isfile(os.path.join(methods_directory, f)) and f in get_modified_msp_files()
         ]
 
-        full_path_file_list = [os.path.join(methods_dir, f) for f in file_list]
+        full_path_file_list = [os.path.join(methods_directory, f) for f in file_list]
         local_file_dict = {file_list[i]: full_path_file_list[i] for i in range(len(file_list))}
 
         # Get files in MS-AutoQC > methods directory
@@ -2703,10 +2727,6 @@ def download_database(drive, sync_settings=False):
     instrument_bool = is_instrument_computer()
     device_identity = get_device_identity()
 
-    # Get directory paths
-    root_directory = os.getcwd()
-    data_directory = os.path.join(root_directory, "data")
-
     # Get Google Drive ID's for the MS-AutoQC folder and database file
     df_workspace = get_table("workspace")
     gdrive_folder_id = df_workspace["gdrive_folder_id"].astype(str).values[0]
@@ -2719,14 +2739,16 @@ def download_database(drive, sync_settings=False):
         if sync_settings == True:
             download_new_or_modified_methods(drive)
 
-        # Download database
         try:
             for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
-                if file["title"] == "QC Database.db":
+                if file["title"] == "QC Database.zip":
+
+                    # Download and unzip database
                     os.chdir(data_directory)                # Change to data directory
                     file.GetContentFile(file["title"])      # Download database and get file ID
                     gdrive_database_file_id = file["id"]    # Get database file ID
                     os.chdir(root_directory)                # Return to root directory
+                    unzip_database()                        # Unzip database
 
                     # Save modifiedDate of database file
                     remember_db_last_modified(file["modifiedDate"])
@@ -2776,7 +2798,7 @@ def database_was_modified(drive):
     drive_last_modified = None
 
     for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
-        if file["title"] == "QC Database.db":
+        if file["title"] == "QC Database.zip":
             drive_last_modified = file["modifiedDate"]
             break
 
@@ -2898,7 +2920,7 @@ def get_modified_date_of_msp_file(filename):
 
         df = pd.read_sql("SELECT * FROM chromatography_methods WHERE pos_istd_msp_file = '" + filename + "'", engine)
         if not len(df) > 0:
-            df = pd.read_sql("SELECT * FROM biological_standards WHERE pos_istd_msp_file = '" + filename + "'", engine)
+            df = pd.read_sql("SELECT * FROM biological_standards WHERE pos_bio_msp_file = '" + filename + "'", engine)
 
         return df["pos_last_modified"].astype(str).tolist()[0]
 
@@ -2920,10 +2942,6 @@ def download_new_or_modified_methods(drive):
     # Get Google Drive folder ID from database
     methods_folder_id = get_methods_folder_drive_id(drive)
 
-    # Initialize directories
-    root_directory = os.getcwd()
-    methods_directory = os.path.join(root_directory, "data", "methods")
-
     # Get dictionary of modified MSP files in local methods directory
     file_list = [
         f for f in os.listdir(methods_directory) if os.path.isfile(os.path.join(methods_directory, f))
@@ -2932,7 +2950,7 @@ def download_new_or_modified_methods(drive):
     for file in drive.ListFile({"q": "'" + methods_folder_id + "' in parents and trashed=false"}).GetList():
         if file["title"] not in file_list or file["modifiedDate"] != (get_modified_date_of_msp_file(file["title"])):
             os.chdir(methods_directory)
-            file.GetContentFile()
+            file.GetContentFile(file["title"])
             os.chdir(root_directory)
 
     return None
