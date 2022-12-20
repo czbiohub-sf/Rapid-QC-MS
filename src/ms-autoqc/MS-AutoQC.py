@@ -1549,13 +1549,11 @@ def sync_with_google_drive(on_page_load):
         # Get Google Drive instance
         drive = GoogleDrive(gauth_holder[0])
 
-        # For instrument computer, upload database to Drive
-        if db.is_instrument_computer():
-            return db.sync_to_google_drive(drive)
-
         # For external user device, download database from Drive
-        else:
-            return db.sync_database(drive)
+        if not db.is_instrument_computer():
+            return db.download_database(drive)
+
+        raise PreventUpdate
 
     # If Google Drive sync is not enabled, perform no action
     else:
@@ -2159,7 +2157,7 @@ def update_google_drive_sync_status_in_settings(google_drive_authenticated, goog
             db.insert_google_drive_ids(gdrive_folder_id, gdrive_file_id)
 
             # Sync database
-            db.sync_to_google_drive(drive=drive, sync_settings=True)
+            db.upload_database(drive=drive, sync_settings=True)
 
             # Save user credentials
             gauth_holder[0].SaveCredentialsFile(credentials_file)
@@ -3060,9 +3058,7 @@ def toggle_settings_modal(button_click):
     """
 
     if db.sync_is_enabled():
-        drive = GoogleDrive(gauth_holder[0])
-        if db.database_was_modified(drive):
-            db.sync_database(drive)
+        db.download_database(GoogleDrive(gauth_holder[0]), sync_settings=True)
 
     return True
 
@@ -3122,8 +3118,8 @@ def sync_settings_to_google_drive(settings_modal_is_open, google_drive_authentic
 
     if not settings_modal_is_open:
         if google_drive_authenticated or auth_in_app:
-            if db.was_modified(md5_checksum):
-                db.sync_to_google_drive(drive=GoogleDrive(gauth_holder[0]), sync_settings=True)
+            if db.was_modified(md5_checksum) or db.methods_modified():
+                db.upload_database(drive=GoogleDrive(gauth_holder[0]), sync_settings=True)
                 return True
 
     return False
@@ -3528,8 +3524,14 @@ def remove_chromatography_method(button_click, chromatography):
     """
 
     if chromatography is not None:
-        db.remove_chromatography_method(chromatography)
+
+        drive = None
+        if db.sync_is_enabled():
+            drive = GoogleDrive(gauth_holder[0])
+
+        db.remove_chromatography_method(chromatography, drive)
         return "Removed"
+
     else:
         return ""
 
@@ -4199,7 +4201,13 @@ def remove_biological_standard(button_click, biological_standard_name):
     """
 
     if biological_standard_name is not None:
-        db.remove_biological_standard(biological_standard_name)
+
+        drive = None
+        if db.sync_is_enabled():
+            drive = GoogleDrive(gauth_holder[0])
+
+        db.remove_biological_standard(biological_standard_name, drive)
+
         return "Deleted " + biological_standard_name + " and all corresponding MSP files."
     else:
         return "Error"
@@ -4727,7 +4735,7 @@ def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, b
         db.store_pid(run_id, process.pid)
 
         if db.is_instrument_computer() and db.sync_is_enabled():
-            return db.sync_to_google_drive(GoogleDrive(gauth_holder[0]), sync_settings=False)
+            return db.upload_database(GoogleDrive(gauth_holder[0]), sync_settings=False)
 
         return True, False, False, ""
 
@@ -4777,7 +4785,7 @@ def start_bulk_qc_processing(modal_open, progress_intervals, data_file_directory
         # Once the last file has been processed, terminate the job
         if index == len(filenames):
             if db.is_instrument_computer() and db.sync_is_enabled():
-                db.sync_to_google_drive(drive=GoogleDrive(gauth_holder[0]), sync_settings=False)
+                db.upload_database(drive=GoogleDrive(gauth_holder[0]), sync_settings=False)
             return 100, "100%", "Processing complete!", True
 
         filename = filenames[index]

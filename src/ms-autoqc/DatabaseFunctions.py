@@ -119,6 +119,18 @@ def was_modified(md5_checksum):
         return False
 
 
+def methods_modified():
+
+    """
+    Checks whether any MSP files were created / modified
+    """
+
+    if len(get_modified_msp_files()) > 0:
+        return True
+    else:
+        return False
+
+
 def create_database(is_instrument_computer, instrument_identity=None):
 
     """
@@ -157,7 +169,11 @@ def create_database(is_instrument_computer, instrument_identity=None):
         sa.Column("neg_bio_msp_file", TEXT),
         sa.Column("pos_parameter_file", TEXT),
         sa.Column("neg_parameter_file", TEXT),
-        sa.Column("msdial_config_id", TEXT)
+        sa.Column("msdial_config_id", TEXT),
+        sa.Column("pos_last_modified", TEXT),
+        sa.Column("neg_last_modified", TEXT),
+        sa.Column("pos_modified", INTEGER),
+        sa.Column("neg_modified", INTEGER)
     )
 
     chromatography_methods = sa.Table(
@@ -170,7 +186,11 @@ def create_database(is_instrument_computer, instrument_identity=None):
         sa.Column("neg_istd_msp_file", TEXT),
         sa.Column("pos_parameter_file", TEXT),
         sa.Column("neg_parameter_file", TEXT),
-        sa.Column("msdial_config_id", TEXT)
+        sa.Column("msdial_config_id", TEXT),
+        sa.Column("pos_last_modified", TEXT),
+        sa.Column("neg_last_modified", TEXT),
+        sa.Column("pos_modified", INTEGER),
+        sa.Column("neg_modified", INTEGER)
     )
 
     gdrive_users = sa.Table(
@@ -653,6 +673,30 @@ def get_chromatography_methods_list():
     return df_methods["method_id"].astype(str).tolist()
 
 
+def get_modified_msp_files():
+
+    """
+    Returns list of newly added / modified MSP library files for chromatography methods and biological standards
+    """
+
+    files = []
+    engine = sa.create_engine(sqlite_db_location)
+
+    df_methods = pd.read_sql("SELECT * FROM chromatography_methods WHERE pos_modified=1", engine)
+    df_bio_standards = pd.read_sql("SELECT * FROM biological_standards WHERE pos_modified=1", engine)
+
+    files = files + df_methods["pos_istd_msp_file"].astype(str).tolist()
+    files = files + df_bio_standards["pos_bio_msp_file"].astype(str).tolist()
+
+    df_methods = pd.read_sql("SELECT * FROM chromatography_methods WHERE neg_modified=1", engine)
+    df_bio_standards = pd.read_sql("SELECT * FROM biological_standards WHERE neg_modified=1", engine)
+
+    files = files + df_methods["neg_istd_msp_file"].astype(str).tolist()
+    files = files + df_bio_standards["neg_bio_msp_file"].astype(str).tolist()
+
+    return files
+
+
 def insert_chromatography_method(method_id):
 
     """
@@ -675,7 +719,9 @@ def insert_chromatography_method(method_id):
          "neg_istd_msp_file": "",
          "pos_parameter_file": "",
          "neg_parameter_file": "",
-         "msdial_config_id": "Default"})
+         "msdial_config_id": "Default",
+         "pos_modified": 0,
+         "neg_modified": 0})
 
     connection.execute(insert_method)
 
@@ -691,17 +737,16 @@ def insert_chromatography_method(method_id):
             "chromatography": method_id,
             "num_pos_features": 0,
             "num_neg_features": 0,
-            "msdial_config_id": "Default"})
+            "msdial_config_id": "Default",
+            "pos_modified": 0,
+            "neg_modified": 0})
         connection.execute(insert_method_for_bio_standard)
-
-    # Indicate that database was modified
-    modified = True
 
     # Execute INSERT to database, then close the connection
     connection.close()
 
 
-def remove_chromatography_method(method_id):
+def remove_chromatography_method(method_id, drive=None):
 
     """
     1. Removes chromatography method in "chromatography_methods" table
@@ -709,6 +754,7 @@ def remove_chromatography_method(method_id):
     3. Removes associated internal standards from "internal_standards" table
     4. Removes associated targeted features from "targeted_features" table
     5. Deletes corresponding MSPs from folders
+    6. Deletes corresponding MSPs from Google Drive (if sync is enabled)
     """
 
     # Delete corresponding MSPs from "methods" directory
@@ -725,6 +771,13 @@ def remove_chromatography_method(method_id):
     for file in os.listdir(methods_directory):
         if file in files_to_delete:
             os.remove(os.path.join(methods_directory, file))
+
+    # Delete corresponding MSPs from Google Drive
+    if drive is not None:
+        methods_folder_id = get_methods_folder_drive_id(drive)
+        for file in drive.ListFile({"q": "'" + methods_folder_id + "' in parents and trashed=false"}).GetList():
+            if file["title"] in files_to_delete:
+                file.Delete()
 
     # Connect to database and get relevant tables
     db_metadata, connection = connect_to_database()
@@ -921,7 +974,8 @@ def add_msp_to_database(msp_file, chromatography, polarity, bio_standard=None):
                     .where((biological_standards_table.c.chromatography == chromatography)
                            & (biological_standards_table.c.name == bio_standard))
                     .values(num_pos_features=len(features_dict),
-                            pos_bio_msp_file=filename)
+                            pos_bio_msp_file=filename,
+                            pos_modified=1)
             )
         elif polarity == "Negative Mode":
             update_msp_file = (
@@ -929,7 +983,8 @@ def add_msp_to_database(msp_file, chromatography, polarity, bio_standard=None):
                     .where((biological_standards_table.c.chromatography == chromatography)
                            & (biological_standards_table.c.name == bio_standard))
                     .values(num_neg_features=len(features_dict),
-                            neg_bio_msp_file=filename)
+                            neg_bio_msp_file=filename,
+                            neg_modified=1)
             )
 
         # Execute UPDATE of MSP file location
@@ -972,14 +1027,16 @@ def add_msp_to_database(msp_file, chromatography, polarity, bio_standard=None):
                 sa.update(chromatography_table)
                     .where(chromatography_table.c.method_id == chromatography)
                     .values(num_pos_standards=len(features_dict),
-                            pos_istd_msp_file=filename)
+                            pos_istd_msp_file=filename,
+                            pos_modified=1)
             )
         elif polarity == "Negative Mode":
             update_msp_file = (
                 sa.update(chromatography_table)
                     .where(chromatography_table.c.method_id == chromatography)
                     .values(num_neg_standards=len(features_dict),
-                            neg_istd_msp_file=filename)
+                            neg_istd_msp_file=filename,
+                            neg_modified=1)
             )
 
         # Execute UPDATE of MSP file location
@@ -1051,14 +1108,16 @@ def add_csv_to_database(csv_file, chromatography, polarity):
             sa.update(chromatography_table)
                 .where(chromatography_table.c.method_id == chromatography)
                 .values(num_pos_standards=len(internal_standards_dict),
-                        pos_istd_msp_file=filename)
+                        pos_istd_msp_file=filename,
+                        pos_modified=1)
         )
     elif polarity == "Negative Mode":
         update_msp_file = (
             sa.update(chromatography_table)
                 .where(chromatography_table.c.method_id == chromatography)
                 .values(num_neg_standards=len(internal_standards_dict),
-                        neg_istd_msp_file=filename)
+                        neg_istd_msp_file=filename,
+                        neg_modified=1)
         )
 
     # Execute UPDATE of CSV file location
@@ -1537,7 +1596,9 @@ def add_biological_standard(name, identifier):
             "chromatography": method,
             "num_pos_features": 0,
             "num_neg_features": 0,
-            "msdial_config_id": "Default"
+            "msdial_config_id": "Default",
+            "pos_modified": 0,
+            "neg_modified": 0
         })
         connection.execute(insert)
 
@@ -1545,7 +1606,7 @@ def add_biological_standard(name, identifier):
     connection.close()
 
 
-def remove_biological_standard(name):
+def remove_biological_standard(name, drive=None):
 
     """
     Deletes biological standard (and corresponding MSPs) from database
@@ -1560,6 +1621,13 @@ def remove_biological_standard(name):
     for file in os.listdir(methods_directory):
         if name in files_to_delete:
             os.remove(os.path.join(methods_directory, file))
+
+    # Delete corresponding MSPs from Google Drive
+    if drive is not None:
+        methods_folder_id = get_methods_folder_drive_id(drive)
+        for file in drive.ListFile({"q": "'" + methods_folder_id + "' in parents and trashed=false"}).GetList():
+            if file["title"] in files_to_delete:
+                file.Delete()
 
     # Connect to database and get relevant tables
     db_metadata, connection = connect_to_database()
@@ -2355,34 +2423,27 @@ def upload_to_google_drive(drive, file_dict):
     """
 
     # Get Google Drive ID for the MS-AutoQC folder
-    gdrive_folder_id = get_table("workspace")["gdrive_folder_id"].astype(str).values[0]
+    folder_id = get_table("workspace")["gdrive_folder_id"].astype(str).values[0]
+
+    # Store Drive ID's of uploaded file(s)
+    drive_ids = {}
 
     # Validate Google Drive folder ID
-    if gdrive_folder_id is not None:
-        if gdrive_folder_id != "None" and gdrive_folder_id != "":
+    if folder_id is not None:
+        if folder_id != "None" and folder_id != "":
 
             # Upload each file to Google Drive
             for filename in file_dict.keys():
                 if os.path.exists(file_dict[filename]):
                     metadata = {
                         "title": filename,
-                        "parents": [{"id": gdrive_folder_id}],
+                        "parents": [{"id": folder_id}],
                     }
                     file = drive.CreateFile(metadata=metadata)
                     file.SetContentFile(file_dict[filename])
                     file.Upload()
 
-    # Get Drive ID's of uploaded file(s)
-    drive_ids = {}
-
-    drive_file_list = drive.ListFile(
-        {"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList()
-
-    drive_file_dict = {file["title"]: file["id"] for file in drive_file_list}
-
-    for filename in drive_file_dict.keys():
-        if filename in file_dict.keys():
-            drive_ids[filename] = drive_file_dict[filename]
+                    drive_ids[file["title"]] = file["id"]
 
     return drive_ids
 
@@ -2465,7 +2526,9 @@ def sync_qc_results(drive, run_id):
         if os.path.exists(samples_csv_path):
             # If the file exists and has been uploaded already, update existing file
             if samples_csv_filename in drive_ids.keys():
-                file = drive.CreateFile({"id": drive_ids[samples_csv_filename]})
+                file = drive.CreateFile({
+                    "id": drive_ids[samples_csv_filename],
+                     "title": samples_csv_filename})
                 file.SetContentFile(samples_csv_path)
                 file.Upload()
             # Otherwise, upload the file for the first time
@@ -2477,7 +2540,9 @@ def sync_qc_results(drive, run_id):
         if os.path.exists(bio_standards_csv_path):
             # If the file exists and has been uploaded already, update existing file
             if bio_standards_csv_filename in drive_ids.keys():
-                file = drive.CreateFile({"id": drive_ids[bio_standards_csv_filename]})
+                file = drive.CreateFile({
+                    "id": drive_ids[bio_standards_csv_filename],
+                    "title": bio_standards_csv_filename})
                 file.SetContentFile(bio_standards_csv_path)
                 file.Upload()
             # Otherwise, upload the file for the first time
@@ -2546,10 +2611,6 @@ def upload_database(drive, sync_settings=False):
     Uploads database file and methods directory to Google Drive
     """
 
-    # If the database was modified by another instrument, download it first
-    if database_was_modified(drive):
-        download_database(drive)
-
     # Get Google Drive ID's for the MS-AutoQC folder and database file
     df_workspace = get_table("workspace")
     gdrive_folder_id = df_workspace["gdrive_folder_id"].astype(str).values[0]
@@ -2562,64 +2623,64 @@ def upload_database(drive, sync_settings=False):
     # Send upload signal
     send_upload_signal(drive, gdrive_folder_id)
 
-    # Upload existing database to Google Drive
+    # Upload database to Google Drive
     if gdrive_file_id is not None:
         if gdrive_file_id != "None" and gdrive_file_id != "":
+
+            # Upload database file
             file = drive.CreateFile({"id": gdrive_file_id, "title": "QC Database.db"})
             file.SetContentFile(db_file)
             file.Upload()
 
+            # Save modifiedDate of database file
+            remember_db_last_modified(file["modifiedDate"])
+
+    else:
+        return None
+
     # Upload methods directory to Google Drive
     if sync_settings == True:
 
-        # Get dictionary of files in local methods directory
-        file_list = [f for f in os.listdir(methods_dir)
-                     if os.path.isfile(os.path.join(methods_dir, f))]
-        full_path_file_list = [os.path.join(methods_dir, f) for f in file_list]
+        # Get dictionary of modified MSP files in local methods directory
+        file_list = [
+            f for f in os.listdir(methods_dir)
+            if os.path.isfile(os.path.join(methods_dir, f)) and f in get_modified_msp_files()
+        ]
 
-        # Dictionary with pairs of file name and corresponding file path
+        full_path_file_list = [os.path.join(methods_dir, f) for f in file_list]
         local_file_dict = {file_list[i]: full_path_file_list[i] for i in range(len(file_list))}
 
-        # Iterate through and update existing methods folder in Google Drive
-        if gdrive_folder_id is not None:
-            if gdrive_folder_id != "None" and gdrive_folder_id != "":
+        # Get files in MS-AutoQC > methods directory
+        methods_folder_id = get_methods_folder_drive_id(drive)
+        drive_file_list = drive.ListFile({"q": "'" + methods_folder_id + "' in parents and trashed=false"}).GetList()
 
-                # Find MS-AutoQC > methods directory
-                drive_file_list = drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList()
-                for file in drive_file_list:
-                    if file["title"] == "methods":
-                        methods_dir_id = file["id"]
+        # Dictionary with pairs of file name and corresponding file ID
+        drive_file_dict = {file["title"]: file["id"] for file in drive_file_list}
 
-                # Get files in MS-AutoQC > methods directory
-                drive_file_list = drive.ListFile({"q": "'" + methods_dir_id + "' in parents and trashed=false"}).GetList()
+        # For each file in the local methods directory,
+        for filename in file_list:
 
-                # Dictionary with pairs of file name and corresponding file ID
-                drive_file_dict = {file["title"]: file["id"] for file in drive_file_list}
+            # Update the existing file in Google Drive
+            if filename in drive_file_dict.keys():
+                file_to_upload = drive.CreateFile({
+                    "id": drive_file_dict[filename],
+                    "title": filename,
+                })
 
-                # For each file in the local methods directory,
-                for filename in file_list:
+            # Or upload it as a new file to Google Drive
+            else:
+                metadata = {
+                    "title": filename,
+                    "parents": [{"id": methods_folder_id}],
+                }
+                file_to_upload = drive.CreateFile(metadata=metadata)
 
-                    # Update the existing file in Google Drive
-                    if filename in drive_file_dict.keys():
-                        file_to_upload = drive.CreateFile({
-                            "id": drive_file_dict[filename],
-                            "title": filename,
-                        })
+            # Execute upload
+            file_to_upload.SetContentFile(local_file_dict[filename])
+            file_to_upload.Upload()
 
-                    # Or upload it as a new file to Google Drive
-                    else:
-                        metadata = {
-                            "title": filename,
-                            "parents": [{"id": methods_dir_id}],
-                        }
-                        file_to_upload = drive.CreateFile(metadata=metadata)
-
-                    # Execute upload
-                    file_to_upload.SetContentFile(local_file_dict[filename])
-                    file_to_upload.Upload()
-
-    # Check and save modifiedDate of database file
-    remember_last_modified(drive)
+            # Store modifiedDate in database
+            remember_msp_file_last_modified(file_to_upload["title"], file_to_upload["modifiedDate"])
 
     # Indicate that uploading is complete
     remove_upload_signal(drive, gdrive_folder_id)
@@ -2627,11 +2688,16 @@ def upload_database(drive, sync_settings=False):
     return time.strftime("%H:%M:%S")
 
 
-def download_database(drive):
+def download_database(drive, sync_settings=False):
 
     """
     Downloads database file from Google Drive (for users signed in to workspace externally from instrument PC)
     """
+
+    # If the database was not modified by another instrument, skip download (for instruments only)
+    if is_instrument_computer():
+        if not database_was_modified(drive):
+            return None
 
     # Get device identity
     instrument_bool = is_instrument_computer()
@@ -2648,36 +2714,39 @@ def download_database(drive):
 
     # If Google Drive folder is found, look for database next
     if gdrive_folder_id is not None and gdrive_file_id is not None:
+
+        # Download newly added / modified MSP files in MS-AutoQC > methods
+        if sync_settings == True:
+            download_new_or_modified_methods(drive)
+
+        # Download database
         try:
             for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
-                if file["title"] == "QC Database.db":       # Download database if found
+                if file["title"] == "QC Database.db":
                     os.chdir(data_directory)                # Change to data directory
                     file.GetContentFile(file["title"])      # Download database and get file ID
                     gdrive_database_file_id = file["id"]    # Get database file ID
                     os.chdir(root_directory)                # Return to root directory
+
+                    # Save modifiedDate of database file
+                    remember_db_last_modified(file["modifiedDate"])
+
         except Exception as error:
             print("Error downloading database from Google Drive:", error)
             return None
+    else:
+        return None
 
     # Update user device identity
     set_device_identity(is_instrument_computer=instrument_bool, instrument_identity=device_identity)
     return time.strftime("%H:%M:%S")
 
 
-def remember_last_modified(drive):
+def remember_db_last_modified(gdrive_last_modified):
 
     """
     Stores last modified time of database file in Google Drive (after upload)
     """
-
-    # Get Google Drive folder ID from database
-    gdrive_folder_id = get_table("workspace")["gdrive_folder_id"].astype(str).values[0]
-    gdrive_last_modified = None
-
-    for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
-        if file["title"] == "QC Database.db":
-            gdrive_last_modified = file["modifiedDate"]
-            break
 
     db_metadata, connection = connect_to_database()
     workspace_table = sa.Table("workspace", db_metadata, autoload=True)
@@ -2756,3 +2825,114 @@ def remove_upload_signal(drive, folder):
         return True
     except:
         return False
+
+
+def get_methods_folder_drive_id(drive):
+
+    """
+    Returns Google Drive ID for MS-AutoQC > methods folder
+    """
+
+    gdrive_folder_id = get_table("workspace")["gdrive_folder_id"].astype(str).tolist()[0]
+    drive_file_list = drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList()
+
+    for file in drive_file_list:
+        if file["title"] == "methods":
+            return file["id"]
+
+
+def remember_msp_file_last_modified(filename, modified_date):
+
+    """
+    Stores last modified time of MSP file in Google Drive (after upload)
+    """
+
+    engine = sa.create_engine(sqlite_db_location)
+
+    db_metadata, connection = connect_to_database()
+    chromatography_table = sa.Table("chromatography_methods", db_metadata, autoload=True)
+    biological_standards_table = sa.Table("biological_standards", db_metadata, autoload=True)
+
+    if "Pos" in filename:
+        connection.execute((
+            sa.update(chromatography_table)
+                .where((chromatography_table.c.pos_istd_msp_file == filename))
+                .values(pos_last_modified=modified_date,
+                        pos_modified=0)
+        ))
+
+        connection.execute((
+            sa.update(biological_standards_table)
+                .where((biological_standards_table.c.pos_bio_msp_file == filename))
+                .values(pos_last_modified=modified_date,
+                        pos_modified=0)
+        ))
+
+    elif "Neg" in filename:
+        connection.execute((
+            sa.update(chromatography_table)
+                .where((chromatography_table.c.neg_istd_msp_file == filename))
+                .values(neg_last_modified=modified_date,
+                        neg_modified=0)
+        ))
+
+        connection.execute((
+            sa.update(biological_standards_table)
+                .where((biological_standards_table.c.neg_bio_msp_file == filename))
+                .values(neg_last_modified=modified_date,
+                        neg_modified=0)
+        ))
+
+    connection.close()
+
+
+def get_modified_date_of_msp_file(filename):
+
+    """
+    Returns modifiedDate of MSP file in database
+    """
+
+    engine = sa.create_engine(sqlite_db_location)
+
+    if "Pos" in filename:
+
+        df = pd.read_sql("SELECT * FROM chromatography_methods WHERE pos_istd_msp_file = '" + filename + "'", engine)
+        if not len(df) > 0:
+            df = pd.read_sql("SELECT * FROM biological_standards WHERE pos_istd_msp_file = '" + filename + "'", engine)
+
+        return df["pos_last_modified"].astype(str).tolist()[0]
+
+    elif "Neg" in filename:
+
+        df = pd.read_sql("SELECT * FROM chromatography_methods WHERE neg_istd_msp_file = '" + filename + "'", engine)
+        if not len(df) > 0:
+            df = pd.read_sql("SELECT * FROM biological_standards WHERE neg_bio_msp_file = '" + filename + "'", engine)
+
+        return df["neg_last_modified"].astype(str).tolist()[0]
+
+
+def download_new_or_modified_methods(drive):
+
+    """
+    Compares modifiedDate of existing MSP files in Google Drive against database and downloads file if new or modified
+    """
+
+    # Get Google Drive folder ID from database
+    methods_folder_id = get_methods_folder_drive_id(drive)
+
+    # Initialize directories
+    root_directory = os.getcwd()
+    methods_directory = os.path.join(root_directory, "data", "methods")
+
+    # Get dictionary of modified MSP files in local methods directory
+    file_list = [
+        f for f in os.listdir(methods_directory) if os.path.isfile(os.path.join(methods_directory, f))
+    ]
+
+    for file in drive.ListFile({"q": "'" + methods_folder_id + "' in parents and trashed=false"}).GetList():
+        if file["title"] not in file_list or file["modifiedDate"] != (get_modified_date_of_msp_file(file["title"])):
+            os.chdir(methods_directory)
+            file.GetContentFile()
+            os.chdir(root_directory)
+
+    return None
