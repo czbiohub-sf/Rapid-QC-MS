@@ -13,10 +13,11 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
     Event handler that alerts when the data file has completed sample acquisition
     """
 
-    def __init__(self, observer, filenames, run_id):
+    def __init__(self, observer, filenames, instrument_id, run_id):
 
         self.observer = observer
         self.filenames = filenames
+        self.instrument_id = instrument_id
         self.run_id = run_id
 
 
@@ -44,7 +45,7 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
             # Route data file to MS-AutoQC pipeline
             if sample_acquired:
                 print("Data acquisition completed for", filename)
-                qc.process_data_file(event.src_path, filename, extension, self.run_id)
+                qc.process_data_file(event.src_path, filename, extension, self.instrument_id, self.run_id)
                 print("Data processing complete.")
 
             # Check if data file was the last sample in the sequence
@@ -55,11 +56,11 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
                 self.observer.stop()
 
                 # Mark instrument run as completed
-                db.mark_run_as_completed(run_id=self.run_id)
+                db.mark_run_as_completed(self.instrument_id, self.run_id)
 
                 # Terminate acquisition listener process
                 print("Terminating acquisition listener process.")
-                pid = db.get_pid(self.run_id)
+                pid = db.get_pid(self.instrument_id, self.run_id)
                 qc.kill_acquisition_listener(pid)
 
 
@@ -137,4 +138,4 @@ def get_md5(filename):
 
 if __name__ == "__main__":
     # Start listening to data file directory
-    start_listener(path=sys.argv[1], filenames=sys.argv[2], run_id=sys.argv[3])
+    start_listener(path=sys.argv[1], filenames=sys.argv[2], instrument_id=sys.argv[3], run_id=sys.argv[4])

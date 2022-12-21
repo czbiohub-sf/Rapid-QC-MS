@@ -15,7 +15,7 @@ methods_directory = os.path.join(data_directory, "methods")
 # Location of SQLite database
 sqlite_db_location = "sqlite:///data/QC Database.db"
 db_file = os.path.join(data_directory, "QC Database.db")
-zip_file = os.path.join(data_directory, "QC Database.zip")
+db_zip_file = os.path.join(data_directory, "QC Database.zip")
 
 def connect_to_database():
 
@@ -58,8 +58,8 @@ def sync_is_enabled():
         return False
 
     df_workspace = get_table("workspace")
-    gdrive_folder_id = df_workspace["gdrive_folder_id"].astype(str).values[0]
-    gdrive_file_id = df_workspace["gdrive_file_id"].astype(str).values[0]
+    gdrive_folder_id = df_workspace["gdrive_folder_id"].values[0]
+    gdrive_file_id = df_workspace["gdrive_file_id"].values[0]
 
     if gdrive_folder_id is not None and gdrive_file_id is not None:
         if gdrive_folder_id != "None" and gdrive_folder_id != "":
@@ -158,6 +158,7 @@ def create_database(is_instrument_computer, instrument_identity=None):
         "bio_qc_results", db_metadata,
         sa.Column("id", INTEGER, primary_key=True),
         sa.Column("sample_id", TEXT),
+        sa.Column("instrument_id", TEXT),
         sa.Column("run_id", TEXT),
         sa.Column("precursor_mz", TEXT),
         sa.Column("retention_time", TEXT),
@@ -295,7 +296,7 @@ def create_database(is_instrument_computer, instrument_identity=None):
         sa.Column("qc_config_id", TEXT),
         sa.Column("biological_standards", TEXT),
         sa.Column("pid", INTEGER),
-        sa.Column("drive_ids", TEXT),
+        sa.Column("drive_id", TEXT),
         sa.Column("sample_status", TEXT)
     )
 
@@ -303,6 +304,7 @@ def create_database(is_instrument_computer, instrument_identity=None):
         "sample_qc_results", db_metadata,
         sa.Column("id", INTEGER, primary_key=True),
         sa.Column("sample_id", TEXT),
+        sa.Column("instrument_id", TEXT),
         sa.Column("run_id", TEXT),
         sa.Column("position", TEXT),
         sa.Column("md5", TEXT),
@@ -358,7 +360,7 @@ def zip_database():
     Zips database file
     """
 
-    filename = zip_file.replace(".zip", "")
+    filename = db_zip_file.replace(".zip", "")
     shutil.make_archive(filename, "zip", data_directory, "QC Database.db")
 
 
@@ -368,7 +370,7 @@ def unzip_database():
     Unzips database file
     """
 
-    shutil.unpack_archive(zip_file, data_directory, "zip")
+    shutil.unpack_archive(db_zip_file, data_directory, "zip")
 
 
 def get_table(table_name):
@@ -574,16 +576,27 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, sequenc
     connection.close()
 
 
-def get_instrument_run(run_id):
+def get_instrument_run(instrument_id, run_id):
 
     """
     Returns DataFrame of selected instrument run from "runs" table
     """
 
     engine = sa.create_engine(sqlite_db_location)
-    query = "SELECT * FROM runs WHERE run_id = '" + run_id + "'"
+    query = "SELECT * FROM runs WHERE instrument_id = '" + instrument_id + "' AND run_id = '" + run_id + "'"
     df_instrument_run = pd.read_sql(query, engine)
     return df_instrument_run
+
+
+def get_instrument_run_from_csv(instrument_id, run_id):
+
+    """
+    Returns DataFrame of selected instrument run from CSV files during active runs
+    """
+
+    id = instrument_id.replace(" ", "_") + "_" + run_id
+    run_csv_file = os.path.join(data_directory, id, "csv", "run.csv")
+    return pd.read_csv(run_csv_file, index_col=False)
 
 
 def get_instrument_runs(instrument_id):
@@ -1855,7 +1868,7 @@ def update_qc_configuration(config_name, intensity_dropouts_cutoff, library_rt_s
     connection.close()
 
 
-def get_samples_in_run(run_id, sample_type="Both"):
+def get_samples_in_run(instrument_id, run_id, sample_type="Both"):
 
     """
     Returns DataFrame of samples in a given run using local database
@@ -1873,17 +1886,20 @@ def get_samples_in_run(run_id, sample_type="Both"):
         df_bio_standards.drop(columns=["biological_standard"], inplace=True)
         df = df_bio_standards.append(df_samples, ignore_index=True)
 
-    return df.loc[df["run_id"] == run_id]
+    return df.loc[(df["run_id"] == run_id) & (df["instrument_id"] == instrument_id)]
 
 
-def get_samples_from_csv(run_id, sample_type="Both"):
+def get_samples_from_csv(instrument_id, run_id, sample_type="Both"):
 
     """
     Returns DataFrame of samples in a given run using CSV files from Google Drive
     """
 
-    samples_csv = os.path.join(os.getcwd(), "data", run_id + "_samples.csv")
-    bio_standards_csv = os.path.join(os.getcwd(), "data", run_id + "_bio_standards.csv")
+    id = instrument_id.replace(" ", "_") + "_" + run_id
+    csv_directory = os.path.join(data_directory, id, "csv")
+
+    samples_csv = os.path.join(csv_directory, "samples.csv")
+    bio_standards_csv = os.path.join(csv_directory, "bio_standards.csv")
 
     if sample_type == "Sample":
         df = pd.read_csv(samples_csv, index_col=False)
@@ -1900,7 +1916,7 @@ def get_samples_from_csv(run_id, sample_type="Both"):
     return df.loc[df["run_id"] == run_id]
 
 
-def parse_internal_standard_data(run_id, result_type, polarity, status, as_json=True):
+def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, status, as_json=True):
 
     """
     Returns JSON-ified DataFrame of samples (as rows) vs. internal standards (as columns)
@@ -1908,9 +1924,9 @@ def parse_internal_standard_data(run_id, result_type, polarity, status, as_json=
 
     # Get relevant QC results table from database
     if status == "Complete":
-        df_samples = get_samples_in_run(run_id, "Sample")
+        df_samples = get_samples_in_run(instrument_id, run_id, "Sample")
     elif status == "Active":
-        df_samples = get_samples_from_csv(run_id, "Sample")
+        df_samples = get_samples_from_csv(instrument_id, run_id, "Sample")
 
     # Filter by polarity
     df_samples = df_samples.loc[df_samples["sample_id"].str.contains(polarity)]
@@ -1954,7 +1970,7 @@ def parse_internal_standard_data(run_id, result_type, polarity, status, as_json=
         return df_results
 
 
-def parse_biological_standard_data(instrument, run_id, result_type, polarity, biological_standard, status, as_json=True):
+def parse_biological_standard_data(instrument_id, run_id, result_type, polarity, biological_standard, status, as_json=True):
 
     """
     Returns JSON-ified DataFrame of instrument runs (as columns) vs. targeted features (as rows)
@@ -1964,7 +1980,8 @@ def parse_biological_standard_data(instrument, run_id, result_type, polarity, bi
     if status == "Complete":
         df_samples = get_table("bio_qc_results")
     elif status == "Active":
-        bio_standards_csv = os.path.join(os.getcwd(), "data", run_id + "_bio_standards.csv")
+        id = instrument_id.replace(" ", "_") + "_" + run_id
+        bio_standards_csv = os.path.join(data_directory, id, "csv", "bio_standards.csv")
         df_samples = pd.read_csv(bio_standards_csv, index_col=False)
 
     # Filter by biological standard type
@@ -1976,7 +1993,7 @@ def parse_biological_standard_data(instrument, run_id, result_type, polarity, bi
     # Filter by instrument
     df_runs = get_table("runs")
     chromatography = df_runs.loc[
-        (df_runs["run_id"] == run_id) & (df_runs["instrument_id"] == instrument)]["chromatography"].values[0]
+        (df_runs["run_id"] == run_id) & (df_runs["instrument_id"] == instrument_id)]["chromatography"].values[0]
 
     # Filter by chromatography
     run_ids = df_runs.loc[df_runs["chromatography"] == chromatography]["run_id"].astype(str).tolist()
@@ -2008,7 +2025,7 @@ def parse_biological_standard_data(instrument, run_id, result_type, polarity, bi
         return df_results
 
 
-def parse_internal_standard_qc_data(run_id, polarity, result_type, status, as_json=True):
+def parse_internal_standard_qc_data(instrument_id, run_id, polarity, result_type, status, as_json=True):
 
     """
     Returns JSON-ified DataFrame of samples (as rows) vs. internal standards (as columns)
@@ -2016,9 +2033,9 @@ def parse_internal_standard_qc_data(run_id, polarity, result_type, status, as_js
 
     # Get relevant QC results table from database
     if status == "Complete":
-        df_samples = get_samples_in_run(run_id, "Sample")
+        df_samples = get_samples_in_run(instrument_id, run_id, "Sample")
     elif status == "Active":
-        df_samples = get_samples_from_csv(run_id, "Sample")
+        df_samples = get_samples_from_csv(instrument_id, run_id, "Sample")
 
     # Filter by polarity
     df_samples = df_samples.loc[df_samples["sample_id"].str.contains(polarity)]
@@ -2082,7 +2099,7 @@ def add_user_to_workspace(drive, email_address):
         return "User already exists"
 
     # Get ID of MS-AutoQC folder in Google Drive
-    gdrive_folder_id = get_table("workspace")["gdrive_folder_id"].astype(str).values[0]
+    gdrive_folder_id = get_table("workspace")["gdrive_folder_id"].values[0]
 
     if gdrive_folder_id is not None:
         # Add user access by updating permissions
@@ -2118,7 +2135,7 @@ def delete_user_from_workspace(drive, email_address):
         return "User does not exist"
 
     # Get ID of MS-AutoQC folder in Google Drive
-    gdrive_folder_id = get_table("workspace")["gdrive_folder_id"].astype(str).values[0]
+    gdrive_folder_id = get_table("workspace")["gdrive_folder_id"].values[0]
 
     if gdrive_folder_id is not None:
         # Get permission ID of user from database
@@ -2209,13 +2226,13 @@ def set_device_identity(is_instrument_computer, instrument_identity):
     connection.close()
 
 
-def run_is_on_instrument_pc(run_id):
+def run_is_on_instrument_pc(instrument_id, run_id):
 
     """
     Validates that the current device is the instrument PC on which the run was started
     """
 
-    instrument_id = get_instrument_run(run_id)["instrument_id"].astype(str).tolist()[0]
+    instrument_id = get_instrument_run(instrument_id, run_id)["instrument_id"].astype(str).tolist()[0]
     device_identity = get_table("workspace")["instrument_identity"].astype(str).tolist()[0]
 
     if instrument_id == device_identity:
@@ -2335,36 +2352,40 @@ def delete_email_from_notifications(email_address):
     connection.close()
 
 
-def get_completed_samples_count(run_id):
+def get_completed_samples_count(instrument_id, run_id, status):
 
     """
     Returns tuple containing count for completed samples and total samples in a given run
     """
 
-    df_instrument_run = get_instrument_run(run_id)
+    if status == "Active" and sync_is_enabled():
+        df_instrument_run = get_instrument_run_from_csv(instrument_id, run_id)
+    else:
+        df_instrument_run = get_instrument_run(instrument_id, run_id)
+
     completed = df_instrument_run["completed"].astype(int).tolist()[0]
     total_samples = df_instrument_run["samples"].astype(int).tolist()[0]
     return (completed, total_samples)
 
 
-def get_run_progress(run_id):
+def get_run_progress(instrument_id, run_id):
 
     """
     Returns progress of instrument run as a percentage of samples completed
     """
 
-    completed, total_samples = get_completed_samples_count(run_id)
+    completed, total_samples = get_completed_samples_count(instrument_id, run_id)
     percent_complete = (completed / total_samples) * 100
     return round(percent_complete, 1)
 
 
-def update_sample_counters_for_run(run_id, qc_result, latest_sample):
+def update_sample_counters_for_run(instrument_id, run_id, qc_result, latest_sample):
 
     """
     Increments "completed" count, as well as "pass" and "fail" counts accordingly
     """
 
-    df_instrument_run = get_instrument_run(run_id)
+    df_instrument_run = get_instrument_run(instrument_id, run_id)
     completed = df_instrument_run["completed"].astype(int).tolist()[0] + 1
     passes = df_instrument_run["passes"].astype(int).tolist()[0]
     fails = df_instrument_run["fails"].astype(int).tolist()[0]
@@ -2392,7 +2413,7 @@ def update_sample_counters_for_run(run_id, qc_result, latest_sample):
     connection.close()
 
 
-def mark_run_as_completed(run_id):
+def mark_run_as_completed(instrument_id, run_id):
 
     """
     Marks instrument run status as completed
@@ -2403,7 +2424,7 @@ def mark_run_as_completed(run_id):
 
     update_status = (
         sa.update(instrument_runs_table)
-            .where(instrument_runs_table.c.run_id == run_id)
+            .where((instrument_runs_table.c.run_id == run_id) & (instrument_runs_table.c.instrument_id == instrument_id))
             .values(status="Complete")
     )
 
@@ -2430,13 +2451,13 @@ def store_pid(run_id, pid):
     connection.close()
 
 
-def get_pid(run_id):
+def get_pid(instrument_id, run_id):
 
     """
     Retrieves acquisition listener process ID from "runs" table
     """
 
-    return get_instrument_run(run_id)["pid"].astype(int).tolist()[0]
+    return get_instrument_run(instrument_id, run_id)["pid"].astype(int).tolist()[0]
 
 
 def upload_to_google_drive(drive, file_dict):
@@ -2448,7 +2469,7 @@ def upload_to_google_drive(drive, file_dict):
     """
 
     # Get Google Drive ID for the MS-AutoQC folder
-    folder_id = get_table("workspace")["gdrive_folder_id"].astype(str).values[0]
+    folder_id = get_table("workspace")["gdrive_folder_id"].values[0]
 
     # Store Drive ID's of uploaded file(s)
     drive_ids = {}
@@ -2473,7 +2494,146 @@ def upload_to_google_drive(drive, file_dict):
     return drive_ids
 
 
-def delete_active_run_files(drive, run_id):
+def upload_qc_results(drive, instrument_id, run_id):
+    
+    """
+    Uploads QC results for a given run to Google Drive as a CSV file
+    """
+
+    id = instrument_id.replace(" ", "_") + "_" + run_id
+
+    # Define file names and file paths
+    run_filename = "run.csv"
+    samples_csv_filename = "samples.csv"
+    bio_standards_csv_filename = "bio_standards.csv"
+
+    run_directory = os.path.join(data_directory, id)
+    if not os.path.exists(run_directory):
+        os.makedirs(run_directory)
+
+    csv_directory = os.path.join(run_directory, "csv")
+    if not os.path.exists(csv_directory):
+        os.makedirs(csv_directory)
+
+    run_csv_path = os.path.join(csv_directory, run_filename)
+    samples_csv_path = os.path.join(csv_directory, samples_csv_filename)
+    bio_standards_csv_path = os.path.join(csv_directory, bio_standards_csv_filename)
+
+    # Convert sample and biological standard QC results from database into CSV files
+    df_run = get_instrument_run(instrument_id, run_id)
+    df_run.to_csv(run_csv_path, index=False)
+
+    df_samples = get_samples_in_run(instrument_id=instrument_id, run_id=run_id, sample_type="Sample")
+    if len(df_samples) > 0:
+        df_samples.to_csv(samples_csv_path, index=False)
+
+    df_bio_standards = get_table("bio_qc_results")
+    if len(df_bio_standards) > 0:
+        df_bio_standards.to_csv(bio_standards_csv_path, index=False)
+
+    # Compress CSV files into a ZIP archive for faster upload
+    zip_filename = id + ".zip"
+    zip_file_path = zip_csv_files(
+        input_directory=csv_directory, output_directory_and_name=os.path.join(run_directory, id))
+
+    zip_file = {zip_filename: zip_file_path}
+
+    # Get Google Drive ID for the CSV files ZIP archive
+    zip_file_drive_id = get_instrument_run(instrument_id, run_id)["drive_id"].tolist()[0]
+
+    # Update existing ZIP archive in Google Drive
+    if zip_file_drive_id is not None:
+
+        file = drive.CreateFile({
+            "id": zip_file_drive_id,
+            "title": zip_filename,
+        })
+
+        # Execute upload
+        file.SetContentFile(zip_file_path)
+        file.Upload()
+
+    # If zip file Drive ID does not exist,
+    else:
+
+        # Upload CSV files ZIP archive to Google Drive for first time
+        drive_id = upload_to_google_drive(drive, zip_file)[zip_filename]
+
+        # Store Drive ID of ZIP file in local database
+        db_metadata, connection = connect_to_database()
+        runs_table = sa.Table("runs", db_metadata, autoload=True)
+
+        connection.execute((
+            sa.update(runs_table)
+                .where((runs_table.c.run_id == run_id) & (runs_table.c.instrument_id == instrument_id))
+                .values(drive_id=drive_id)
+        ))
+
+        connection.close()
+
+
+def download_qc_results(drive, instrument_id, run_id):
+
+    """
+    Downloads CSV files of QC results from Google Drive and stores in data directory
+    """
+
+    id = instrument_id.replace(" ", "_") + "_" + run_id
+
+    # Initialize directories
+    run_directory = os.path.join(data_directory, id)
+    if not os.path.exists(run_directory):
+        os.makedirs(run_directory)
+
+    csv_directory = os.path.join(run_directory, "csv")
+    if not os.path.exists(csv_directory):
+        os.makedirs(csv_directory)
+
+    # Zip file
+    zip_filename = id + ".zip"
+    zip_file_path = os.path.join(run_directory, zip_filename)
+
+    # Get Google Drive folder ID
+    gdrive_folder_id = get_table("workspace")["gdrive_folder_id"].values[0]
+
+    # Find and download ZIP archive of CSV files from Google Drive
+    for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
+        if file["title"] == zip_filename:
+            os.chdir(run_directory)
+            file.GetContentFile(file["title"])
+            os.chdir(root_directory)
+
+    # Unzip archive
+    unzip_csv_files(zip_file_path, csv_directory)
+
+    # Define and return file paths
+    run_csv = os.path.join(csv_directory, "run.csv")
+    samples_csv = os.path.join(csv_directory, "samples.csv")
+    bio_standards_csv_file = os.path.join(csv_directory, "bio_standards.csv")
+
+    return (run_csv, samples_csv, bio_standards_csv_file)
+
+
+def zip_csv_files(input_directory, output_directory_and_name):
+
+    """
+    Compresses CSV files into a ZIP archive
+    """
+
+    shutil.make_archive(output_directory_and_name, "zip", input_directory)
+    return output_directory_and_name + ".zip"
+
+
+def unzip_csv_files(input_zip, output_directory):
+
+    """
+    Unzips archive of CSV files
+    """
+
+    shutil.unpack_archive(input_zip, output_directory, "zip")
+
+
+def delete_active_run_files(drive, instrument_id, run_id):
 
     """
     Checks for and deletes CSV files from Google Drive at the end of an active instrument run
@@ -2481,12 +2641,12 @@ def delete_active_run_files(drive, run_id):
 
     # Get ID's for the instrument run's CSV files in Google Drive
     try:
-        drive_ids = list(ast.literal_eval(get_instrument_run(run_id)["drive_ids"].astype(str).tolist()[0]).values())
+        zip_file_id = get_instrument_run(instrument_id, run_id)["drive_id"].astype(str).tolist()[0]
     except:
-        return
+        return None
 
     # Get Google Drive ID for the MS-AutoQC folder
-    gdrive_folder_id = get_table("workspace")["gdrive_folder_id"].astype(str).values[0]
+    gdrive_folder_id = get_table("workspace")["gdrive_folder_id"].values[0]
 
     if gdrive_folder_id is not None:
         if gdrive_folder_id != "None" and gdrive_folder_id != "":
@@ -2495,137 +2655,23 @@ def delete_active_run_files(drive, run_id):
             drive_file_list = drive.ListFile(
                 {"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList()
 
-            # Find CSV files and delete them
+            # Find zip archive of CSV files and delete it
             for file in drive_file_list:
-                if file["id"] in drive_ids:
+                if file["id"] == zip_file_id:
                     file.Delete()
 
-    # Delete Drive ID's from database
+    # Delete Drive ID from database
     db_metadata, connection = connect_to_database()
     instrument_runs_table = sa.Table("runs", db_metadata, autoload=True)
 
-    delete_drive_ids = (
+    delete_drive_id = (
         sa.update(instrument_runs_table)
             .where((instrument_runs_table.c.run_id == run_id))
-            .values(drive_ids=None)
+            .values(drive_id=None)
     )
 
-    connection.execute(delete_drive_ids)
+    connection.execute(delete_drive_id)
     connection.close()
-
-
-def sync_qc_results(drive, run_id):
-    
-    """
-    Uploads QC results for a given run to Google Drive as a CSV file
-    """
-
-    # Define file names and file paths
-    samples_csv_filename = run_id + "_samples.csv"
-    bio_standards_csv_filename = run_id + "_bio_standards.csv"
-
-    samples_csv_path = os.path.join(os.getcwd(), "data", samples_csv_filename)
-    bio_standards_csv_path = os.path.join(os.getcwd(), "data", bio_standards_csv_filename)
-
-    csv_files = {
-        samples_csv_filename: samples_csv_path,
-        bio_standards_csv_filename: bio_standards_csv_path
-    }
-
-    # Get sample and biological standard QC results from database
-    df_samples = get_samples_in_run(run_id=run_id, sample_type="Sample")
-    if len(df_samples) > 0:
-        df_samples.to_csv(samples_csv_path, index=False)
-
-    df_bio_standards = get_table("bio_qc_results")
-    if len(df_bio_standards) > 0:
-        df_bio_standards.to_csv(bio_standards_csv_path, index=False)
-
-    # Get Google Drive ID for the CSV files
-    drive_ids = get_instrument_run(run_id)["drive_ids"].astype(str).tolist()[0]
-
-    # Update existing CSV files in Google Drive
-    try:
-        drive_ids = ast.literal_eval(drive_ids)
-
-        if os.path.exists(samples_csv_path):
-            # If the file exists and has been uploaded already, update existing file
-            if samples_csv_filename in drive_ids.keys():
-                file = drive.CreateFile({
-                    "id": drive_ids[samples_csv_filename],
-                     "title": samples_csv_filename})
-                file.SetContentFile(samples_csv_path)
-                file.Upload()
-            # Otherwise, upload the file for the first time
-            else:
-                drive_id = upload_to_google_drive(
-                    drive, {samples_csv_filename: samples_csv_path})
-                drive_ids[samples_csv_filename] = drive_id[samples_csv_filename]
-
-        if os.path.exists(bio_standards_csv_path):
-            # If the file exists and has been uploaded already, update existing file
-            if bio_standards_csv_filename in drive_ids.keys():
-                file = drive.CreateFile({
-                    "id": drive_ids[bio_standards_csv_filename],
-                    "title": bio_standards_csv_filename})
-                file.SetContentFile(bio_standards_csv_path)
-                file.Upload()
-            # Otherwise, upload the file for the first time
-            else:
-                drive_id = upload_to_google_drive(
-                    drive, {bio_standards_csv_filename: bio_standards_csv_path})
-                drive_ids[bio_standards_csv_filename] = drive_id[bio_standards_csv_filename]
-
-    # If drive ID's do not exist, upload CSV files to Google Drive for first time
-    except:
-        drive_ids = upload_to_google_drive(drive, csv_files)
-
-    # Store Drive ID's in local database
-    drive_ids = json.dumps(drive_ids)
-
-    db_metadata, connection = connect_to_database()
-    instrument_runs_table = sa.Table("runs", db_metadata, autoload=True)
-
-    update_drive_ids = (
-        sa.update(instrument_runs_table)
-            .where(instrument_runs_table.c.run_id == run_id)
-            .values(drive_ids=drive_ids)
-    )
-
-    connection.execute(update_drive_ids)
-    connection.close()
-
-
-def download_qc_results(drive, run_id):
-
-    """
-    Downloads CSV files of QC results from Google Drive and stores in data directory
-    """
-
-    # Define files
-    samples_csv_file = run_id + "_samples.csv"
-    bio_standards_csv_file = run_id + "_bio_standards.csv"
-
-    # Find and download CSV files from Google Drive
-    gdrive_folder_id = get_table("workspace")["gdrive_folder_id"].astype(str).values[0]
-
-    # Navigate to data directory
-    os.chdir(data_directory)
-
-    if gdrive_folder_id is not None:
-        if gdrive_folder_id != "None" and gdrive_folder_id != "":
-            for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
-                if file["title"] == samples_csv_file or file["title"] == bio_standards_csv_file:
-                    file.GetContentFile(file["title"])
-
-    # Navigate back to script directory
-    os.chdir(root_directory)
-
-    # Define and return file paths
-    samples_csv = os.path.join(data_directory, samples_csv_file)
-    bio_standards_csv_file = os.path.join(data_directory, bio_standards_csv_file)
-
-    return (samples_csv, bio_standards_csv_file)
 
 
 def upload_database(drive, sync_settings=False):
@@ -2636,8 +2682,8 @@ def upload_database(drive, sync_settings=False):
 
     # Get Google Drive ID's for the MS-AutoQC folder and database file
     df_workspace = get_table("workspace")
-    gdrive_folder_id = df_workspace["gdrive_folder_id"].astype(str).values[0]
-    gdrive_file_id = df_workspace["gdrive_file_id"].astype(str).values[0]
+    gdrive_folder_id = df_workspace["gdrive_folder_id"].values[0]
+    gdrive_file_id = df_workspace["gdrive_file_id"].values[0]
 
     # Ensure that another device is not currently uploading to Google Drive
     if not safe_to_upload(drive, gdrive_folder_id):
@@ -2653,7 +2699,7 @@ def upload_database(drive, sync_settings=False):
             # Upload zipped database
             zip_database()
             file = drive.CreateFile({"id": gdrive_file_id, "title": "QC Database.zip"})
-            file.SetContentFile(zip_file)
+            file.SetContentFile(db_zip_file)
             file.Upload()
 
             # Save modifiedDate of database file
@@ -2729,8 +2775,8 @@ def download_database(drive, sync_settings=False):
 
     # Get Google Drive ID's for the MS-AutoQC folder and database file
     df_workspace = get_table("workspace")
-    gdrive_folder_id = df_workspace["gdrive_folder_id"].astype(str).values[0]
-    gdrive_file_id = df_workspace["gdrive_file_id"].astype(str).values[0]
+    gdrive_folder_id = df_workspace["gdrive_folder_id"].values[0]
+    gdrive_file_id = df_workspace["gdrive_file_id"].values[0]
 
     # If Google Drive folder is found, look for database next
     if gdrive_folder_id is not None and gdrive_file_id is not None:
@@ -2791,7 +2837,7 @@ def database_was_modified(drive):
 
     # Get Google Drive folder ID from database
     df_workspace = get_table("workspace")
-    gdrive_folder_id = df_workspace["gdrive_folder_id"].astype(str).values[0]
+    gdrive_folder_id = df_workspace["gdrive_folder_id"].values[0]
 
     # Compare "last modified" values
     local_last_modified = df_workspace["gdrive_last_modified"].astype(str).tolist()[0]
@@ -2855,7 +2901,7 @@ def get_methods_folder_drive_id(drive):
     Returns Google Drive ID for MS-AutoQC > methods folder
     """
 
-    gdrive_folder_id = get_table("workspace")["gdrive_folder_id"].astype(str).tolist()[0]
+    gdrive_folder_id = get_table("workspace")["gdrive_folder_id"].tolist()[0]
     drive_file_list = drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList()
 
     for file in drive_file_list:
@@ -2954,3 +3000,70 @@ def download_new_or_modified_methods(drive):
             os.chdir(root_directory)
 
     return None
+
+
+def csv_to_sql_database(instrument_id, run_id):
+
+    """
+    At the end of an active instrument run:
+
+    1. Before function call: database is downloaded from Google Drive
+    2. Deletes rows associated with run_id in SQLite database
+    3. Appends runs, sample_qc_results, and bio_qc_results data from CSV files
+    4. After function call: database is uploaded back to Google Drive
+
+    Should only be used if Google Drive sync is enabled.
+    """
+
+    id = instrument_id.replace(" ", "_") + "_" + run_id
+
+    # Connect to database
+    db_metadata, connection = connect_to_database()
+
+    # Delete rows from "runs" table
+    runs_table = sa.Table("runs", db_metadata, autoload=True)
+    connection.execute((
+        sa.delete(runs_table)
+            .where((runs_table.c.run_id == run_id) & (runs_table.c.instrument_id == instrument_id))
+    ))
+
+    # Delete rows from "sample_qc_results" table
+    samples_table = sa.Table("sample_qc_results", db_metadata, autoload=True)
+    connection.execute((
+        sa.delete(samples_table)
+            .where((samples_table.c.run_id == run_id) & (samples_table.c.instrument_id == instrument_id))
+    ))
+
+    # Delete rows from "sample_qc_results" table
+    bio_standards_table = sa.Table("bio_qc_results", db_metadata, autoload=True)
+    connection.execute((
+        sa.delete(bio_standards_table)
+            .where((bio_standards_table.c.run_id == run_id) & (bio_standards_table.c.instrument_id == instrument_id))
+    ))
+
+    # Get CSV paths
+    run_directory = os.path.join(data_directory, id)
+    run_csv = os.path.join(run_directory, "csv", "run.csv")
+    samples_csv = os.path.join(run_directory, "csv", "samples.csv")
+    bio_standards_csv = os.path.join(run_directory, "csv", "bio_standards.csv")
+
+    # Get CSV files as DataFrames
+    df_instrument_run = pd.read_csv(run_csv, index_col=False)
+    df_samples = pd.read_csv(samples_csv, index_col=False)
+    df_bio_standards = pd.read_csv(bio_standards_csv, index_col=False)
+
+    # Append rows to "runs" table
+    dtype = {}
+    for column in ["id", "samples", "completed", "passes", "fails", "pid"]:
+        dtype[column] = Integer()
+    df_samples.to_sql("sample_qc_results", connection, if_exists="append", index=False, dtype=dtype)
+
+    # Append rows to "sample_qc_results" table
+    dtype = {"id": Integer()}
+    df_samples.to_sql("sample_qc_results", connection, if_exists="append", index=False, dtype=dtype)
+
+    # Append rows to "bio_qc_results" table
+    df_bio_standards.to_sql("bio_qc_results", connection, if_exists="append", index=False, dtype=dtype)
+
+    # Close the connection
+    connection.close()

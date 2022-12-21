@@ -349,23 +349,24 @@ def qc_sample(run_id, polarity, df_peak_list, df_features, is_bio_standard):
     return qc_dataframe, qc_result
 
 
-def process_data_file(path, filename, extension, run_id):
+def process_data_file(path, filename, extension, instrument_id, run_id):
 
     """
     1. Convert data file to mzML format using MSConvert
     2. Process data file using MS-DIAL and user-defined parameter configuration
     3. Load data into pandas DataFrame and execute AutoQC algorithm
     4. Write QC results to "sample_qc_results" or "bio_qc_results" table accordingly
-    5. Write results to database
-    6. Upload CSV file with QC results to Google Drive
+    5. Write results to SQLite database
     """
 
-    # Create the necessary directories
-    autoqc_directory = os.path.join(os.getcwd(), r"data")
-    mzml_file_directory = os.path.join(autoqc_directory, run_id, "data")
-    qc_results_directory = os.path.join(autoqc_directory, run_id, "results")
+    id = instrument_id.replace(" ", "_") + "_" + run_id
 
-    for directory in [autoqc_directory, mzml_file_directory, qc_results_directory]:
+    # Create the necessary directories
+    data_directory = os.path.join(os.getcwd(), r"data")
+    mzml_file_directory = os.path.join(data_directory, id, "data")
+    qc_results_directory = os.path.join(data_directory, id, "results")
+
+    for directory in [data_directory, mzml_file_directory, qc_results_directory]:
         if not os.path.exists(directory):
             os.makedirs(directory)
 
@@ -373,7 +374,7 @@ def process_data_file(path, filename, extension, run_id):
     qc_results_directory = qc_results_directory + "/"
 
     # Retrieve chromatography, polarity, samples, and biological standards using run ID
-    df_run = db.get_instrument_run(run_id)
+    df_run = db.get_instrument_run(instrument_id, run_id)
     chromatography = df_run["chromatography"].astype(str).values[0]
 
     if "Pos" in filename:
@@ -453,8 +454,6 @@ def process_data_file(path, filename, extension, run_id):
     except Exception as error:
         print("Failed to write QC results to database:", error)
         return
-
-    # TODO: Upload QC results to Google Drive as a CSV file
 
     # Delete MS-DIAL result file
     try:

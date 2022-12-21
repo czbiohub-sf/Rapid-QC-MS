@@ -1800,9 +1800,6 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
     5. Dismisses setup window
     """
 
-    print(gdrive_folder_id)
-    print(gdrive_file_id)
-
     if button_click:
         drive = GoogleDrive(gauth_holder[0])
 
@@ -1860,9 +1857,6 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
         # Create local methods directory
         if not os.path.exists(methods_directory):
             os.makedirs(methods_directory)
-
-        print(gdrive_folder_id)
-        print(gdrive_file_id)
 
         # Add instrument to database
         db.insert_new_instrument(instrument_id, instrument_vendor)
@@ -2085,7 +2079,7 @@ def dismiss_setup_window(workspace_has_been_setup_1, workspace_has_been_setup_2)
               Output("gdrive-client-secret", "placeholder"),
               Input("google-drive-authenticated-3", "data"),
               Input("google-drive-authenticated", "data"),
-              State("settings-modal", "is_open"),
+              Input("settings-modal", "is_open"),
               State("google-drive-sync-form-text", "children"), prevent_initial_call=True)
 def update_google_drive_sync_status_in_settings(google_drive_authenticated, google_drive_authenticated_on_start,
     settings_is_open, form_text):
@@ -2094,18 +2088,18 @@ def update_google_drive_sync_status_in_settings(google_drive_authenticated, goog
     Updates Google Drive sync status in user settings on user authentication
     """
 
-    auth_source = ctx.triggered_id
+    trigger = ctx.triggered_id
 
     if not settings_is_open:
         raise PreventUpdate
 
     # Authenticated on app startup
-    if auth_source == "google-drive-authenticated":
+    if trigger == "google-drive-authenticated" or trigger == "settings-modal":
         form_text = "Cloud sync is enabled! You can now sign in to this MS-AutoQC workspace from any device."
         return "success", "Signed in to Google Drive", form_text, False, "Client ID (saved)", "Client secret (saved)"
 
     # Authenticated from "Sign in to Google Drive" button in Settings > General
-    elif auth_source == "google-drive-authenticated-3" and google_drive_authenticated_on_start is None:
+    elif trigger == "google-drive-authenticated-3" and google_drive_authenticated_on_start is None:
 
         drive = GoogleDrive(gauth_holder[0])
         gdrive_folder_id = None
@@ -2286,9 +2280,10 @@ def populate_instrument_runs_table(instrument, refresh, resources, sync_update):
     if trigger == "refresh-interval":
         resources = json.loads(resources)
         run_id = resources["run_id"]
+        status = resources["status"]
 
         completed_count_in_cache = resources["samples_completed"]
-        actual_completed_count, total = db.get_completed_samples_count(run_id)
+        actual_completed_count, total = db.get_completed_samples_count(instrument, run_id, status)
 
         if completed_count_in_cache == actual_completed_count:
             raise PreventUpdate
@@ -2376,8 +2371,9 @@ def open_loading_modal(active_cell, table_data, load_finished):
               Input("refresh-interval", "n_intervals"),
               Input("instrument-run-table", "active_cell"),
               State("instrument-run-table", "data"),
-              State("study-resources", "data"), prevent_initial_call=True, suppress_callback_exceptions=True)
-def load_data(refresh, active_cell, table_data, resources):
+              State("study-resources", "data"),
+              State("tabs", "value"), prevent_initial_call=True, suppress_callback_exceptions=True)
+def load_data(refresh, active_cell, table_data, resources, instrument_id):
 
     """
     Updates and stores QC results in dcc.Store objects (user's browser session)
@@ -2392,16 +2388,17 @@ def load_data(refresh, active_cell, table_data, resources):
         # Ensure that refresh does not trigger data parsing if no new samples processed
         if trigger == "refresh-interval":
             completed_count_in_cache = json.loads(resources)["samples_completed"]
-            actual_completed_count, total = db.get_completed_samples_count(run_id)
+            actual_completed_count, total = db.get_completed_samples_count(instrument_id, run_id, status)
 
             if completed_count_in_cache == actual_completed_count:
                 raise PreventUpdate
 
         # Otherwise, begin route: raw data -> parsed data -> user session cache -> plots
         if status == "Active" and db.sync_is_enabled():
-            return get_qc_results(run_id, status, drive) + (True,)
+            drive = GoogleDrive(gauth_holder[0])
+            return get_qc_results(instrument_id, run_id, status, drive) + (True,)
         else:
-            return get_qc_results(run_id) + (True,)
+            return get_qc_results(instrument_id, run_id) + (True,)
 
     else:
         raise PreventUpdate
@@ -2835,6 +2832,7 @@ def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, in
 
     # Get run ID and status
     resources = json.loads(resources)
+    instrument_id = resources["instrument"]
     run_id = resources["run_id"]
     status = resources["status"]
 
@@ -2845,7 +2843,7 @@ def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, in
 
     # Toggle a different biological standard
     if selected_bio_standard is not None:
-        rt_pos, rt_neg, intensity_pos, intensity_neg, mz_pos, mz_neg = get_qc_results(
+        rt_pos, rt_neg, intensity_pos, intensity_neg, mz_pos, mz_neg = get_qc_results(instrument_id=instrument_id,
             run_id=run_id, status=status, drive=drive, biological_standard=selected_bio_standard, biological_standards_only=True)
 
     # Get biological standard m/z, RT, and intensity data
@@ -2894,6 +2892,7 @@ def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_p
 
     # Get run ID and status
     resources = json.loads(resources)
+    instrument_id = resources["instrument"]
     run_id = resources["run_id"]
     status = resources["status"]
 
@@ -2904,8 +2903,8 @@ def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_p
 
     # Toggle a different biological standard
     if selected_bio_standard is not None:
-        intensity_pos, intensity_neg = get_qc_results(
-            run_id=run_id, status=status, drive=drive, biological_standard=selected_bio_standard, for_benchmark_plot=True)
+        intensity_pos, intensity_neg = get_qc_results(instrument_id=instrument_id, run_id=run_id,
+            status=status, drive=drive, biological_standard=selected_bio_standard, for_benchmark_plot=True)
 
     # Get intensity data
     if polarity == "Pos":
@@ -4751,7 +4750,7 @@ def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, b
     # If this is for an active run, initialize run monitoring at the given directory
     if job_type == "active":
         acquisition_listener = os.path.join(os.getcwd(), "src", "ms-autoqc", "AcquisitionListener.py")
-        process = psutil.Popen(["py", acquisition_listener, acquisition_path, str(filenames), run_id])
+        process = psutil.Popen(["py", acquisition_listener, acquisition_path, str(filenames), instrument_id, run_id])
         db.store_pid(run_id, process.pid)
 
         if db.is_instrument_computer() and db.sync_is_enabled():
@@ -4776,9 +4775,10 @@ def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, b
               Input("progress-interval", "n_intervals"),
               State("data-acquisition-folder-path", "value"),
               State("filenames-for-bulk-qc", "data"),
+              State("tabs", "value"),
               State("instrument-run-id", "value"),
               State("start-bulk-qc-modal-title", "children"), prevent_initial_call=True)
-def start_bulk_qc_processing(modal_open, progress_intervals, data_file_directory, filenames_as_json, run_id, title):
+def start_bulk_qc_processing(modal_open, progress_intervals, data_file_directory, filenames_as_json, instrument_id, run_id, title):
 
     """
     Initiates bulk QC processing:
@@ -4823,7 +4823,7 @@ def start_bulk_qc_processing(modal_open, progress_intervals, data_file_directory
 
         # Otherwise, process the data file
         if os.path.exists(path + filename + ".raw"):
-            qc.process_data_file(path=path, filename=filename, extension="raw", run_id=run_id)
+            qc.process_data_file(path=path, filename=filename, extension="raw", instrument_id=instrument_id, run_id=run_id)
         return progress, progress_label, new_title, False
 
     else:
@@ -5019,8 +5019,9 @@ def update_folder_path_text_field(select_folder_button, selected_folder, setting
               Output("refresh-interval", "disabled"),
               Input("instrument-run-table", "active_cell"),
               State("instrument-run-table", "data"),
-              Input("refresh-interval", "n_intervals"), prevent_initial_call=True)
-def update_progress_bar_during_active_instrument_run(active_cell, table_data, refresh):
+              Input("refresh-interval", "n_intervals"),
+              State("tabs", "value"), prevent_initial_call=True)
+def update_progress_bar_during_active_instrument_run(active_cell, table_data, refresh, instrument_id):
 
     """
     Displays and updates progress bar if an active instrument run was selected from the table
@@ -5030,22 +5031,23 @@ def update_progress_bar_during_active_instrument_run(active_cell, table_data, re
 
         # Get run ID
         run_id = table_data[active_cell["row"]]["Run ID"]
+        status = table_data[active_cell["row"]]["Status"]
 
         # Get Google Drive instance
         if db.sync_is_enabled():
             drive = GoogleDrive(gauth_holder[0])
 
         # Construct values for progress bar
-        completed, total = db.get_completed_samples_count(run_id)
-        percent_complete = db.get_run_progress(run_id)
+        completed, total = db.get_completed_samples_count(instrument_id, run_id, status)
+        percent_complete = db.get_run_progress(instrument_id, run_id)
         progress_label = str(percent_complete) + "%"
         header_text = run_id + " – " + str(completed) + " out of " + str(total) + " samples complete"
 
         if percent_complete != 100.0:
             return {"display": "block"}, header_text, percent_complete, progress_label, False
         else:
-            if db.sync_is_enabled():
-                db.delete_active_run_files(drive, run_id)
+            # if db.sync_is_enabled():
+            #     db.delete_active_run_files(drive, instrument_id, run_id)
             return {"display": "none"}, None, None, None, True
 
     else:
