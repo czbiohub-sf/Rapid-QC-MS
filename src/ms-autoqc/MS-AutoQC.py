@@ -27,7 +27,7 @@ drive_settings_file = os.path.join(auth_directory, "settings.yaml")
 gauth_holder = [GoogleAuth(settings_file=drive_settings_file)]
 
 # Database path
-db_file = os.path.join(root_directory, "data", "QC Database.zip")
+db_zip_file = os.path.join(root_directory, "data", "QC Database.zip")
 
 local_stylesheet = {
     "href": "https://fonts.googleapis.com/css2?"
@@ -1517,12 +1517,15 @@ def serve_layout():
             dcc.Store(id="google-drive-authenticated-1"),
             dcc.Store(id="gdrive-folder-id-1"),
             dcc.Store(id="gdrive-database-file-id-1"),
+            dcc.Store(id="gdrive-methods-zip-id-1"),
             dcc.Store(id="google-drive-authenticated-2"),
             dcc.Store(id="gdrive-folder-id-2"),
             dcc.Store(id="gdrive-database-file-id-2"),
+            dcc.Store(id="gdrive-methods-zip-id-2"),
             dcc.Store(id="google-drive-authenticated-3"),
             dcc.Store(id="gdrive-folder-id-3"),
             dcc.Store(id="gdrive-database-file-id-3"),
+            dcc.Store(id="gdrive-methods-zip-id-3"),
         ])
     ])
 
@@ -1662,6 +1665,7 @@ def launch_google_drive_authentication(setup_auth_button_clicks, sign_in_auth_bu
               Output("google-drive-button-1-popover", "is_open"),
               Output("gdrive-folder-id-1", "data"),
               Output("gdrive-database-file-id-1", "data"),
+              Output("gdrive-methods-zip-id-1", "data"),
               Input("google-drive-authenticated-1", "data"), prevent_initial_call=True)
 def check_first_time_google_drive_authentication(google_drive_is_authenticated):
 
@@ -1676,6 +1680,7 @@ def check_first_time_google_drive_authentication(google_drive_is_authenticated):
         # Initial values
         gdrive_folder_id = None
         gdrive_database_file_id = None
+        gdrive_methods_zip_id = None
         popover_message = [dbc.PopoverHeader("No existing workspace found."),
                            dbc.PopoverBody("A new MS-AutoQC workspace will be created.")]
 
@@ -1688,31 +1693,29 @@ def check_first_time_google_drive_authentication(google_drive_is_authenticated):
         # If Google Drive folder is found, look for database next
         if gdrive_folder_id is not None:
             for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
+
                 if file["title"] == "QC Database.zip":
+                    os.chdir(data_directory)                # Switch to data directory
+                    file.GetContentFile(file["title"])      # Download database ZIP archive
+                    gdrive_database_file_id = file["id"]    # Get database ZIP file ID
+                    os.chdir(root_directory)                # Switch back to root directory
+                    db.unzip_database()                     # Unzip database ZIP archive
 
-                    # Switch to data directory
-                    os.chdir(data_directory)
+                elif file["title"] == "methods.zip":
+                    os.chdir(data_directory)                # Switch to data directory
+                    file.GetContentFile(file["title"])      # Download methods ZIP archive
+                    gdrive_methods_zip_id = file["id"]      # Get methods ZIP file ID
+                    os.chdir(root_directory)                # Switch back to root directory
+                    db.unzip_methods()                      # Unzip methods ZIP archive
 
-                    # Download database
-                    file.GetContentFile(file["title"])
+            if gdrive_database_file_id is not None:
+                popover_message = [dbc.PopoverHeader("Workspace found!"),
+                    dbc.PopoverBody("This instrument will be added to the existing MS-AutoQC workspace.")]
 
-                    # Get database file ID
-                    gdrive_database_file_id = file["id"]
-
-                    # Switch back to root directory
-                    os.chdir(root_directory)
-
-                    # Unzip database
-                    db.unzip_database()
-
-                    popover_message = [dbc.PopoverHeader("Workspace found!"),
-                        dbc.PopoverBody("This instrument will be added to the existing MS-AutoQC workspace.")]
-                    break
-
-        return "You're signed in!", "success", False, popover_message, True, gdrive_folder_id, gdrive_database_file_id
+        return "You're signed in!", "success", False, popover_message, True, gdrive_folder_id, gdrive_database_file_id, gdrive_methods_zip_id
 
     else:
-        return "Sign in to Google Drive", "primary", True, "", False, None, None
+        return "Sign in to Google Drive", "primary", True, "", False, None, None, None
 
 
 @app.callback(Output("first-time-instrument-vendor", "label"),
@@ -1787,9 +1790,10 @@ def ui_feedback_for_complete_setup_button(button_click):
               State("first-time-instrument-vendor", "label"),
               State("google-drive-authenticated-1", "data"),
               State("gdrive-folder-id-1", "data"),
-              State("gdrive-database-file-id-1", "data"), prevent_initial_call=True)
+              State("gdrive-database-file-id-1", "data"),
+              State("gdrive-methods-zip-id-1", "data"), prevent_initial_call=True)
 def complete_first_time_setup(button_click, instrument_id, instrument_vendor, google_drive_authenticated,
-                              gdrive_folder_id, gdrive_file_id):
+                              gdrive_folder_id, main_db_file_id, methods_zip_file_id):
 
     """
     Upon "Complete setup" button click, this callback completes the following:
@@ -1805,7 +1809,7 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
 
         # Initialize a new database if one does not exist
         if not db.is_valid():
-            db.create_database(is_instrument_computer=True, instrument_identity=instrument_id)
+            db.create_databases(is_instrument_computer=True, instrument_identity=instrument_id)
 
         # Handle Google Drive sync
         if google_drive_authenticated:
@@ -1824,20 +1828,14 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
                 # Get Google Drive ID of folder
                 gdrive_folder_id = folder["id"]
 
-                # Create methods folder inside of MS-AutoQC folder
-                folder_metadata = {
-                    "title": "methods",
-                    "parents": [{"id": gdrive_folder_id}],
-                    "mimeType": "application/vnd.google-apps.folder"
-                }
-                folder = drive.CreateFile(folder_metadata)
-                folder.Upload()
+            # Add instrument to database
+            db.insert_new_instrument(instrument_id, instrument_vendor)
 
-            # Update database in Google Drive folder
+            # Upload/update database to Google Drive folder
             db.zip_database()
 
-            if gdrive_file_id is not None:
-                file = drive.CreateFile({"id": gdrive_file_id})
+            if main_db_file_id is not None:
+                file = drive.CreateFile({"id": main_db_file_id, "title": "QC Database.zip"})
             else:
                 metadata = {
                     "title": "QC Database.zip",
@@ -1845,25 +1843,38 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
                 }
                 file = drive.CreateFile(metadata=metadata)
 
-            file.SetContentFile(db_file)
+            file.SetContentFile(db_zip_file)
             file.Upload()
+            main_db_file_id = file["id"]
 
-            # Get Drive ID of database file
-            gdrive_file_id = file["id"]
+            # Create local methods directory
+            if not os.path.exists(methods_directory):
+                os.makedirs(methods_directory)
+
+            # Upload/update local methods directory to Google Drive
+            methods_zip_file = db.zip_methods()
+
+            if methods_zip_file_id is not None:
+                file = drive.CreateFile({"id": methods_zip_file_id, "title": "methods.zip"})
+            else:
+                metadata = {
+                    "title": "methods.zip",
+                    "parents": [{"id": gdrive_folder_id}],
+                }
+                file = drive.CreateFile(metadata=metadata)
+
+            file.SetContentFile(methods_zip_file)
+            file.Upload()
+            methods_zip_file_id = file["id"]
 
             # Save user credentials
             gauth_holder[0].SaveCredentialsFile(credentials_file)
 
-        # Create local methods directory
-        if not os.path.exists(methods_directory):
-            os.makedirs(methods_directory)
+            # Save Google Drive ID's for each file
+            db.insert_google_drive_ids(gdrive_folder_id, main_db_file_id, methods_zip_file_id)
 
-        # Add instrument to database
-        db.insert_new_instrument(instrument_id, instrument_vendor)
-        db.insert_google_drive_ids(gdrive_folder_id, gdrive_file_id)
-
-        # Sync database with Drive again to save Google Drive ID's
-        db.upload_database(drive)
+            # Sync database with Drive again to save Google Drive ID's
+            db.upload_database(drive=drive, sync_settings=True)
 
         # Dismiss setup window by returning True for workspace_has_been_setup boolean
         return db.is_valid()
@@ -1878,7 +1889,6 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
               Output("google-drive-button-2-popover", "children"),
               Output("google-drive-button-2-popover", "is_open"),
               Output("gdrive-folder-id-2", "data"),
-              Output("gdrive-database-file-id-2", "data"),
               Output("device-identity-selection", "options"),
               Input("google-drive-authenticated-2", "data"), prevent_initial_call=True)
 def check_workspace_login_google_drive_authentication(google_drive_is_authenticated):
@@ -1893,7 +1903,7 @@ def check_workspace_login_google_drive_authentication(google_drive_is_authentica
         # Initial values
         gdrive_folder_id = None
         gdrive_database_file_id = None
-        methods_folder_id = None
+        methods_zip_file_id = None
 
         # Failed popover message
         button_text = "Sign in to Google Drive"
@@ -1918,37 +1928,29 @@ def check_workspace_login_google_drive_authentication(google_drive_is_authentica
         # If Google Drive folder is found, look for database next
         if gdrive_folder_id is not None:
             for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
-                # Download database if found
                 if file["title"] == "QC Database.zip":
+                    os.chdir(data_directory)                # Switch to data directory
+                    file.GetContentFile(file["title"])      # Download database ZIP archive
+                    gdrive_database_file_id = file["id"]    # Get database ZIP file ID
+                    os.chdir(root_directory)                # Switch back to root directory
+                    db.unzip_database()                     # Unzip database ZIP archive
 
-                    # Change to data directory
-                    os.chdir(data_directory)
+            # Popover alert
+            button_text = "Signed in to Google Drive"
+            button_color = "success"
+            popover_message = [dbc.PopoverHeader("Workspace found!"),
+                dbc.PopoverBody("Click the button below to sign in.")]
 
-                    # Download database and get file ID
-                    file.GetContentFile(file["title"])
-                    gdrive_database_file_id = file["id"]
-
-                    # Change to root directory
-                    os.chdir(root_directory)
-
-                    # Unzip database
-                    db.unzip_database()
-
-                    # Popover alert
-                    button_text = "Signed in to Google Drive"
-                    button_color = "success"
-                    popover_message = [dbc.PopoverHeader("Workspace found!"),
-                        dbc.PopoverBody("Click the button below to sign in.")]
-
+        # Fill instrument identity dropdown
         instruments = db.get_instruments_list()
         instrument_options = []
         for instrument in instruments:
             instrument_options.append({"label": instrument, "value": instrument})
 
-        return button_text, button_color, False, popover_message, True, gdrive_folder_id, gdrive_database_file_id, instrument_options
+        return button_text, button_color, False, popover_message, True, gdrive_folder_id, instrument_options
 
     else:
-        return "Sign in to Google Drive", "primary", True, "", False, "", "", []
+        return "Sign in to Google Drive", "primary", True, "", False, None, []
 
 
 @app.callback(Output("device-identity-selection", "disabled"),
@@ -2006,7 +2008,7 @@ def ui_feedback_for_workspace_login_button(button_click):
               State("device-identity-checkbox", "value"),
               State("device-identity-selection", "value"),
               State("gdrive-folder-id-2", "data"), prevent_initial_call=True)
-def ui_feedback_for_workspace_login_button(button_click, is_instrument_computer, instrument_id, gdrive_folder_id):
+def ui_feedback_for_login_button(button_click, is_instrument_computer, instrument_id, gdrive_folder_id):
 
     """
     Dismisses setup window and signs in to MS-AutoQC workspace
@@ -2019,37 +2021,21 @@ def ui_feedback_for_workspace_login_button(button_click, is_instrument_computer,
 
             # Get Google Drive instance
             drive = GoogleDrive(gauth_holder[0])
-            methods_folder_id = None
 
-            # Find methods directory in Google Drive
+            # Download methods directory
             if gdrive_folder_id is not None:
                 for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
-                    if file["title"] == "methods":
-                        methods_folder_id = file["id"]
-
-            # Use ID to download contents of methods directory
-            if methods_folder_id is not None:
-
-                # Create methods directory if it does not exist
-                if not os.path.exists(methods_directory):
-                    os.makedirs(methods_directory)
-
-                # Change to methods directory
-                os.chdir(methods_directory)
-
-                # Download files
-                for file in drive.ListFile({"q": "'" + methods_folder_id + "' in parents and trashed=false"}).GetList():
-                    file.GetContentFile(file["title"])
-
-                # Change back to root directory
-                os.chdir(root_directory)
+                    if file["title"] == "methods.zip":
+                        os.chdir(data_directory)                # Switch to data directory
+                        file.GetContentFile(file["title"])      # Download methods ZIP archive
+                        os.chdir(root_directory)                # Switch back to root directory
+                        db.unzip_methods()                      # Unzip methods ZIP archive
 
         # Set device identity and proceed
         db.set_device_identity(is_instrument_computer, instrument_id)
 
         # Save Google Drive credentials
         gauth_holder[0].SaveCredentialsFile(credentials_file)
-
         return True
 
     else:
@@ -2103,7 +2089,7 @@ def update_google_drive_sync_status_in_settings(google_drive_authenticated, goog
 
         drive = GoogleDrive(gauth_holder[0])
         gdrive_folder_id = None
-        gdrive_file_id = None
+        main_db_file_id = None
 
         # Check for MS-AutoQC folder in Google Drive root directory
         for file in drive.ListFile({"q": "'root' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"}).GetList():
@@ -2139,30 +2125,38 @@ def update_google_drive_sync_status_in_settings(google_drive_authenticated, goog
                     gdrive_folder_id = file["id"]
                     break
 
-            # Create methods folder inside of MS-AutoQC folder
-            folder_metadata = {
-                "title": "methods",
-                "parents": [{"id": gdrive_folder_id}],
-                "mimeType": "application/vnd.google-apps.folder"
-            }
-            folder = drive.CreateFile(folder_metadata)
-            folder.Upload()
-
             # Update database in Google Drive folder
             db.zip_database()
+
             metadata = {
                 "title": "QC Database.zip",
                 "parents": [{"id": gdrive_folder_id}],
             }
-            file = drive.CreateFile(metadata=metadata)
-            file.SetContentFile(db_file)
-            file.Upload()
 
-            # Get Google Drive ID of database file
-            gdrive_file_id = file["id"]
+            file = drive.CreateFile(metadata=metadata)
+            file.SetContentFile(db_zip_file)
+            file.Upload()
+            main_db_file_id = file["id"]
+
+            # Create local methods directory
+            if not os.path.exists(methods_directory):
+                os.makedirs(methods_directory)
+
+            # Upload local methods directory to Google Drive
+            methods_zip_file = db.zip_methods()
+
+            metadata = {
+                "title": "methods.zip",
+                "parents": [{"id": gdrive_folder_id}],
+            }
+
+            file = drive.CreateFile(metadata=metadata)
+            file.SetContentFile(methods_zip_file)
+            file.Upload()
+            methods_zip_file_id = file["id"]
 
             # Put Google Drive ID's into database
-            db.insert_google_drive_ids(gdrive_folder_id, gdrive_file_id)
+            db.insert_google_drive_ids(gdrive_folder_id, main_db_file_id, methods_zip_file_id)
 
             # Sync database
             db.upload_database(drive=drive, sync_settings=True)
@@ -3071,7 +3065,7 @@ def toggle_settings_modal(button_click):
     """
 
     if db.sync_is_enabled():
-        db.download_database(GoogleDrive(gauth_holder[0]), sync_settings=True)
+        db.download_methods(GoogleDrive(gauth_holder[0]))
 
     return True
 
@@ -3098,7 +3092,7 @@ def show_sync_modal(settings_is_open, google_drive_authenticated, sync_modal_is_
 
     # Check if settings modal has been closed
     if settings_is_open:
-        return False, db.get_md5_for_database()
+        return False, db.get_md5_for_settings_db()
 
     elif not settings_is_open:
 
@@ -3106,7 +3100,7 @@ def show_sync_modal(settings_is_open, google_drive_authenticated, sync_modal_is_
         if google_drive_authenticated:
 
             # Get MD5 checksum after use closes settings
-            new_md5_checksum = db.get_md5_for_database()
+            new_md5_checksum = db.get_md5_for_settings_db()
 
             # Compare new MD5 checksum to old MD5 checksum
             if md5_checksum != new_md5_checksum:
@@ -3131,8 +3125,8 @@ def sync_settings_to_google_drive(settings_modal_is_open, google_drive_authentic
 
     if not settings_modal_is_open:
         if google_drive_authenticated or auth_in_app:
-            if db.was_modified(md5_checksum) or db.methods_modified():
-                db.upload_database(drive=GoogleDrive(gauth_holder[0]), sync_settings=True)
+            if db.settings_were_modified(md5_checksum):
+                db.upload_methods(drive=GoogleDrive(gauth_holder[0]))
                 return True
 
     return False
@@ -3159,7 +3153,7 @@ def get_users_with_workspace_access(on_page_load, user_added, user_deleted):
 
     # Get users from database
     if db.is_valid():
-        df_gdrive_users = db.get_table("gdrive_users")
+        df_gdrive_users = db.get_table("sqlite:///data/methods/Settings.db", "gdrive_users")
         df_gdrive_users = df_gdrive_users.rename(
             columns={"id": "User",
                      "name": "Name",
@@ -3543,12 +3537,7 @@ def remove_chromatography_method(button_click, chromatography):
     """
 
     if chromatography is not None:
-
-        drive = None
-        if db.sync_is_enabled():
-            drive = GoogleDrive(gauth_holder[0])
-
-        db.remove_chromatography_method(chromatography, drive)
+        db.remove_chromatography_method(chromatography)
         return "Removed"
 
     else:
@@ -4220,13 +4209,7 @@ def remove_biological_standard(button_click, biological_standard_name):
     """
 
     if biological_standard_name is not None:
-
-        drive = None
-        if db.sync_is_enabled():
-            drive = GoogleDrive(gauth_holder[0])
-
-        db.remove_biological_standard(biological_standard_name, drive)
-
+        db.remove_biological_standard(biological_standard_name)
         return "Deleted " + biological_standard_name + " and all corresponding MSP files."
     else:
         return "Error"
@@ -5039,7 +5022,7 @@ def update_progress_bar_during_active_instrument_run(active_cell, table_data, re
 
         # Construct values for progress bar
         completed, total = db.get_completed_samples_count(instrument_id, run_id, status)
-        percent_complete = db.get_run_progress(instrument_id, run_id)
+        percent_complete = db.get_run_progress(instrument_id, run_id, status)
         progress_label = str(percent_complete) + "%"
         header_text = run_id + " – " + str(completed) + " out of " + str(total) + " samples complete"
 
