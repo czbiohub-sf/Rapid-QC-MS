@@ -1549,14 +1549,9 @@ def sync_with_google_drive(on_page_load):
     For users signed in to MS-AutoQC from an external device, this will download the database on page load
     """
 
-    # Check if Google Drive sync is enabled
+    # Download database on page load (or refresh) if sync is enabled
     if db.sync_is_enabled():
-
-        # For external user device, download database from Drive
-        if not db.is_instrument_computer():
-            return db.download_database()
-
-        raise PreventUpdate
+        return db.download_database()
 
     # If Google Drive sync is not enabled, perform no action
     else:
@@ -1571,7 +1566,7 @@ def authenticate_with_google_drive(on_page_load):
     Authenticates with Google Drive if the credentials file is found
     """
 
-    # Initialize Google Drive
+    # Initialize Google Drive if sync is enabled
     if db.sync_is_enabled():
         return db.initialize_google_drive()
     else:
@@ -1761,7 +1756,7 @@ def ui_feedback_for_complete_setup_button(button_click):
               State("gdrive-database-file-id-1", "data"),
               State("gdrive-methods-zip-id-1", "data"), prevent_initial_call=True)
 def complete_first_time_setup(button_click, instrument_id, instrument_vendor, google_drive_authenticated,
-                              gdrive_folder_id, main_db_file_id, methods_zip_file_id):
+    gdrive_folder_id, main_db_file_id, methods_zip_file_id):
 
     """
     Upon "Complete setup" button click, this callback completes the following:
@@ -4753,8 +4748,15 @@ def start_bulk_qc_processing(modal_open, progress_intervals, data_file_directory
 
         # Once the last file has been processed, terminate the job
         if index == len(filenames):
-            if db.is_instrument_computer() and db.sync_is_enabled():
-                db.upload_database()
+
+            # Mark instrument run as completed
+            db.mark_run_as_completed(self.instrument_id, self.run_id)
+
+            # Sync database on run completion
+            if db.sync_is_enabled():
+                db.sync_on_run_completion(self.instrument_id, self.run_id)
+
+            # Return progress update
             return 100, "100%", "Processing complete!", True
 
         filename = filenames[index]
@@ -4991,8 +4993,6 @@ def update_progress_bar_during_active_instrument_run(active_cell, table_data, re
         if percent_complete != 100.0:
             return {"display": "block"}, header_text, percent_complete, progress_label, False
         else:
-            # if db.sync_is_enabled():
-            #     db.delete_active_run_files(drive, instrument_id, run_id)
             return {"display": "none"}, None, None, None, True
 
     else:

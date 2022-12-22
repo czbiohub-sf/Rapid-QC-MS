@@ -55,13 +55,9 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
                 print("Last sample acquired. Instrument run complete.")
                 self.observer.stop()
 
-                # Mark instrument run as completed
-                db.mark_run_as_completed(self.instrument_id, self.run_id)
-
                 # Terminate acquisition listener process
                 print("Terminating acquisition listener process.")
-                pid = db.get_pid(self.instrument_id, self.run_id)
-                qc.kill_acquisition_listener(pid)
+                self.conclude_process()
 
 
     def watch_file(self, path, filename, extension, check_interval=180):
@@ -94,6 +90,24 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
                 break
             else:
                 db.update_md5_checksum(filename, new_md5)
+
+
+    def conclude_process(self):
+
+        """
+        Wraps up job after the last data file has been routed to the pipeline
+        """
+
+        # Mark instrument run as completed
+        db.mark_run_as_completed(self.instrument_id, self.run_id)
+
+        # Sync database on run completion
+        if db.sync_is_enabled():
+            db.sync_on_run_completion(self.instrument_id, self.run_id)
+
+        # Kill acquisition listener
+        pid = db.get_pid(self.instrument_id, self.run_id)
+        qc.kill_acquisition_listener(pid)
 
 
 def start_listener(path, filenames, run_id):

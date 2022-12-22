@@ -447,20 +447,27 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
         print("Failed to convert data to JSON:", error)
         return
 
-    # Write QC results to database and upload to Google Drive
     try:
+        # Write QC results to database and upload to Google Drive
         db.write_qc_results(filename, run_id, json_mz, json_rt, json_intensity, qc_dataframe, qc_result, is_bio_standard)
+
+        # Update sample counters to trigger dashboard update
         db.update_sample_counters_for_run(run_id=run_id, qc_result=qc_result, latest_sample=filename)
+
+        # If sync is enabled, upload the QC results to Google Drive
+        if db.sync_is_enabled():
+            db.upload_qc_results(instrument_id, run_id)
+
     except Exception as error:
         print("Failed to write QC results to database:", error)
         return
 
     # Delete MS-DIAL result file
-    try:
-        os.remove(qc_results_directory + filename + ".msdial")
-    except Exception as error:
-        print("Failed to remove MS-DIAL result file:", error)
-        return
+    # try:
+    #     os.remove(qc_results_directory + filename + ".msdial")
+    # except Exception as error:
+    #     print("Failed to remove MS-DIAL result file:", error)
+    #     return
 
 
 def listener_is_running(pid):

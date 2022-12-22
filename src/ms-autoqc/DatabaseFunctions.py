@@ -2721,6 +2721,7 @@ def download_qc_results(instrument_id, run_id):
             os.chdir(run_directory)
             file.GetContentFile(file["title"])
             os.chdir(root_directory)
+            break
 
     # Unzip archive
     unzip_csv_files(zip_file_path, csv_directory)
@@ -2731,50 +2732,6 @@ def download_qc_results(instrument_id, run_id):
     bio_standards_csv_file = os.path.join(csv_directory, "bio_standards.csv")
 
     return (run_csv, samples_csv, bio_standards_csv_file)
-
-
-def delete_active_run_files(instrument_id, run_id):
-
-    """
-    Checks for and deletes CSV files from Google Drive at the end of an active instrument run
-    """
-
-    # Get ID's for the instrument run's CSV files in Google Drive
-    try:
-        zip_file_id = get_instrument_run(instrument_id, run_id)["drive_id"].astype(str).tolist()[0]
-    except:
-        return None
-
-    # Get Google Drive instance
-    drive = get_drive_instance()
-
-    # Get Google Drive ID for the MS-AutoQC folder
-    gdrive_folder_id = get_table(settings_database, "workspace")["gdrive_folder_id"].values[0]
-
-    if gdrive_folder_id is not None:
-        if gdrive_folder_id != "None" and gdrive_folder_id != "":
-
-            # Get list of files in Google Drive folder
-            drive_file_list = drive.ListFile(
-                {"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList()
-
-            # Find zip archive of CSV files and delete it
-            for file in drive_file_list:
-                if file["id"] == zip_file_id:
-                    file.Delete()
-
-    # Delete Drive ID from database
-    db_metadata, connection = connect_to_database(main_database)
-    instrument_runs_table = sa.Table("runs", db_metadata, autoload=True)
-
-    delete_drive_id = (
-        sa.update(instrument_runs_table)
-            .where((instrument_runs_table.c.run_id == run_id))
-            .values(drive_id=None)
-    )
-
-    connection.execute(delete_drive_id)
-    connection.close()
 
 
 def upload_database(sync_settings=False):
@@ -2799,7 +2756,7 @@ def upload_database(sync_settings=False):
     vacuum_main_database()
 
     # Send upload signal
-    send_upload_signal(gdrive_folder_id)
+    send_sync_signal(gdrive_folder_id)
 
     # Upload methods directory to Google Drive
     if sync_settings == True:
@@ -2821,7 +2778,7 @@ def upload_database(sync_settings=False):
         return None
 
     # Indicate that uploading is complete
-    remove_upload_signal(gdrive_folder_id)
+    remove_sync_signal(gdrive_folder_id)
 
     return time.strftime("%H:%M:%S")
 
@@ -2832,7 +2789,7 @@ def download_database(sync_settings=False):
     Downloads database file from Google Drive (for users signed in to workspace externally from instrument PC)
     """
 
-    # If the database was not modified by another instrument, skip download (for instruments only)
+    # # If the database was not modified by another instrument, skip download (for instruments only)
     if is_instrument_computer():
         if not file_was_modified(filename="QC Database.zip"):
             return None
@@ -3005,7 +2962,7 @@ def file_was_modified(filename):
         return True
 
 
-def send_upload_signal(folder):
+def send_sync_signal(folder_id):
 
     """
     Uploads empty file to signal that an instrument PC is syncing to Google Drive
@@ -3015,13 +2972,13 @@ def send_upload_signal(folder):
     drive = get_drive_instance()
 
     try:
-        drive.CreateFile(metadata={"title": "Uploading", "parents": [{"id": folder}]}).Upload()
+        drive.CreateFile(metadata={"title": "Syncing", "parents": [{"id": folder_id}]}).Upload()
         return True
     except:
         return False
 
 
-def safe_to_upload(folder):
+def safe_to_upload(folder_id):
 
     """
     Returns False if another device is currently uploading to Google Drive, else True
@@ -3030,14 +2987,14 @@ def safe_to_upload(folder):
     # Get Google Drive instance
     drive = get_drive_instance()
 
-    for file in drive.ListFile({"q": "'" + folder + "' in parents and trashed=false"}).GetList():
-        if file["title"] == "Uploading":
+    for file in drive.ListFile({"q": "'" + folder_id + "' in parents and trashed=false"}).GetList():
+        if file["title"] == "Syncing":
             return False
 
     return True
 
 
-def remove_upload_signal(folder):
+def remove_sync_signal(folder):
 
     """
     Uploads empty file to signal that an instrument PC is syncing to Google Drive
@@ -3048,7 +3005,7 @@ def remove_upload_signal(folder):
 
     try:
         for file in drive.ListFile({"q": "'" + folder + "' in parents and trashed=false"}).GetList():
-            if file["title"] == "Uploading":
+            if file["title"] == "Syncing":
                 file.Delete()
         return True
     except:
@@ -3071,28 +3028,18 @@ def csv_to_sql_database(instrument_id, run_id):
     id = instrument_id.replace(" ", "_") + "_" + run_id
 
     # Connect to database
-    db_metadata, connection = connect_to_database()
+    db_metadata, connection = connect_to_database(main_database)
 
-    # Delete rows from "runs" table
-    runs_table = sa.Table("runs", db_metadata, autoload=True)
-    connection.execute((
-        sa.delete(runs_table)
-            .where((runs_table.c.run_id == run_id) & (runs_table.c.instrument_id == instrument_id))
-    ))
+    # Delete rows from tables
+    for table_name in ["runs", "sample_qc_results", "bio_qc_results"]:
+        table = sa.Table(table_name, db_metadata, autoload=True)
+        connection.execute((
+            sa.delete(table)
+                .where((table.c.run_id == run_id) & (table.c.instrument_id == instrument_id))
+        ))
 
-    # Delete rows from "sample_qc_results" table
-    samples_table = sa.Table("sample_qc_results", db_metadata, autoload=True)
-    connection.execute((
-        sa.delete(samples_table)
-            .where((samples_table.c.run_id == run_id) & (samples_table.c.instrument_id == instrument_id))
-    ))
-
-    # Delete rows from "sample_qc_results" table
-    bio_standards_table = sa.Table("bio_qc_results", db_metadata, autoload=True)
-    connection.execute((
-        sa.delete(bio_standards_table)
-            .where((bio_standards_table.c.run_id == run_id) & (bio_standards_table.c.instrument_id == instrument_id))
-    ))
+    # Download and unzip CSV archive
+    download_qc_results(instrument_id, run_id)
 
     # Get CSV paths
     run_directory = os.path.join(data_directory, id)
@@ -3105,18 +3052,121 @@ def csv_to_sql_database(instrument_id, run_id):
     df_samples = pd.read_csv(samples_csv, index_col=False)
     df_bio_standards = pd.read_csv(bio_standards_csv, index_col=False)
 
+    df_bio_standards = df_bio_standards.loc[
+        (df_bio_standards["run_id"] == run_id) & (df_bio_standards["instrument_id"] == instrument_id)]
+
     # Append rows to "runs" table
     dtype = {}
     for column in ["id", "samples", "completed", "passes", "fails", "pid"]:
-        dtype[column] = Integer()
-    df_samples.to_sql("sample_qc_results", connection, if_exists="append", index=False, dtype=dtype)
+        dtype[column] = INTEGER
+    df_instrument_run.to_sql("runs", connection, if_exists="append", index=False, dtype=dtype)
 
     # Append rows to "sample_qc_results" table
-    dtype = {"id": Integer()}
-    df_samples.to_sql("sample_qc_results", connection, if_exists="append", index=False, dtype=dtype)
+    df_samples.to_sql("sample_qc_results", connection, if_exists="append", index=False, dtype={"id": INTEGER})
 
     # Append rows to "bio_qc_results" table
-    df_bio_standards.to_sql("bio_qc_results", connection, if_exists="append", index=False, dtype=dtype)
+    df_bio_standards.to_sql("bio_qc_results", connection, if_exists="append", index=False, dtype={"id": INTEGER})
 
     # Close the connection
     connection.close()
+
+
+def delete_active_run_csv_files(instrument_id, run_id):
+
+    """
+    Checks for and deletes CSV files from Google Drive at the end of an active instrument run
+    """
+
+    id = instrument_id.replace(" ", "_") + "_" + run_id + ".zip"
+
+    # Find zip archive of CSV files in Google Drive and delete it
+    drive = get_drive_instance()
+    gdrive_folder_id = get_table(settings_database, "workspace")["gdrive_folder_id"].values[0]
+    drive_file_list = drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList()
+    for file in drive_file_list:
+        if file["title"] == id:
+            file.Delete()
+            break
+
+    # Delete zip archive from /data
+    csv_directory = os.path.join(data_directory, id, "csv")
+    shutil.rmtree(csv_directory)
+
+    # Delete Drive ID from database
+    db_metadata, connection = connect_to_database(main_database)
+    runs_table = sa.Table("runs", db_metadata, autoload=True)
+
+    connection.execute((
+        sa.update(runs_table)
+            .where((runs_table.c.run_id == run_id) & (runs_table.c.instrument_id == instrument_id))
+            .values(drive_id=None)
+    ))
+
+    connection.close()
+
+
+def sync_on_run_completion(instrument_id, run_id):
+
+    """
+    Syncs database with Google Drive at the end of an active instrument run.
+    1. Ensure another instrument is not syncing
+    2. Send sync signal
+    3. If modified, download up-to-date database
+    4. Merge active run CSV files into database
+    5. Upload database to Google Drive
+    6. Delete active run CSV files
+    """
+
+    # Get Google Drive instance and folder ID
+    drive = get_drive_instance()
+    gdrive_folder_id = get_table(settings_database, "workspace")["gdrive_folder_id"].values[0]
+
+    # Ensure another instrument is not uploading or syncing (give 3 attempts)
+    while not safe_to_upload(gdrive_folder_id):
+        time.sleep(15)
+        if not safe_to_upload(gdrive_folder_id):
+            time.sleep(15)
+            if not safe_to_upload(gdrive_folder_id):
+                return False
+        break
+
+    # Send sync signal
+    try:
+        send_sync_signal(gdrive_folder_id)
+    except Exception as error:
+        print("sync_on_run_completion() – Error sending sync signal:", error)
+        return None
+
+    # If modified, download up-to-date database
+    try:
+        download_database()
+    except Exception as error:
+        print("sync_on_run_completion() – Error downloading database during sync:", error)
+        return None
+
+    # Merge CSV files into database
+    try:
+        csv_to_sql_database(instrument_id, run_id)
+    except Exception as error:
+        print("sync_on_run_completion() – Error merging CSV files into database", error)
+        return None
+
+    # Remove sync signal for upload
+    try:
+        remove_sync_signal(gdrive_folder_id)
+    except Exception as error:
+        print("sync_on_run_completion() – Error removing sync signal", error)
+
+    # Upload database to Google Drive
+    try:
+        upload_database()
+    except Exception as error:
+        print("sync_on_run_completion() – Error uploading database during sync", error)
+        return None
+
+    # Delete active run CSV files
+    try:
+        delete_active_run_csv_files(instrument_id, run_id)
+    except Exception as error:
+        print("sync_on_run_completion() – Error deleting CSV files after sync", error)
+        return None
