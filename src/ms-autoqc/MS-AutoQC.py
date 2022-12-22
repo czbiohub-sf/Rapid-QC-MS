@@ -1,10 +1,14 @@
 import io, sys, psutil, time
 import base64, webbrowser, json, ast
+
 import pandas as pd
 import sqlalchemy as sa
 from dash import dash, dcc, html, dash_table, Input, Output, State, ctx
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
+from pydrive2.auth import GoogleAuth
+from pydrive2.drive import GoogleDrive
+
 from PlotGeneration import *
 from AcquisitionListener import *
 import DatabaseFunctions as db
@@ -24,7 +28,6 @@ for directory in [data_directory, auth_directory, methods_directory]:
 # Google Drive authentication files
 credentials_file = os.path.join(auth_directory, "credentials.txt")
 drive_settings_file = os.path.join(auth_directory, "settings.yaml")
-gauth_holder = [GoogleAuth(settings_file=drive_settings_file)]
 
 # Database path
 db_zip_file = os.path.join(root_directory, "data", "QC Database.zip")
@@ -1549,12 +1552,9 @@ def sync_with_google_drive(on_page_load):
     # Check if Google Drive sync is enabled
     if db.sync_is_enabled():
 
-        # Get Google Drive instance
-        drive = GoogleDrive(gauth_holder[0])
-
         # For external user device, download database from Drive
         if not db.is_instrument_computer():
-            return db.download_database(drive)
+            return db.download_database()
 
         raise PreventUpdate
 
@@ -1571,39 +1571,9 @@ def authenticate_with_google_drive(on_page_load):
     Authenticates with Google Drive if the credentials file is found
     """
 
+    # Initialize Google Drive
     if db.sync_is_enabled():
-
-        # Create Google Drive instance
-        gauth_holder[0] = GoogleAuth(settings_file=drive_settings_file)
-        gauth = gauth_holder[0]
-
-        # If no credentials file, make user authenticate
-        if not os.path.exists(credentials_file) and db.is_valid():
-            gauth.LocalWebserverAuth()
-
-        # Try to load saved client credentials
-        gauth.LoadCredentialsFile(credentials_file)
-
-        # Initialize saved credentials
-        if gauth.credentials is not None:
-
-            # Refresh credentials if expired
-            if gauth.access_token_expired:
-                gauth.Refresh()
-
-            # Otherwise, authorize saved credentials
-            else:
-                gauth.Authorize()
-
-        # If no saved credentials, make user authenticate again
-        elif gauth.credentials is None:
-            gauth.LocalWebserverAuth()
-
-        if not os.path.exists(credentials_file) and db.is_valid():
-            gauth.SaveCredentialsFile(credentials_file)
-
-        return os.path.exists(credentials_file)
-
+        return db.initialize_google_drive()
     else:
         raise PreventUpdate
 
@@ -1644,9 +1614,7 @@ def launch_google_drive_authentication(setup_auth_button_clicks, sign_in_auth_bu
                 db.generate_client_settings_yaml(client_id_3, client_secret_3)
 
         # Authenticate, then save the credentials to a file
-        gauth_holder[0] = GoogleAuth(settings_file=drive_settings_file)
-        gauth = gauth_holder[0]
-        gauth.LocalWebserverAuth()
+        db.launch_google_drive_authentication()
 
     if button_id == "setup-google-drive-button-1":
         return True, None, None
@@ -1675,7 +1643,7 @@ def check_first_time_google_drive_authentication(google_drive_is_authenticated):
 
     if google_drive_is_authenticated:
 
-        drive = GoogleDrive(gauth_holder[0])
+        drive = db.get_drive_instance()
 
         # Initial values
         gdrive_folder_id = None
@@ -1805,7 +1773,7 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
     """
 
     if button_click:
-        drive = GoogleDrive(gauth_holder[0])
+        drive = db.get_drive_instance()
 
         # Initialize a new database if one does not exist
         if not db.is_valid():
@@ -1868,13 +1836,13 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
             methods_zip_file_id = file["id"]
 
             # Save user credentials
-            gauth_holder[0].SaveCredentialsFile(credentials_file)
+            db.save_google_drive_credentials()
 
             # Save Google Drive ID's for each file
             db.insert_google_drive_ids(gdrive_folder_id, main_db_file_id, methods_zip_file_id)
 
             # Sync database with Drive again to save Google Drive ID's
-            db.upload_database(drive=drive, sync_settings=True)
+            db.upload_database(sync_settings=True)
 
         # Dismiss setup window by returning True for workspace_has_been_setup boolean
         return db.is_valid()
@@ -1898,7 +1866,7 @@ def check_workspace_login_google_drive_authentication(google_drive_is_authentica
     """
 
     if google_drive_is_authenticated:
-        drive = GoogleDrive(gauth_holder[0])
+        drive = db.get_drive_instance()
 
         # Initial values
         gdrive_folder_id = None
@@ -2020,7 +1988,7 @@ def ui_feedback_for_login_button(button_click, is_instrument_computer, instrumen
         if is_instrument_computer:
 
             # Get Google Drive instance
-            drive = GoogleDrive(gauth_holder[0])
+            drive = db.get_drive_instance()
 
             # Download methods directory
             if gdrive_folder_id is not None:
@@ -2035,7 +2003,7 @@ def ui_feedback_for_login_button(button_click, is_instrument_computer, instrumen
         db.set_device_identity(is_instrument_computer, instrument_id)
 
         # Save Google Drive credentials
-        gauth_holder[0].SaveCredentialsFile(credentials_file)
+        db.save_google_drive_credentials()
         return True
 
     else:
@@ -2087,7 +2055,7 @@ def update_google_drive_sync_status_in_settings(google_drive_authenticated, goog
     # Authenticated from "Sign in to Google Drive" button in Settings > General
     elif trigger == "google-drive-authenticated-3" and google_drive_authenticated_on_start is None:
 
-        drive = GoogleDrive(gauth_holder[0])
+        drive = db.get_drive_instance()
         gdrive_folder_id = None
         main_db_file_id = None
 
@@ -2159,10 +2127,10 @@ def update_google_drive_sync_status_in_settings(google_drive_authenticated, goog
             db.insert_google_drive_ids(gdrive_folder_id, main_db_file_id, methods_zip_file_id)
 
             # Sync database
-            db.upload_database(drive=drive, sync_settings=True)
+            db.upload_database(sync_settings=True)
 
             # Save user credentials
-            gauth_holder[0].SaveCredentialsFile(credentials_file)
+            db.save_google_drive_credentials()
 
         form_text = "Cloud sync is enabled! You can now sign in to this MS-AutoQC workspace from any device."
         return "success", "Signed in to Google Drive", form_text, False, "Client ID (saved)", "Client secret (saved)"
@@ -2389,7 +2357,7 @@ def load_data(refresh, active_cell, table_data, resources, instrument_id):
 
         # Otherwise, begin route: raw data -> parsed data -> user session cache -> plots
         if status == "Active" and db.sync_is_enabled():
-            drive = GoogleDrive(gauth_holder[0])
+            drive = db.get_drive_instance()
             return get_qc_results(instrument_id, run_id, status, drive) + (True,)
         else:
             return get_qc_results(instrument_id, run_id) + (True,)
@@ -2833,7 +2801,7 @@ def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, in
     # Get Google Drive instance
     drive = None
     if status == "Active" and db.sync_is_enabled():
-        drive = GoogleDrive(gauth_holder[0])
+        drive = db.get_drive_instance()
 
     # Toggle a different biological standard
     if selected_bio_standard is not None:
@@ -2893,7 +2861,7 @@ def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_p
     # Get Google Drive instance
     drive = None
     if status == "Active" and db.sync_is_enabled():
-        drive = GoogleDrive(gauth_holder[0])
+        drive = db.get_drive_instance()
 
     # Toggle a different biological standard
     if selected_bio_standard is not None:
@@ -3065,7 +3033,7 @@ def toggle_settings_modal(button_click):
     """
 
     if db.sync_is_enabled():
-        db.download_methods(GoogleDrive(gauth_holder[0]))
+        db.download_methods()
 
     return True
 
@@ -3126,7 +3094,7 @@ def sync_settings_to_google_drive(settings_modal_is_open, google_drive_authentic
     if not settings_modal_is_open:
         if google_drive_authenticated or auth_in_app:
             if db.settings_were_modified(md5_checksum):
-                db.upload_methods(drive=GoogleDrive(gauth_holder[0]))
+                db.upload_methods()
                 return True
 
     return False
@@ -3184,8 +3152,7 @@ def add_user_to_workspace(button_click, user_email_address, google_drive_is_auth
         return "User already exists"
 
     if db.sync_is_enabled():
-        drive = GoogleDrive(gauth_holder[0])
-        db.add_user_to_workspace(drive, user_email_address)
+        db.add_user_to_workspace(user_email_address)
 
     if user_email_address in db.get_workspace_users_list():
         return user_email_address
@@ -3207,8 +3174,7 @@ def delete_user_from_workspace(button_click, user_email_address, google_drive_is
         return "User does not exist"
 
     if db.sync_is_enabled():
-        drive = GoogleDrive(gauth_holder[0])
-        db.delete_user_from_workspace(drive, user_email_address)
+        db.delete_user_from_workspace(user_email_address)
 
     if user_email_address in db.get_workspace_users_list():
         return "Error"
@@ -4737,7 +4703,7 @@ def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, b
         db.store_pid(run_id, process.pid)
 
         if db.is_instrument_computer() and db.sync_is_enabled():
-            return db.upload_database(GoogleDrive(gauth_holder[0]), sync_settings=False)
+            return db.upload_database()
 
         return True, False, False, ""
 
@@ -4788,7 +4754,7 @@ def start_bulk_qc_processing(modal_open, progress_intervals, data_file_directory
         # Once the last file has been processed, terminate the job
         if index == len(filenames):
             if db.is_instrument_computer() and db.sync_is_enabled():
-                db.upload_database(drive=GoogleDrive(gauth_holder[0]), sync_settings=False)
+                db.upload_database()
             return 100, "100%", "Processing complete!", True
 
         filename = filenames[index]
@@ -5015,10 +4981,6 @@ def update_progress_bar_during_active_instrument_run(active_cell, table_data, re
         # Get run ID
         run_id = table_data[active_cell["row"]]["Run ID"]
         status = table_data[active_cell["row"]]["Status"]
-
-        # Get Google Drive instance
-        if db.sync_is_enabled():
-            drive = GoogleDrive(gauth_holder[0])
 
         # Construct values for progress bar
         completed, total = db.get_completed_samples_count(instrument_id, run_id, status)

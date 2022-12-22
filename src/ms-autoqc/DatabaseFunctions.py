@@ -9,8 +9,9 @@ from sqlalchemy import INTEGER, REAL, TEXT
 
 # Initialize directories
 root_directory = os.getcwd()
-data_directory = os.path.join(os.getcwd(), "data")
+data_directory = os.path.join(root_directory, "data")
 methods_directory = os.path.join(data_directory, "methods")
+auth_directory = os.path.join(root_directory, "auth")
 
 # Location of main SQLite database
 main_database = "sqlite:///data/QC Database.db"
@@ -21,14 +22,20 @@ main_db_zip_file = os.path.join(data_directory, "QC Database.zip")
 settings_database = "sqlite:///data/methods/Settings.db"
 settings_db_file = os.path.join(methods_directory, "Settings.db")
 
+# Google Drive authentication files
+credentials_file = os.path.join(auth_directory, "credentials.txt")
+drive_settings_file = os.path.join(auth_directory, "settings.yaml")
+auth_container = [GoogleAuth(settings_file=drive_settings_file)]
+
 """
 The functions defined below operate on two databases:
 
 - One storing instrument metadata, instrument run info, and sample / biological standard QC results
-- The other storing workspace settings for chromatography methods, biological standards, 
+- The other storing workspace settings for workspace access, chromatography methods, biological standards, 
   QC configurations, and MS-DIAL configurations
-
-To get an overview of all functions, please visit the documentation on ms-autoqc.github.io!
+  
+In addition, this file also contains methods for syncing data and settings with Google Drive.
+To get an overview of all functions, please visit the documentation on http://ms-autoqc.github.io :)
 """
 
 def connect_to_database(database_file):
@@ -286,6 +293,72 @@ def vacuum_settings_database():
     execute_vacuum(settings_database)
 
 
+def get_drive_instance():
+
+    """
+    Returns user-authenticated Google Drive instance
+    """
+
+    return GoogleDrive(auth_container[0])
+
+
+def launch_google_drive_authentication():
+
+    """
+    Launches Google Drive authentication flow and sets authentication instance
+    """
+
+    auth_container[0] = GoogleAuth(settings_file=drive_settings_file)
+    auth_container[0].LocalWebserverAuth()
+
+
+def save_google_drive_credentials():
+
+    """
+    Saves Google credentials to a credentials.txt file
+    """
+
+    auth_container[0].SaveCredentialsFile(credentials_file)
+
+
+def initialize_google_drive():
+
+    """
+    Initializes instance of Google Drive using credentials.txt and settings.yaml in /auth directory
+    """
+
+    # Create Google Drive instance
+    auth_container[0] = GoogleAuth(settings_file=drive_settings_file)
+    gauth = auth_container[0]
+
+    # If no credentials file, make user authenticate
+    if not os.path.exists(credentials_file) and is_valid():
+        gauth.LocalWebserverAuth()
+
+    # Try to load saved client credentials
+    gauth.LoadCredentialsFile(credentials_file)
+
+    # Initialize saved credentials
+    if gauth.credentials is not None:
+
+        # Refresh credentials if expired
+        if gauth.access_token_expired:
+            gauth.Refresh()
+
+        # Otherwise, authorize saved credentials
+        else:
+            gauth.Authorize()
+
+    # If no saved credentials, make user authenticate again
+    elif gauth.credentials is None:
+        gauth.LocalWebserverAuth()
+
+    if not os.path.exists(credentials_file) and is_valid():
+        gauth.SaveCredentialsFile(credentials_file)
+
+    return os.path.exists(credentials_file)
+
+
 def is_valid():
 
     """
@@ -408,6 +481,7 @@ def unzip_database():
     """
 
     shutil.unpack_archive(main_db_zip_file, data_directory, "zip")
+    os.remove(main_db_zip_file)
 
 
 def zip_methods():
@@ -429,6 +503,7 @@ def unzip_methods():
 
     input_zip = os.path.join(data_directory, "methods.zip")
     shutil.unpack_archive(input_zip, methods_directory, "zip")
+    os.remove(input_zip)
 
 
 def zip_csv_files(input_directory, output_directory_and_name):
@@ -448,6 +523,7 @@ def unzip_csv_files(input_zip, output_directory):
     """
 
     shutil.unpack_archive(input_zip, output_directory, "zip")
+    os.remove(input_zip)
 
 
 def get_table(database, table_name):
@@ -2117,7 +2193,7 @@ def get_workspace_users_list():
     return get_table(settings_database, "gdrive_users")["email_address"].astype(str).tolist()
 
 
-def add_user_to_workspace(drive, email_address):
+def add_user_to_workspace(email_address):
 
     """
     Gives user access to workspace in Google Drive, stores email in database
@@ -2125,6 +2201,9 @@ def add_user_to_workspace(drive, email_address):
 
     if email_address in get_workspace_users_list():
         return "User already exists"
+
+    # Get Google Drive instance
+    drive = get_drive_instance()
 
     # Get ID of MS-AutoQC folder in Google Drive
     gdrive_folder_id = get_table(settings_database, "workspace")["gdrive_folder_id"].values[0]
@@ -2153,7 +2232,7 @@ def add_user_to_workspace(drive, email_address):
         return "Error"
 
 
-def delete_user_from_workspace(drive, email_address):
+def delete_user_from_workspace(email_address):
 
     """
     Removes user access to workspace in Google Drive, deletes email in database
@@ -2161,6 +2240,9 @@ def delete_user_from_workspace(drive, email_address):
 
     if email_address not in get_workspace_users_list():
         return "User does not exist"
+
+    # Get Google Drive instance
+    drive = get_drive_instance()
 
     # Get ID of MS-AutoQC folder in Google Drive
     gdrive_folder_id = get_table(settings_database, "workspace")["gdrive_folder_id"].values[0]
@@ -2488,13 +2570,16 @@ def get_pid(instrument_id, run_id):
     return get_instrument_run(instrument_id, run_id)["pid"].astype(int).tolist()[0]
 
 
-def upload_to_google_drive(drive, file_dict):
+def upload_to_google_drive(file_dict):
 
     """
     Uploads files to MS-AutoQC folder in Google Drive
     Input: dictionary with key-value structure { filename : file path }
     Output: dictionary with key-value structure { filename : Google Drive ID }
     """
+
+    # Get Google Drive instance
+    drive = get_drive_instance()
 
     # Get Google Drive ID for the MS-AutoQC folder
     folder_id = get_table(settings_database, "workspace")["gdrive_folder_id"].values[0]
@@ -2522,13 +2607,16 @@ def upload_to_google_drive(drive, file_dict):
     return drive_ids
 
 
-def upload_qc_results(drive, instrument_id, run_id):
+def upload_qc_results(instrument_id, run_id):
     
     """
     Uploads QC results for a given run to Google Drive as a CSV file
     """
 
     id = instrument_id.replace(" ", "_") + "_" + run_id
+
+    # Get Google Drive instance
+    drive = get_drive_instance()
 
     # Define file names and file paths
     run_filename = "run.csv"
@@ -2585,7 +2673,7 @@ def upload_qc_results(drive, instrument_id, run_id):
     else:
 
         # Upload CSV files ZIP archive to Google Drive for first time
-        drive_id = upload_to_google_drive(drive, zip_file)[zip_filename]
+        drive_id = upload_to_google_drive(zip_file)[zip_filename]
 
         # Store Drive ID of ZIP file in local database
         db_metadata, connection = connect_to_database(main_database)
@@ -2600,13 +2688,16 @@ def upload_qc_results(drive, instrument_id, run_id):
         connection.close()
 
 
-def download_qc_results(drive, instrument_id, run_id):
+def download_qc_results(instrument_id, run_id):
 
     """
     Downloads CSV files of QC results from Google Drive and stores in data directory
     """
 
     id = instrument_id.replace(" ", "_") + "_" + run_id
+
+    # Get Google Drive instance
+    drive = get_drive_instance()
 
     # Initialize directories
     run_directory = os.path.join(data_directory, id)
@@ -2642,7 +2733,7 @@ def download_qc_results(drive, instrument_id, run_id):
     return (run_csv, samples_csv, bio_standards_csv_file)
 
 
-def delete_active_run_files(drive, instrument_id, run_id):
+def delete_active_run_files(instrument_id, run_id):
 
     """
     Checks for and deletes CSV files from Google Drive at the end of an active instrument run
@@ -2653,6 +2744,9 @@ def delete_active_run_files(drive, instrument_id, run_id):
         zip_file_id = get_instrument_run(instrument_id, run_id)["drive_id"].astype(str).tolist()[0]
     except:
         return None
+
+    # Get Google Drive instance
+    drive = get_drive_instance()
 
     # Get Google Drive ID for the MS-AutoQC folder
     gdrive_folder_id = get_table(settings_database, "workspace")["gdrive_folder_id"].values[0]
@@ -2683,7 +2777,7 @@ def delete_active_run_files(drive, instrument_id, run_id):
     connection.close()
 
 
-def upload_database(drive, sync_settings=False):
+def upload_database(sync_settings=False):
 
     """
     Uploads database file and methods directory to Google Drive
@@ -2694,16 +2788,22 @@ def upload_database(drive, sync_settings=False):
     gdrive_folder_id = df_workspace["gdrive_folder_id"].values[0]
     main_db_file_id = df_workspace["main_db_file_id"].values[0]
 
+    # Get Google Drive instance
+    drive = get_drive_instance()
+
     # Ensure that another device is not currently uploading to Google Drive
-    if not safe_to_upload(drive, gdrive_folder_id):
+    if not safe_to_upload(gdrive_folder_id):
         return None
 
+    # Vacuum database to optimize size
+    vacuum_main_database()
+
     # Send upload signal
-    send_upload_signal(drive, gdrive_folder_id)
+    send_upload_signal(gdrive_folder_id)
 
     # Upload methods directory to Google Drive
     if sync_settings == True:
-        upload_methods(drive)
+        upload_methods()
 
     # Upload database to Google Drive
     if gdrive_folder_id is not None and main_db_file_id is not None:
@@ -2721,12 +2821,12 @@ def upload_database(drive, sync_settings=False):
         return None
 
     # Indicate that uploading is complete
-    remove_upload_signal(drive, gdrive_folder_id)
+    remove_upload_signal(gdrive_folder_id)
 
     return time.strftime("%H:%M:%S")
 
 
-def download_database(drive, sync_settings=False):
+def download_database(sync_settings=False):
 
     """
     Downloads database file from Google Drive (for users signed in to workspace externally from instrument PC)
@@ -2734,8 +2834,11 @@ def download_database(drive, sync_settings=False):
 
     # If the database was not modified by another instrument, skip download (for instruments only)
     if is_instrument_computer():
-        if not file_was_modified(drive=drive, filename="QC Database.zip"):
+        if not file_was_modified(filename="QC Database.zip"):
             return None
+
+    # Get Google Drive instance
+    drive = get_drive_instance()
 
     # Get Google Drive ID's for the MS-AutoQC folder and database file
     df_workspace = get_table(settings_database, "workspace")
@@ -2747,7 +2850,7 @@ def download_database(drive, sync_settings=False):
 
         # Download newly added / modified MSP files in MS-AutoQC > methods
         if sync_settings == True:
-            download_methods(drive=drive, skip_check=True)
+            download_methods(skip_check=True)
 
         try:
             for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
@@ -2771,7 +2874,7 @@ def download_database(drive, sync_settings=False):
     return time.strftime("%H:%M:%S")
 
 
-def upload_methods(drive):
+def upload_methods():
 
     """
     Uploads methods directory ZIP archive to Google Drive
@@ -2779,6 +2882,12 @@ def upload_methods(drive):
 
     df_workspace = get_table(settings_database, "workspace")
     methods_zip_file_id = df_workspace["methods_zip_file_id"].values[0]
+
+    # Vacuum database to optimize size
+    vacuum_settings_database()
+
+    # Get Google Drive instance
+    drive = get_drive_instance()
 
     # Upload methods ZIP archive to Google Drive
     if methods_zip_file_id is not None:
@@ -2796,7 +2905,7 @@ def upload_methods(drive):
         return None
 
 
-def download_methods(drive, skip_check=False):
+def download_methods(skip_check=False):
 
     """
     Downloads methods directory ZIP archive from Google Drive
@@ -2805,12 +2914,15 @@ def download_methods(drive, skip_check=False):
     # If the database was not modified by another instrument, skip download (for instruments only)
     if not skip_check:
         if is_instrument_computer():
-            if not file_was_modified(drive=drive, filename="methods.zip"):
+            if not file_was_modified(filename="methods.zip"):
                 return None
 
     # Get device identity
     instrument_bool = is_instrument_computer()
     device_identity = get_device_identity()
+
+    # Get Google Drive instance
+    drive = get_drive_instance()
 
     # Get Google Drive folder ID
     gdrive_folder_id = get_table(settings_database, "workspace")["gdrive_folder_id"].values[0]
@@ -2862,7 +2974,7 @@ def remember_last_modified(modified_date, file):
     connection.close()
 
 
-def file_was_modified(drive, filename):
+def file_was_modified(filename):
 
     """
     Returns True if workspace file was modified by another instrument PC in Google Drive, and False if not
@@ -2871,6 +2983,9 @@ def file_was_modified(drive, filename):
     # Get Google Drive folder ID from database
     df_workspace = get_table(settings_database, "workspace")
     gdrive_folder_id = df_workspace["gdrive_folder_id"].values[0]
+
+    # Get Google Drive instance
+    drive = get_drive_instance()
 
     # Compare "last modified" values
     if filename == "QC Database.zip":
@@ -2890,11 +3005,14 @@ def file_was_modified(drive, filename):
         return True
 
 
-def send_upload_signal(drive, folder):
+def send_upload_signal(folder):
 
     """
     Uploads empty file to signal that an instrument PC is syncing to Google Drive
     """
+
+    # Get Google Drive instance
+    drive = get_drive_instance()
 
     try:
         drive.CreateFile(metadata={"title": "Uploading", "parents": [{"id": folder}]}).Upload()
@@ -2903,11 +3021,14 @@ def send_upload_signal(drive, folder):
         return False
 
 
-def safe_to_upload(drive, folder):
+def safe_to_upload(folder):
 
     """
     Returns False if another device is currently uploading to Google Drive, else True
     """
+
+    # Get Google Drive instance
+    drive = get_drive_instance()
 
     for file in drive.ListFile({"q": "'" + folder + "' in parents and trashed=false"}).GetList():
         if file["title"] == "Uploading":
@@ -2916,11 +3037,14 @@ def safe_to_upload(drive, folder):
     return True
 
 
-def remove_upload_signal(drive, folder):
+def remove_upload_signal(folder):
 
     """
     Uploads empty file to signal that an instrument PC is syncing to Google Drive
     """
+
+    # Get Google Drive instance
+    drive = get_drive_instance()
 
     try:
         for file in drive.ListFile({"q": "'" + folder + "' in parents and trashed=false"}).GetList():
