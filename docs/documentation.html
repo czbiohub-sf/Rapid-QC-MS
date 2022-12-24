@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.2.280">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>MS-AutoQC - Documentation</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1.6em;
+  vertical-align: middle;
+}
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark.css" rel="prefetch" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark.min.css" rel="prefetch" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">MS-AutoQC</span>
+    </a>
+  </div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="./index.html">
+ <span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./overview.html">
+ <span class="menu-text">Overview</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./download.html">
+ <span class="menu-text">Download</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./installation.html">
+ <span class="menu-text">Installation</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./get-started.html">
+ <span class="menu-text">Get Started</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./user-guide.html">
+ <span class="menu-text">User Guide</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link active" href="./documentation.html" aria-current="page">
+ <span class="menu-text">Documentation</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./troubleshooting.html">
+ <span class="menu-text">Troubleshooting</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./faq.html">
+ <span class="menu-text">FAQ</span></a>
+  </li>  
+</ul>
+              <div class="quarto-toggle-container">
+                  <a href="" class="quarto-color-scheme-toggle nav-link" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+              </div>
+              <div id="quarto-search" class="" title="Search"></div>
+          </div> <!-- /navcollapse -->
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#general-workflow" id="toc-general-workflow" class="nav-link active" data-scroll-target="#general-workflow">General workflow</a>
+  <ul class="collapse">
+  <li><a href="#ms-autoqc-starts-listening-to-the-data-acquisition-path" id="toc-ms-autoqc-starts-listening-to-the-data-acquisition-path" class="nav-link" data-scroll-target="#ms-autoqc-starts-listening-to-the-data-acquisition-path">1. MS-AutoQC starts listening to the data acquisition path</a></li>
+  <li><a href="#ms-autoqc-compares-checksums" id="toc-ms-autoqc-compares-checksums" class="nav-link" data-scroll-target="#ms-autoqc-compares-checksums">2. MS-AutoQC compares checksums</a></li>
+  <li><a href="#the-processing-pipeline-is-launched" id="toc-the-processing-pipeline-is-launched" class="nav-link" data-scroll-target="#the-processing-pipeline-is-launched">3. The processing pipeline is launched</a></li>
+  <li><a href="#msconvert-converts-the-raw-data-to-mzml-format" id="toc-msconvert-converts-the-raw-data-to-mzml-format" class="nav-link" data-scroll-target="#msconvert-converts-the-raw-data-to-mzml-format">4. MSConvert converts the raw data to mzML format</a></li>
+  <li><a href="#ms-dial-processes-the-mzml-file" id="toc-ms-dial-processes-the-mzml-file" class="nav-link" data-scroll-target="#ms-dial-processes-the-mzml-file">5. MS-DIAL processes the mzML file</a></li>
+  <li><a href="#ms-autoqc-performs-quality-control-checks" id="toc-ms-autoqc-performs-quality-control-checks" class="nav-link" data-scroll-target="#ms-autoqc-performs-quality-control-checks">6. MS-AutoQC performs quality control checks</a></li>
+  <li><a href="#the-ms-autoqc-dashboard-is-refreshed-with-qc-results" id="toc-the-ms-autoqc-dashboard-is-refreshed-with-qc-results" class="nav-link" data-scroll-target="#the-ms-autoqc-dashboard-is-refreshed-with-qc-results">7. The MS-AutoQC dashboard is refreshed with QC results</a></li>
+  <li><a href="#the-user-is-notified-of-qc-fails-and-warnings" id="toc-the-user-is-notified-of-qc-fails-and-warnings" class="nav-link" data-scroll-target="#the-user-is-notified-of-qc-fails-and-warnings">8. The user is notified of QC fails and warnings</a></li>
+  </ul></li>
+  <li><a href="#database-schema" id="toc-database-schema" class="nav-link" data-scroll-target="#database-schema">Database schema</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Documentation</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<p>This section details the backend data infrastructure and data processing pipeline packaged into MS-AutoQC, as well as some of the structure and logic of the Dash callbacks that serve the frontend app interface.</p>
+<p>If you have any questions, concerns, or suggestions about the design of MS-AutoQC, please don’t hesitate to contact us at wasim.sandhu@czbiohub.org or brian.defelice@czbiohub.org.</p>
+<section id="general-workflow" class="level1">
+<h1>General workflow</h1>
+<p>The diagram below gives a broad overview of how MS-AutoQC listens to instrument runs and processes your data safely and securely. To summarize:</p>
+<ol type="1">
+<li>The user prepares their run sequence and starts an instrument run</li>
+<li>The user gives MS-AutoQC the sequence file and the data acquisition path</li>
+</ol>
+<p><strong>At this point, the user’s work is done.</strong> They can start monitoring their instrument run from the MS-AutoQC dashboard. Now, the MS-AutoQC workflow is initialized.</p>
+<ol type="1">
+<li>MS-AutoQC starts “listening” to the data acquisition path</li>
+<li>When the instrument starts collecting sample data, MS-AutoQC starts comparing checksums</li>
+<li>Once the sample data has been acquired, the processing pipeline is launched</li>
+<li>MSConvert converts a copy of the raw data file from closed vendor format to open mzML format</li>
+<li>MS-DIAL processes the mzML file and quantifies internal standards</li>
+<li>MS-AutoQC performs quality control checks (based on user-defined criteria)</li>
+<li>QC results are written to the local database and trigger an update to the MS-AutoQC dashboard</li>
+<li>If there are any QC fails or warnings, the user is notified (if user opted in for notifications)</li>
+</ol>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://user-images.githubusercontent.com/7220175/201808870-ee51397e-c101-4647-9098-5f43acf5e944.png" class="img-fluid figure-img"></p>
+<p></p><figcaption class="figure-caption">MS-AutoQC data processing pipeline</figcaption><p></p>
+</figure>
+</div>
+<p>The following sections discuss the MS-AutoQC workflow in detail.</p>
+<section id="ms-autoqc-starts-listening-to-the-data-acquisition-path" class="level3">
+<h3 class="anchored" data-anchor-id="ms-autoqc-starts-listening-to-the-data-acquisition-path">1. MS-AutoQC starts listening to the data acquisition path</h3>
+<p>To initialize the workflow, several functions are executed:</p>
+<ul>
+<li>The instrument run is written to the database</li>
+<li>MSP library files are retrieved from the database</li>
+<li>MS-DIAL parameter files are generated for chromatography methods and biological standards</li>
+<li>Filenames are parsed out from the acquisition sequence file</li>
+</ul>
+<p>Once this is done, the acquisition path, filenames, and run ID are passed to the acquisition listener, which is started in the background as a subprocess.</p>
+<p><strong><code>MS-AutoQC.py</code>:</strong></p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="at">@app.callback</span>(...)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, bio_standards, sequence, metadata, acquisition_path, qc_config_id, job_type):</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">    This callback initiates the following:</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">    1. Writing a new instrument run to the database</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">    2. Generate parameters files for MS-DIAL processing</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">    3a. Initializing run monitoring at the given directory for an active run, or</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">    3b. Iterating through and processing data files for a completed run</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Write a new instrument run to the database</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    db.insert_new_run(run_id, instrument_id, chromatography, bio_standards, sequence, metadata, qc_config_id)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Get MSPs and generate parameters files for MS-DIAL processing</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> polarity <span class="kw">in</span> [<span class="st">"Positive"</span>, <span class="st">"Negative"</span>]:</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Generate parameters files for processing samples</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>        msp_file_path <span class="op">=</span> db.get_msp_file_path(chromatography, polarity)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        db.generate_msdial_parameters_file(chromatography, polarity, msp_file_path)</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Generate parameters files for processing each biological standard</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> bio_standards <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> bio_standard <span class="kw">in</span> bio_standards:</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>                msp_file_path <span class="op">=</span> db.get_msp_file_path(chromatography, polarity, bio_standard)</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>                db.generate_msdial_parameters_file(chromatography, polarity, msp_file_path, bio_standard)</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Get filenames from sequence and filter out preblanks, wash, shutdown, etc.</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    filenames <span class="op">=</span> db.get_filenames_from_sequence(sequence)[<span class="st">"File Name"</span>].astype(<span class="bu">str</span>).tolist()</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    <span class="co"># If this is for an active run, initialize run monitoring at the given directory</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> job_type <span class="op">==</span> <span class="st">"active"</span>:</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>        listener <span class="op">=</span> subprocess.Popen([<span class="st">"py"</span>, <span class="st">"AcquisitionListener.py"</span>, acquisition_path, <span class="bu">str</span>(filenames), run_id])</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">True</span>, <span class="va">False</span>, <span class="va">False</span>, <span class="st">""</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>    <span class="co"># If this is for a completed run, begin iterating through the files and process them</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> job_type <span class="op">==</span> <span class="st">"completed"</span>:</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">False</span>, <span class="va">True</span>, <span class="va">False</span>, json.dumps(filenames)</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Handle form validation errors</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">False</span>, <span class="va">False</span>, <span class="va">True</span>, <span class="st">""</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><strong>Jump to relevant functions:</strong> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/MS-AutoQC.py#L4498"><code>new_autoqc_job_setup()</code></a> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/DatabaseFunctions.py#L1405"><code>db.get_msp_file_path()</code></a> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/DatabaseFunctions.py#L1131"><code>db.generate_msdial_parameters_file()</code></a> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/DatabaseFunctions.py#L472"><code>db.get_filenames_from_sequence()</code></a></p>
+</section>
+<section id="ms-autoqc-compares-checksums" class="level3">
+<h3 class="anchored" data-anchor-id="ms-autoqc-compares-checksums">2. MS-AutoQC compares checksums</h3>
+<p>Once the acquisition listener has been called, it waits for a file to be created in the data acquisition path.</p>
+<p>Upon file creation, <code>watch_file()</code> is called. It writes an initial MD5 checksum<sup>1</sup> of the file to the database, and then initializes an indefinite loop.</p>
+<p><strong><code>DataAcquisitionEventHandler</code> class in <code>AcquisitionListener.py</code>:</strong></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> watch_file(<span class="va">self</span>, path, filename, extension, check_interval<span class="op">=</span><span class="dv">180</span>):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="co">"""</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">        Returns True if MD5 checksum on file matches the MD5 checksum written to the database 3 minutes ago.</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">        Effectively determines whether sample acquisition has been completed.</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">        """</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Write initial MD5 checksum to database</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        md5_checksum <span class="op">=</span> get_md5(path <span class="op">+</span> filename <span class="op">+</span> <span class="st">"."</span> <span class="op">+</span> extension)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        db.update_md5_checksum(filename, md5_checksum)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Watch file indefinitely</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">while</span> os.path.exists(path):</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Wait 3 minutes</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>            time.sleep(check_interval)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>            new_md5 <span class="op">=</span> get_md5(path <span class="op">+</span> filename <span class="op">+</span> <span class="st">"."</span> <span class="op">+</span> extension)</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>            old_md5 <span class="op">=</span> db.get_md5(filename)</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>            <span class="co"># If the MD5 checksum after 3 mins is the same as before, file is done acquiring</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> new_md5 <span class="op">==</span> old_md5:</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>                <span class="cf">break</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>            <span class="cf">else</span>:</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>                db.update_md5_checksum(filename, new_md5)</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">True</span>  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The loop waits 3 minutes, then computes the file’s MD5 checksum again. If the checksums match, the loop breaks and <code>qc.process_data_file()</code> is called. If not, the loop repeats.</p>
+<p><strong><code>DataAcquisitionEventHandler</code> class in <code>AcquisitionListener.py</code>:</strong></p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> on_created(<span class="va">self</span>, event):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="co">"""</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">        Listen for data file creation</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">        """</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Remove directory path and file extension from filename</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        ...</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Check if file created is in the sequence</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> event.is_directory <span class="kw">and</span> filename <span class="kw">in</span> <span class="va">self</span>.filenames:</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Start watching file until sample acquisition is complete</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>            sample_acquired <span class="op">=</span> <span class="va">self</span>.watch_file(path, filename, extension)</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Execute QC processing</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> sample_acquired:</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>                qc.process_data_file(event.src_path, filename, extension, <span class="va">self</span>.run_id)</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Terminate listener when the last data file is acquired</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> filename <span class="op">==</span> <span class="va">self</span>.filenames[<span class="op">-</span><span class="dv">1</span>]:</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>                <span class="va">self</span>.observer.stop()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><strong>Jump to relevant functions:</strong> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/AcquisitionListener.py#L23"><code>on_created()</code></a> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/AcquisitionListener.py#L56"><code>watch_file()</code></a> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/AcquisitionListener.py#L113"><code>get_md5()</code></a> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/DatabaseFunctions.py#L599"><code>db.get_md5()</code></a> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/DatabaseFunctions.py#L623"><code>db.update_md5_checksum()</code></a> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/AutoQCProcessing.py#L352"><code>qc.process_data_file()</code></a></p>
+<p><sup>1</sup><sub>An MD5 checksum is a 32-character serialized string that represents the contents of a file. If two files have the same MD5 checksum, it is highly likely that they are identical files. Computing this checksum is unlikely to corrupt raw data files, or files of any kind for that matter.</sub></p>
+</section>
+<section id="the-processing-pipeline-is-launched" class="level3">
+<h3 class="anchored" data-anchor-id="the-processing-pipeline-is-launched">3. The processing pipeline is launched</h3>
+<p>The processing pipeline is a wrapper function called <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/AutoQCProcessing.py#L352"><code>qc.process_data_file()</code></a>, which gets executed when the instrument has finished writing to the data file. It is be described in detail in the upcoming steps.</p>
+<p>In preparation, this function retrieves the following information from the database: - Instrument run ID - Chromatography method - List of samples in run - List of biological standards in run - MS-DIAL parameters file path - List of internal standards for chromatography - List of targeted features for chromatography and biological standard - MS-DIAL software folder path</p>
+<p>It’s worth noting that this pipeline was intended to be modular<sup>2</sup>.</p>
+<p>Simply put, the <strong>input</strong> for whatever data processing software is used is expected to be an <strong>mzML file.</strong></p>
+<p>The <strong>output</strong> of that data processing software should be then be a <strong>peak table,</strong> so that calculations and transformations can be made in the succeeding modules.</p>
+<p>For the purpose of untargeted metabolomics, data is currently processed by calling the MS-DIAL via the command line.</p>
+<p><strong>Jump to relevant functions:</strong> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/DatabaseFunctions.py#L575"><code>db.get_instrument_run()</code></a> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/DatabaseFunctions.py#L1814"><code>db.get_samples_in_run()</code></a> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/DatabaseFunctions.py#L1444"><code>db.get_parameter_file_path()</code></a> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/DatabaseFunctions.py#L1530"><code>db.get_targeted_features()</code></a> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/DatabaseFunctions.py#L1516"><code>db.get_internal_standards()</code></a> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/DatabaseFunctions.py#L1468"><code>db.get_msdial_directory()</code></a> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/AutoQCProcessing.py#L125"><code>run_msconvert()</code></a> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/AutoQCProcessing.py#L149"><code>run_msdial_processing()</code></a> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/AutoQCProcessing.py#L180"><code>peak_list_to_dataframe()</code></a> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/AutoQCProcessing.py#L206"><code>qc_sample()</code></a> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/DatabaseFunctions.py#L652"><code>db.write_qc_results()</code></a></p>
+<p><sup>2</sup><sub>As development continues, implementation of other data processing software tools is as straightforward as making a function call to that tool (and storing user parameters, of course).</sub></p>
+</section>
+<section id="msconvert-converts-the-raw-data-to-mzml-format" class="level3">
+<h3 class="anchored" data-anchor-id="msconvert-converts-the-raw-data-to-mzml-format">4. MSConvert converts the raw data to mzML format</h3>
+<p>To ensure that the raw data remains untouched (and therefore uncorrupted) by MS-AutoQC, it is copied<sup>3</sup> to a local app directory, <code>MS-AutoQC/data</code>.</p>
+<p>A <a href="https://hub.docker.com/r/chambm/pwiz-skyline-i-agree-to-the-vendor-licenses">Docker image of MSConvert</a> is then called via the command line. After a few seconds, the mzML file will be saved to <code>MS-AutoQC/data</code>.</p>
+<p>To prevent unnecessary storage, the copy of the original raw data file is deleted.</p>
+<p><strong><code>AutoQCProcessing.py</code>:</strong></p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> run_msconvert(path, filename, extension, output_folder):</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">    Converts data files in closed vendor format to open mzML format</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Copy original data file to output folder</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    shutil.copy2(path <span class="op">+</span> filename <span class="op">+</span> <span class="st">"."</span> <span class="op">+</span> extension, output_folder)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Run MSConvert Docker container and allow 5 seconds for conversion</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    command <span class="op">=</span> <span class="st">"docker run --rm -e WINEDEBUG=-all -v "</span> \</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>            <span class="op">+</span> output_folder.replace(<span class="st">" "</span>, <span class="st">"/"</span>) <span class="op">\</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>            <span class="op">+</span> <span class="st">":/data chambm/pwiz-skyline-i-agree-to-the-vendor-licenses wine msconvert /data/"</span> \</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>            <span class="op">+</span> filename <span class="op">+</span> <span class="st">"."</span> <span class="op">+</span> extension</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    os.system(command)</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    time.sleep(<span class="dv">3</span>)</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Delete copy of original data file</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    data_file_copy <span class="op">=</span> output_folder <span class="op">+</span> filename <span class="op">+</span> <span class="st">"."</span> <span class="op">+</span> extension</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    os.remove(data_file_copy)</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><strong>Jump to relevant functions:</strong> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/AutoQCProcessing.py#L125"><code>run_msconvert()</code></a></p>
+<p><sup>3</sup><sub>Copying is performed using the native Python function <a href="https://docs.python.org/3/library/shutil.html#shutil.copy2"><code>shutil.copy2()</code></a>, and is unlikely to corrupt the raw data file, or files of any kind.</sub></p>
+</section>
+<section id="ms-dial-processes-the-mzml-file" class="level3">
+<h3 class="anchored" data-anchor-id="ms-dial-processes-the-mzml-file">5. MS-DIAL processes the mzML file</h3>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> run_msdial_processing(filename, msdial_path, parameter_file, input_folder, output_folder):</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">    Processes data files using MS-DIAL command line tools</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Navigate to directory containing MS-DIAL</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    home <span class="op">=</span> os.getcwd()</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    os.chdir(msdial_path)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Run MS-DIAL</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    command <span class="op">=</span> <span class="st">"MsdialConsoleApp.exe lcmsdda -i "</span> <span class="op">+</span> input_folder <span class="op">\</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>              <span class="op">+</span> <span class="st">" -o "</span> <span class="op">+</span> output_folder <span class="op">\</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>              <span class="op">+</span> <span class="st">" -m "</span> <span class="op">+</span> parameter_file <span class="op">+</span> <span class="st">" -p"</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    os.system(command)</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Clear data file directory for next sample</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> os.listdir(input_folder):</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>        filepath <span class="op">=</span> os.path.join(input_folder, <span class="bu">file</span>)</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>        <span class="cf">try</span>:</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>            shutil.rmtree(filepath)</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>        <span class="cf">except</span> <span class="pp">OSError</span>:</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>            os.remove(filepath)</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Return to original working directory</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>    os.chdir(home)</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Return .msdial file path</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> output_folder <span class="op">+</span> <span class="st">"/"</span> <span class="op">+</span> filename.split(<span class="st">"."</span>)[<span class="dv">0</span>] <span class="op">+</span> <span class="st">".msdial"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="ms-autoqc-performs-quality-control-checks" class="level3">
+<h3 class="anchored" data-anchor-id="ms-autoqc-performs-quality-control-checks">6. MS-AutoQC performs quality control checks</h3>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> peak_list_to_dataframe(sample_peak_list, internal_standards<span class="op">=</span><span class="va">None</span>, targeted_features<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">    Returns DataFrame with m/z, RT, and intensity info for each internal standard in a given sample</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Convert .msdial file into a DataFrame</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    df_peak_list <span class="op">=</span> pd.read_csv(sample_peak_list, sep<span class="op">=</span><span class="st">"</span><span class="ch">\t</span><span class="st">"</span>, engine<span class="op">=</span><span class="st">"python"</span>, skip_blank_lines<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    df_peak_list.rename(columns<span class="op">=</span>{<span class="st">"Title"</span>: <span class="st">"Name"</span>}, inplace<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Get only the m/z, RT, and intensity columns</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    df_peak_list <span class="op">=</span> df_peak_list[[<span class="st">"Name"</span>, <span class="st">"Precursor m/z"</span>, <span class="st">"RT (min)"</span>, <span class="st">"Height"</span>]]</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Query only internal standards (or targeted features for biological standard)</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> internal_standards <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>        df_peak_list <span class="op">=</span> df_peak_list.loc[df_peak_list[<span class="st">"Name"</span>].isin(internal_standards)]</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> targeted_features <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>        df_peak_list <span class="op">=</span> df_peak_list.loc[df_peak_list[<span class="st">"Name"</span>].isin(targeted_features)]</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>    <span class="co"># DataFrame readiness</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>    df_peak_list.reset_index(drop<span class="op">=</span><span class="va">True</span>, inplace<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Return DataFrame</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> df_peak_list</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="the-ms-autoqc-dashboard-is-refreshed-with-qc-results" class="level3">
+<h3 class="anchored" data-anchor-id="the-ms-autoqc-dashboard-is-refreshed-with-qc-results">7. The MS-AutoQC dashboard is refreshed with QC results</h3>
+<p>To-do…</p>
+</section>
+<section id="the-user-is-notified-of-qc-fails-and-warnings" class="level3">
+<h3 class="anchored" data-anchor-id="the-user-is-notified-of-qc-fails-and-warnings">8. The user is notified of QC fails and warnings</h3>
+<p>To-do…</p>
+</section>
+</section>
+<section id="database-schema" class="level1">
+<h1>Database schema</h1>
+<p>Data stays in persistence in a local SQLite database. Together, the <strong>database</strong> and <strong>methods directory</strong> –&nbsp;which stores MSP/TXT libraries and MS-DIAL parameter files – comprise a user’s MS-AutoQC workspace. A diagram of the database schema is shown below. <img src="https://user-images.githubusercontent.com/7220175/201223892-a91451a0-c764-44d3-b735-50efd51ffbdb.png" class="img-fluid" alt="MS-AutoQC database schema"></p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const disableStylesheet = (stylesheets) => {
+    for (let i=0; i < stylesheets.length; i++) {
+      const stylesheet = stylesheets[i];
+      stylesheet.rel = 'prefetch';
+    }
+  }
+  const enableStylesheet = (stylesheets) => {
+    for (let i=0; i < stylesheets.length; i++) {
+      const stylesheet = stylesheets[i];
+      stylesheet.rel = 'stylesheet';
+    }
+  }
+  const manageTransitions = (selector, allowTransitions) => {
+    const els = window.document.querySelectorAll(selector);
+    for (let i=0; i < els.length; i++) {
+      const el = els[i];
+      if (allowTransitions) {
+        el.classList.remove('notransition');
+      } else {
+        el.classList.add('notransition');
+      }
+    }
+  }
+  const toggleColorMode = (alternate) => {
+    // Switch the stylesheets
+    const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
+    manageTransitions('#quarto-margin-sidebar .nav-link', false);
+    if (alternate) {
+      enableStylesheet(alternateStylesheets);
+      for (const sheetNode of alternateStylesheets) {
+        if (sheetNode.id === "quarto-bootstrap") {
+          toggleBodyColorMode(sheetNode);
+        }
+      }
+    } else {
+      disableStylesheet(alternateStylesheets);
+      toggleBodyColorPrimary();
+    }
+    manageTransitions('#quarto-margin-sidebar .nav-link', true);
+    // Switch the toggles
+    const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
+    for (let i=0; i < toggles.length; i++) {
+      const toggle = toggles[i];
+      if (toggle) {
+        if (alternate) {
+          toggle.classList.add("alternate");     
+        } else {
+          toggle.classList.remove("alternate");
+        }
+      }
+    }
+    // Hack to workaround the fact that safari doesn't
+    // properly recolor the scrollbar when toggling (#1455)
+    if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
+      manageTransitions("body", false);
+      window.scrollTo(0, 1);
+      setTimeout(() => {
+        window.scrollTo(0, 0);
+        manageTransitions("body", true);
+      }, 40);  
+    }
+  }
+  const isFileUrl = () => { 
+    return window.location.protocol === 'file:';
+  }
+  const hasAlternateSentinel = () => {  
+    let styleSentinel = getColorSchemeSentinel();
+    if (styleSentinel !== null) {
+      return styleSentinel === "alternate";
+    } else {
+      return false;
+    }
+  }
+  const setStyleSentinel = (alternate) => {
+    const value = alternate ? "alternate" : "default";
+    if (!isFileUrl()) {
+      window.localStorage.setItem("quarto-color-scheme", value);
+    } else {
+      localAlternateSentinel = value;
+    }
+  }
+  const getColorSchemeSentinel = () => {
+    if (!isFileUrl()) {
+      const storageValue = window.localStorage.getItem("quarto-color-scheme");
+      return storageValue != null ? storageValue : localAlternateSentinel;
+    } else {
+      return localAlternateSentinel;
+    }
+  }
+  let localAlternateSentinel = 'default';
+  // Dark / light mode switch
+  window.quartoToggleColorScheme = () => {
+    // Read the current dark / light value 
+    let toAlternate = !hasAlternateSentinel();
+    toggleColorMode(toAlternate);
+    setStyleSentinel(toAlternate);
+  };
+  // Ensure there is a toggle, if there isn't float one in the top right
+  if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
+    const a = window.document.createElement('a');
+    a.classList.add('top-right');
+    a.classList.add('quarto-color-scheme-toggle');
+    a.href = "";
+    a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
+    const i = window.document.createElement("i");
+    i.classList.add('bi');
+    a.appendChild(i);
+    window.document.body.appendChild(a);
+  }
+  // Switch to dark mode if need be
+  if (hasAlternateSentinel()) {
+    toggleColorMode(true);
+  } else {
+    toggleColorMode(false);
+  }
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
