@@ -1,0 +1,74 @@
+---
+title: "Installation"
+---
+
+Installing MS-AutoQC is relatively easy and straightforward. You'll need to:
+
+1. Install Python
+2. Download and install MS-AutoQC
+3. Download MS-DIAL
+4. Download and install Docker
+5. Install MSConvert
+
+If you run into trouble or have any questions, please feel free to [open a new issue on GitHub](https://github.com/czbiohub/MS-AutoQC/issues), or send an email to wasim.sandhu@czbiohub.org. You can also visit the [Troubleshooting](https://github.com/czbiohub/MS-AutoQC/wiki/Troubleshooting) section to see if your issue has been documented already.
+
+# Important note
+While, to our knowledge, installation of the following software packages on data acquisition computers comes _at no risk_, it is possible for a wary user to install MS-AutoQC on a separate computer.
+
+Because MS-AutoQC only needs access to the data acquisition path (i.e. the folder where your MS data is being collected), you can install all of the packages on a different computer. The only requirement is that **the instrument computer must be mounted as a network drive on the MS-AutoQC installation computer.** 
+
+If you don't have any experience with mapping a network drive in Windows, consult your IT department or check out [this tutorial on Microsoft Support](https://support.microsoft.com/en-us/windows/map-a-network-drive-in-windows-29ce55d1-34e3-a7e2-4801-131475f9557d#ID0EBD=Windows_10).
+
+We have not tested this functionality ourselves. If you plan to test this out, please come back and let us know how it goes!
+
+# 1. Install Python
+If you don't have Python installed already, please [download and install the latest release of Python 3](https://www.python.org/downloads/) for Windows or Mac (which is v3.11 at the time of this writing).
+
+# 2. Download and install MS-AutoQC
+## a. Download MS-AutoQC
+Please [download the latest version of MS-AutoQC](https://github.com/czbiohub/MS-AutoQC/releases) (which is v1.0 at the time of this writing) for either Windows or MacOS.
+
+Once the ZIP file has been downloaded and extracted, MS-AutoQC can be launched from a Command Prompt or Terminal window. For example, if the MS-AutoQC folder path was `C:/Users/Wasim/Downloads/MS-AutoQC`, the user should enter the following commands:
+
+```console
+cd C:/Users/Wasim/Downloads/MS-AutoQC
+python MS-AutoQC.py
+```
+
+Alternatively, Windows users can also launch MS-AutoQC by double-clicking the .exe file.
+
+## b. Install Python dependencies
+On first launch, Python will install all required dependencies automatically, and this may take a minute or two. (If you're curious, you can find a list of these dependencies [here](https://github.com/czbiohub/MS-AutoQC/blob/main/requirements.txt).)
+
+Once that's done, MS-AutoQC will open in your web browser and should look like this:
+
+<img width="1624" alt="Screenshot 2022-11-09 at 3 22 28 PM" src="https://user-images.githubusercontent.com/7220175/200963700-16445386-73a6-4a03-bd35-b19593351ed4.png">
+
+If you see this screen, then MS-AutoQC was installed properly! If not, double check your command prompt and see if there were any errors in package installation. You can refer to the [Troubleshooting](https://github.com/czbiohub/MS-AutoQC/wiki/Troubleshooting) page for common mistakes / errors.
+
+## Important note
+At this point, if you are installing MS-AutoQC only to sign in to your workspace and view the QC dashboard, you can move on to the [Getting Started](https://github.com/czbiohub/MS-AutoQC/wiki/Getting-Started) section and learn how to use MS-AutoQC.
+
+If you are installing MS-AutoQC on an instrument computer, follow through with installation of MS-DIAL and MSConvert below.
+
+# 3. Download MS-DIAL
+Please [download the latest version of MS-DIAL 4](http://prime.psc.riken.jp/compms/msdial/download/repository/) (which is v4.9.2 at the time of this writing). If the provided link doesn't work, you can visit [the MS-DIAL website](http://prime.psc.riken.jp/compms/msdial/main.html) to find it. 
+
+Once the download has completed, extract the ZIP file into a directory of your choice.
+
+# 4. Download and install Docker
+Docker is required to install the MSConvert Docker image, which allows MS-AutoQC to run it from the command-line.
+
+Please [download and install Docker for Windows](https://docs.docker.com/desktop/install/windows-install/).
+
+# 5. Install MSConvert
+Once Docker is installed, open a new instance of Command Prompt and enter the following to install the MSConvert Docker image:
+
+```console
+docker pull chambm/pwiz-skyline-i-agree-to-the-vendor-licenses
+```
+
+# 6. Celebrate!
+If you've reached this point, you're one giant step closer to using MS-AutoQC for your LC-MS instrument runs!
+
+When you're ready, please visit the [Getting Started](https://github.com/czbiohub/MS-AutoQC/wiki/Getting-Started) section to learn how to configure and use your MS-AutoQC workspace.
