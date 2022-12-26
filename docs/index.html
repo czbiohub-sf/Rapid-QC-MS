@@ -90,10 +90,6 @@ ul.task-list li input[type="checkbox"] {
  <span class="menu-text">Overview</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./download.html">
- <span class="menu-text">Download</span></a>
-  </li>  
-  <li class="nav-item">
     <a class="nav-link" href="./installation.html">
  <span class="menu-text">Installation</span></a>
   </li>  
@@ -110,12 +106,15 @@ ul.task-list li input[type="checkbox"] {
  <span class="menu-text">Documentation</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./troubleshooting.html">
- <span class="menu-text">Troubleshooting</span></a>
-  </li>  
-  <li class="nav-item">
     <a class="nav-link" href="./faq.html">
  <span class="menu-text">FAQ</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/czbiohub/MS-AutoQC"><i class="bi bi-github" role="img" aria-label="GitHub">
+</i> 
+ <span class="menu-text"></span></a>
   </li>  
 </ul>
               <div class="quarto-toggle-container">
@@ -161,31 +160,32 @@ ul.task-list li input[type="checkbox"] {
 
 </header>
 
-<p><strong>MS-AutoQC</strong> is an all-in-one solution for automated quality control of liquid chromatography-mass spectrometry (LC-MS) data, either during or after data acquisition. It offers a fast, straightforward approach to ensure collection of high-quality data, allowing for less time extracting ion chromatograms and more time conducting experiments.</p>
+<p><strong>MS-AutoQC</strong> is an all-in-one solution for automated quality control of liquid chromatography-mass spectrometry (LC-MS) data, both during and after data acquisition.</p>
+<p><img src="https://user-images.githubusercontent.com/7220175/200887970-d8bcc29e-3a9a-4a51-912a-56a223d50f8a.png" class="img-fluid"> <br></p>
+<p>It offers a fast, straightforward approach to ensure collection of high-quality data, allowing for less time exploring raw data and more time conducting experiments.</p>
 <p>Developed at the <a href="https://www.czbiohub.org/mass-spec/">Mass Spectrometry Platform of CZ Biohub San Francisco</a>, MS-AutoQC provides a host of key features to streamline untargeted metabolomics research, such as:</p>
 <ul>
-<li>Automated and user-defined quality control checks during instrument runs</li>
-<li>Realtime updates on QC fails in the form of Slack or email notifications</li>
-<li>Interactive data visualization of internal standard retention time, precursor <em>m/z</em>, and intensity across samples</li>
-<li>Google Drive cloud sync and secure, Google-authenticated access to QC results from any device</li>
+<li><strong>Automated and user-defined quality control checks</strong> during instrument runs</li>
+<li><strong>Realtime updates on QC fails</strong> in the form of Slack or email notifications</li>
+<li><strong>Interactive data visualization</strong> of internal standard retention time, <em>m/z</em>, and intensity across samples</li>
+<li><strong>Google Drive cloud sync</strong> and secure, Google-authenticated access to QC results from any device</li>
 </ul>
-<p><img src="https://user-images.githubusercontent.com/7220175/200887970-d8bcc29e-3a9a-4a51-912a-56a223d50f8a.png" class="img-fluid"> <br></p>
 <section id="download" class="level1">
 <h1>Download</h1>
-<p>Download the latest version of MS-AutoQC here: <a href="https://github.com/czbiohub/MS-AutoQC/releases">https://github.com/czbiohub/MS-AutoQC/releases</a></p>
+<p>You can download MS-AutoQC v1.0.0 on GitHub: <a href="https://github.com/czbiohub/MS-AutoQC/releases">https://github.com/czbiohub/MS-AutoQC/releases</a></p>
+<p>Please keep in mind that MS-AutoQC is currently in beta development. If you encounter a bug or issue, please report it by <a href="https://github.com/czbiohub/MS-AutoQC/issues">opening an issue on GitHub</a>.</p>
 </section>
 <section id="requirements" class="level1">
 <h1>Requirements</h1>
-<p><strong>MS-AutoQC was designed to run on Windows platforms</strong> because of its dependency on <a href="https://proteowizard.sourceforge.io/tools/msconvert.html">MSConvert</a> for vendor format data conversion and <a href="http://prime.psc.riken.jp/compms/msdial/main.html">MS-DIAL</a> for data processing and identification.</p>
-<p><strong>MacOS users cannot setup MS-AutoQC jobs.</strong> However, MS-AutoQC is a local web app, so MacOS users can still log in to their workspace to view QC data visualizations, as well as to configure instrument settings.</p>
+<p><strong>MS-AutoQC was designed to run on Windows platforms</strong> because of its dependency on <a href="https://proteowizard.sourceforge.io/tools/msconvert.html">MSConvert</a> for vendor format data conversion and <a href="http://prime.psc.riken.jp/compms/msdial/main.html">MS-DIAL</a> for data processing and identification. However, MacOS users can still use MS-AutoQC to monitor / view their instrument run data.</p>
 <p>In addition, MS-AutoQC requires Python 3.9+ and various Python packages, including Pandas, SQLAlchemy, Plotly, Dash, Bootstrap, Watchdog, and the Google Drive and Slack API. These are installed automatically during setup.</p>
-<p>Installation of Python and various Python packages on MS instrument computers comes at no risk, but MS-AutoQC can be run and installed on an separate network computer if preferred. To learn more, please read the <a href="https://github.com/czbiohub/MS-AutoQC/wiki/Installation">installation guide</a>.</p>
+<p><strong>Note:</strong> Installation of Python and various Python packages on MS instrument computers comes at no risk, but MS-AutoQC can be run and installed on an separate network computer if preferred. To learn more, please read the <a href="https://github.com/czbiohub/MS-AutoQC/wiki/Installation">installation guide</a>.</p>
 </section>
 <section id="supported-vendors" class="level1">
 <h1>Supported Vendors</h1>
-<p>MS-AutoQC was designed to be a universal tool. Because MSConvert converts a copy of the raw data into mzML format before performing the rest of its functions, the package should work seamlessly with data of all vendor formats.</p>
+<p>MS-AutoQC was designed to be a universal, open-source solution for data quality control. Because MSConvert converts raw acquired data into open mzML format before routing it to the data processing pipeline, the package will work seamlessly with data of all vendor formats.</p>
 <p><strong>However, MS-AutoQC has only been tested extensively on Thermo Fisher mass spectrometers and Thermo RAW files.</strong> As such, it is expected that there may be bugs / issues with processing data of other vendor formats.</p>
-<p>If you would like to help us test support on Agilent / Bruker / Sciex / Waters instruments, please send an email to wasim.sandhu@czbiohub.org.</p>
+<p>If you would like to help us comprehensively test support on Agilent / Bruker / Sciex / Waters instruments, please send an email to <a href="wasim.sandhu@czbiohub.org">mailto:wasim.sandhu@czbiohub.org</a>!</p>
 
 
 </section>
@@ -440,6 +440,21 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 });
 </script>
 </div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://www.czbiohub.org/mass-spec/">
+    </a>
+  </li>  
+    <li class="nav-item">
+ © 2023 Chan Zuckerberg Biohub
+  </li>  
+</ul>
+    </div>   
+  </div>
+</footer>
 
 
 

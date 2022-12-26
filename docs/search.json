@@ -172,21 +172,14 @@
     "href": "index.html",
     "title": "MS-AutoQC",
     "section": "",
-    "text": "MS-AutoQC is an all-in-one solution for automated quality control of liquid chromatography-mass spectrometry (LC-MS) data, either during or after data acquisition. It offers a fast, straightforward approach to ensure collection of high-quality data, allowing for less time extracting ion chromatograms and more time conducting experiments.\nDeveloped at the Mass Spectrometry Platform of CZ Biohub San Francisco, MS-AutoQC provides a host of key features to streamline untargeted metabolomics research, such as:\n\nAutomated and user-defined quality control checks during instrument runs\nRealtime updates on QC fails in the form of Slack or email notifications\nInteractive data visualization of internal standard retention time, precursor m/z, and intensity across samples\nGoogle Drive cloud sync and secure, Google-authenticated access to QC results from any device\n\n \n\nDownload\nDownload the latest version of MS-AutoQC here: https://github.com/czbiohub/MS-AutoQC/releases\n\n\nRequirements\nMS-AutoQC was designed to run on Windows platforms because of its dependency on MSConvert for vendor format data conversion and MS-DIAL for data processing and identification.\nMacOS users cannot setup MS-AutoQC jobs. However, MS-AutoQC is a local web app, so MacOS users can still log in to their workspace to view QC data visualizations, as well as to configure instrument settings.\nIn addition, MS-AutoQC requires Python 3.9+ and various Python packages, including Pandas, SQLAlchemy, Plotly, Dash, Bootstrap, Watchdog, and the Google Drive and Slack API. These are installed automatically during setup.\nInstallation of Python and various Python packages on MS instrument computers comes at no risk, but MS-AutoQC can be run and installed on an separate network computer if preferred. To learn more, please read the installation guide.\n\n\nSupported Vendors\nMS-AutoQC was designed to be a universal tool. Because MSConvert converts a copy of the raw data into mzML format before performing the rest of its functions, the package should work seamlessly with data of all vendor formats.\nHowever, MS-AutoQC has only been tested extensively on Thermo Fisher mass spectrometers and Thermo RAW files. As such, it is expected that there may be bugs / issues with processing data of other vendor formats.\nIf you would like to help us test support on Agilent / Bruker / Sciex / Waters instruments, please send an email to wasim.sandhu@czbiohub.org."
-  },
-  {
-    "objectID": "download.html",
-    "href": "download.html",
-    "title": "Download",
-    "section": "",
-    "text": "Download"
+    "text": "MS-AutoQC is an all-in-one solution for automated quality control of liquid chromatography-mass spectrometry (LC-MS) data, both during and after data acquisition.\n \nIt offers a fast, straightforward approach to ensure collection of high-quality data, allowing for less time exploring raw data and more time conducting experiments.\nDeveloped at the Mass Spectrometry Platform of CZ Biohub San Francisco, MS-AutoQC provides a host of key features to streamline untargeted metabolomics research, such as:\n\nAutomated and user-defined quality control checks during instrument runs\nRealtime updates on QC fails in the form of Slack or email notifications\nInteractive data visualization of internal standard retention time, m/z, and intensity across samples\nGoogle Drive cloud sync and secure, Google-authenticated access to QC results from any device\n\n\nDownload\nYou can download MS-AutoQC v1.0.0 on GitHub: https://github.com/czbiohub/MS-AutoQC/releases\nPlease keep in mind that MS-AutoQC is currently in beta development. If you encounter a bug or issue, please report it by opening an issue on GitHub.\n\n\nRequirements\nMS-AutoQC was designed to run on Windows platforms because of its dependency on MSConvert for vendor format data conversion and MS-DIAL for data processing and identification. However, MacOS users can still use MS-AutoQC to monitor / view their instrument run data.\nIn addition, MS-AutoQC requires Python 3.9+ and various Python packages, including Pandas, SQLAlchemy, Plotly, Dash, Bootstrap, Watchdog, and the Google Drive and Slack API. These are installed automatically during setup.\nNote: Installation of Python and various Python packages on MS instrument computers comes at no risk, but MS-AutoQC can be run and installed on an separate network computer if preferred. To learn more, please read the installation guide.\n\n\nSupported Vendors\nMS-AutoQC was designed to be a universal, open-source solution for data quality control. Because MSConvert converts raw acquired data into open mzML format before routing it to the data processing pipeline, the package will work seamlessly with data of all vendor formats.\nHowever, MS-AutoQC has only been tested extensively on Thermo Fisher mass spectrometers and Thermo RAW files. As such, it is expected that there may be bugs / issues with processing data of other vendor formats.\nIf you would like to help us comprehensively test support on Agilent / Bruker / Sciex / Waters instruments, please send an email to mailto:wasim.sandhu@czbiohub.org!"
   },
   {
     "objectID": "user-guide.html",
     "href": "user-guide.html",
     "title": "User Guide",
     "section": "",
-    "text": "This is a Quarto website."
+    "text": "MS-AutoQC User Guide"
   },
   {
     "objectID": "faq.html",
@@ -194,13 +187,6 @@
     "title": "FAQ",
     "section": "",
     "text": "Frequently Asked Questions"
-  },
-  {
-    "objectID": "troubleshooting.html",
-    "href": "troubleshooting.html",
-    "title": "Troubleshooting",
-    "section": "",
-    "text": "Troubleshooting"
   },
   {
     "objectID": "installation.html",
