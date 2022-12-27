@@ -11,35 +11,35 @@
     "href": "overview.html#retention-time-across-samples",
     "title": "Overview",
     "section": "Retention time across samples",
-    "text": "Retention time across samples\nPlotting retention time values for a given internal standard gives insight into retention time shifts, which can indicate any of the following:\n\nIncorrect mobile phase concentration\nChanges in flow rate\nChanges in column temperature\nFaulty column\n\nWith MS-AutoQC, you can view an RT vs. sample plot for each of your internal standards. Select an internal standard using the dropdown, or seek through them using the previous / next buttons."
+    "text": "Retention time across samples\nPlotting retention time values for a given internal standard gives insight into retention time shifts, which can indicate any of the following:\n\nIncorrect mobile phase concentration\nChanges in flow rate\nChanges in column temperature\nFaulty / damaged column\n\nThe retention time vs. sample plot provides an at-a-glance view at trends or issues with chromatography. The user can hover over each marker (point) to display relevant metadata for a sample, zoom or pan over the graph, and even grab a screenshot for easy sharing with teammates.\nTry it out yourself below!\n\n\n\n                                                \n\n\nAdditionally, the user can select an internal standard using the dropdown, or seek through them using the previous / next buttons. MS-AutoQC provides global filters for polarity and sample type in the sidebar as well."
   },
   {
     "objectID": "overview.html#intensity-across-samples",
     "href": "overview.html#intensity-across-samples",
     "title": "Overview",
     "section": "Intensity across samples",
-    "text": "Intensity across samples\nPlotting intensity (peak height) values can give insight into sample preparation and ionization variability. Low internal standard intensities can indicate the following:\n\nBad injection\nError in sample preparation\nInstrument performance (sample not ionizing correctly)\n\nMS-AutoQC allows you to filter the intensity vs. sample plot by samples, pools, or blanks using the plot filter on the left-hand side. You can scroll through the plot using the plot scroll bar below."
+    "text": "Intensity across samples\nPlotting intensity (peak height) values can give insight into sample preparation and ionization variability. Low internal standard intensities could indicate:\n\nBad injection\nError in sample preparation\nInstrument performance (sample not ionizing correctly)\n\nMS-AutoQC allows you to filter the intensity vs. sample plot by samples, pools, or blanks using the plot filter in the sidebar. You can also scroll through the plot using the plot scroll bar at the bottom."
   },
   {
-    "objectID": "overview.html#delta-mz-vs.-sample-plot",
-    "href": "overview.html#delta-mz-vs.-sample-plot",
+    "objectID": "overview.html#delta-mz-across-samples",
+    "href": "overview.html#delta-mz-across-samples",
     "title": "Overview",
-    "section": "Delta m/z vs. sample plot",
-    "text": "Delta m/z vs. sample plot\nPlotting delta m/z values can give insight into mass accuracy and instrument performance."
+    "section": "Delta m/z across samples",
+    "text": "Delta m/z across samples\nThe mass accuracy of a mass spectrometer can be evaluated by plotting delta m/z values, which can also provide insight into the instrument’s overall performance.\nWhile it may not always be immediately apparent if there are problems with the mass accuracy, the delta m/z vs. samples plot ensures the reliability of an experiment’s results."
   },
   {
     "objectID": "overview.html#sample-information-card",
     "href": "overview.html#sample-information-card",
     "title": "Overview",
     "section": "Sample information card",
-    "text": "Sample information card\nTo investigate a sample more closely, you can select one from the sample table (or click a marker on the plot!) and the sample information card will open.\nThis card conveniently aggregates information from the sequence, metadata, processed data, and QC results into one place."
+    "text": "Sample information card\nTo investigate a sample more closely, you can select one from the sample table (or click a marker on the plot!) and the sample information card will open.\nThis card conveniently aggregates sample information from the sequence, metadata, processed data, and QC results into one place."
   },
   {
     "objectID": "overview.html#new-job-setup",
     "href": "overview.html#new-job-setup",
     "title": "Overview",
     "section": "New job setup",
-    "text": "New job setup\nSetting up a new MS-AutoQC job was designed to be as fast and easy as possible. To get the AutoQC algorithm running, the user just needs to enter:\n\nRun ID\nChromatography\nBiological standards (optional)\nAcquisition sequence file\nSample metadata file\nData file directory\n\n\nThe form will then give the user intelligent feedback on whether they have provided valid resources. Once the user has chosen whether the job is for an active or completed instrument run, the new job can be executed."
+    "text": "New job setup\nSetting up a new MS-AutoQC job is designed to be as fast and easy as possible. To get the AutoQC algorithm running, the user just needs to enter:\n\nRun ID\nChromatography\nBiological standards (optional)\nAcquisition sequence file\nSample metadata file\nData file directory\n\nThe form then validates resources and gives the user intelligent feedback. Once the user has chosen whether the job is for an active or completed instrument run, the new job can be executed."
   },
   {
     "objectID": "overview.html#google-drive-and-slack-settings",
