@@ -40,12 +40,16 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
             print("Watching file...")
 
             # Start watching file until sample acquisition is complete
-            sample_acquired = self.watch_file(path, filename, extension)
+            try:
+                sample_acquired = self.watch_file(path, filename, extension)
+            except Exception as error:
+                print("Unable to watch file:", error)
+                sample_acquired = None
 
             # Route data file to MS-AutoQC pipeline
             if sample_acquired:
                 print("Data acquisition completed for", filename)
-                qc.process_data_file(event.src_path, filename, extension, self.instrument_id, self.run_id)
+                qc.process_data_file(path, filename, extension, self.instrument_id, self.run_id)
                 print("Data processing complete.")
 
             # Check if data file was the last sample in the sequence
@@ -87,7 +91,6 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
             # If the MD5 checksum after 3 mins is the same as before, file is done acquiring
             if new_md5 == old_md5:
                 return True
-                break
             else:
                 db.update_md5_checksum(filename, new_md5)
 
@@ -110,7 +113,7 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
         qc.kill_acquisition_listener(pid)
 
 
-def start_listener(path, filenames, run_id):
+def start_listener(path, filenames, instrument_id, run_id):
 
     """
     Watchdog file monitor to get files in directory upon data acquisition completion
@@ -123,7 +126,7 @@ def start_listener(path, filenames, run_id):
                         datefmt="%Y-%m-%d %H:%M:%S")
 
     observer = Observer()
-    event_handler = DataAcquisitionEventHandler(observer, filenames, run_id)
+    event_handler = DataAcquisitionEventHandler(observer, filenames, instrument_id, run_id)
     observer.schedule(event_handler, path, recursive=True)
     observer.start()
 

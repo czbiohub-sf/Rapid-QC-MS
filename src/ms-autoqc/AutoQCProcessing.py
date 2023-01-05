@@ -203,7 +203,7 @@ def peak_list_to_dataframe(sample_peak_list, internal_standards=None, targeted_f
     return df_peak_list
 
 
-def qc_sample(run_id, polarity, df_peak_list, df_features, is_bio_standard):
+def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio_standard):
 
     """
     Main algorithm that performs QC checks on sample data
@@ -247,7 +247,7 @@ def qc_sample(run_id, polarity, df_peak_list, df_features, is_bio_standard):
 
         # Get in-run RT average for each internal standard
         df_compare["In-run RT average"] = np.nan
-        df_run_retention_times = db.parse_internal_standard_data(run_id, "retention_time", polarity, False)
+        df_run_retention_times = db.parse_internal_standard_data(instrument_id, run_id, "retention_time", polarity, "Processing", False)
         df_run_retention_times = df_run_retention_times.dropna()
 
         for internal_standard in df_run_retention_times.columns:
@@ -274,7 +274,7 @@ def qc_sample(run_id, polarity, df_peak_list, df_features, is_bio_standard):
                 qc_dataframe = qc_dataframe.append(row, ignore_index=True)
 
         # Determine pass / fail based on user criteria
-        qc_config = db.get_qc_configuration_parameters(run_id=run_id)
+        qc_config = db.get_qc_configuration_parameters(instrument_id=instrument_id, run_id=run_id)
         qc_result = "Pass"
 
         # QC of internal standard intensity dropouts
@@ -382,8 +382,8 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
     elif "Neg" in filename:
         polarity = "Negative"
 
-    df_samples = db.get_samples_in_run(run_id, sample_type="Sample")
-    df_biological_standards = db.get_samples_in_run(run_id, sample_type="Biological Standard")
+    df_samples = db.get_samples_in_run(instrument_id, run_id, sample_type="Sample")
+    df_biological_standards = db.get_samples_in_run(instrument_id, run_id, sample_type="Biological Standard")
 
     # Retrieve MS-DIAL parameters, internal standards, and targeted features from database
     if filename in df_biological_standards["sample_id"].astype(str).tolist():
@@ -432,7 +432,7 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
 
     # Execute AutoQC algorithm
     try:
-        qc_dataframe, qc_result = qc_sample(run_id, polarity, df_peak_list, df_features, is_bio_standard)
+        qc_dataframe, qc_result = qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio_standard)
     except Exception as error:
         print("Failed to execute AutoQC algorithm:", error)
         return
@@ -452,7 +452,7 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
         db.write_qc_results(filename, run_id, json_mz, json_rt, json_intensity, qc_dataframe, qc_result, is_bio_standard)
 
         # Update sample counters to trigger dashboard update
-        db.update_sample_counters_for_run(run_id=run_id, qc_result=qc_result, latest_sample=filename)
+        db.update_sample_counters_for_run(instrument_id=instrument_id, run_id=run_id, qc_result=qc_result, latest_sample=filename)
 
         # If sync is enabled, upload the QC results to Google Drive
         if db.sync_is_enabled():

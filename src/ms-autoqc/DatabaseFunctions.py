@@ -706,6 +706,7 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, sequenc
         if not is_bio_standard:
             insert_sample = sample_qc_results_table.insert().values(
                 {"sample_id": sample,
+                 "instrument_id": instrument_id,
                  "run_id": run_id,
                  "position": positions[index]})
 
@@ -713,6 +714,7 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, sequenc
         else:
             insert_sample = bio_qc_results_table.insert().values(
                 {"sample_id": sample,
+                 "instrument_id": instrument_id,
                  "run_id": run_id,
                  "biological_standard": identifiers[identifier],
                  "position": positions[index]})
@@ -1460,7 +1462,7 @@ def add_msdial_configuration(msdial_config_name):
          "min_peak_width": 3,
          "min_peak_height": 35000,
          "mass_slice_width": 0.1,
-         "post_id_rt_tolerance": 0.1,
+         "post_id_rt_tolerance": 0.3,
          "post_id_mz_tolerance": 0.008,
          "post_id_score_cutoff": 85,
          "alignment_rt_tolerance": 0.05,
@@ -1913,7 +1915,7 @@ def remove_qc_configuration(qc_config_name):
     connection.close()
 
 
-def get_qc_configuration_parameters(config_name=None, run_id=None):
+def get_qc_configuration_parameters(config_name=None, instrument_id=None, run_id=None):
 
     """
     Returns DataFrame of parameters for a selected QC configuration
@@ -1924,9 +1926,9 @@ def get_qc_configuration_parameters(config_name=None, run_id=None):
     # Get selected configuration
     if config_name is not None:
         selected_config = df_configurations.loc[df_configurations["config_name"] == config_name]
-    elif run_id is not None:
+    elif instrument_id is not None and run_id is not None:
         df_runs = get_table(main_database, "runs")
-        config_name = df_runs.loc[df_runs["run_id"] == run_id]["qc_config_id"].values[0]
+        config_name = df_runs.loc[(df_runs["run_id"] == run_id) & (df_runs["instrument_id"] == instrument_id)]["qc_config_id"].values[0]
         selected_config = df_configurations.loc[df_configurations["config_name"] == config_name]
 
     selected_config.drop(inplace=True, columns=["id", "config_name"])
@@ -2027,7 +2029,7 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, s
     """
 
     # Get relevant QC results table from database
-    if status == "Complete":
+    if status == "Complete" or status == "Processing":
         df_samples = get_samples_in_run(instrument_id, run_id, "Sample")
     elif status == "Active":
         df_samples = get_samples_from_csv(instrument_id, run_id, "Sample")
@@ -2081,7 +2083,7 @@ def parse_biological_standard_data(instrument_id, run_id, result_type, polarity,
     """
 
     # Get relevant QC results table from database
-    if status == "Complete":
+    if status == "Complete" or status == "Processing":
         df_samples = get_table(main_database, "bio_qc_results")
     elif status == "Active":
         id = instrument_id.replace(" ", "_") + "_" + run_id
@@ -2136,7 +2138,7 @@ def parse_internal_standard_qc_data(instrument_id, run_id, polarity, result_type
     """
 
     # Get relevant QC results table from database
-    if status == "Complete":
+    if status == "Complete" or status == "Processing":
         df_samples = get_samples_in_run(instrument_id, run_id, "Sample")
     elif status == "Active":
         df_samples = get_samples_from_csv(instrument_id, run_id, "Sample")
@@ -2415,7 +2417,10 @@ def get_slack_notifications_toggled():
     Returns Slack notification toggled setting
     """
 
-    return get_table(settings_database, "workspace")["slack_enabled"].astype(int).tolist()[0]
+    try:
+        return get_table(settings_database, "workspace")["slack_enabled"].astype(int).tolist()[0]
+    except:
+        return None
 
 
 def get_email_notifications_list():
@@ -3047,25 +3052,31 @@ def csv_to_sql_database(instrument_id, run_id):
     samples_csv = os.path.join(run_directory, "csv", "samples.csv")
     bio_standards_csv = os.path.join(run_directory, "csv", "bio_standards.csv")
 
-    # Get CSV files as DataFrames
-    df_instrument_run = pd.read_csv(run_csv, index_col=False)
-    df_samples = pd.read_csv(samples_csv, index_col=False)
-    df_bio_standards = pd.read_csv(bio_standards_csv, index_col=False)
-
-    df_bio_standards = df_bio_standards.loc[
-        (df_bio_standards["run_id"] == run_id) & (df_bio_standards["instrument_id"] == instrument_id)]
-
-    # Append rows to "runs" table
-    dtype = {}
-    for column in ["id", "samples", "completed", "passes", "fails", "pid"]:
-        dtype[column] = INTEGER
-    df_instrument_run.to_sql("runs", connection, if_exists="append", index=False, dtype=dtype)
+    # Get instrument run CSV file as DataFrames and append rows to "runs" table
+    try:
+        df_instrument_run = pd.read_csv(run_csv, index_col=False)
+        dtype = {}
+        for column in ["id", "samples", "completed", "passes", "fails", "pid"]:
+            dtype[column] = INTEGER
+        df_instrument_run.to_sql("runs", connection, if_exists="append", index=False, dtype=dtype)
+    except Exception:
+        pass
 
     # Append rows to "sample_qc_results" table
-    df_samples.to_sql("sample_qc_results", connection, if_exists="append", index=False, dtype={"id": INTEGER})
+    try:
+        df_samples = pd.read_csv(samples_csv, index_col=False)
+        df_samples.to_sql("sample_qc_results", connection, if_exists="append", index=False, dtype={"id": INTEGER})
+    except Exception:
+        pass
 
     # Append rows to "bio_qc_results" table
-    df_bio_standards.to_sql("bio_qc_results", connection, if_exists="append", index=False, dtype={"id": INTEGER})
+    try:
+        df_bio_standards = pd.read_csv(bio_standards_csv, index_col=False)
+        df_bio_standards = df_bio_standards.loc[
+            (df_bio_standards["run_id"] == run_id) & (df_bio_standards["instrument_id"] == instrument_id)]
+        df_bio_standards.to_sql("bio_qc_results", connection, if_exists="append", index=False, dtype={"id": INTEGER})
+    except Exception:
+        pass
 
     # Close the connection
     connection.close()

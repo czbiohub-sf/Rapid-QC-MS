@@ -1,4 +1,4 @@
-import io, sys, psutil, time
+import io, sys, subprocess, psutil, time
 import base64, webbrowser, json, ast
 
 import pandas as pd
@@ -1768,7 +1768,6 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
     """
 
     if button_click:
-        drive = db.get_drive_instance()
 
         # Initialize a new database if one does not exist
         if not db.is_valid():
@@ -1776,6 +1775,8 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
 
         # Handle Google Drive sync
         if google_drive_authenticated:
+
+            drive = db.get_drive_instance()
 
             # Create necessary folders if not found
             if gdrive_folder_id is None:
@@ -1838,6 +1839,10 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
 
             # Sync database with Drive again to save Google Drive ID's
             db.upload_database(sync_settings=True)
+
+        else:
+            # Add instrument to database
+            db.insert_new_instrument(instrument_id, instrument_vendor)
 
         # Dismiss setup window by returning True for workspace_has_been_setup boolean
         return db.is_valid()
@@ -2043,7 +2048,7 @@ def update_google_drive_sync_status_in_settings(google_drive_authenticated, goog
         raise PreventUpdate
 
     # Authenticated on app startup
-    if trigger == "google-drive-authenticated" or trigger == "settings-modal":
+    if (trigger == "google-drive-authenticated" or trigger == "settings-modal") and google_drive_authenticated_on_start is not None:
         form_text = "Cloud sync is enabled! You can now sign in to this MS-AutoQC workspace from any device."
         return "success", "Signed in to Google Drive", form_text, False, "Client ID (saved)", "Client secret (saved)"
 
@@ -2692,9 +2697,6 @@ def populate_istd_mz_plot(polarity, internal_standard, selected_samples, delta_m
 
     trigger = ctx.triggered_id
 
-    # Get chromatography
-    chromatography = json.loads(resources)["chromatography"]
-
     # Get internal standard RT data
     df_istd_mz_pos = pd.DataFrame()
     df_istd_mz_neg = pd.DataFrame()
@@ -2717,12 +2719,11 @@ def populate_istd_mz_plot(polarity, internal_standard, selected_samples, delta_m
         samples = [x for x in samples if "Pos" in x]
         internal_standards = json.loads(pos_internal_standards)
         df_istd_mz = df_istd_mz_pos
-        pol = "Positive Mode"
+
     elif polarity == "Neg":
         samples = [x for x in samples if "Neg" in x]
         internal_standards = json.loads(neg_internal_standards)
         df_istd_mz = df_istd_mz_neg
-        pol = "Negative Mode"
 
     # Set initial dropdown values when none are selected
     if not internal_standard or trigger == "polarity-options":
@@ -2739,8 +2740,7 @@ def populate_istd_mz_plot(polarity, internal_standard, selected_samples, delta_m
 
     try:
         # Generate internal standard delta m/z vs. sample plot
-        return load_istd_delta_mz_plot(dataframe=df_istd_mz, samples=selected_samples,
-            internal_standard=internal_standard, chromatography=chromatography, polarity=pol), \
+        return load_istd_delta_mz_plot(dataframe=df_istd_mz, samples=selected_samples, internal_standard=internal_standard), \
                None, index, internal_standard, {"display": "block"}
 
     except Exception as error:
@@ -4693,8 +4693,7 @@ def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, b
 
     # If this is for an active run, initialize run monitoring at the given directory
     if job_type == "active":
-        acquisition_listener = os.path.join(os.getcwd(), "src", "ms-autoqc", "AcquisitionListener.py")
-        process = psutil.Popen(["py", acquisition_listener, acquisition_path, str(filenames), instrument_id, run_id])
+        process = psutil.Popen(["py", "AcquisitionListener.py", acquisition_path, str(filenames), instrument_id, run_id])
         db.store_pid(run_id, process.pid)
 
         if db.is_instrument_computer() and db.sync_is_enabled():

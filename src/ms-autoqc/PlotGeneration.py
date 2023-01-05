@@ -1,8 +1,6 @@
 import os, json, ast
 import plotly.express as px
 import pandas as pd
-from pydrive2.auth import GoogleAuth
-from pydrive2.drive import GoogleDrive
 import DatabaseFunctions as db
 
 # Bootstrap color dictionary
@@ -226,6 +224,7 @@ def get_qc_results(instrument_id, run_id, status="Complete", drive=None, biologi
         df_samples = ""
 
     # Get internal standards from data
+    print(df_rt_pos)
     if df_rt_pos is not None:
         pos_internal_standards = pd.read_json(df_rt_pos, orient="split").columns.tolist()
         pos_internal_standards.remove("Sample")
@@ -416,7 +415,7 @@ def load_istd_intensity_plot(dataframe, samples, internal_standard, text, treatm
     return fig
 
 
-def load_istd_delta_mz_plot(dataframe, samples, internal_standard, chromatography, polarity):
+def load_istd_delta_mz_plot(dataframe, samples, internal_standard):
 
     """
     Returns scatter plot figure of delta m/z vs. sample for internal standards
