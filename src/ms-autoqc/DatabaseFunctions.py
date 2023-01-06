@@ -3186,3 +3186,25 @@ def sync_on_run_completion(instrument_id, run_id):
     except Exception as error:
         print("sync_on_run_completion() – Error deleting CSV files after sync", error)
         return None
+
+
+def get_data_file_type(instrument_id):
+
+    """
+    Returns expected data file extension based on instrument vendor type (incomplete)
+    """
+
+    engine = sa.create_engine(main_database)
+    df_instruments = pd.read_sql("SELECT * FROM instruments WHERE name='" + instrument_id + "'", engine)
+    vendor = df_instruments["vendor"].astype(str).tolist()[0]
+
+    if vendor == "Thermo Fisher":
+        return "raw"
+    elif vendor == "Agilent":
+        return "d"
+    elif vendor == "Bruker":
+        return "baf"
+    elif vendor == "Waters":
+        return "raw"
+    elif vendor == "Sciex":
+        return "wiff2"

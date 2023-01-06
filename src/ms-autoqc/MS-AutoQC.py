@@ -128,7 +128,7 @@ def serve_layout():
                                 dbc.Card(id="active-run-progress-card", style={"display": "none"}, className="margin-top-15", children=[
                                     dbc.CardHeader(id="active-run-progress-header", style={"padding": "0.75rem"}),
                                     dbc.CardBody([
-                                        dcc.Interval(id="refresh-interval", n_intervals=0, interval=5000, disabled=True),
+                                        dcc.Interval(id="refresh-interval", n_intervals=0, interval=15000, disabled=True),
                                         dbc.Progress(id="active-run-progress-bar", animated=False)
                                     ])
                                 ]),
@@ -669,19 +669,6 @@ def serve_layout():
                             dbc.ModalHeader(dbc.ModalTitle(id="start-run-monitor-modal-title", children="Success!"), close_button=True),
                             dbc.ModalBody(id="start-run-monitor-modal-body", className="modal-styles", children=[
                                 dbc.Alert("MS-AutoQC will start monitoring your run. Please do not restart your computer.", color="success")
-                            ]),
-                        ]),
-
-                        # Progress modal for bulk QC process
-                        dbc.Modal(id="start-bulk-qc-modal", size="md", centered=True, is_open=False,
-                                  keyboard=False, backdrop="static", children=[
-                            dbc.ModalHeader(dbc.ModalTitle(id="start-bulk-qc-modal-title", children="Processing data files..."), close_button=False),
-                            dbc.ModalBody(id="start-bulk-qc-modal-body", className="modal-styles", children=[
-                                html.Div([
-                                    dcc.Interval(id="progress-interval", n_intervals=0, interval=10000),
-                                    dbc.Label("Please do not refresh the page or close this window."),
-                                    dbc.Progress(id="bulk-qc-progress-bar", striped=True, animated=True, style={"height": "30px"}),
-                                ])
                             ]),
                         ]),
 
@@ -1480,7 +1467,6 @@ def serve_layout():
             # Data for starting a new AutoQC job
             dcc.Store(id="new-sequence"),
             dcc.Store(id="new-metadata"),
-            dcc.Store(id="filenames-for-bulk-qc"),
 
             # Dummy inputs for UI update callbacks
             dcc.Store(id="chromatography-added"),
@@ -4402,13 +4388,11 @@ def ui_feedback_for_setting_msdial_config_for_chromatography(config_added, chrom
               Output("setup-new-run-modal-title", "children"),
               Input("setup-new-run-button", "n_clicks"),
               Input("start-run-monitor-modal", "is_open"),
-              Input("start-bulk-qc-modal", "is_open"),
               State("tabs", "value"),
               Input("data-acquisition-folder-button", "n_clicks"),
               Input("file-explorer-select-button", "n_clicks"),
               State("settings-modal", "is_open"), prevent_initial_call=True)
-def toggle_new_run_modal(button_clicks, success, success_2, instrument_name, browse_folder_button, file_explorer_button,
-                         settings_modal_is_open):
+def toggle_new_run_modal(button_clicks, success, instrument_name, browse_folder_button, file_explorer_button, settings_modal_is_open):
 
     """
     Toggles modal for setting up AutoQC monitoring for a new instrument run
@@ -4430,9 +4414,7 @@ def toggle_new_run_modal(button_clicks, success, success_2, instrument_name, bro
         else:
             return open_modal
 
-    if success or success_2:
-        return close_modal
-    elif (not success or not success_2) and button_clicks != 0:
+    if not success and button_clicks != 0:
         return open_modal
     else:
         return close_modal
@@ -4649,9 +4631,7 @@ def enable_new_autoqc_job_button(run_id_valid, chromatography_valid, qc_config_v
 
 
 @app.callback(Output("start-run-monitor-modal", "is_open"),
-              Output("start-bulk-qc-modal", "is_open"),
               Output("new-job-error-modal", "is_open"),
-              Output("filenames-for-bulk-qc", "data"),
               Input("monitor-new-run-button", "n_clicks"),
               State("instrument-run-id", "value"),
               State("tabs", "value"),
@@ -4694,91 +4674,18 @@ def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, b
 
     # If this is for an active run, initialize run monitoring at the given directory
     if job_type == "active":
-        process = psutil.Popen(["py", "AcquisitionListener.py", acquisition_path, str(filenames), instrument_id, run_id])
+        process = psutil.Popen(["py", "AcquisitionListener.py", acquisition_path, str(filenames), instrument_id, run_id, "False"])
         db.store_pid(run_id, process.pid)
 
         if db.is_instrument_computer() and db.sync_is_enabled():
             return db.upload_database()
 
-        return True, False, False, ""
-
     # If this is for a completed run, begin iterating through the files and process them
     elif job_type == "completed":
-        return False, True, False, json.dumps(filenames)
+        process = psutil.Popen(["py", "AcquisitionListener.py", acquisition_path, str(filenames), instrument_id, run_id, "True"])
+        db.store_pid(run_id, process.pid)
 
-    # Handle form validation errors
-    else:
-        return False, False, True, ""
-
-
-@app.callback(Output("bulk-qc-progress-bar", "value"),
-              Output("bulk-qc-progress-bar", "label"),
-              Output("start-bulk-qc-modal-title", "children"),
-              Output("progress-interval", "disabled"),
-              Input("start-bulk-qc-modal", "is_open"),
-              Input("progress-interval", "n_intervals"),
-              State("data-acquisition-folder-path", "value"),
-              State("filenames-for-bulk-qc", "data"),
-              State("tabs", "value"),
-              State("instrument-run-id", "value"),
-              State("start-bulk-qc-modal-title", "children"), prevent_initial_call=True)
-def start_bulk_qc_processing(modal_open, progress_intervals, data_file_directory, filenames_as_json, instrument_id, run_id, title):
-
-    """
-    Initiates bulk QC processing:
-    1. Iterates through data files in a given directory
-    2. Processes them and writes results to database
-    3. Updates progress bar
-    """
-
-    if modal_open:
-        # Get filenames as list from JSON string
-        filenames = json.loads(filenames_as_json)
-
-        # Replace any backwards slashes in path
-        path = data_file_directory.replace("\\", "/")
-        if not path.endswith("/"):
-            path = path + "/"
-
-        # Iterate through files using index from progress bar callback loop
-        if title != "Processing data files...":
-            index = int(title.split(" out of ")[0])
-        else:
-            index = 0
-
-        # Once the last file has been processed, terminate the job
-        if index == len(filenames):
-
-            # Mark instrument run as completed
-            db.mark_run_as_completed(self.instrument_id, self.run_id)
-
-            # Sync database on run completion
-            if db.sync_is_enabled():
-                db.sync_on_run_completion(self.instrument_id, self.run_id)
-
-            # Return progress update
-            return 100, "100%", "Processing complete!", True
-
-        filename = filenames[index]
-
-        # Prepare update of progress bar
-        progress = int(min(((index + 1) / len(filenames)) * 100, 100))
-        progress_label = str(progress) + "%"
-        new_title = str(index + 1) + " out of " + str(len(filenames)) + " samples processed"
-
-        # If the file has already been processed, restart the loop
-        df_samples = db.get_samples_in_run(run_id)
-        df_sample = df_samples.loc[df_samples["sample_id"] == filename]
-        if df_sample["qc_result"].astype(str).values[0] != "None":
-            return progress, progress_label, new_title, False
-
-        # Otherwise, process the data file
-        if os.path.exists(path + filename + ".raw"):
-            qc.process_data_file(path=path, filename=filename, extension="raw", instrument_id=instrument_id, run_id=run_id)
-        return progress, progress_label, new_title, False
-
-    else:
-        return 0, "", "", False
+    return True, False
 
 
 @app.callback(Output("file-explorer-modal", "is_open"),
@@ -4926,9 +4833,9 @@ def the_most_inefficient_callback_in_history(com_1, com_2, com_3, com_4, com_5, 
 
     # Return selected folder and all folder values
     if settings_is_open:
-        return None, selected_folder
+        return None, selected_folder.replace("\\", "/")
     else:
-        return selected_folder, None
+        return selected_folder.replace("\\", "/"), None
 
 
 @app.callback(Output("file-explorer-modal-title", "children"),

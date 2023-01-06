@@ -1,4 +1,4 @@
-import os, sys, time
+import os, sys, time, ast
 import logging
 from datetime import datetime, timedelta
 from watchdog.observers import Observer
@@ -61,7 +61,7 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
 
                 # Terminate acquisition listener process
                 print("Terminating acquisition listener process.")
-                self.conclude_process()
+                terminate_job(self.instrument_id, self.run_id)
 
 
     def watch_file(self, path, filename, extension, check_interval=60):
@@ -95,47 +95,69 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
                 db.update_md5_checksum(filename, new_md5)
 
 
-    def conclude_process(self):
-
-        """
-        Wraps up job after the last data file has been routed to the pipeline
-        """
-
-        # Mark instrument run as completed
-        db.mark_run_as_completed(self.instrument_id, self.run_id)
-
-        # Sync database on run completion
-        if db.sync_is_enabled():
-            db.sync_on_run_completion(self.instrument_id, self.run_id)
-
-        # Kill acquisition listener
-        pid = db.get_pid(self.instrument_id, self.run_id)
-        qc.kill_acquisition_listener(pid)
-
-
-def start_listener(path, filenames, instrument_id, run_id):
+def start_listener(path, filenames, instrument_id, run_id, is_completed_run):
 
     """
     Watchdog file monitor to get files in directory upon data acquisition completion
     """
 
     print("Run monitoring initiated for", path)
+    filenames = ast.literal_eval(filenames)
 
-    logging.basicConfig(level=logging.INFO,
-                        format="%(asctime)s - %(message)s",
-                        datefmt="%Y-%m-%d %H:%M:%S")
+    if is_completed_run:
 
-    observer = Observer()
-    event_handler = DataAcquisitionEventHandler(observer, filenames, instrument_id, run_id)
-    observer.schedule(event_handler, path, recursive=True)
-    observer.start()
+        # Get data file extension
+        extension = db.get_data_file_type(instrument_id)
+        path = path.replace("\\", "/")
+        path = path + "/" if path[-1] != "/" else path
 
-    try:
-        while observer.is_alive():
-            observer.join(1)
-    finally:
-        observer.stop()
-        observer.join()
+        # Iterate through files and process each one
+        for filename in filenames:
+
+            # If file is not in directory, skip it
+            full_path = path + filename + "." + extension
+            if not os.path.exists(full_path):
+                continue
+
+            # Process data file
+            qc.process_data_file(path, filename, extension, instrument_id, run_id)
+            print("Data processing for", filename, "complete.")
+
+        terminate_job(instrument_id, run_id)
+
+    else:
+        # Start file monitor and process files as they are created
+        logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+
+        observer = Observer()
+        event_handler = DataAcquisitionEventHandler(observer, filenames, instrument_id, run_id)
+        observer.schedule(event_handler, path, recursive=True)
+        observer.start()
+
+        try:
+            while observer.is_alive():
+                observer.join(1)
+        finally:
+            observer.stop()
+            observer.join()
+
+
+def terminate_job(instrument_id, run_id):
+
+    """
+    Wraps up job after the last data file has been routed to the pipeline
+    """
+
+    # Mark instrument run as completed
+    db.mark_run_as_completed(instrument_id, run_id)
+
+    # Sync database on run completion
+    if db.sync_is_enabled():
+        db.sync_on_run_completion(instrument_id, run_id)
+
+    # Kill acquisition listener
+    pid = db.get_pid(instrument_id, run_id)
+    qc.kill_acquisition_listener(pid)
 
 
 def get_md5(filename):
@@ -155,4 +177,4 @@ def get_md5(filename):
 
 if __name__ == "__main__":
     # Start listening to data file directory
-    start_listener(path=sys.argv[1], filenames=sys.argv[2], instrument_id=sys.argv[3], run_id=sys.argv[4])
+    start_listener(path=sys.argv[1], filenames=sys.argv[2], instrument_id=sys.argv[3], run_id=sys.argv[4], is_completed_run=sys.argv[5])
