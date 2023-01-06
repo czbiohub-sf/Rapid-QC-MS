@@ -1,4 +1,4 @@
-import os, time, shutil, subprocess, psutil
+import os, time, shutil, subprocess, psutil, traceback
 import pandas as pd
 import numpy as np
 import DatabaseFunctions as db
@@ -20,7 +20,8 @@ def sequence_is_valid(filename, contents, vendor="Thermo Fisher"):
         try:
             df_sequence = pd.read_csv(contents, index_col=False)
         except Exception as error:
-            print("Sequence file could not be read:", error)
+            print("Sequence file could not be read.")
+            traceback.print_exc()
             return False
 
         df_sequence.columns = df_sequence.iloc[0]
@@ -51,7 +52,8 @@ def metadata_is_valid(filename, contents):
     try:
         df_metadata = pd.read_csv(contents, index_col=False)
     except Exception as error:
-        print("Metadata file could not be read:", error)
+        print("Metadata file could not be read.")
+        traceback.print_exc()
         return False
 
     # Define required columns and columns found in metadata file
@@ -131,13 +133,13 @@ def run_msconvert(path, filename, extension, output_folder):
     # Copy original data file to output folder
     shutil.copy2(path + filename + "." + extension, output_folder)
 
-    # Run MSConvert Docker container and allow 5 seconds for conversion
+    # Run MSConvert Docker container
     command = "docker run --rm -e WINEDEBUG=-all -v " \
             + output_folder.replace(" ", "/") \
             + ":/data chambm/pwiz-skyline-i-agree-to-the-vendor-licenses wine msconvert /data/" \
             + filename + "." + extension
     os.system(command)
-    time.sleep(3)
+    time.sleep(1)
 
     # Delete copy of original data file
     data_file_copy = output_folder + filename + "." + extension
@@ -209,6 +211,8 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
     Main algorithm that performs QC checks on sample data
     """
 
+    polarity = polarity.replace("itive", "").replace("ative", "")
+
     # Handles sample QC checks
     if not is_bio_standard:
 
@@ -248,16 +252,19 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
         # Get in-run RT average for each internal standard
         df_compare["In-run RT average"] = np.nan
         df_run_retention_times = db.parse_internal_standard_data(instrument_id, run_id, "retention_time", polarity, "Processing", False)
-        df_run_retention_times = df_run_retention_times.dropna()
 
-        for internal_standard in df_run_retention_times.columns:
-            if internal_standard == "Sample":
-                continue
-            in_run_average = df_run_retention_times[internal_standard].astype(float).mean()
-            df_compare.loc[df_compare["Name"] == internal_standard, "In-run RT average"] = in_run_average
+        if df_run_retention_times is not None:
+            # Calculate in-run RT average for each internal standard
+            for internal_standard in df_run_retention_times.columns:
+                if internal_standard == "Sample":
+                    continue
+                in_run_average = df_run_retention_times[internal_standard].dropna().astype(float).mean()
+                df_compare.loc[df_compare["Name"] == internal_standard, "In-run RT average"] = in_run_average
 
-        # Compare each internal standard RT to in-run RT average
-        df_compare["In-run delta RT"] = df_compare["RT (min)"].astype(float) - df_compare["In-run RT average"].astype(float)
+            # Compare each internal standard RT to in-run RT average
+            df_compare["In-run delta RT"] = df_compare["RT (min)"].astype(float) - df_compare["In-run RT average"].astype(float)
+        else:
+            df_compare["In-run delta RT"] = np.nan
 
         # Prepare final DataFrame
         qc_dataframe = df_compare[["Name", "Delta m/z", "Delta RT", "In-run delta RT"]]
@@ -308,7 +315,7 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
                 qc_result = "Warning"
 
         # QC of internal standard RT's against in-run RT average
-        if qc_config["in_run_rt_enabled"].values[0] == 1:
+        if qc_config["in_run_rt_enabled"].values[0] == 1 and df_run_retention_times is not None:
 
             # Check if in-run delta RT's are outside of user-defined cutoff
             in_run_rt_shift_cutoff = qc_config["in_run_rt_shift_cutoff"].astype(float).values[0]
@@ -420,21 +427,24 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
         peak_list = run_msdial_processing(filename, msdial_directory, msdial_parameters,
             str(mzml_file_directory), str(qc_results_directory))
     except Exception as error:
-        print("Failed to run MS-DIAL:", error)
+        print("Failed to run MS-DIAL.")
+        traceback.print_exc()
         return
 
     # Convert peak list to DataFrame
     try:
         df_peak_list = peak_list_to_dataframe(peak_list, feature_list)
     except Exception as error:
-        print("Failed to convert peak list to DataFrame", error)
+        print("Failed to convert peak list to DataFrame.")
+        traceback.print_exc()
         return
 
     # Execute AutoQC algorithm
     try:
         qc_dataframe, qc_result = qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio_standard)
     except Exception as error:
-        print("Failed to execute AutoQC algorithm:", error)
+        print("Failed to execute AutoQC algorithm.")
+        traceback.print_exc()
         return
 
     # Convert m/z, RT, and intensity data to JSON strings
@@ -444,7 +454,8 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
         json_intensity = df_peak_list[["Name", "Height"]].to_json(orient="split")
         qc_dataframe = qc_dataframe.to_json(orient="split")
     except Exception as error:
-        print("Failed to convert data to JSON:", error)
+        print("Failed to convert data to JSON.")
+        traceback.print_exc()
         return
 
     try:
@@ -459,14 +470,16 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
             db.upload_qc_results(instrument_id, run_id)
 
     except Exception as error:
-        print("Failed to write QC results to database:", error)
+        print("Failed to write QC results to database.")
+        traceback.print_exc()
         return
 
     # Delete MS-DIAL result file
     # try:
     #     os.remove(qc_results_directory + filename + ".msdial")
     # except Exception as error:
-    #     print("Failed to remove MS-DIAL result file:", error)
+    #     print("Failed to remove MS-DIAL result file.")
+    #     traceback.print_exc()
     #     return
 
 
@@ -484,7 +497,8 @@ def listener_is_running(pid):
         else:
             return False
     except Exception as error:
-        print("Error searching for subprocess using given pid", error)
+        print("Error searching for subprocess using given pid.")
+        traceback.print_exc()
 
 
 def kill_acquisition_listener(pid):
@@ -496,4 +510,5 @@ def kill_acquisition_listener(pid):
     try:
         return psutil.Process(pid).kill()
     except Exception as error:
-        print("Error killing acquisition listener:", error)
+        print("Error killing acquisition listener.")
+        traceback.print_exc()

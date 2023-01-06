@@ -224,7 +224,6 @@ def get_qc_results(instrument_id, run_id, status="Complete", drive=None, biologi
         df_samples = ""
 
     # Get internal standards from data
-    print(df_rt_pos)
     if df_rt_pos is not None:
         pos_internal_standards = pd.read_json(df_rt_pos, orient="split").columns.tolist()
         pos_internal_standards.remove("Sample")

@@ -2037,6 +2037,11 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, s
     # Filter by polarity
     df_samples = df_samples.loc[df_samples["sample_id"].str.contains(polarity)]
 
+    # Return None if results are None
+    if status == "Processing":
+        if len(df_samples[result_type].dropna()) == 0:
+            return None
+
     # Get list of results using result type
     sample_ids = df_samples["sample_id"].astype(str).tolist()
     results = df_samples[result_type].tolist()

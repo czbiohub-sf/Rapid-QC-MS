@@ -64,10 +64,10 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
                 self.conclude_process()
 
 
-    def watch_file(self, path, filename, extension, check_interval=180):
+    def watch_file(self, path, filename, extension, check_interval=60):
 
         """
-        Returns True if MD5 checksum on file matches the MD5 checksum written to the database 3 minutes ago.
+        Returns True if MD5 checksum on file matches the MD5 checksum written to the database 1 minute ago.
         Effectively determines whether sample acquisition has been completed.
         """
 
@@ -78,7 +78,7 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
         # Watch file indefinitely
         while os.path.exists(path):
 
-            print("MD5 checksums do not match. Waiting 3 minutes...")
+            print("MD5 checksums do not match. Waiting 1 minute...")
 
             # Wait 5 minutes
             time.sleep(check_interval)
@@ -88,7 +88,7 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
 
             print("Comparing MD5 checksums...")
 
-            # If the MD5 checksum after 3 mins is the same as before, file is done acquiring
+            # If the MD5 checksum after 1 min is the same as before, file is done acquiring
             if new_md5 == old_md5:
                 return True
             else:

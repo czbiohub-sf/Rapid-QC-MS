@@ -2229,8 +2229,9 @@ def reset_instrument_table(instrument):
               Input("tabs", "value"),
               Input("refresh-interval", "n_intervals"),
               State("study-resources", "data"),
-              Input("google-drive-sync-update", "data"))
-def populate_instrument_runs_table(instrument, refresh, resources, sync_update):
+              Input("google-drive-sync-update", "data"),
+              Input("start-run-monitor-modal", "is_open"))
+def populate_instrument_runs_table(instrument, refresh, resources, sync_update, new_job_started):
 
     """
     Dash callback for populating tables with list of past/active instrument runs
@@ -4970,8 +4971,9 @@ def update_folder_path_text_field(select_folder_button, selected_folder, setting
               Input("instrument-run-table", "active_cell"),
               State("instrument-run-table", "data"),
               Input("refresh-interval", "n_intervals"),
-              State("tabs", "value"), prevent_initial_call=True)
-def update_progress_bar_during_active_instrument_run(active_cell, table_data, refresh, instrument_id):
+              State("tabs", "value"),
+              Input("start-run-monitor-modal", "is_open"), prevent_initial_call=True)
+def update_progress_bar_during_active_instrument_run(active_cell, table_data, refresh, instrument_id, new_job_started):
 
     """
     Displays and updates progress bar if an active instrument run was selected from the table
