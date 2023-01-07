@@ -1,3 +1,6 @@
+import warnings
+warnings.simplefilter(action="ignore", category=FutureWarning)
+
 import os, io, shutil, time
 import hashlib, json, ast
 import pandas as pd

@@ -1,8 +1,13 @@
+import warnings
+warnings.simplefilter(action="ignore", category=FutureWarning)
+
 import os, time, shutil, subprocess, psutil, traceback
 import pandas as pd
 import numpy as np
 import DatabaseFunctions as db
 import SlackNotifications as bot
+
+pd.options.mode.chained_assignment = None
 
 def sequence_is_valid(filename, contents, vendor="Thermo Fisher"):
 
@@ -271,13 +276,17 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
 
         # Count internal standard intensity dropouts
         qc_dataframe["Intensity dropout"] = 0
+        qc_dataframe["Warnings"] = ""
+        qc_dataframe["Fails"] = ""
         for feature in df_features["Name"].astype(str).tolist():
             if feature not in df_peak_list["Name"].astype(str).tolist():
                 row = {"Name": feature,
                        "Delta m/z": np.nan,
                        "Delta RT": np.nan,
                        "In-run delta RT": np.nan,
-                       "Intensity dropout": 1}
+                       "Intensity dropout": 1,
+                       "Warnings": "",
+                       "Fails": ""}
                 qc_dataframe = qc_dataframe.append(row, ignore_index=True)
 
         # Determine pass / fail based on user criteria
@@ -287,14 +296,17 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
         # QC of internal standard intensity dropouts
         if qc_config["intensity_enabled"].values[0] == 1:
 
+            # Mark fails
+            qc_dataframe.loc[qc_dataframe["Intensity dropout"].astype(int) == 1, "Fails"] = "Intensity, "
+
             # Count intensity dropouts
             intensity_dropouts = qc_dataframe["Intensity dropout"].astype(int).sum()
             intensity_dropouts_cutoff = qc_config["intensity_dropouts_cutoff"].astype(int).values[0]
 
-            # Compare to user-defined cutoff
+            # Compare number of intensity dropouts to user-defined cutoff
             if intensity_dropouts >= intensity_dropouts_cutoff:
                 qc_result = "Fail"
-            elif intensity_dropouts >= intensity_dropouts_cutoff - 1:
+            elif intensity_dropouts > len(qc_dataframe) / 1.33:
                 qc_result = "Warning"
 
         # QC of internal standard RT's against library RT's
@@ -303,16 +315,20 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
             # Check if delta RT's are outside of user-defined cutoff
             library_rt_shift_cutoff = qc_config["library_rt_shift_cutoff"].astype(float).values[0]
 
-            delta_rts_for_fail = qc_dataframe.loc[
-                qc_dataframe["Delta RT"].abs() > library_rt_shift_cutoff]
-            delta_rts_for_warning = qc_dataframe.loc[
-                ((library_rt_shift_cutoff / 1.5) < qc_dataframe["Delta RT"].abs()) &
-                ((qc_dataframe["Delta RT"].abs()) < library_rt_shift_cutoff)]
+            # Mark fails
+            fails = qc_dataframe["Delta RT"].abs() > library_rt_shift_cutoff
+            qc_dataframe.loc[fails, "Fails"] = qc_dataframe.loc[fails]["Fails"].astype(str) + "Delta RT, "
 
-            if len(delta_rts_for_fail) > 0:
+            # Mark warnings
+            warnings = ((library_rt_shift_cutoff / 1.5) < qc_dataframe["Delta RT"].abs()) & \
+                       ((qc_dataframe["Delta RT"].abs()) < library_rt_shift_cutoff)
+            qc_dataframe.loc[warnings, "Warnings"] = qc_dataframe.loc[warnings]["Warnings"].astype(str) + "Delta RT, "
+
+            if len(qc_dataframe.loc[fails]) >= len(qc_dataframe) / 2:
                 qc_result = "Fail"
-            elif len(delta_rts_for_warning) > 0:
-                qc_result = "Warning"
+            else:
+                if len(qc_dataframe.loc[warnings]) > len(qc_dataframe) / 2 and qc_result != "Fail":
+                    qc_result = "Warning"
 
         # QC of internal standard RT's against in-run RT average
         if qc_config["in_run_rt_enabled"].values[0] == 1 and df_run_retention_times is not None:
@@ -320,16 +336,20 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
             # Check if in-run delta RT's are outside of user-defined cutoff
             in_run_rt_shift_cutoff = qc_config["in_run_rt_shift_cutoff"].astype(float).values[0]
 
-            delta_rts_for_fail = qc_dataframe.loc[
-                qc_dataframe["In-run delta RT"].abs() > in_run_rt_shift_cutoff]
-            delta_rts_for_warning = qc_dataframe.loc[
-                ((in_run_rt_shift_cutoff / 1.25) < qc_dataframe["In-run delta RT"].abs()) &
-                (qc_dataframe["In-run delta RT"].abs() < in_run_rt_shift_cutoff)]
+            # Mark fails
+            fails = qc_dataframe["In-run delta RT"].abs() > in_run_rt_shift_cutoff
+            qc_dataframe.loc[fails, "Fails"] = qc_dataframe.loc[fails]["Fails"].astype(str) + "In-run delta RT, "
 
-            if len(delta_rts_for_fail) > 0:
+            # Mark warnings
+            warnings = ((in_run_rt_shift_cutoff / 1.25) < qc_dataframe["In-run delta RT"].abs()) & \
+                       (qc_dataframe["In-run delta RT"].abs() < in_run_rt_shift_cutoff)
+            qc_dataframe.loc[warnings, "Warnings"] = qc_dataframe.loc[warnings]["Warnings"].astype(str) + "In-run delta RT, "
+
+            if len(qc_dataframe.loc[fails]) >= len(qc_dataframe) / 2:
                 qc_result = "Fail"
-            elif len(delta_rts_for_warning) > 0:
-                qc_result = "Warning"
+            else:
+                if len(qc_dataframe.loc[warnings]) > len(qc_dataframe) / 2 and qc_result != "Fail":
+                    qc_result = "Warning"
 
         # QC of internal standard precursor m/z against library m/z
         if qc_config["library_mz_enabled"].values[0] == 1:
@@ -337,16 +357,20 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
             # Check if delta m/z's are outside of user-defined cutoff
             library_mz_shift_cutoff = qc_config["library_mz_shift_cutoff"].astype(float).values[0]
 
-            delta_mzs_for_fail = qc_dataframe.loc[
-                qc_dataframe["Delta m/z"].abs() > library_mz_shift_cutoff]
-            delta_mzs_for_warning = qc_dataframe.loc[
-                ((library_mz_shift_cutoff / 1.25) < qc_dataframe["Delta m/z"].abs()) &
-                (qc_dataframe["Delta m/z"].abs() < library_mz_shift_cutoff)]
+            # Mark fails
+            fails = qc_dataframe["Delta m/z"].abs() > library_mz_shift_cutoff
+            qc_dataframe.loc[fails, "Fails"] = qc_dataframe.loc[fails]["Fails"].astype(str) + "Delta m/z, "
 
-            if len(delta_mzs_for_fail) > 0:
+            # Mark warnings
+            warnings = ((library_mz_shift_cutoff / 1.25) < qc_dataframe["Delta m/z"].abs()) & \
+                       (qc_dataframe["Delta m/z"].abs() < library_mz_shift_cutoff)
+            qc_dataframe.loc[warnings, "Warnings"] = qc_dataframe.loc[warnings]["Warnings"].astype(str) + "Delta m/z, "
+
+            if len(qc_dataframe.loc[fails]) >= len(qc_dataframe) / 2:
                 qc_result = "Fail"
-            elif len(delta_mzs_for_warning) > 0:
-                qc_result = "Warning"
+            else:
+                if len(qc_dataframe.loc[warnings]) > len(qc_dataframe) / 2 and qc_result != "Fail":
+                    qc_result = "Warning"
 
     # Handles biological standard QC checks
     else:
@@ -512,3 +536,13 @@ def kill_acquisition_listener(pid):
     except Exception as error:
         print("Error killing acquisition listener.")
         traceback.print_exc()
+
+# Testing AutoQC
+df_features = db.get_internal_standards("HILIC", "Positive Mode")
+feature_list = df_features["name"].astype(str).tolist()
+path = "C:/Users/wasim.sandhu/Documents/MS-AutoQC/src/ms-autoqc/data/Thermo_QE_1_EMGO001/results/"
+peak_list = path + "EMGO001_Pos_D_5_QE1_HILIC_010.msdial"
+df_peak_list = peak_list_to_dataframe(peak_list, feature_list)
+qc_dataframe, qc_result = qc_sample("Thermo QE 1", "EMGO001", "Pos", df_peak_list, df_features, False)
+print(qc_dataframe[["Name", "Warnings", "Fails"]])
+print(qc_result)
