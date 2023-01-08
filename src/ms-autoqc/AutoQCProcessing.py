@@ -297,7 +297,7 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
         if qc_config["intensity_enabled"].values[0] == 1:
 
             # Mark fails
-            qc_dataframe.loc[qc_dataframe["Intensity dropout"].astype(int) == 1, "Fails"] = "Intensity, "
+            qc_dataframe.loc[qc_dataframe["Intensity dropout"].astype(int) == 1, "Fails"] = "Missing"
 
             # Count intensity dropouts
             intensity_dropouts = qc_dataframe["Intensity dropout"].astype(int).sum()
@@ -317,12 +317,12 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
 
             # Mark fails
             fails = qc_dataframe["Delta RT"].abs() > library_rt_shift_cutoff
-            qc_dataframe.loc[fails, "Fails"] = qc_dataframe.loc[fails]["Fails"].astype(str) + "Delta RT, "
+            qc_dataframe.loc[fails, "Fails"] = "RT"
 
             # Mark warnings
             warnings = ((library_rt_shift_cutoff / 1.5) < qc_dataframe["Delta RT"].abs()) & \
                        ((qc_dataframe["Delta RT"].abs()) < library_rt_shift_cutoff)
-            qc_dataframe.loc[warnings, "Warnings"] = qc_dataframe.loc[warnings]["Warnings"].astype(str) + "Delta RT, "
+            qc_dataframe.loc[warnings, "Warnings"] = "RT"
 
             if len(qc_dataframe.loc[fails]) >= len(qc_dataframe) / 2:
                 qc_result = "Fail"
@@ -338,12 +338,12 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
 
             # Mark fails
             fails = qc_dataframe["In-run delta RT"].abs() > in_run_rt_shift_cutoff
-            qc_dataframe.loc[fails, "Fails"] = qc_dataframe.loc[fails]["Fails"].astype(str) + "In-run delta RT, "
+            qc_dataframe.loc[fails, "Fails"] = "In-Run RT"
 
             # Mark warnings
             warnings = ((in_run_rt_shift_cutoff / 1.25) < qc_dataframe["In-run delta RT"].abs()) & \
                        (qc_dataframe["In-run delta RT"].abs() < in_run_rt_shift_cutoff)
-            qc_dataframe.loc[warnings, "Warnings"] = qc_dataframe.loc[warnings]["Warnings"].astype(str) + "In-run delta RT, "
+            qc_dataframe.loc[warnings, "Warnings"] = "In-Run RT"
 
             if len(qc_dataframe.loc[fails]) >= len(qc_dataframe) / 2:
                 qc_result = "Fail"
@@ -359,12 +359,12 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
 
             # Mark fails
             fails = qc_dataframe["Delta m/z"].abs() > library_mz_shift_cutoff
-            qc_dataframe.loc[fails, "Fails"] = qc_dataframe.loc[fails]["Fails"].astype(str) + "Delta m/z, "
+            qc_dataframe.loc[fails, "Fails"] = "m/z"
 
             # Mark warnings
             warnings = ((library_mz_shift_cutoff / 1.25) < qc_dataframe["Delta m/z"].abs()) & \
                        (qc_dataframe["Delta m/z"].abs() < library_mz_shift_cutoff)
-            qc_dataframe.loc[warnings, "Warnings"] = qc_dataframe.loc[warnings]["Warnings"].astype(str) + "Delta m/z, "
+            qc_dataframe.loc[warnings, "Warnings"] = qc_dataframe.loc[warnings]["Warnings"].astype(str) + "m/z"
 
             if len(qc_dataframe.loc[fails]) >= len(qc_dataframe) / 2:
                 qc_result = "Fail"
@@ -513,6 +513,9 @@ def listener_is_running(pid):
     Check if acquisition listener subprocess is still running
     """
 
+    if pid is None:
+        return False
+
     time.sleep(1)
 
     try:
@@ -521,8 +524,7 @@ def listener_is_running(pid):
         else:
             return False
     except Exception as error:
-        print("Error searching for subprocess using given pid.")
-        traceback.print_exc()
+        return False
 
 
 def kill_acquisition_listener(pid):
@@ -536,13 +538,3 @@ def kill_acquisition_listener(pid):
     except Exception as error:
         print("Error killing acquisition listener.")
         traceback.print_exc()
-
-# Testing AutoQC
-df_features = db.get_internal_standards("HILIC", "Positive Mode")
-feature_list = df_features["name"].astype(str).tolist()
-path = "C:/Users/wasim.sandhu/Documents/MS-AutoQC/src/ms-autoqc/data/Thermo_QE_1_EMGO001/results/"
-peak_list = path + "EMGO001_Pos_D_5_QE1_HILIC_010.msdial"
-df_peak_list = peak_list_to_dataframe(peak_list, feature_list)
-qc_dataframe, qc_result = qc_sample("Thermo QE 1", "EMGO001", "Pos", df_peak_list, df_features, False)
-print(qc_dataframe[["Name", "Warnings", "Fails"]])
-print(qc_result)

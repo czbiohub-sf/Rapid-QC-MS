@@ -97,6 +97,7 @@ def create_databases(is_instrument_computer, instrument_identity=None):
         sa.Column("run_id", TEXT),
         sa.Column("instrument_id", TEXT),
         sa.Column("chromatography", TEXT),
+        sa.Column("acquisition_path", TEXT),
         sa.Column("sequence", TEXT),
         sa.Column("metadata", TEXT),
         sa.Column("status", TEXT),
@@ -652,7 +653,7 @@ def get_filenames_from_sequence(sequence):
     return df_sequence
 
 
-def insert_new_run(run_id, instrument_id, chromatography, bio_standards, sequence, metadata, qc_config_id):
+def insert_new_run(run_id, instrument_id, chromatography, bio_standards, path, sequence, metadata, qc_config_id):
 
     """
     1. Inserts a new instrument run into the "runs" table
@@ -684,6 +685,7 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, sequenc
         {"run_id": run_id,
          "instrument_id": instrument_id,
          "chromatography": chromatography,
+         "acquisition_path": path,
          "sequence": sequence,
          "metadata": metadata,
          "status": "Active",
@@ -768,6 +770,15 @@ def get_instrument_runs(instrument_id):
     query = "SELECT * FROM runs WHERE instrument_id = '" + instrument_id + "'"
     df_instrument_runs = pd.read_sql(query, engine)
     return df_instrument_runs
+
+
+def get_acquisition_path(instrument_id, run_id):
+
+    """
+    Returns acquisition path for a given instrument run
+    """
+
+    return get_instrument_run(instrument_id, run_id)["acquisition_path"].astype(str).tolist()[0]
 
 
 def get_md5(sample_id):
@@ -1204,6 +1215,10 @@ def add_msp_to_database(msp_file, chromatography, polarity, bio_standard=None):
         # Execute UPDATE of MSP file location
         connection.execute(update_msp_file)
 
+    # If the corresponding TXT library existed, delete it
+    txt_library = os.path.join(methods_directory, filename.replace(".msp", ".txt"))
+    os.remove(txt_library) if os.path.exists(txt_library) else None
+
     # Close the connection
     connection.close()
 
@@ -1281,6 +1296,10 @@ def add_csv_to_database(csv_file, chromatography, polarity):
 
     # Execute UPDATE of CSV file location
     connection.execute(update_msp_file)
+
+    # If the corresponding MSP library existed, delete it
+    msp_library = os.path.join(methods_directory, filename.replace(".txt", ".msp"))
+    os.remove(msp_library) if os.path.exists(msp_library) else None
 
     # Close the connection
     connection.close()
@@ -2025,6 +2044,26 @@ def get_samples_from_csv(instrument_id, run_id, sample_type="Both"):
     return df.loc[df["run_id"] == run_id]
 
 
+def get_remaining_samples(instrument_id, run_id):
+
+    """
+    Returns list of samples remaining in a given instrument run
+    """
+
+    # Get latest sample in run
+    df_run = get_instrument_run(instrument_id, run_id)
+    latest_sample = df_run["latest_sample"].astype(str).tolist()[0]
+
+    # Get list of samples in run
+    samples = get_samples_in_run(instrument_id, run_id, "Both")["sample_id"].astype(str).tolist()
+
+    # Get index of latest sample
+    latest_sample_index = samples.index(latest_sample)
+
+    # Return list of samples starting at latest sample
+    return samples[latest_sample_index:len(samples)]
+
+
 def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, status, as_json=True):
 
     """
@@ -2555,7 +2594,7 @@ def mark_run_as_completed(instrument_id, run_id):
     connection.close()
 
 
-def store_pid(run_id, pid):
+def store_pid(instrument_id, run_id, pid):
 
     """
     Store acquisition listener process ID to allow termination later
@@ -2566,7 +2605,7 @@ def store_pid(run_id, pid):
 
     update_pid = (
         sa.update(instrument_runs_table)
-            .where(instrument_runs_table.c.run_id == run_id)
+            .where((instrument_runs_table.c.run_id == run_id) & (instrument_runs_table.c.instrument_id == instrument_id))
             .values(pid=pid)
     )
 
@@ -2580,7 +2619,10 @@ def get_pid(instrument_id, run_id):
     Retrieves acquisition listener process ID from "runs" table
     """
 
-    return get_instrument_run(instrument_id, run_id)["pid"].astype(int).tolist()[0]
+    try:
+        return get_instrument_run(instrument_id, run_id)["pid"].astype(int).tolist()[0]
+    except:
+        return None
 
 
 def upload_to_google_drive(file_dict):

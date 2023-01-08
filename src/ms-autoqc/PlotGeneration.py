@@ -1,4 +1,4 @@
-import os, json, ast
+import os, json, ast, traceback
 import plotly.express as px
 import pandas as pd
 import DatabaseFunctions as db
@@ -204,6 +204,34 @@ def get_qc_results(instrument_id, run_id, status="Complete", drive=None, biologi
         print("Error loading negative (–) mode delta m/z data:", error)
         df_delta_mz_neg = None
 
+    try:
+        df_warnings_pos = db.parse_internal_standard_qc_data(instrument_id=instrument_id,
+            run_id=run_id, result_type="Warnings", polarity="Pos", status=status)
+    except Exception as error:
+        print("Error loading positive (+) mode QC warnings data:", error)
+        df_warnings_pos = None
+
+    try:
+        df_warnings_neg = db.parse_internal_standard_qc_data(instrument_id=instrument_id,
+            run_id=run_id, result_type="Warnings", polarity="Neg", status=status)
+    except Exception as error:
+        print("Error loading negative (–) mode QC warnings data:", error)
+        df_warnings_neg = None
+
+    try:
+        df_fails_pos = db.parse_internal_standard_qc_data(instrument_id=instrument_id,
+            run_id=run_id, result_type="Fails", polarity="Pos", status=status)
+    except Exception as error:
+        print("Error loading positive (+) mode QC fails data:", error)
+        df_fails_pos = None
+
+    try:
+        df_fails_neg = db.parse_internal_standard_qc_data(instrument_id=instrument_id,
+            run_id=run_id, result_type="Fails", polarity="Neg", status=status)
+    except Exception as error:
+        print("Error loading negative (+) mode QC fails data:", error)
+        df_fails_neg = None
+
     # Generate DataFrame for sample table
     try:
         if status == "Complete":
@@ -221,6 +249,7 @@ def get_qc_results(instrument_id, run_id, status="Complete", drive=None, biologi
 
     except Exception as error:
         print("Error loading samples from database:", error)
+        traceback.print_exc()
         df_samples = ""
 
     # Get internal standards from data
@@ -239,11 +268,12 @@ def get_qc_results(instrument_id, run_id, status="Complete", drive=None, biologi
     return (df_rt_pos, df_rt_neg, df_intensity_pos, df_intensity_neg, df_mz_pos, df_mz_neg, df_sequence, df_metadata,
         df_bio_rt_pos, df_bio_rt_neg, df_bio_intensity_pos, df_bio_intensity_neg, df_bio_mz_pos, df_bio_mz_neg,
         json.dumps(resources), df_samples, json.dumps(pos_internal_standards), json.dumps(neg_internal_standards),
-        df_delta_rt_pos, df_delta_rt_neg, df_in_run_delta_rt_pos, df_in_run_delta_rt_neg, df_delta_mz_pos, df_delta_mz_neg)
+        df_delta_rt_pos, df_delta_rt_neg, df_in_run_delta_rt_pos, df_in_run_delta_rt_neg, df_delta_mz_pos, df_delta_mz_neg,
+        df_warnings_pos, df_warnings_neg, df_fails_pos, df_fails_neg)
 
 
 def generate_sample_metadata_dataframe(sample, df_rt, df_mz, df_intensity, df_delta_rt, df_in_run_delta_rt,
-    df_delta_mz, df_sequence, df_metadata):
+    df_delta_mz, df_warnings, df_fails, df_sequence, df_metadata):
 
     """
     Aggregates and returns 3 DataFrames for a selected sample:
@@ -265,6 +295,11 @@ def generate_sample_metadata_dataframe(sample, df_rt, df_mz, df_intensity, df_de
     del internal_standards[0]
     df_sample_istd["Internal Standard"] = internal_standards
 
+    # Precursor m/z
+    df_mz = df_mz.loc[df_mz["Sample"] == sample][columns]
+    df_mz.drop(columns=["Sample"], inplace=True)
+    df_sample_istd["m/z"] = df_mz.iloc[0].astype(float).values.tolist()
+
     # Retention times
     df_rt = df_rt.loc[df_rt["Sample"] == sample][columns]
     df_rt.drop(columns=["Sample"], inplace=True)
@@ -275,11 +310,6 @@ def generate_sample_metadata_dataframe(sample, df_rt, df_mz, df_intensity, df_de
     df_intensity.drop(columns=["Sample"], inplace=True)
     intensities = df_intensity.iloc[0].fillna(0).values.tolist()
     df_sample_istd["Intensity"] = ["{:.2e}".format(x) for x in intensities]
-
-    # Precursor m/z
-    df_mz = df_mz.loc[df_mz["Sample"] == sample][columns]
-    df_mz.drop(columns=["Sample"], inplace=True)
-    df_sample_istd["m/z"] = df_mz.iloc[0].astype(float).values.tolist()
 
     # Delta m/z
     df_delta_mz = df_delta_mz.loc[df_delta_mz["Sample"] == sample][columns]
@@ -294,7 +324,17 @@ def generate_sample_metadata_dataframe(sample, df_rt, df_mz, df_intensity, df_de
     # In-run delta RT
     df_in_run_delta_rt = df_in_run_delta_rt.loc[df_in_run_delta_rt["Sample"] == sample][columns]
     df_in_run_delta_rt.drop(columns=["Sample"], inplace=True)
-    df_sample_istd["In-run delta RT"] = df_in_run_delta_rt.iloc[0].astype(float).round(3).values.tolist()
+    df_sample_istd["In-Run Delta RT"] = df_in_run_delta_rt.iloc[0].astype(float).round(3).values.tolist()
+
+    # Warnings
+    df_warnings = df_warnings.loc[df_warnings["Sample"] == sample][columns]
+    df_warnings.drop(columns=["Sample"], inplace=True)
+    df_sample_istd["Warnings"] = df_warnings.iloc[0].astype(str).values.tolist()
+
+    # Fails
+    df_fails = df_fails.loc[df_fails["Sample"] == sample][columns]
+    df_fails.drop(columns=["Sample"], inplace=True)
+    df_sample_istd["Fails"] = df_fails.iloc[0].astype(str).values.tolist()
 
     if len(df_sequence) > 0:
         df_sample_info["Sample ID"] = df_sequence["L1 Study"].astype(str).values

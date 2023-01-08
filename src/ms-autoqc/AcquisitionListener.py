@@ -102,6 +102,8 @@ def start_listener(path, filenames, instrument_id, run_id, is_completed_run):
     """
 
     print("Run monitoring initiated for", path)
+
+    is_completed_run = True if is_completed_run == "True" else False
     filenames = ast.literal_eval(filenames)
 
     if is_completed_run:

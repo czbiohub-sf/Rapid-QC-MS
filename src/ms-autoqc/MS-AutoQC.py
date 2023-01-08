@@ -1448,6 +1448,10 @@ def serve_layout():
             dcc.Store(id="istd-in-run-delta-rt-neg"),
             dcc.Store(id="istd-delta-mz-pos"),
             dcc.Store(id="istd-delta-mz-neg"),
+            dcc.Store(id="qc-warnings-pos"),
+            dcc.Store(id="qc-warnings-neg"),
+            dcc.Store(id="qc-fails-pos"),
+            dcc.Store(id="qc-fails-neg"),
             dcc.Store(id="sequence"),
             dcc.Store(id="metadata"),
             dcc.Store(id="bio-rt-pos"),
@@ -2316,6 +2320,10 @@ def open_loading_modal(active_cell, table_data, load_finished):
               Output("istd-in-run-delta-rt-neg", "data"),
               Output("istd-delta-mz-pos", "data"),
               Output("istd-delta-mz-neg", "data"),
+              Output("qc-warnings-pos", "data"),
+              Output("qc-warnings-neg", "data"),
+              Output("qc-fails-pos", "data"),
+              Output("qc-fails-neg", "data"),
               Output("load-finished", "data"),
               Input("refresh-interval", "n_intervals"),
               Input("instrument-run-table", "active_cell"),
@@ -2342,7 +2350,37 @@ def load_data(refresh, active_cell, table_data, resources, instrument_id):
             if completed_count_in_cache == actual_completed_count:
                 raise PreventUpdate
 
-        # Otherwise, begin route: raw data -> parsed data -> user session cache -> plots
+        # If the acquisition listener was stopped for some reason, start a new process and pass remaining samples
+        if status == "Active":
+
+            # Check that device is the instrument that the run is on
+            if db.get_device_identity() == instrument_id:
+
+                # Get listener process ID from database; if process is not running, restart it
+                listener_id = db.get_pid(instrument_id, run_id)
+                if not qc.listener_is_running(listener_id):
+
+                    # Retrieve acquisition path
+                    acquisition_path = db.get_acquisition_path(instrument_id, run_id).replace("\\", "/")
+                    acquisition_path = acquisition_path + "/" if acquisition_path[-1] != "/" else acquisition_path
+
+                    # Retrieve filenames
+                    filenames = db.get_remaining_samples(instrument_id, run_id)
+
+                    # Check if active run monitor or bulk QC job
+                    last_sample = acquisition_path + filenames[-1] + ".raw"
+                    second_last_sample = acquisition_path + filenames[-2] + ".raw"
+                    if os.path.exists(last_sample) or os.path.exists(second_last_sample):
+                        is_completed_run = True
+                    else:
+                        is_completed_run = False
+
+                    # Restart AcquisitionListener and store process ID
+                    process = psutil.Popen(["py", "AcquisitionListener.py", acquisition_path,
+                        str(filenames), instrument_id, run_id, str(is_completed_run)])
+                    db.store_pid(instrument_id, run_id, process.pid)
+
+        # If new sample, route raw data -> parsed data -> user session cache -> plots
         if status == "Active" and db.sync_is_enabled():
             drive = db.get_drive_instance()
             return get_qc_results(instrument_id, run_id, status, drive) + (True,)
@@ -2899,6 +2937,10 @@ def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_p
               State("istd-in-run-delta-rt-neg", "data"),
               State("istd-delta-mz-pos", "data"),
               State("istd-delta-mz-neg", "data"),
+              State("qc-warnings-pos", "data"),
+              State("qc-warnings-neg", "data"),
+              State("qc-fails-pos", "data"),
+              State("qc-fails-neg", "data"),
               State("bio-rt-pos", "data"),
               State("bio-rt-neg", "data"),
               State("bio-intensity-pos", "data"),
@@ -2910,7 +2952,8 @@ def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_p
               State("study-resources", "data"), prevent_initial_call=True)
 def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_click, mz_click, rt_pos, rt_neg, intensity_pos,
     intensity_neg, mz_pos, mz_neg, delta_rt_pos, delta_rt_neg, in_run_delta_rt_pos, in_run_delta_rt_neg, delta_mz_pos, delta_mz_neg,
-    bio_rt_pos, bio_rt_neg, bio_intensity_pos, bio_intensity_neg, bio_mz_pos, bio_mz_neg, sequence, metadata, resources):
+    qc_warnings_pos, qc_warnings_neg, qc_fails_pos, qc_fails_neg, bio_rt_pos, bio_rt_neg, bio_intensity_pos, bio_intensity_neg,
+    bio_mz_pos, bio_mz_neg, sequence, metadata, resources):
 
     """
     Opens information modal when a sample is clicked from the sample table
@@ -2965,6 +3008,8 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
             df_delta_rt = pd.read_json(delta_rt_pos, orient="split")
             df_in_run_delta_rt = pd.read_json(in_run_delta_rt_pos, orient="split")
             df_delta_mz = pd.read_json(delta_mz_pos, orient="split")
+            df_warnings = pd.read_json(qc_warnings_pos, orient="split")
+            df_fails = pd.read_json(qc_fails_pos, orient="split")
 
         elif polarity == "Neg":
             df_rt = pd.read_json(rt_neg, orient="split")
@@ -2973,9 +3018,11 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
             df_delta_rt = pd.read_json(delta_rt_neg, orient="split")
             df_in_run_delta_rt = pd.read_json(in_run_delta_rt_neg, orient="split")
             df_delta_mz = pd.read_json(delta_mz_neg, orient="split")
+            df_warnings = pd.read_json(qc_warnings_neg, orient="split")
+            df_fails = pd.read_json(qc_fails_neg, orient="split")
 
         df_sample_features, df_sample_info = generate_sample_metadata_dataframe(clicked_sample, df_rt, df_mz, df_intensity,
-            df_delta_rt, df_in_run_delta_rt, df_delta_mz, df_sequence, df_metadata)
+            df_delta_rt, df_in_run_delta_rt, df_delta_mz, df_warnings, df_fails, df_sequence, df_metadata)
 
     elif is_bio_standard:
 
@@ -4654,7 +4701,7 @@ def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, b
     """
 
     # Write a new instrument run to the database
-    db.insert_new_run(run_id, instrument_id, chromatography, bio_standards, sequence, metadata, qc_config_id)
+    db.insert_new_run(run_id, instrument_id, chromatography, bio_standards, acquisition_path, sequence, metadata, qc_config_id)
 
     # Get MSPs and generate parameters files for MS-DIAL processing
     for polarity in ["Positive", "Negative"]:
@@ -4675,7 +4722,7 @@ def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, b
     # If this is for an active run, initialize run monitoring at the given directory
     if job_type == "active":
         process = psutil.Popen(["py", "AcquisitionListener.py", acquisition_path, str(filenames), instrument_id, run_id, "False"])
-        db.store_pid(run_id, process.pid)
+        db.store_pid(instrument_id, run_id, process.pid)
 
         if db.is_instrument_computer() and db.sync_is_enabled():
             return db.upload_database()
@@ -4683,7 +4730,7 @@ def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, b
     # If this is for a completed run, begin iterating through the files and process them
     elif job_type == "completed":
         process = psutil.Popen(["py", "AcquisitionListener.py", acquisition_path, str(filenames), instrument_id, run_id, "True"])
-        db.store_pid(run_id, process.pid)
+        db.store_pid(instrument_id, run_id, process.pid)
 
     return True, False
 
