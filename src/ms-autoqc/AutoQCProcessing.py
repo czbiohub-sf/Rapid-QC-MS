@@ -184,30 +184,83 @@ def run_msdial_processing(filename, msdial_path, parameter_file, input_folder, o
     return output_folder + "/" + filename.split(".")[0] + ".msdial"
 
 
-def peak_list_to_dataframe(sample_peak_list, internal_standards=None, targeted_features=None):
+def peak_list_to_dataframe(sample_peak_list, df_features):
 
     """
     Returns DataFrame with m/z, RT, and intensity info for each internal standard in a given sample
     """
 
     # Convert .msdial file into a DataFrame
-    df_peak_list = pd.read_csv(sample_peak_list, sep="\t", engine="python", skip_blank_lines=True)
-    df_peak_list.rename(columns={"Title": "Name"}, inplace=True)
+    df = pd.read_csv(sample_peak_list, sep="\t", engine="python", skip_blank_lines=True)
+    df.rename(columns={"Title": "Name"}, inplace=True)
 
     # Get only the m/z, RT, and intensity columns
-    df_peak_list = df_peak_list[["Name", "Precursor m/z", "RT (min)", "Height"]]
+    df = df[["Name", "Precursor m/z", "RT (min)", "Height"]]
 
     # Query only internal standards (or targeted features for biological standard)
-    if internal_standards is not None:
-        df_peak_list = df_peak_list.loc[df_peak_list["Name"].isin(internal_standards)]
-    elif targeted_features is not None:
-        df_peak_list = df_peak_list.loc[df_peak_list["Name"].isin(targeted_features)]
+    feature_list = df_features["name"].astype(str).tolist()
+    df = df.loc[df["Name"].isin(feature_list)]
 
-    # DataFrame readiness
-    df_peak_list.reset_index(drop=True, inplace=True)
+    # Get duplicate annotations in a DataFrame
+    df_duplicates = df[df.duplicated(subset=["Name"], keep=False)]
 
-    # Return DataFrame
-    return df_peak_list
+    # Remove duplicates from peak list DataFrame
+    df = df[~(df.duplicated(subset=["Name"], keep=False))]
+
+    # Handle duplicate annotations
+    if len(df_duplicates) > 0:
+
+        # Get list of annotations that have duplicates in the peak list
+        annotations = df_duplicates[~df_duplicates.duplicated(subset=["Name"])]["Name"].tolist()
+
+        # For each unique feature, choose the annotation that best matches library m/z and RT values
+        for annotation in annotations:
+
+            # Get all duplicate annotations for that feature
+            df_annotation = df_duplicates[df_duplicates["Name"] == annotation]
+            df_feature_in_library = df_features.loc[df_features["name"] == annotation]
+
+            # Calculate delta m/z and delta RT
+            df_annotation["Delta m/z"] = df_annotation["Precursor m/z"].astype(float) - df_feature_in_library["precursor_mz"].astype(float).values[0]
+            df_annotation["Delta RT"] = df_annotation["RT (min)"].astype(float) - df_feature_in_library["retention_time"].astype(float).values[0]
+
+            # Absolute values
+            df_annotation["Delta m/z"] = df_annotation["Delta m/z"].abs()
+            df_annotation["Delta RT"] = df_annotation["Delta RT"].abs()
+
+            # Append the annotation with the lowest delta RT and delta m/z to the peak list DataFrame
+            df_rectified = df_annotation.loc[
+                (df_annotation["Delta m/z"] == df_annotation["Delta m/z"].min()) &
+                (df_annotation["Delta RT"] == df_annotation["Delta RT"].min())]
+
+            # If there is no "best" feature with the lowest delta RT and lowest delta m/z, choose the lowest delta RT
+            if len(df_rectified) == 0:
+                df_rectified = df_annotation.loc[
+                    df_annotation["Delta RT"] == df_annotation["Delta RT"].min()]
+
+            # If the RT's are exactly the same, choose the feature between them with the lowest delta m/z
+            if len(df_rectified) > 1:
+                df_rectified = df_rectified.loc[
+                    df_rectified["Delta m/z"] == df_rectified["Delta m/z"].min()]
+
+            # If they both have the same delta m/z, choose the feature between them with the greatest intensity
+            if len(df_rectified) > 1:
+                df_rectified = df_rectified.loc[
+                    df_rectified["Height"] == df_rectified["Height"].max()]
+
+            # If at this point there's still duplicates for some reason, just choose the first one
+            if len(df_rectified) > 1:
+                df_rectified = df_rectified[:1]
+
+            # Append "correct" annotation to peak list DataFrame
+            df = df.append(df_rectified, ignore_index=True)
+
+    # DataFrame readiness before return
+    try:
+        df.drop(columns=["Delta m/z", "Delta RT"], inplace=True)
+    finally:
+        df.reset_index(drop=True, inplace=True)
+        return df
 
 
 def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio_standard):
@@ -437,9 +490,6 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
     else:
         return
 
-    # Get list of features
-    feature_list = df_features["name"].astype(str).tolist()
-
     # Get MS-DIAL directory
     msdial_directory = db.get_msdial_directory()
 
@@ -457,7 +507,7 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
 
     # Convert peak list to DataFrame
     try:
-        df_peak_list = peak_list_to_dataframe(peak_list, feature_list)
+        df_peak_list = peak_list_to_dataframe(peak_list, df_features)
     except Exception as error:
         print("Failed to convert peak list to DataFrame.")
         traceback.print_exc()
