@@ -1,3 +1,4 @@
+import ssl
 import DatabaseFunctions as db
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
@@ -8,9 +9,14 @@ def send_message(message):
     Posts a message to the Slack channel registered for notifications in Settings > General
     """
 
+    # SSL
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+
     # Retrieve Slack bot token and Slack channel
     slack_token = db.get_slack_bot_token()
-    client = WebClient(token=slack_token)
+    client = WebClient(token=slack_token, ssl=ssl_context)
 
     # Send Slack message
     try:

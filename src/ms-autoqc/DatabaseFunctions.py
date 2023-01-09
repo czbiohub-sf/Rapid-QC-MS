@@ -429,7 +429,10 @@ def slack_notifications_are_enabled():
     if not is_valid():
         return False
 
-    return bool(get_table(settings_database, "workspace")["slack_enabled"].astype(int).tolist()[0])
+    try:
+        return bool(get_table(settings_database, "workspace")["slack_enabled"].astype(int).tolist()[0])
+    except:
+        return False
 
 
 def is_instrument_computer():

@@ -5,7 +5,7 @@ import os, time, shutil, subprocess, psutil, traceback
 import pandas as pd
 import numpy as np
 import DatabaseFunctions as db
-import SlackNotifications as bot
+import SlackNotifications as slack_bot
 
 pd.options.mode.chained_assignment = None
 
@@ -500,7 +500,7 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
     try:
         peak_list = run_msdial_processing(filename, msdial_directory, msdial_parameters,
             str(mzml_file_directory), str(qc_results_directory))
-    except Exception as error:
+    except:
         print("Failed to run MS-DIAL.")
         traceback.print_exc()
         return
@@ -508,7 +508,7 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
     # Convert peak list to DataFrame
     try:
         df_peak_list = peak_list_to_dataframe(peak_list, df_features)
-    except Exception as error:
+    except:
         print("Failed to convert peak list to DataFrame.")
         traceback.print_exc()
         return
@@ -516,10 +516,20 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
     # Execute AutoQC algorithm
     try:
         qc_dataframe, qc_result = qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio_standard)
-    except Exception as error:
+    except:
         print("Failed to execute AutoQC algorithm.")
         traceback.print_exc()
         return
+
+    # Send Slack notification (if they are enabled)
+    try:
+        if db.slack_notifications_are_enabled():
+            if qc_result != "Pass":
+                alert = "QC " + qc_result + ": " + filename
+                slack_bot.send_message(alert)
+    except:
+        print("Failed to send Slack notification.")
+        traceback.print_exc()
 
     # Convert m/z, RT, and intensity data to JSON strings
     try:
@@ -527,7 +537,7 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
         json_rt = df_peak_list[["Name", "RT (min)"]].to_json(orient="split")
         json_intensity = df_peak_list[["Name", "Height"]].to_json(orient="split")
         qc_dataframe = qc_dataframe.to_json(orient="split")
-    except Exception as error:
+    except:
         print("Failed to convert data to JSON.")
         traceback.print_exc()
         return
@@ -543,7 +553,7 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
         if db.sync_is_enabled():
             db.upload_qc_results(instrument_id, run_id)
 
-    except Exception as error:
+    except:
         print("Failed to write QC results to database.")
         traceback.print_exc()
         return

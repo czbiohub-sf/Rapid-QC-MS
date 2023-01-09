@@ -2344,10 +2344,13 @@ def load_data(refresh, active_cell, table_data, resources, instrument_id):
 
         # Ensure that refresh does not trigger data parsing if no new samples processed
         if trigger == "refresh-interval":
-            completed_count_in_cache = json.loads(resources)["samples_completed"]
-            actual_completed_count, total = db.get_completed_samples_count(instrument_id, run_id, status)
+            try:
+                completed_count_in_cache = json.loads(resources)["samples_completed"]
+                actual_completed_count, total = db.get_completed_samples_count(instrument_id, run_id, status)
 
-            if completed_count_in_cache == actual_completed_count:
+                if completed_count_in_cache == actual_completed_count:
+                    raise PreventUpdate
+            except:
                 raise PreventUpdate
 
         # If the acquisition listener was stopped for some reason, start a new process and pass remaining samples
