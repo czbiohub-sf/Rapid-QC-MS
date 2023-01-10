@@ -138,18 +138,17 @@ def run_msconvert(path, filename, extension, output_folder):
     # Copy original data file to output folder
     shutil.copy2(path + filename + "." + extension, output_folder)
 
-    # Run MSConvert Docker container
-    command = "docker run --rm -e WINEDEBUG=-all -v " \
-            + output_folder.replace(" ", "/") \
-            + ":/data chambm/pwiz-skyline-i-agree-to-the-vendor-licenses wine msconvert /data/" \
-            + filename + "." + extension
+    user = db.get_msdial_directory().split("/")[2]
+    msconvert_exe = '"C:/Users/' + user + '/AppData/Local/Apps/ProteoWizard 3.0.23009.e04bf0d 64-bit/msconvert.exe" '
+
+    # Run MSConvert.exe
+    command = msconvert_exe + output_folder + filename + "." + extension + " -o " + output_folder
     os.system(command)
     time.sleep(1)
 
     # Delete copy of original data file
     data_file_copy = output_folder + filename + "." + extension
     os.remove(data_file_copy)
-
     return
 
 
@@ -598,3 +597,6 @@ def kill_acquisition_listener(pid):
     except Exception as error:
         print("Error killing acquisition listener.")
         traceback.print_exc()
+
+# Testing data pipeline
+process_data_file("C:/Users/wasim.sandhu/Downloads/EMGO001_Data/", "EMGO001_BK_Neg_QE1_HILIC_007", "raw", "Thermo QE 1", "EMGO001")
