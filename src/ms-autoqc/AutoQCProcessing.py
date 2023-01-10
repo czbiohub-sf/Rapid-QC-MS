@@ -417,7 +417,7 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
             # Mark warnings
             warnings = ((library_mz_shift_cutoff / 1.25) < qc_dataframe["Delta m/z"].abs()) & \
                        (qc_dataframe["Delta m/z"].abs() < library_mz_shift_cutoff)
-            qc_dataframe.loc[warnings, "Warnings"] = qc_dataframe.loc[warnings]["Warnings"].astype(str) + "m/z"
+            qc_dataframe.loc[warnings, "Warnings"] = "m/z"
 
             if len(qc_dataframe.loc[fails]) >= len(qc_dataframe) / 2:
                 qc_result = "Fail"

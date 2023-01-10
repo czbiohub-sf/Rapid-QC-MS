@@ -4946,9 +4946,9 @@ def update_progress_bar_during_active_instrument_run(active_cell, table_data, re
         completed, total = db.get_completed_samples_count(instrument_id, run_id, status)
         percent_complete = db.get_run_progress(instrument_id, run_id, status)
         progress_label = str(percent_complete) + "%"
-        header_text = run_id + " – " + str(completed) + " out of " + str(total) + " samples complete"
+        header_text = run_id + " – " + str(completed) + " out of " + str(total) + " samples processed"
 
-        if percent_complete != 100.0:
+        if percent_complete != 100.0 or status != "Complete":
             return {"display": "block"}, header_text, percent_complete, progress_label, False
         else:
             return {"display": "none"}, None, None, None, True
