@@ -364,12 +364,17 @@ def generate_bio_standard_dataframe(clicked_sample, run_id, df_rt, df_mz, df_int
     2. Targeted metabolite m/z, RT, intensity, delta RT, and percent change
     """
 
+    metabolites = df_mz.columns.tolist()
+    del metabolites[0]
+
     df_sample_features = pd.DataFrame()
-    df_sample_features["Metabolite name"] = df_mz["Name"]
-    df_sample_features["Precursor m/z"] = df_mz[run_id]
-    df_sample_features["Retention time (min)"] = df_rt[run_id].astype(float).round(3)
-    intensities = df_intensity[run_id].fillna(0).astype(float).values.tolist()
+    df_sample_features["Metabolite name"] = metabolites
+    df_sample_features["Precursor m/z"] = df_mz[metabolites].iloc[0].astype(float).values
+    df_sample_features["Retention time (min)"] = df_rt[metabolites].iloc[0].astype(float).round(3).values
+    intensities = df_intensity[metabolites].iloc[0].fillna(0).astype(float).values.tolist()
     df_sample_features["Intensity"] = ["{:.2e}".format(x) for x in intensities]
+
+    print(df_sample_features)
 
     df_sample_info = pd.DataFrame()
     df_sample_info["Sample ID"] = [clicked_sample]
@@ -492,19 +497,26 @@ def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity):
     Returns scatter plot figure of m/z vs. retention time for urine features
     """
 
-    bio_df = pd.DataFrame()
+    # Get metabolites
+    metabolites = df_mz.columns.tolist()
+    del metabolites[0]
 
-    # Rename columns
-    bio_df["Metabolite name"] = df_mz["Name"]
-    bio_df["Precursor m/z"] = df_mz[run_id]
-    bio_df["Retention time (min)"] = df_rt[run_id]
-    bio_df["Intensity"] = df_intensity[run_id]
+    # Construct new DataFrame
+    bio_df = pd.DataFrame()
+    bio_df["Metabolite name"] = metabolites
+    bio_df["Precursor m/z"] = df_mz[metabolites].iloc[0].values
+    bio_df["Retention time (min)"] =  df_rt[metabolites].iloc[0].values
+    bio_df["Intensity"] =  df_intensity[metabolites].iloc[0].values
 
     # Get standard deviation of feature intensities
     df_intensity = df_intensity.fillna(0)
-    feature_intensity_from_study = df_intensity.loc[:, run_id].astype(float)
-    average_intensity_in_studies = df_intensity.iloc[:, 1:].astype(float).mean(axis=1)
-    bio_df["% Change"] = ((feature_intensity_from_study - average_intensity_in_studies) / average_intensity_in_studies) * 100
+    feature_intensity_from_study = df_intensity.loc[df_intensity["Name"] == run_id][metabolites].astype(float).values
+
+    if len(df_intensity) > 1:
+        average_intensity_in_studies = df_intensity.loc[df_intensity["Name"] != run_id][metabolites].astype(float).mean()
+        bio_df["% Change"] = ((feature_intensity_from_study - average_intensity_in_studies) / average_intensity_in_studies) * 100
+    else:
+        bio_df["% Change"] = 0
 
     # Plot readiness
     bio_df["Retention time (min)"] = bio_df["Retention time (min)"].round(2)
@@ -548,15 +560,11 @@ def load_bio_benchmark_plot(dataframe, metabolite_name):
     """
 
     # Get list of runs
-    instrument_runs = dataframe.columns.tolist()
-    del instrument_runs[0]
+    instrument_runs = dataframe["Name"].astype(str).tolist()
 
     # Get targeted metabolite intensities for each run
-    intensities = dataframe.loc[dataframe["Name"] == metabolite_name].values.tolist()
-    if len(intensities) != 0:
-        intensities = intensities[0]
-        del intensities[0]
-    else:
+    intensities = dataframe[metabolite_name].values.tolist()
+    if len(intensities) == 0:
         intensities = [0 for x in instrument_runs]
 
     # Get intensities in scientific notation for labeling bar plot

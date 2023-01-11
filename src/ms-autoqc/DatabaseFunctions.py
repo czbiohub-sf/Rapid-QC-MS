@@ -2118,7 +2118,7 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, s
         result_dataframes.append(df)
 
     # # Concatenate DataFrames together
-    df_results = pd.concat(result_dataframes, sort=False)
+    df_results = pd.concat(result_dataframes, sort=False, ignore_index=True)
 
     # Return DataFrame as JSON string
     if as_json:
@@ -2170,7 +2170,7 @@ def parse_biological_standard_data(instrument_id, run_id, result_type, polarity,
         df = pd.read_json(result, orient="split")
 
         # Refactor so that each row is a sample, and each column is an internal standard
-        df.rename(columns={df.columns[1]: run_ids[index]}, inplace=True)
+        df["Name"] = run_ids[index]
 
         # Append to list of DataFrames
         result_dataframes.append(df)
@@ -2213,7 +2213,9 @@ def parse_internal_standard_qc_data(instrument_id, run_id, polarity, result_type
         # Convert to DataFrame
         if result is not None:
             df = pd.read_json(result, orient="split")
-            df = df[["Name", result_type]]
+            df = df.loc[df["Name"].str.contains(result_type)]
+            df.loc[df["Name"].str.contains(result_type), "Name"] = sample_ids[index]
+            df.rename(columns={"Name": "Sample"}, inplace=True)
         else:
             empty_row = [np.nan for x in result_dataframes[0].columns]
             empty_row[0] = sample_ids[index]
@@ -2224,7 +2226,7 @@ def parse_internal_standard_qc_data(instrument_id, run_id, polarity, result_type
         result_dataframes.append(df)
 
     # Concatenate DataFrames together
-    df_results = pd.concat(result_dataframes, sort=False)
+    df_results = pd.concat(result_dataframes, sort=False, ignore_index=True)
 
     # Return DataFrame as JSON string
     if as_json:

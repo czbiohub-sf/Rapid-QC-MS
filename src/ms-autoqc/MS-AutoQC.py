@@ -672,7 +672,7 @@ def serve_layout():
                             ]),
                         ]),
 
-                        # TODO: Error modal for new AutoQC job setup
+                        # Error modal for new AutoQC job setup
                         dbc.Modal(id="new-job-error-modal", size="md", centered=True, is_open=False, children=[
                             dbc.ModalHeader(dbc.ModalTitle(id="new-job-error-modal-title"), close_button=False),
                             dbc.ModalBody(id="new-job-error-modal-body", className="modal-styles"),
@@ -2354,7 +2354,7 @@ def load_data(refresh, active_cell, table_data, resources, instrument_id):
                 raise PreventUpdate
 
         # If the acquisition listener was stopped for some reason, start a new process and pass remaining samples
-        if status == "Active":
+        if status == "Active" and os.name == "nt":
 
             # Check that device is the instrument that the run is on
             if db.get_device_identity() == instrument_id:
@@ -2903,7 +2903,7 @@ def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_p
 
     # Get clicked or selected feature from biological standard m/z-RT plot
     if not selected_feature:
-        selected_feature = df_bio_intensity["Name"].astype(str).tolist()[0]
+        selected_feature = df_bio_intensity.columns[1]
 
     try:
         # Generate biological standard metabolite intensity vs. instrument run plot

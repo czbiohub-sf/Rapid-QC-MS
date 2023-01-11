@@ -434,7 +434,7 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
     return qc_dataframe, qc_result
 
 
-def convert_to_json(sample_id, df_peak_list, qc_dataframe, is_bio_standard):
+def convert_to_json(sample_id, df_peak_list, qc_dataframe):
 
     """
     Format DataFrames as JSON strings, with features as columns and relevant data in rows
@@ -444,13 +444,6 @@ def convert_to_json(sample_id, df_peak_list, qc_dataframe, is_bio_standard):
     df_mz = df_peak_list[["Name", "Precursor m/z"]]
     df_rt = df_peak_list[["Name", "RT (min)"]]
     df_intensity = df_peak_list[["Name", "Height"]]
-
-    if is_bio_standard:
-        json_mz = df_mz.to_json(orient="split")
-        json_rt = df_rt.to_json(orient="split")
-        json_intensity = df_intensity.to_json(orient="split")
-        json_qc = qc_dataframe.to_json(orient="split")
-        return json_mz, json_rt, json_intensity, json_qc
 
     df_mz = df_mz.rename(columns={"Precursor m/z": sample_id})
     df_rt = df_rt.rename(columns={"RT (min)": sample_id})
@@ -587,7 +580,7 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
 
     # Convert m/z, RT, and intensity data to JSON strings
     try:
-        json_mz, json_rt, json_intensity, json_qc = convert_to_json(filename, df_peak_list, qc_dataframe, is_bio_standard)
+        json_mz, json_rt, json_intensity, json_qc = convert_to_json(filename, df_peak_list, qc_dataframe)
     except:
         print("Failed to convert DataFrames to JSON format.")
         traceback.print_exc()
