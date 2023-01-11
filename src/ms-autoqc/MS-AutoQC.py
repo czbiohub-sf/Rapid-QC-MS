@@ -2371,13 +2371,16 @@ def load_data(refresh, active_cell, table_data, resources, instrument_id):
                     filenames = db.get_remaining_samples(instrument_id, run_id)
 
                     # Check if active run monitor or bulk QC job
-                    last_sample = acquisition_path + filenames[-1] + ".raw"
-                    second_last_sample = acquisition_path + filenames[-2] + ".raw"
+                    try:
+                        last_sample = acquisition_path + filenames[-1] + ".raw"
+                        second_last_sample = acquisition_path + filenames[-2] + ".raw"
 
-                    if os.path.exists(last_sample) or os.path.exists(second_last_sample):
+                        if os.path.exists(last_sample) or os.path.exists(second_last_sample):
+                            is_completed_run = True
+                        else:
+                            is_completed_run = False
+                    except:
                         is_completed_run = True
-                    else:
-                        is_completed_run = False
 
                     # Restart AcquisitionListener and store process ID
                     process = psutil.Popen(["py", "AcquisitionListener.py", acquisition_path,

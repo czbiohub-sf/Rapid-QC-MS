@@ -1,5 +1,6 @@
-import os, sys, time, ast
+import os, sys, time, ast, shutil
 import logging
+import traceback
 from datetime import datetime, timedelta
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -157,6 +158,15 @@ def terminate_job(instrument_id, run_id):
     # Sync database on run completion
     if db.sync_is_enabled():
         db.sync_on_run_completion(instrument_id, run_id)
+
+    # Delete temporary data file directory
+    try:
+        id = instrument_id.replace(" ", "_") + "_" + run_id
+        temp_directory = os.path.join(os.getcwd(), "data", id)
+        shutil.rmtree(temp_directory)
+    except:
+        print("Could not delete temporary data directory.")
+        traceback.print_exc()
 
     # Kill acquisition listener
     pid = db.get_pid(instrument_id, run_id)

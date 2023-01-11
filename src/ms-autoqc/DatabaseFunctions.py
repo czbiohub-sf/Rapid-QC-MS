@@ -1663,6 +1663,17 @@ def get_msdial_directory():
     return get_table(settings_database, "workspace")["msdial_directory"].astype(str).values[0]
 
 
+def get_msconvert_directory():
+
+    """
+    Returns MSConvert.exe function call
+    """
+
+    user = get_msdial_directory().split("/")[2]
+    msconvert_folder = [f.path for f in os.scandir("C:/Users/" + user + "/AppData/Local/Apps/") if f.is_dir() and "ProteoWizard" in f.name][0]
+    return msconvert_folder
+
+
 def update_msdial_directory(msdial_directory):
 
     """

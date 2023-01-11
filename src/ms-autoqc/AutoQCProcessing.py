@@ -138,8 +138,14 @@ def run_msconvert(path, filename, extension, output_folder):
     # Copy original data file to output folder
     shutil.copy2(path + filename + "." + extension, output_folder)
 
-    user = db.get_msdial_directory().split("/")[2]
-    msconvert_exe = '"C:/Users/' + user + '/AppData/Local/Apps/ProteoWizard 3.0.23009.e04bf0d 64-bit/msconvert.exe" '
+    # Get MSConvert.exe
+    try:
+        msconvert_folder = db.get_msconvert_directory()
+        msconvert_exe = '"' + msconvert_folder + '/msconvert.exe" '
+    except:
+        print("Failed to locate MSConvert.exe!")
+        traceback.print_exc()
+        return
 
     # Run MSConvert.exe
     command = msconvert_exe + output_folder + filename + "." + extension + " -o " + output_folder
