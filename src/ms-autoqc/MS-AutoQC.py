@@ -2985,7 +2985,10 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
 
     # Get sequence and metadata
     df_sequence = pd.read_json(sequence, orient="split")
-    df_metadata = pd.read_json(metadata, orient="split")
+    try:
+        df_metadata = pd.read_json(metadata, orient="split")
+    except:
+        df_metadata = pd.DataFrame()
 
     # Get polarity from sample name
     if "Pos" in clicked_sample:

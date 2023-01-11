@@ -1,6 +1,7 @@
 import os, json, ast, traceback
 import plotly.express as px
 import pandas as pd
+import numpy as np
 import DatabaseFunctions as db
 
 # Bootstrap color dictionary
@@ -374,8 +375,6 @@ def generate_bio_standard_dataframe(clicked_sample, run_id, df_rt, df_mz, df_int
     intensities = df_intensity[metabolites].iloc[0].fillna(0).astype(float).values.tolist()
     df_sample_features["Intensity"] = ["{:.2e}".format(x) for x in intensities]
 
-    print(df_sample_features)
-
     df_sample_info = pd.DataFrame()
     df_sample_info["Sample ID"] = [clicked_sample]
     qc_result = db.get_qc_results(sample_list=[clicked_sample], is_bio_standard=True)["qc_result"].values[0]
@@ -504,17 +503,19 @@ def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity):
     # Construct new DataFrame
     bio_df = pd.DataFrame()
     bio_df["Metabolite name"] = metabolites
-    bio_df["Precursor m/z"] = df_mz[metabolites].iloc[0].values
-    bio_df["Retention time (min)"] =  df_rt[metabolites].iloc[0].values
-    bio_df["Intensity"] =  df_intensity[metabolites].iloc[0].values
+    bio_df["Precursor m/z"] = df_mz.loc[df_mz["Name"] == run_id][metabolites].iloc[0].astype(float).values
+    bio_df["Retention time (min)"] =  df_rt.loc[df_rt["Name"] == run_id][metabolites].iloc[0].astype(float).values
+    bio_df["Intensity"] =  df_intensity.loc[df_intensity["Name"] == run_id][metabolites].iloc[0].astype(float).values
 
     # Get standard deviation of feature intensities
     df_intensity = df_intensity.fillna(0)
-    feature_intensity_from_study = df_intensity.loc[df_intensity["Name"] == run_id][metabolites].astype(float).values
+    feature_intensity_from_study = df_intensity.loc[df_intensity["Name"] == run_id][metabolites].iloc[0].astype(float).values
 
     if len(df_intensity) > 1:
-        average_intensity_in_studies = df_intensity.loc[df_intensity["Name"] != run_id][metabolites].astype(float).mean()
+        average_intensity_in_studies = df_intensity.loc[df_intensity["Name"] != run_id][metabolites].astype(float).mean().values
         bio_df["% Change"] = ((feature_intensity_from_study - average_intensity_in_studies) / average_intensity_in_studies) * 100
+        bio_df.replace(np.inf, 100, inplace=True)
+        bio_df.replace(-np.inf, -100, inplace=True)
     else:
         bio_df["% Change"] = 0
 
