@@ -358,8 +358,10 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
             # Compare number of intensity dropouts to user-defined cutoff
             if intensity_dropouts >= intensity_dropouts_cutoff:
                 qc_result = "Fail"
-            elif intensity_dropouts > len(qc_dataframe) / 1.33:
-                qc_result = "Warning"
+
+            if qc_result != "Fail":
+                if intensity_dropouts > len(intensity_dropouts_cutoff) / 1.33:
+                    qc_result = "Warning"
 
         # QC of internal standard RT's against library RT's
         if qc_config["library_rt_enabled"].values[0] == 1:
@@ -430,6 +432,39 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
         qc_result = "Pass"
 
     return qc_dataframe, qc_result
+
+
+def convert_to_json(sample_id, df_peak_list, qc_dataframe):
+
+    """
+    Format DataFrames as JSON strings, with features as columns and relevant data in rows
+    """
+
+    # m/z, RT, intensity
+    df_mz = df_peak_list[["Name", "Precursor m/z"]]
+    df_rt = df_peak_list[["Name", "RT (min)"]]
+    df_intensity = df_peak_list[["Name", "Height"]]
+
+    df_mz = df_mz.rename(columns={"Precursor m/z": sample_id})
+    df_rt = df_rt.rename(columns={"RT (min)": sample_id})
+    df_intensity = df_intensity.rename(columns={"Height": sample_id})
+
+    df_mz = df_mz.set_index("Name").transpose()
+    df_rt = df_rt.set_index("Name").transpose()
+    df_intensity = df_intensity.set_index("Name").transpose()
+
+    json_mz = df_mz.to_json(orient="split")
+    json_rt = df_rt.to_json(orient="split")
+    json_intensity = df_intensity.to_json(orient="split")
+
+    # QC results
+    for column in qc_dataframe.columns:
+        if column != "Name":
+            qc_dataframe.rename(columns={column: sample_id + " " + column}, inplace=True)
+    qc_dataframe = qc_dataframe.set_index("Name").transpose()
+    json_qc = qc_dataframe.to_json(orient="split")
+
+    return json_mz, json_rt, json_intensity, json_qc
 
 
 def process_data_file(path, filename, extension, instrument_id, run_id):
@@ -532,18 +567,15 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
 
     # Convert m/z, RT, and intensity data to JSON strings
     try:
-        json_mz = df_peak_list[["Name", "Precursor m/z"]].to_json(orient="split")
-        json_rt = df_peak_list[["Name", "RT (min)"]].to_json(orient="split")
-        json_intensity = df_peak_list[["Name", "Height"]].to_json(orient="split")
-        qc_dataframe = qc_dataframe.to_json(orient="split")
+        json_mz, json_rt, json_intensity, json_qc = convert_to_json(sample_id, df_peak_list, qc_dataframe)
     except:
-        print("Failed to convert data to JSON.")
+        print("Failed to convert DataFrames to JSON format.")
         traceback.print_exc()
         return
 
     try:
         # Write QC results to database and upload to Google Drive
-        db.write_qc_results(filename, run_id, json_mz, json_rt, json_intensity, qc_dataframe, qc_result, is_bio_standard)
+        db.write_qc_results(filename, run_id, json_mz, json_rt, json_intensity, json_qc, qc_result, is_bio_standard)
 
         # Update sample counters to trigger dashboard update
         db.update_sample_counters_for_run(instrument_id=instrument_id, run_id=run_id, qc_result=qc_result, latest_sample=filename)
@@ -597,6 +629,3 @@ def kill_acquisition_listener(pid):
     except Exception as error:
         print("Error killing acquisition listener.")
         traceback.print_exc()
-
-# Testing data pipeline
-process_data_file("C:/Users/wasim.sandhu/Downloads/EMGO001_Data/", "EMGO001_BK_Neg_QE1_HILIC_007", "raw", "Thermo QE 1", "EMGO001")

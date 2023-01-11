@@ -2092,7 +2092,7 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, s
     results = df_samples[result_type].tolist()
 
     # Prepare unified results DataFrame
-    df_results = pd.DataFrame()
+    result_dataframes = []
 
     # For each JSON-ified result,
     for index, result in enumerate(results):
@@ -2101,11 +2101,10 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, s
         if result is not None:
             df = pd.read_json(result, orient="split")
         else:
-            empty_row = [np.nan for x in df_results.columns.tolist()]
+            empty_row = [np.nan for x in result_dataframes[0].columns]
             empty_row[0] = sample_ids[index]
-            empty_row = [empty_row]
-            empty_df = pd.DataFrame(empty_row, columns=df_results.columns.tolist())
-            df_results = df_results.append(empty_df, ignore_index=True)
+            empty_df = pd.DataFrame([empty_row], columns=result_dataframes[0].columns)
+            result_dataframes.append(empty_df)
             continue
 
         # Refactor so that each row is a sample, and each column is an internal standard
@@ -2115,9 +2114,10 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, s
         df = df.drop(df.index[0])
         df.reset_index(inplace=True)
         df.rename(columns={"index": "Sample"}, inplace=True)
+        result_dataframes.append(df)
 
-        # Append result to df_results
-        df_results = pd.concat([df_results, df], ignore_index=True)
+    # Concatenate DataFrames together
+    df_results = pd.concat(result_dataframes, sort=False, ignore_index=True)
 
     # Return DataFrame as JSON string
     if as_json:
@@ -2160,7 +2160,7 @@ def parse_biological_standard_data(instrument_id, run_id, result_type, polarity,
     results = df_samples[result_type].tolist()
 
     # Prepare unified results DataFrame
-    df_results = pd.DataFrame()
+    result_dataframes = []
 
     # For each JSON-ified result,
     for index, result in enumerate(results):
@@ -2171,8 +2171,11 @@ def parse_biological_standard_data(instrument_id, run_id, result_type, polarity,
         # Refactor so that each row is a sample, and each column is an internal standard
         df.rename(columns={df.columns[1]: run_ids[index]}, inplace=True)
 
-        # Append result to df_results
-        df_results = pd.concat([df_results, df], ignore_index=True)
+        # Append to list of DataFrames
+        result_dataframes.append(df)
+
+    # Concatenate DataFrames together
+    df_results = pd.concat(result_dataframes, sort=False, ignore_index=True)
 
     # Return DataFrame as JSON string
     if as_json:
@@ -2201,7 +2204,7 @@ def parse_internal_standard_qc_data(instrument_id, run_id, polarity, result_type
     results = df_samples["qc_dataframe"].tolist()
 
     # Prepare unified results DataFrame
-    df_results = pd.DataFrame()
+    result_dataframes = []
 
     # For each JSON-ified result,
     for index, result in enumerate(results):
@@ -2211,11 +2214,10 @@ def parse_internal_standard_qc_data(instrument_id, run_id, polarity, result_type
             df = pd.read_json(result, orient="split")
             df = df[["Name", result_type]]
         else:
-            empty_row = [np.nan for x in df_results.columns.tolist()]
+            empty_row = [np.nan for x in result_dataframes[0].columns]
             empty_row[0] = sample_ids[index]
-            empty_row = [empty_row]
-            empty_df = pd.DataFrame(empty_row, columns=df_results.columns.tolist())
-            df_results = df_results.append(empty_df, ignore_index=True)
+            empty_df = pd.DataFrame([empty_row], columns=result_dataframes[0].columns)
+            result_dataframes.append(df)
             continue
 
         # Refactor so that each row is a sample, and each column is an internal standard
@@ -2225,9 +2227,10 @@ def parse_internal_standard_qc_data(instrument_id, run_id, polarity, result_type
         df = df.drop(df.index[0])
         df.reset_index(inplace=True)
         df.rename(columns={"index": "Sample"}, inplace=True)
+        result_dataframes.append(df)
 
-        # Append result to df_results
-        df_results = pd.concat([df_results, df], ignore_index=True)
+    # Concatenate DataFrames together
+    df_results = pd.concat(result_dataframes, sort=False, ignore_index=True)
 
     # Return DataFrame as JSON string
     if as_json:
