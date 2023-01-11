@@ -128,7 +128,7 @@ def serve_layout():
                                 dbc.Card(id="active-run-progress-card", style={"display": "none"}, className="margin-top-15", children=[
                                     dbc.CardHeader(id="active-run-progress-header", style={"padding": "0.75rem"}),
                                     dbc.CardBody([
-                                        dcc.Interval(id="refresh-interval", n_intervals=0, interval=15000, disabled=True),
+                                        dcc.Interval(id="refresh-interval", n_intervals=0, interval=60000, disabled=True),
                                         dbc.Progress(id="active-run-progress-bar", animated=False)
                                     ])
                                 ]),
@@ -2373,6 +2373,7 @@ def load_data(refresh, active_cell, table_data, resources, instrument_id):
                     # Check if active run monitor or bulk QC job
                     last_sample = acquisition_path + filenames[-1] + ".raw"
                     second_last_sample = acquisition_path + filenames[-2] + ".raw"
+
                     if os.path.exists(last_sample) or os.path.exists(second_last_sample):
                         is_completed_run = True
                     else:

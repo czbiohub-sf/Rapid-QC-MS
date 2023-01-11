@@ -353,14 +353,14 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
 
             # Count intensity dropouts
             intensity_dropouts = qc_dataframe["Intensity dropout"].astype(int).sum()
-            intensity_dropouts_cutoff = qc_config["intensity_dropouts_cutoff"].astype(int).values[0]
+            intensity_dropouts_cutoff = qc_config["intensity_dropouts_cutoff"].astype(int).tolist()[0]
 
             # Compare number of intensity dropouts to user-defined cutoff
             if intensity_dropouts >= intensity_dropouts_cutoff:
                 qc_result = "Fail"
 
             if qc_result != "Fail":
-                if intensity_dropouts > len(intensity_dropouts_cutoff) / 1.33:
+                if intensity_dropouts > intensity_dropouts_cutoff / 1.33:
                     qc_result = "Warning"
 
         # QC of internal standard RT's against library RT's
@@ -434,7 +434,7 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
     return qc_dataframe, qc_result
 
 
-def convert_to_json(sample_id, df_peak_list, qc_dataframe):
+def convert_to_json(sample_id, df_peak_list, qc_dataframe, is_bio_standard):
 
     """
     Format DataFrames as JSON strings, with features as columns and relevant data in rows
@@ -445,24 +445,44 @@ def convert_to_json(sample_id, df_peak_list, qc_dataframe):
     df_rt = df_peak_list[["Name", "RT (min)"]]
     df_intensity = df_peak_list[["Name", "Height"]]
 
+    if is_bio_standard:
+        json_mz = df_mz.to_json(orient="split")
+        json_rt = df_rt.to_json(orient="split")
+        json_intensity = df_intensity.to_json(orient="split")
+        json_qc = qc_dataframe.to_json(orient="split")
+        return json_mz, json_rt, json_intensity, json_qc
+
     df_mz = df_mz.rename(columns={"Precursor m/z": sample_id})
     df_rt = df_rt.rename(columns={"RT (min)": sample_id})
     df_intensity = df_intensity.rename(columns={"Height": sample_id})
 
-    df_mz = df_mz.set_index("Name").transpose()
-    df_rt = df_rt.set_index("Name").transpose()
-    df_intensity = df_intensity.set_index("Name").transpose()
+    df_mz = df_mz.transpose().reset_index()
+    df_rt = df_rt.transpose().reset_index()
+    df_intensity = df_intensity.transpose().reset_index()
+
+    df_mz.columns = df_mz.iloc[0].astype(str).tolist()
+    df_rt.columns = df_rt.iloc[0].astype(str).tolist()
+    df_intensity.columns = df_intensity.iloc[0].astype(str).tolist()
+
+    df_mz = df_mz.drop(df_mz.index[0])
+    df_rt = df_rt.drop(df_rt.index[0])
+    df_intensity = df_intensity.drop(df_intensity.index[0])
 
     json_mz = df_mz.to_json(orient="split")
     json_rt = df_rt.to_json(orient="split")
     json_intensity = df_intensity.to_json(orient="split")
 
     # QC results
-    for column in qc_dataframe.columns:
-        if column != "Name":
-            qc_dataframe.rename(columns={column: sample_id + " " + column}, inplace=True)
-    qc_dataframe = qc_dataframe.set_index("Name").transpose()
-    json_qc = qc_dataframe.to_json(orient="split")
+    if len(qc_dataframe) > 0:
+        for column in qc_dataframe.columns:
+            if column != "Name":
+                qc_dataframe.rename(columns={column: sample_id + " " + column}, inplace=True)
+        qc_dataframe = qc_dataframe.transpose().reset_index()
+        qc_dataframe.columns = qc_dataframe.iloc[0].astype(str).tolist()
+        qc_dataframe = qc_dataframe.drop(qc_dataframe.index[0])
+        json_qc = qc_dataframe.to_json(orient="split")
+    else:
+        json_qc = ""
 
     return json_mz, json_rt, json_intensity, json_qc
 
@@ -567,7 +587,7 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
 
     # Convert m/z, RT, and intensity data to JSON strings
     try:
-        json_mz, json_rt, json_intensity, json_qc = convert_to_json(sample_id, df_peak_list, qc_dataframe)
+        json_mz, json_rt, json_intensity, json_qc = convert_to_json(filename, df_peak_list, qc_dataframe, is_bio_standard)
     except:
         print("Failed to convert DataFrames to JSON format.")
         traceback.print_exc()
