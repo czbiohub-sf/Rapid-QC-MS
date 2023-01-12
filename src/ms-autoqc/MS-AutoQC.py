@@ -1,4 +1,4 @@
-import io, sys, subprocess, psutil, time
+import io, sys, subprocess, psutil, time, traceback
 import base64, webbrowser, json, ast
 
 import pandas as pd
@@ -2675,11 +2675,10 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
     # Set initial sample dropdown value when none are selected
     if not selected_samples:
         selected_samples = samples
-        treatments = []
+        treatments = pd.DataFrame()
     else:
         df_metadata = df_metadata.loc[df_metadata["Filename"].isin(selected_samples)]
-        df_metadata = df_metadata.sort_values(by=["Treatment"])
-        treatments = df_metadata["Treatment"].tolist()
+        treatments = df_metadata[["Filename", "Treatment"]]
         if len(df_metadata) == len(selected_samples):
             selected_samples = df_metadata["Filename"].tolist()
 
@@ -2693,11 +2692,12 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
     try:
         # Generate internal standard intensity vs. sample plot
         return load_istd_intensity_plot(dataframe=df_istd_intensity, samples=selected_samples,
-        internal_standard=internal_standard, text=selected_samples, treatments=treatments), \
+        internal_standard=internal_standard, treatments=treatments), \
                None, index, internal_standard, {"display": "block"}
 
     except Exception as error:
         print("Error in loading intensity vs. sample plot:", error)
+        traceback.print_exc()
         return {}, None, None, None, {"display": "none"}
 
 

@@ -424,7 +424,7 @@ def load_istd_rt_plot(dataframe, samples, internal_standard, retention_times):
     return fig
 
 
-def load_istd_intensity_plot(dataframe, samples, internal_standard, text, treatments):
+def load_istd_intensity_plot(dataframe, samples, internal_standard, treatments):
 
     """
     Returns bar plot figure of intensity vs. sample for internal standards
@@ -432,18 +432,22 @@ def load_istd_intensity_plot(dataframe, samples, internal_standard, text, treatm
 
     df_filtered_by_samples = dataframe.loc[dataframe["Sample"].isin(samples)]
 
-    if treatments:
-        if len(treatments) == len(df_filtered_by_samples):
-            df_filtered_by_samples["Treatment"] = treatments
+    if len(treatments) > 0:
+        # Map treatments to sample names
+        df_mapped = pd.DataFrame()
+        df_mapped["Sample"] = df_filtered_by_samples["Sample"]
+        df_mapped["Treatment"] = df_mapped.replace(
+            treatments.set_index("Filename")["Treatment"])
+        df_filtered_by_samples["Treatment"] = df_mapped["Treatment"].astype(str)
     else:
         df_filtered_by_samples["Treatment"] = " "
 
     fig = px.bar(df_filtered_by_samples,
                  title="Intensity vs. Samples – " + internal_standard,
-                 x=samples,
+                 x="Sample",
                  y=internal_standard,
-                 text=text,
-                 color=df_filtered_by_samples["Treatment"],
+                 text="Sample",
+                 color="Treatment",
                  height=600)
     fig.update_layout(showlegend=False,
                       transition_duration=500,
