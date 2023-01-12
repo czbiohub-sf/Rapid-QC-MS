@@ -2444,13 +2444,15 @@ def update_dropdowns_on_polarity_change(polarity, table_data, samples, bio_inten
 
     if samples is not None:
         df_samples = pd.read_json(samples, orient="split")
+        print(df_samples)
 
         if polarity == "Neg":
             istd_dropdown = json.loads(neg_internal_standards)
 
             if bio_intensity_neg is not None:
                 df = pd.read_json(bio_intensity_neg, orient="split")
-                bio_dropdown = df["Name"].astype(str).unique().tolist()
+                df.drop(columns=["Name"], inplace=True)
+                bio_dropdown = df.columns.tolist()
             else:
                 bio_dropdown = []
 
@@ -2462,11 +2464,12 @@ def update_dropdowns_on_polarity_change(polarity, table_data, samples, bio_inten
 
             if bio_intensity_pos is not None:
                 df = pd.read_json(bio_intensity_pos, orient="split")
-                bio_dropdown = df["Name"].astype(str).unique().tolist()
+                df.drop(columns=["Name"], inplace=True)
+                bio_dropdown = df.columns.tolist()
             else:
                 bio_dropdown = []
 
-            df_samples = df_samples.loc[df_samples["Sample"].str.contains("Pos")]
+            df_samples = df_samples.loc[(df_samples["Sample"].str.contains("Pos"))]
             sample_dropdown = df_samples["Sample"].tolist()
 
         return istd_dropdown, istd_dropdown, istd_dropdown, bio_dropdown, sample_dropdown, sample_dropdown, sample_dropdown
