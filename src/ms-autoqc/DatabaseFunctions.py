@@ -771,8 +771,32 @@ def get_instrument_runs(instrument_id):
 
     engine = sa.create_engine(main_database)
     query = "SELECT * FROM runs WHERE instrument_id = '" + instrument_id + "'"
-    df_instrument_runs = pd.read_sql(query, engine)
-    return df_instrument_runs
+    return pd.read_sql(query, engine)
+
+
+def delete_instrument_run(instrument_id, run_id):
+
+    """
+    Deletes instrument run from all tables in the database
+    """
+
+    # Connect to database
+    db_metadata, connection = connect_to_database(main_database)
+
+    # Get relevant tables
+    runs_table = sa.Table("runs", db_metadata, autoload=True)
+    sample_qc_results_table = sa.Table("sample_qc_results", db_metadata, autoload=True)
+    bio_qc_results_table = sa.Table("bio_qc_results", db_metadata, autoload=True)
+
+    # Delete from each table
+    for table in [runs_table, sample_qc_results_table, bio_qc_results_table]:
+        connection.execute((
+            sa.delete(table).where(
+                (table.c.instrument_id == instrument_id) & (runs_table.c.run_id == run_id))
+        ))
+
+    # Close the connection
+    connection.close()
 
 
 def get_acquisition_path(instrument_id, run_id):
@@ -2575,7 +2599,7 @@ def update_sample_counters_for_run(instrument_id, run_id, qc_result, latest_samp
 
     update_status = (
         sa.update(instrument_runs_table)
-            .where(instrument_runs_table.c.run_id == run_id)
+            .where((instrument_runs_table.c.run_id == run_id) & (instrument_runs_table.c.instrument_id == instrument_id))
             .values(
                 completed=completed,
                 passes=passes,
@@ -2604,6 +2628,29 @@ def mark_run_as_completed(instrument_id, run_id):
     )
 
     connection.execute(update_status)
+    connection.close()
+
+
+def skip_sample(instrument_id, run_id):
+
+    """
+    Skip sample (use if MS-DIAL gets stuck processing a corrupted file)
+    """
+
+    # Get next sample
+    samples = get_remaining_samples(instrument_id, run_id)
+    next_sample = samples[1]
+
+    # Set latest sample to next sample
+    db_metadata, connection = connect_to_database(main_database)
+    instrument_runs_table = sa.Table("runs", db_metadata, autoload=True)
+
+    connection.execute((
+        sa.update(instrument_runs_table)
+            .where((instrument_runs_table.c.run_id == run_id) & (instrument_runs_table.c.instrument_id == instrument_id))
+            .values(latest_sample=next_sample)
+    ))
+
     connection.close()
 
 

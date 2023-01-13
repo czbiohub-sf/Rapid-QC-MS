@@ -53,6 +53,11 @@ html {
     max-height: calc(100vh - 15px);
 }
 
+.run-button {
+    line-height: 1.75;
+    margin-top: 15px;
+}
+
 /* Plots and plot container */
 .all-plots-container {
     float: left;

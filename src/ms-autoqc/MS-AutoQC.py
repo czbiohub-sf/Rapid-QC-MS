@@ -125,15 +125,48 @@ def serve_layout():
                                 ),
 
                                 # Progress bar for instrument run
-                                dbc.Card(id="active-run-progress-card", style={"display": "none"}, className="margin-top-15", children=[
-                                    dbc.CardHeader(id="active-run-progress-header", style={"padding": "0.75rem"}),
-                                    dbc.CardBody([
-                                        dcc.Interval(id="refresh-interval", n_intervals=0, interval=60000, disabled=True),
-                                        dbc.Progress(id="active-run-progress-bar", animated=False)
-                                    ])
+                                dbc.Card(id="active-run-progress-card", style={"display": "none"},
+                                    className="margin-top-15", children=[
+                                        dbc.CardHeader(id="active-run-progress-header", style={"padding": "0.75rem"}),
+                                        dbc.CardBody([
+
+                                            # Instrument run progress
+                                            dcc.Interval(id="refresh-interval", n_intervals=0, interval=60000, disabled=True),
+                                            dbc.Progress(id="active-run-progress-bar", animated=False),
+
+                                            # Buttons for managing MS-AutoQC jobs
+                                            html.Div(className="d-flex justify-content-center btn-toolbar", children=[
+                                                # Button to mark current job as complete
+                                                html.Div(className="me-1", children=[
+                                                    dbc.Button("Mark as Completed",
+                                                        id="mark-as-completed-button",
+                                                        className="run-button",
+                                                        outline=True,
+                                                        color="success"),
+                                                ]),
+
+                                                # Button to restart job
+                                                html.Div(className="me-1", children=[
+                                                    dbc.Button("Skip Sample",
+                                                        id="restart-job-button",
+                                                        className="run-button",
+                                                        outline=True,
+                                                        color="warning"),
+                                                ]),
+
+                                                # Button to delete job
+                                                html.Div(className="me-1", children=[
+                                                    dbc.Button("Delete Job",
+                                                        id="delete-job-button",
+                                                        className="run-button",
+                                                        outline=True,
+                                                        color="danger"),
+                                                ]),
+                                            ]),
+                                        ])
                                 ]),
 
-                                # Button to start monitoring a new run
+                                # Button to start new MS-AutoQC job
                                 html.Div(className="d-grid gap-2", children=[
                                     dbc.Button("New MS-AutoQC Job",
                                         id="setup-new-run-button",
@@ -401,6 +434,16 @@ def serve_layout():
                                   keyboard=False, backdrop="static", children=[
                             dbc.ModalHeader(dbc.ModalTitle(id="loading-modal-title"), close_button=False),
                             dbc.ModalBody(id="loading-modal-body")
+                        ]),
+
+                        # Modal for job completion / restart / deletion confirmation
+                        dbc.Modal(id="job-controller-modal", size="md", centered=True, is_open=False, children=[
+                            dbc.ModalHeader(dbc.ModalTitle(id="job-controller-modal-title")),
+                            dbc.ModalBody(id="job-controller-modal-body"),
+                            dbc.ModalFooter(children=[
+                                dbc.Button("Cancel", color="secondary", id="job-controller-cancel-button"),
+                                dbc.Button(id="job-controller-confirm-button")
+                            ]),
                         ]),
 
                         # Modal for progress feedback while database syncs to Google Drive
@@ -1503,6 +1546,9 @@ def serve_layout():
             dcc.Store(id="slack-bot-token-saved"),
             dcc.Store(id="slack-channel-saved"),
             dcc.Store(id="google-drive-sync-update"),
+            dcc.Store(id="job-marked-completed"),
+            dcc.Store(id="job-restarted"),
+            dcc.Store(id="job-deleted"),
 
             # Dummy inputs for Google Drive authentication
             dcc.Store(id="workspace-has-been-setup-1"),
@@ -2444,7 +2490,6 @@ def update_dropdowns_on_polarity_change(polarity, table_data, samples, bio_inten
 
     if samples is not None:
         df_samples = pd.read_json(samples, orient="split")
-        print(df_samples)
 
         if polarity == "Neg":
             istd_dropdown = json.loads(neg_internal_standards)
@@ -2700,7 +2745,6 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
 
     except Exception as error:
         print("Error in loading intensity vs. sample plot:", error)
-        traceback.print_exc()
         return {}, None, None, None, {"display": "none"}
 
 
@@ -4981,6 +5025,132 @@ def hide_elements_for_non_instrument_devices(on_page_load):
             return {"display": "none"}, {"display": "none"}
         else:
             raise PreventUpdate
+    else:
+        raise PreventUpdate
+
+
+@app.callback(Output("job-controller-modal", "is_open"),
+              Output("job-controller-modal-title", "children"),
+              Output("job-controller-modal-body", "children"),
+              Output("job-controller-confirm-button", "children"),
+              Output("job-controller-confirm-button", "color"),
+              Input("mark-as-completed-button", "n_clicks"),
+              Input("job-marked-completed", "data"),
+              Input("restart-job-button", "n_clicks"),
+              Input("job-restarted", "data"),
+              Input("delete-job-button", "n_clicks"),
+              Input("job-deleted", "data"),
+              State("study-resources", "data"), prevent_initial_call=True)
+def confirm_action_on_job(mark_job_as_completed, job_completed, restart_job, job_restarted, delete_job, job_deleted, resources):
+
+    """
+    Shows an alert confirming that the user wants to perform an action on the selected MS-AutoQC job
+    """
+
+    trigger = ctx.triggered_id
+    resources = json.loads(resources)
+    instrument_id = resources["instrument"]
+    run_id = resources["run_id"]
+
+    if trigger == "mark-as-completed-button":
+        title = "Mark " + run_id + " as completed?"
+        body = dbc.Label("This will save your QC results as-is and end the current job. Continue?")
+        return True, title, body, "Mark Job as Completed", "success"
+
+    elif trigger == "job-marked-completed":
+        return False, None, None
+
+    elif trigger == "restart-job-button":
+        title = "Skip sample and restart " + run_id + "?"
+        body = dbc.Label("This will skip the current sample and restart the acquisition listener process for " +
+            run_id + ". Continue?")
+        return True, title, body, "Skip Sample and Restart Job", "warning"
+
+    elif trigger == "job-restarted":
+        return False, None, None
+
+    elif trigger == "delete-job-button":
+        title = "Delete " + run_id + " on " + instrument_id + "?"
+        body = dbc.Label("This will delete all QC results for " + run_id + " on " + instrument_id +
+            ". This process cannot be undone. Continue?")
+        return True, title, body, "Delete Job", "danger"
+
+    elif trigger == "job-deleted":
+        return False, None, None
+
+    else:
+        raise PreventUpdate
+
+
+@app.callback(Output("job-deleted", "data"),
+              Input("job-controller-confirm-button", "n_clicks"),
+              State("job-controller-modal-title", "children"), prevent_initial_call=True)
+def perform_action_on_job(confirm_button, modal_title):
+
+    """
+    Performs the selected action on the selected MS-AutoQC job
+    """
+
+    if "Mark" in modal_title:
+
+        try:
+            # Mark instrument run as completed
+            db.mark_run_as_completed(instrument_id, run_id)
+
+            # Sync database on run completion
+            if db.sync_is_enabled():
+                db.sync_on_run_completion(instrument_id, run_id)
+
+            # Delete temporary data file directory
+            try:
+                id = instrument_id.replace(" ", "_") + "_" + run_id
+                temp_directory = os.path.join(os.getcwd(), "data", id)
+                shutil.rmtree(temp_directory)
+            except:
+                print("Could not delete temporary data directory.")
+                traceback.print_exc()
+
+            # Kill acquisition listener
+            pid = db.get_pid(instrument_id, run_id)
+            qc.kill_acquisition_listener(pid)
+
+        except:
+            print("Could not mark instrument run as completed.")
+            traceback.print_exc()
+
+    elif "Skip" in modal_title:
+
+        try:
+            # Skip sample
+            db.skip_sample(instrument_id, run_id)
+
+            # Kill current acquisition listener (acquisition listener will be restarted automatically)
+            pid = db.get_pid(instrument_id, run_id)
+            qc.kill_acquisition_listener(pid)
+
+        except:
+            print("Could not skip sample and restart listener.")
+            traceback.print_exc()
+
+    elif "Delete" in modal_title:
+
+        try:
+            # Delete instrument run from database
+            db.delete_instrument_run(instrument_id, run_id)
+
+            # Delete temporary data file directory
+            try:
+                id = instrument_id.replace(" ", "_") + "_" + run_id
+                temp_directory = os.path.join(os.getcwd(), "data", id)
+                shutil.rmtree(temp_directory)
+            except:
+                print("Could not delete temporary data directory.")
+                traceback.print_exc()
+
+        except:
+            print("Could not delete instrument run.")
+            traceback.print_exc()
+
     else:
         raise PreventUpdate
 
