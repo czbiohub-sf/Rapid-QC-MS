@@ -1,3 +1,4 @@
+import traceback
 import warnings
 warnings.simplefilter(action="ignore", category=FutureWarning)
 
@@ -110,7 +111,8 @@ def create_databases(is_instrument_computer, instrument_identity=None):
         sa.Column("biological_standards", TEXT),
         sa.Column("pid", INTEGER),
         sa.Column("drive_id", TEXT),
-        sa.Column("sample_status", TEXT)
+        sa.Column("sample_status", TEXT),
+        sa.Column("job_type", TEXT)
     )
 
     sample_qc_results = sa.Table(
@@ -656,7 +658,7 @@ def get_filenames_from_sequence(sequence):
     return df_sequence
 
 
-def insert_new_run(run_id, instrument_id, chromatography, bio_standards, path, sequence, metadata, qc_config_id):
+def insert_new_run(run_id, instrument_id, chromatography, bio_standards, path, sequence, metadata, qc_config_id, job_type):
 
     """
     1. Inserts a new instrument run into the "runs" table
@@ -697,7 +699,8 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, path, s
          "passes": 0,
          "fails": 0,
          "qc_config_id": qc_config_id,
-         "biological_standards": str(bio_standards)})
+         "biological_standards": str(bio_standards),
+         "job_type": job_type})
 
     insert_samples = []
 
@@ -3313,3 +3316,37 @@ def get_data_file_type(instrument_id):
         return "raw"
     elif vendor == "Sciex":
         return "wiff2"
+
+
+def is_completed_run(instrument_id, run_id):
+
+    """
+    Returns True if the job is for a completed run, and False if job is for an active run
+    """
+
+    try:
+        job_type = get_instrument_run(instrument_id, run_id)["job_type"].astype(str).values[0]
+        if job_type == "completed":
+            return True
+        else:
+            return False
+    except:
+        print("Could not get MS-AutoQC job type.")
+        traceback.print_exc()
+        return False
+
+
+def delete_temp_directory(instrument_id, run_id):
+
+    """
+    Deletes temporary data file directory in local app directory
+    """
+
+    # Delete temporary data file directory
+    try:
+        id = instrument_id.replace(" ", "_") + "_" + run_id
+        temp_directory = os.path.join(data_directory, id)
+        if os.path.exists(temp_directory):
+            shutil.rmtree(temp_directory)
+    except:
+        print("Could not delete temporary data directory.")

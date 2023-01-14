@@ -1549,6 +1549,7 @@ def serve_layout():
             dcc.Store(id="job-marked-completed"),
             dcc.Store(id="job-restarted"),
             dcc.Store(id="job-deleted"),
+            dcc.Store(id="job-action-failed"),
 
             # Dummy inputs for Google Drive authentication
             dcc.Store(id="workspace-has-been-setup-1"),
@@ -2413,24 +2414,11 @@ def load_data(refresh, active_cell, table_data, resources, instrument_id):
                     acquisition_path = db.get_acquisition_path(instrument_id, run_id).replace("\\", "/")
                     acquisition_path = acquisition_path + "/" if acquisition_path[-1] != "/" else acquisition_path
 
-                    # Retrieve filenames
-                    filenames = db.get_remaining_samples(instrument_id, run_id)
-
-                    # Check if active run monitor or bulk QC job
-                    try:
-                        last_sample = acquisition_path + filenames[-1] + ".raw"
-                        second_last_sample = acquisition_path + filenames[-2] + ".raw"
-
-                        if os.path.exists(last_sample) or os.path.exists(second_last_sample):
-                            is_completed_run = True
-                        else:
-                            is_completed_run = False
-                    except:
-                        is_completed_run = True
+                    # Delete temporary data file directory
+                    db.delete_temp_directory(instrument_id, run_id)
 
                     # Restart AcquisitionListener and store process ID
-                    process = psutil.Popen(["py", "AcquisitionListener.py", acquisition_path,
-                        str(filenames), instrument_id, run_id, str(is_completed_run)])
+                    process = psutil.Popen(["py", "AcquisitionListener.py", acquisition_path, instrument_id, run_id])
                     db.store_pid(instrument_id, run_id, process.pid)
 
         # If new sample, route raw data -> parsed data -> user session cache -> plots
@@ -4758,7 +4746,7 @@ def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, b
     """
 
     # Write a new instrument run to the database
-    db.insert_new_run(run_id, instrument_id, chromatography, bio_standards, acquisition_path, sequence, metadata, qc_config_id)
+    db.insert_new_run(run_id, instrument_id, chromatography, bio_standards, acquisition_path, sequence, metadata, qc_config_id, job_type)
 
     # Get MSPs and generate parameters files for MS-DIAL processing
     for polarity in ["Positive", "Negative"]:
@@ -4773,12 +4761,9 @@ def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, b
                 msp_file_path = db.get_msp_file_path(chromatography, polarity, bio_standard)
                 db.generate_msdial_parameters_file(chromatography, polarity, msp_file_path, bio_standard)
 
-    # Get filenames from sequence and filter out preblanks, wash, shutdown, etc.
-    filenames = db.get_filenames_from_sequence(sequence)["File Name"].astype(str).tolist()
-
     # If this is for an active run, initialize run monitoring at the given directory
     if job_type == "active":
-        process = psutil.Popen(["py", "AcquisitionListener.py", acquisition_path, str(filenames), instrument_id, run_id, "False"])
+        process = psutil.Popen(["py", "AcquisitionListener.py", acquisition_path, instrument_id, run_id])
         db.store_pid(instrument_id, run_id, process.pid)
 
         if db.is_instrument_computer() and db.sync_is_enabled():
@@ -4786,7 +4771,7 @@ def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, b
 
     # If this is for a completed run, begin iterating through the files and process them
     elif job_type == "completed":
-        process = psutil.Popen(["py", "AcquisitionListener.py", acquisition_path, str(filenames), instrument_id, run_id, "True"])
+        process = psutil.Popen(["py", "AcquisitionListener.py", acquisition_path, instrument_id, run_id])
         db.store_pid(instrument_id, run_id, process.pid)
 
     return True, False
@@ -5057,17 +5042,11 @@ def confirm_action_on_job(mark_job_as_completed, job_completed, restart_job, job
         body = dbc.Label("This will save your QC results as-is and end the current job. Continue?")
         return True, title, body, "Mark Job as Completed", "success"
 
-    elif trigger == "job-marked-completed":
-        return False, None, None
-
     elif trigger == "restart-job-button":
         title = "Skip sample and restart " + run_id + "?"
         body = dbc.Label("This will skip the current sample and restart the acquisition listener process for " +
             run_id + ". Continue?")
         return True, title, body, "Skip Sample and Restart Job", "warning"
-
-    elif trigger == "job-restarted":
-        return False, None, None
 
     elif trigger == "delete-job-button":
         title = "Delete " + run_id + " on " + instrument_id + "?"
@@ -5075,21 +5054,30 @@ def confirm_action_on_job(mark_job_as_completed, job_completed, restart_job, job
             ". This process cannot be undone. Continue?")
         return True, title, body, "Delete Job", "danger"
 
-    elif trigger == "job-deleted":
-        return False, None, None
+    elif trigger == "job-marked-completed" or trigger == "job-restarted" or trigger == "job-deleted" or trigger == "job-action-failed":
+        return False, None, None, None, None
 
     else:
         raise PreventUpdate
 
 
-@app.callback(Output("job-deleted", "data"),
+@app.callback(Output("job-marked-completed", "data"),
+              Output("job-restarted", "data"),
+              Output("job-deleted", "data"),
+              Output("job-action-failed", "data"),
               Input("job-controller-confirm-button", "n_clicks"),
-              State("job-controller-modal-title", "children"), prevent_initial_call=True)
-def perform_action_on_job(confirm_button, modal_title):
+              State("job-controller-modal-title", "children"),
+              State("study-resources", "data"), prevent_initial_call=True)
+def perform_action_on_job(confirm_button, modal_title, resources):
 
     """
     Performs the selected action on the selected MS-AutoQC job
     """
+
+    resources = json.loads(resources)
+    instrument_id = resources["instrument"]
+    run_id = resources["run_id"]
+    acquisition_path = db.get_acquisition_path(instrument_id, run_id)
 
     if "Mark" in modal_title:
 
@@ -5102,21 +5090,17 @@ def perform_action_on_job(confirm_button, modal_title):
                 db.sync_on_run_completion(instrument_id, run_id)
 
             # Delete temporary data file directory
-            try:
-                id = instrument_id.replace(" ", "_") + "_" + run_id
-                temp_directory = os.path.join(os.getcwd(), "data", id)
-                shutil.rmtree(temp_directory)
-            except:
-                print("Could not delete temporary data directory.")
-                traceback.print_exc()
+            db.delete_temp_directory(instrument_id, run_id)
 
             # Kill acquisition listener
             pid = db.get_pid(instrument_id, run_id)
             qc.kill_acquisition_listener(pid)
+            return True, None, None, None
 
         except:
             print("Could not mark instrument run as completed.")
             traceback.print_exc()
+            return None, None, None, True
 
     elif "Skip" in modal_title:
 
@@ -5128,9 +5112,18 @@ def perform_action_on_job(confirm_button, modal_title):
             pid = db.get_pid(instrument_id, run_id)
             qc.kill_acquisition_listener(pid)
 
+            # Delete temporary data file directory
+            db.delete_temp_directory(instrument_id, run_id)
+
+            # Restart AcquisitionListener and store process ID
+            process = psutil.Popen(["py", "AcquisitionListener.py", acquisition_path, instrument_id, run_id])
+            db.store_pid(instrument_id, run_id, process.pid)
+            return None, True, None, None
+
         except:
             print("Could not skip sample and restart listener.")
             traceback.print_exc()
+            return None, None, None, True
 
     elif "Delete" in modal_title:
 
@@ -5139,17 +5132,13 @@ def perform_action_on_job(confirm_button, modal_title):
             db.delete_instrument_run(instrument_id, run_id)
 
             # Delete temporary data file directory
-            try:
-                id = instrument_id.replace(" ", "_") + "_" + run_id
-                temp_directory = os.path.join(os.getcwd(), "data", id)
-                shutil.rmtree(temp_directory)
-            except:
-                print("Could not delete temporary data directory.")
-                traceback.print_exc()
+            db.delete_temp_directory(instrument_id, run_id)
+            return None, None, True, None
 
         except:
             print("Could not delete instrument run.")
             traceback.print_exc()
+            return None, None, None, True
 
     else:
         raise PreventUpdate

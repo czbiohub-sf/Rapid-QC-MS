@@ -97,7 +97,7 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
                 db.update_md5_checksum(filename, new_md5)
 
 
-def start_listener(path, filenames, instrument_id, run_id, is_completed_run):
+def start_listener(path, instrument_id, run_id):
 
     """
     Watchdog file monitor to get files in directory upon data acquisition completion
@@ -105,8 +105,11 @@ def start_listener(path, filenames, instrument_id, run_id, is_completed_run):
 
     print("Run monitoring initiated for", path)
 
-    is_completed_run = True if is_completed_run == "True" else False
-    filenames = ast.literal_eval(filenames)
+    # Check if MS-AutoQC job type is active monitoring or bulk QC
+    is_completed_run = db.is_completed_run(instrument_id, run_id)
+
+    # Retrieve filenames for samples in run
+    filenames = db.get_remaining_samples(instrument_id, run_id)
 
     if is_completed_run:
 
@@ -160,13 +163,7 @@ def terminate_job(instrument_id, run_id):
         db.sync_on_run_completion(instrument_id, run_id)
 
     # Delete temporary data file directory
-    try:
-        id = instrument_id.replace(" ", "_") + "_" + run_id
-        temp_directory = os.path.join(os.getcwd(), "data", id)
-        shutil.rmtree(temp_directory)
-    except:
-        print("Could not delete temporary data directory.")
-        traceback.print_exc()
+    db.delete_temp_directory(instrument_id, run_id)
 
     # Kill acquisition listener
     pid = db.get_pid(instrument_id, run_id)
@@ -190,4 +187,4 @@ def get_md5(filename):
 
 if __name__ == "__main__":
     # Start listening to data file directory
-    start_listener(path=sys.argv[1], filenames=sys.argv[2], instrument_id=sys.argv[3], run_id=sys.argv[4], is_completed_run=sys.argv[5])
+    start_listener(path=sys.argv[1], instrument_id=sys.argv[2], run_id=sys.argv[3])
