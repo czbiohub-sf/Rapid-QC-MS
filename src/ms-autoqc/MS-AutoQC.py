@@ -639,6 +639,7 @@ def serve_layout():
                                             placeholder="No file selected"),
                                         dbc.Button(dcc.Upload(
                                             id="sequence-upload-button",
+                                            accept="text/plain, application/vnd.ms-excel, .csv",
                                             children=[html.A("Browse Files")]),
                                             color="secondary"),
                                         dbc.FormFeedback("Looks good!", type="valid"),
@@ -657,6 +658,7 @@ def serve_layout():
                                             placeholder="No file selected"),
                                         dbc.Button(dcc.Upload(
                                             id="metadata-upload-button",
+                                            accept="text/plain, application/vnd.ms-excel, .csv",
                                             children=[html.A("Browse Files")]),
                                             color="secondary"),
                                         dbc.FormFeedback("Looks good!", type="valid"),
@@ -955,6 +957,7 @@ def serve_layout():
                                                           id="add-istd-msp-text-field"),
                                                 dbc.Button(dcc.Upload(
                                                     id="add-istd-msp-button",
+                                                    accept="text/plain, application/vnd.ms-excel, .msp, .csv",
                                                     children=[html.A("Browse Files")]),
                                                     color="secondary"),
                                             ]),
@@ -1081,6 +1084,7 @@ def serve_layout():
                                                           id="add-bio-msp-text-field"),
                                                 dbc.Button(dcc.Upload(
                                                     id="add-bio-msp-button",
+                                                    accept=".msp",
                                                     children=[html.A("Browse Files")]),
                                                     color="secondary"),
                                             ]),
