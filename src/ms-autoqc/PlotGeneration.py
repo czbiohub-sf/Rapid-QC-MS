@@ -1,4 +1,4 @@
-import os, json, ast, traceback
+import os, json, ast, traceback, time
 import plotly.express as px
 import pandas as pd
 import numpy as np
@@ -26,6 +26,8 @@ def get_qc_results(instrument_id, run_id, status="Complete", drive=None, biologi
     Input: instrument run ID and status
     Output: tuple of multiple tables encoded as JSON strings
     """
+
+    start = time.time()
 
     # Download CSV files if instrument run is active
     if status == "Active" and drive is not None:
@@ -266,6 +268,9 @@ def get_qc_results(instrument_id, run_id, status="Complete", drive=None, biologi
     else:
         neg_internal_standards = []
 
+    end = time.time()
+    print("Loading time:", end - start)
+
     return (df_rt_pos, df_rt_neg, df_intensity_pos, df_intensity_neg, df_mz_pos, df_mz_neg, df_sequence, df_metadata,
         df_bio_rt_pos, df_bio_rt_neg, df_bio_intensity_pos, df_bio_intensity_neg, df_bio_mz_pos, df_bio_mz_neg,
         json.dumps(resources), df_samples, json.dumps(pos_internal_standards), json.dumps(neg_internal_standards),
@@ -313,26 +318,31 @@ def generate_sample_metadata_dataframe(sample, df_rt, df_mz, df_intensity, df_de
     df_sample_istd["Intensity"] = ["{:.2e}".format(x) for x in intensities]
 
     # Delta m/z
+    df_delta_mz.replace(" ", np.nan, inplace=True)
     df_delta_mz = df_delta_mz.loc[df_delta_mz["Sample"] == sample][columns]
     df_delta_mz.drop(columns=["Sample"], inplace=True)
     df_sample_istd["Delta m/z"] = df_delta_mz.iloc[0].astype(float).round(6).values.tolist()
 
     # Delta RT
+    df_delta_rt.replace(" ", np.nan, inplace=True)
     df_delta_rt = df_delta_rt.loc[df_delta_rt["Sample"] == sample][columns]
     df_delta_rt.drop(columns=["Sample"], inplace=True)
     df_sample_istd["Delta RT"] = df_delta_rt.iloc[0].astype(float).round(3).values.tolist()
 
     # In-run delta RT
+    df_in_run_delta_rt.replace(" ", np.nan, inplace=True)
     df_in_run_delta_rt = df_in_run_delta_rt.loc[df_in_run_delta_rt["Sample"] == sample][columns]
     df_in_run_delta_rt.drop(columns=["Sample"], inplace=True)
     df_sample_istd["In-Run Delta RT"] = df_in_run_delta_rt.iloc[0].astype(float).round(3).values.tolist()
 
     # Warnings
+    df_warnings.replace(" ", np.nan, inplace=True)
     df_warnings = df_warnings.loc[df_warnings["Sample"] == sample][columns]
     df_warnings.drop(columns=["Sample"], inplace=True)
     df_sample_istd["Warnings"] = df_warnings.iloc[0].astype(str).values.tolist()
 
     # Fails
+    df_fails.replace(" ", np.nan, inplace=True)
     df_fails = df_fails.loc[df_fails["Sample"] == sample][columns]
     df_fails.drop(columns=["Sample"], inplace=True)
     df_sample_istd["Fails"] = df_fails.iloc[0].astype(str).values.tolist()
