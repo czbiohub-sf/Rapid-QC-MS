@@ -3350,3 +3350,20 @@ def delete_temp_directory(instrument_id, run_id):
             shutil.rmtree(temp_directory)
     except:
         print("Could not delete temporary data directory.")
+
+
+def pipeline_valid(module=None):
+
+    """
+    Validates that MSConvert and MS-DIAL dependencies are installed
+    """
+
+    msconvert_installed = os.path.exists(os.path.join(get_msconvert_directory(), "msconvert.exe"))
+    msdial_installed = os.path.exists(os.path.join(get_msdial_directory(), "MsdialConsoleApp.exe"))
+
+    if module == "msdial":
+        return msdial_installed
+    elif module == "msconvert":
+        return msconvert_installed
+    else:
+        return msconvert_installed and msdial_installed

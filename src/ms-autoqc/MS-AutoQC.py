@@ -4585,7 +4585,7 @@ def capture_uploaded_metadata(contents, filename):
 @app.callback(Output("monitor-new-run-button", "children"),
               Output("data-acquisition-path-title", "children"),
               Output("data-acquisition-path-form-text", "children"),
-              Input("autoqc-job-type", "value"), prevent_initial_call=True)
+              Input("autoqc-job-type", "value"))
 def update_new_job_button_text(job_type):
 
     """
@@ -4600,6 +4600,16 @@ def update_new_job_button_text(job_type):
         button_text = "Start QC processing data files"
         text_field_title = "Data file path"
         form_text = "Please enter the folder path where your data files are saved."
+
+    msconvert_valid = db.pipeline_valid(module="msconvert")
+    msdial_valid = db.pipeline_valid(module="msdial")
+
+    if not msconvert_valid and not msdial_valid:
+        button_text = "Error: MSConvert and MS-DIAL installations not found"
+    if not msdial_valid:
+        button_text = "Error: Could not locate MS-DIAL console app"
+    if not msconvert_valid:
+        button_text = "Error: Could not locate MSConvert installation"
 
     return button_text, text_field_title, form_text
 
@@ -4716,7 +4726,7 @@ def enable_new_autoqc_job_button(run_id_valid, chromatography_valid, qc_config_v
     Enables "submit" button for New MS-AutoQC Job form
     """
 
-    if run_id_valid and chromatography_valid and qc_config_valid and sequence_valid and path_valid:
+    if run_id_valid and chromatography_valid and qc_config_valid and sequence_valid and path_valid and db.pipeline_valid():
         return False
     else:
         return True
