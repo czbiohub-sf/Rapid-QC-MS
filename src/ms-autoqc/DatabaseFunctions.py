@@ -2123,40 +2123,19 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, s
 
     # Filter by polarity
     df_samples = df_samples.loc[df_samples["sample_id"].str.contains(polarity)]
+    sample_ids = df_samples["sample_id"].astype(str).tolist()
 
     # Return None if results are None
     if status == "Processing":
         if len(df_samples[result_type].dropna()) == 0:
             return None
 
-    # Get list of results using result type
-    sample_ids = df_samples["sample_id"].astype(str).tolist()
-    results = df_samples[result_type].tolist()
-
-    # Prepare unified results DataFrame
-    result_dataframes = []
-
-    # For each JSON-ified result,
-    for index, result in enumerate(results):
-
-        # Convert to DataFrame
-        if result is not None:
-            df = pd.read_json(result, orient="split")
-            df.rename(columns={"Name": "Sample"}, inplace=True)
-        else:
-            if status == "Processing":
-                continue
-            else:
-                empty_row = [np.nan for x in result_dataframes[0].columns]
-                empty_row[0] = sample_ids[index]
-                empty_df = pd.DataFrame([empty_row], columns=result_dataframes[0].columns)
-                result_dataframes.append(empty_df)
-                continue
-
-        result_dataframes.append(df)
-
-    # # Concatenate DataFrames together
-    df_results = pd.concat(result_dataframes, sort=False, ignore_index=True)
+    # Initialize DataFrame with individual records of sample data
+    results = df_samples[result_type].astype(str).tolist()
+    results = [ast.literal_eval(result) if result != "None" else {} for result in results]
+    df_results = pd.DataFrame(results)
+    df_results.drop(columns=["Name"], inplace=True)
+    df_results["Sample"] = sample_ids
 
     # Return DataFrame as JSON string
     if as_json:
@@ -2195,26 +2174,11 @@ def parse_biological_standard_data(instrument_id, run_id, result_type, polarity,
     df_samples = df_samples.loc[df_samples["run_id"].isin(run_ids)]
     run_ids = df_samples["run_id"].astype(str).tolist()
 
-    # Get list of results using result type
-    results = df_samples[result_type].tolist()
-
-    # Prepare unified results DataFrame
-    result_dataframes = []
-
-    # For each JSON-ified result,
-    for index, result in enumerate(results):
-
-        # Convert to DataFrame
-        df = pd.read_json(result, orient="split")
-
-        # Refactor so that each row is a sample, and each column is an internal standard
-        df["Name"] = run_ids[index]
-
-        # Append to list of DataFrames
-        result_dataframes.append(df)
-
-    # Concatenate DataFrames together
-    df_results = pd.concat(result_dataframes, sort=False, ignore_index=True)
+    # Initialize DataFrame with individual records of sample data
+    results = df_samples[result_type].fillna('{}').tolist()
+    results = [ast.literal_eval(result) for result in results]
+    df_results = pd.DataFrame(results)
+    df_results["Name"] = run_ids
 
     # Return DataFrame as JSON string
     if as_json:
@@ -2238,33 +2202,25 @@ def parse_internal_standard_qc_data(instrument_id, run_id, polarity, result_type
     # Filter by polarity
     df_samples = df_samples.loc[df_samples["sample_id"].str.contains(polarity)]
 
+    # For results DataFrame, each index corresponds to the result type
+    get_result_index = {
+        "Delta m/z": 0,
+        "Delta RT": 1,
+        "In-run delta RT": 2,
+        "Intensity dropout": 3,
+        "Warnings": 4,
+        "Fails": 5
+    }
+
     # Get list of results using result type
     sample_ids = df_samples["sample_id"].astype(str).tolist()
-    results = df_samples["qc_dataframe"].tolist()
+    results = df_samples["qc_dataframe"].fillna('[{}, {}, {}, {}, {}, {}]').astype(str).tolist()
 
-    # Prepare unified results DataFrame
-    result_dataframes = []
-
-    # For each JSON-ified result,
-    for index, result in enumerate(results):
-
-        # Convert to DataFrame
-        if result is not None:
-            df = pd.read_json(result, orient="split")
-            df = df.loc[df["Name"].str.contains(result_type)]
-            df.loc[df["Name"].str.contains(result_type), "Name"] = sample_ids[index]
-            df.rename(columns={"Name": "Sample"}, inplace=True)
-        else:
-            empty_row = [np.nan for x in result_dataframes[0].columns]
-            empty_row[0] = sample_ids[index]
-            empty_df = pd.DataFrame([empty_row], columns=result_dataframes[0].columns)
-            result_dataframes.append(empty_df)
-            continue
-
-        result_dataframes.append(df)
-
-    # Concatenate DataFrames together
-    df_results = pd.concat(result_dataframes, sort=False, ignore_index=True)
+    type_index = get_result_index[result_type]
+    results = [ast.literal_eval(result)[type_index] for result in results]
+    df_results = pd.DataFrame(results)
+    df_results.drop(columns=["Name"], inplace=True)
+    df_results["Sample"] = sample_ids
 
     # Return DataFrame as JSON string
     if as_json:

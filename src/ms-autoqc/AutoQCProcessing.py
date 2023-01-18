@@ -440,10 +440,10 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
     return qc_dataframe, qc_result
 
 
-def convert_to_json(sample_id, df_peak_list, qc_dataframe):
+def convert_to_dict(sample_id, df_peak_list, qc_dataframe):
 
     """
-    Format DataFrames as JSON strings, with features as columns and relevant data in rows
+    Converts DataFrames to dictionary records, with features as columns and relevant data in rows
     """
 
     # m/z, RT, intensity
@@ -467,9 +467,9 @@ def convert_to_json(sample_id, df_peak_list, qc_dataframe):
     df_rt = df_rt.drop(df_rt.index[0])
     df_intensity = df_intensity.drop(df_intensity.index[0])
 
-    json_mz = df_mz.to_json(orient="split")
-    json_rt = df_rt.to_json(orient="split")
-    json_intensity = df_intensity.to_json(orient="split")
+    mz_record = df_mz.to_dict(orient="records")[0]
+    rt_record = df_rt.to_dict(orient="records")[0]
+    intensity_record = df_intensity.to_dict(orient="records")[0]
 
     # QC results
     if len(qc_dataframe) > 0:
@@ -479,11 +479,12 @@ def convert_to_json(sample_id, df_peak_list, qc_dataframe):
         qc_dataframe = qc_dataframe.transpose().reset_index()
         qc_dataframe.columns = qc_dataframe.iloc[0].astype(str).tolist()
         qc_dataframe = qc_dataframe.drop(qc_dataframe.index[0])
-        json_qc = qc_dataframe.to_json(orient="split")
+        qc_dataframe = qc_dataframe.fillna(" ")
+        qc_record = qc_dataframe.to_dict(orient="records")
     else:
-        json_qc = ""
+        qc_record = {}
 
-    return json_mz, json_rt, json_intensity, json_qc
+    return str(mz_record), str(rt_record), str(intensity_record), str(qc_record)
 
 
 def process_data_file(path, filename, extension, instrument_id, run_id):
@@ -586,15 +587,15 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
 
     # Convert m/z, RT, and intensity data to JSON strings
     try:
-        json_mz, json_rt, json_intensity, json_qc = convert_to_json(filename, df_peak_list, qc_dataframe)
+        mz_record, rt_record, intensity_record, qc_record = convert_to_dict(filename, df_peak_list, qc_dataframe)
     except:
-        print("Failed to convert DataFrames to JSON format.")
+        print("Failed to convert DataFrames to dictionary record format.")
         traceback.print_exc()
         return
 
     try:
         # Write QC results to database and upload to Google Drive
-        db.write_qc_results(filename, run_id, json_mz, json_rt, json_intensity, json_qc, qc_result, is_bio_standard)
+        db.write_qc_results(filename, run_id, mz_record, rt_record, intensity_record, qc_record, qc_result, is_bio_standard)
 
         # Update sample counters to trigger dashboard update
         db.update_sample_counters_for_run(instrument_id=instrument_id, run_id=run_id, qc_result=qc_result, latest_sample=filename)
@@ -609,12 +610,12 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
         return
 
     # Delete MS-DIAL result file
-    # try:
-    #     os.remove(qc_results_directory + filename + ".msdial")
-    # except Exception as error:
-    #     print("Failed to remove MS-DIAL result file.")
-    #     traceback.print_exc()
-    #     return
+    try:
+        os.remove(qc_results_directory + filename + ".msdial")
+    except Exception as error:
+        print("Failed to remove MS-DIAL result file.")
+        traceback.print_exc()
+        return
 
 
 def listener_is_running(pid):
