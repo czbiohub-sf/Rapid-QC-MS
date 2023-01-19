@@ -1,7 +1,7 @@
 import warnings
 warnings.simplefilter(action="ignore", category=FutureWarning)
 
-import os, time, shutil, subprocess, psutil, traceback
+import os, time, shutil, psutil, traceback
 import pandas as pd
 import numpy as np
 import DatabaseFunctions as db
@@ -145,17 +145,30 @@ def run_msconvert(path, filename, extension, output_folder):
     except:
         print("Failed to locate MSConvert.exe!")
         traceback.print_exc()
-        return
+        return None
 
-    # Run MSConvert.exe
+    # Run MSConvert in a subprocess
     command = msconvert_exe + output_folder + filename + "." + extension + " -o " + output_folder
-    os.system(command)
-    time.sleep(1)
+    process = psutil.Popen(command)
+    pid = process.pid
+
+    # Check every second for 30 seconds if mzML file was created; if process hangs, terminate and return None
+    for index in range(31):
+        if not subprocess_is_running(pid):
+            break
+        else:
+            if index != 30:
+                time.sleep(1)
+            else:
+                kill_subprocess(pid)
+                return None
 
     # Delete copy of original data file
     data_file_copy = output_folder + filename + "." + extension
     os.remove(data_file_copy)
-    return
+
+    # Return mzML file path to indicate success
+    return output_folder + filename + ".mzml"
 
 
 def run_msdial_processing(filename, msdial_path, parameter_file, input_folder, output_folder):
@@ -168,11 +181,24 @@ def run_msdial_processing(filename, msdial_path, parameter_file, input_folder, o
     home = os.getcwd()
     os.chdir(msdial_path)
 
-    # Run MS-DIAL
+    # Run MS-DIAL in a subprocess
     command = "MsdialConsoleApp.exe lcmsdda -i " + input_folder \
               + " -o " + output_folder \
               + " -m " + parameter_file + " -p"
-    os.system(command)
+    process = psutil.Popen(command)
+    pid = process.pid
+
+    # Check every second for 30 seconds if process was completed; if process hangs, return None
+    for index in range(31):
+        if not subprocess_is_running(pid):
+            break
+        else:
+            if index != 30:
+                time.sleep(1)
+            else:
+                kill_subprocess(pid)
+                os.chdir(home)
+                return None
 
     # Clear data file directory for next sample
     for file in os.listdir(input_folder):
@@ -185,8 +211,11 @@ def run_msdial_processing(filename, msdial_path, parameter_file, input_folder, o
     # Return to original working directory
     os.chdir(home)
 
+    # MS-DIAL output filename
+    msdial_result = output_folder + "/" + filename.split(".")[0] + ".msdial"
+
     # Return .msdial file path
-    return output_folder + "/" + filename.split(".")[0] + ".msdial"
+    return msdial_result
 
 
 def peak_list_to_dataframe(sample_peak_list, df_features):
@@ -548,50 +577,77 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
     msdial_directory = db.get_msdial_directory()
 
     # Run MSConvert
-    run_msconvert(path, filename, extension, mzml_file_directory)
+    try:
+        mzml_file = run_msconvert(path, filename, extension, mzml_file_directory)
+    except:
+        mzml_file = None
+        print("Failed to run MSConvert.")
+        traceback.print_exc()
 
     # Run MS-DIAL
-    try:
-        peak_list = run_msdial_processing(filename, msdial_directory, msdial_parameters,
-            str(mzml_file_directory), str(qc_results_directory))
-    except:
-        print("Failed to run MS-DIAL.")
-        traceback.print_exc()
-        return
+    if mzml_file is not None:
+        try:
+            peak_list = run_msdial_processing(filename, msdial_directory, msdial_parameters,
+                str(mzml_file_directory), str(qc_results_directory))
+        except:
+            peak_list = None
+            print("Failed to run MS-DIAL.")
+            traceback.print_exc()
 
-    # Convert peak list to DataFrame
-    try:
-        df_peak_list = peak_list_to_dataframe(peak_list, df_features)
-    except:
-        print("Failed to convert peak list to DataFrame.")
-        traceback.print_exc()
-        return
+    # Send peak list to MS-AutoQC algorithm if valid
+    if mzml_file is not None and peak_list is not None:
 
-    # Execute AutoQC algorithm
-    try:
-        qc_dataframe, qc_result = qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio_standard)
-    except:
-        print("Failed to execute AutoQC algorithm.")
-        traceback.print_exc()
-        return
+        # Convert peak list to DataFrame
+        try:
+            df_peak_list = peak_list_to_dataframe(peak_list, df_features)
+        except:
+            print("Failed to convert peak list to DataFrame.")
+            traceback.print_exc()
+            return
+
+        # Execute AutoQC algorithm
+        try:
+            qc_dataframe, qc_result = qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio_standard)
+        except:
+            print("Failed to execute AutoQC algorithm.")
+            traceback.print_exc()
+            return
+
+        # Convert m/z, RT, and intensity data to dictionary records in string form
+        try:
+            mz_record, rt_record, intensity_record, qc_record = convert_to_dict(filename, df_peak_list, qc_dataframe)
+        except:
+            print("Failed to convert DataFrames to dictionary record format.")
+            traceback.print_exc()
+            return
+
+        # Delete MS-DIAL result file
+        try:
+            os.remove(qc_results_directory + filename + ".msdial")
+        except Exception as error:
+            print("Failed to remove MS-DIAL result file.")
+            traceback.print_exc()
+            return
+
+    else:
+        print("Failed to process", filename)
+        mz_record = None
+        rt_record = None
+        intensity_record = None
+        qc_record = None
+        qc_result = "Fail"
 
     # Send Slack notification (if they are enabled)
     try:
         if db.slack_notifications_are_enabled():
             if qc_result != "Pass":
                 alert = "QC " + qc_result + ": " + filename
+                if peak_list is None:
+                    alert = "Failed to process " + filename
                 slack_bot.send_message(alert)
     except:
         print("Failed to send Slack notification.")
         traceback.print_exc()
-
-    # Convert m/z, RT, and intensity data to JSON strings
-    try:
-        mz_record, rt_record, intensity_record, qc_record = convert_to_dict(filename, df_peak_list, qc_dataframe)
-    except:
-        print("Failed to convert DataFrames to dictionary record format.")
-        traceback.print_exc()
-        return
 
     try:
         # Write QC results to database and upload to Google Drive
@@ -609,19 +665,11 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
         traceback.print_exc()
         return
 
-    # Delete MS-DIAL result file
-    try:
-        os.remove(qc_results_directory + filename + ".msdial")
-    except Exception as error:
-        print("Failed to remove MS-DIAL result file.")
-        traceback.print_exc()
-        return
 
-
-def listener_is_running(pid):
+def subprocess_is_running(pid):
 
     """
-    Check if acquisition listener subprocess is still running
+    Check if subprocess is still running
     """
 
     if pid is None:
@@ -638,10 +686,10 @@ def listener_is_running(pid):
         return False
 
 
-def kill_acquisition_listener(pid):
+def kill_subprocess(pid):
 
     """
-    Kill acquisition listener subprocess using the pid
+    Kill subprocess using process ID (pid)
     """
 
     try:

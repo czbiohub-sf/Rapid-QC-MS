@@ -167,7 +167,7 @@ def terminate_job(instrument_id, run_id):
 
     # Kill acquisition listener
     pid = db.get_pid(instrument_id, run_id)
-    qc.kill_acquisition_listener(pid)
+    qc.kill_subprocess(pid)
 
 
 def get_md5(filename):

@@ -131,7 +131,7 @@ def serve_layout():
                                         dbc.CardBody([
 
                                             # Instrument run progress
-                                            dcc.Interval(id="refresh-interval", n_intervals=0, interval=60000, disabled=True),
+                                            dcc.Interval(id="refresh-interval", n_intervals=0, interval=30000, disabled=True),
                                             dbc.Progress(id="active-run-progress-bar", animated=False),
 
                                             # Buttons for managing MS-AutoQC jobs
@@ -2306,6 +2306,7 @@ def populate_instrument_runs_table(instrument, refresh, resources, sync_update, 
             columns={"run_id": "Run ID",
                      "chromatography": "Chromatography",
                      "status": "Status"})
+        df_instrument_runs[::-1]
 
         # Convert DataFrame into a dictionary
         instrument_runs = df_instrument_runs.to_dict("records")
@@ -2412,7 +2413,7 @@ def load_data(refresh, active_cell, table_data, resources, instrument_id):
 
                 # Get listener process ID from database; if process is not running, restart it
                 listener_id = db.get_pid(instrument_id, run_id)
-                if not qc.listener_is_running(listener_id):
+                if not qc.subprocess_is_running(listener_id):
 
                     # Retrieve acquisition path
                     acquisition_path = db.get_acquisition_path(instrument_id, run_id).replace("\\", "/")
@@ -5108,7 +5109,7 @@ def perform_action_on_job(confirm_button, modal_title, resources):
 
             # Kill acquisition listener
             pid = db.get_pid(instrument_id, run_id)
-            qc.kill_acquisition_listener(pid)
+            qc.kill_subprocess(pid)
             return True, None, None, None
 
         except:
@@ -5124,7 +5125,7 @@ def perform_action_on_job(confirm_button, modal_title, resources):
 
             # Kill current acquisition listener (acquisition listener will be restarted automatically)
             pid = db.get_pid(instrument_id, run_id)
-            qc.kill_acquisition_listener(pid)
+            qc.kill_subprocess(pid)
 
             # Delete temporary data file directory
             db.delete_temp_directory(instrument_id, run_id)
