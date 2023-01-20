@@ -2091,14 +2091,14 @@ def get_remaining_samples(instrument_id, run_id):
     Returns list of samples remaining in a given instrument run
     """
 
-    # Get latest sample in run
+    # Get last processed sample in run
     df_run = get_instrument_run(instrument_id, run_id)
-    latest_sample = df_run["latest_sample"].astype(str).tolist()[0]
+    latest_sample = df_run["latest_sample"].astype(str).values[0]
 
     # Get list of samples in run
     samples = get_samples_in_run(instrument_id, run_id, "Both")["sample_id"].astype(str).tolist()
 
-    # Return first sample if beginning of run
+    # Return all samples if beginning of run
     if latest_sample == "None":
         return samples
 
@@ -2107,6 +2107,74 @@ def get_remaining_samples(instrument_id, run_id):
 
     # Return list of samples starting at latest sample
     return samples[latest_sample_index:len(samples)]
+
+
+def get_unprocessed_samples(instrument_id, run_id):
+
+    """
+    For an active run, returns:
+    1. list of samples that were not processed due to error / runtime termination
+    2. the most recent sample that was being monitored / processed
+    """
+
+    # Get last processed sample in run
+    df_run = get_instrument_run(instrument_id, run_id)
+    latest_sample = df_run["latest_sample"].astype(str).values[0]
+
+    # Get acquisition path, data files, and data file extension
+    acquisition_path = df_run["acquisition_path"].astype(str).values[0]
+    data_files = os.listdir(acquisition_path)
+    extension = get_data_file_type(instrument_id)
+
+    # Get samples in run
+    df_samples = get_samples_in_run(instrument_id, run_id, "Both")
+
+    # Get list of samples in run
+    samples = df_samples["sample_id"].astype(str).tolist()
+
+    # Return if beginning of run
+    if latest_sample == "None":
+        return [], samples[0]
+
+    # Get index of current sample (the sample after latest_sample)
+    current_sample_index = samples.index(latest_sample) + 1
+
+    # Get samples that were acquired, but not processed (up to and including latest_sample)
+    df = df_samples[0:current_sample_index]
+    unprocessed_samples = df.loc[df["qc_result"].isnull()]["sample_id"].astype(str).tolist()
+
+    # If data files exist, add them to list of missing samples (which will then be processed)
+    missing_samples = []
+    for sample in unprocessed_samples:
+        filename = sample + "." + extension
+        if filename in data_files:
+            missing_samples.append(sample)
+
+    # Get current sample
+    if current_sample_index != len(samples):
+        current_sample = samples[current_sample_index]
+    else:
+        current_sample = latest_sample
+
+    # Return as tuple
+    return missing_samples, current_sample
+
+
+def get_current_sample(instrument_id, run_id):
+
+    """
+    Returns the current sample being monitored / processed
+    """
+
+    # Get latest sample in run
+    df_run = get_instrument_run(instrument_id, run_id)
+    latest_sample = df_run["latest_sample"].astype(str).values[0]
+
+    # Return second sample if beginning of run
+    if latest_sample == "None":
+        return samples[1]
+
+
 
 
 def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, status, as_json=True):

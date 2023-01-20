@@ -14,12 +14,16 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
     Event handler that alerts when the data file has completed sample acquisition
     """
 
-    def __init__(self, observer, filenames, instrument_id, run_id):
+    def __init__(self, observer, path, filenames, extension, instrument_id, run_id, current_sample):
 
         self.observer = observer
         self.filenames = filenames
         self.instrument_id = instrument_id
         self.run_id = run_id
+        self.current_sample = current_sample
+
+        if os.path.exists(path + current_sample + "." + extension):
+            self.trigger_pipeline(path, current_sample, extension)
 
 
     def on_created(self, event):
@@ -34,35 +38,9 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
         extension = path.split("/")[-1].split(".")[-1]
         path = path.replace(filename + "." + extension, "")
 
-        # Check if file created is in the sequence
+        # Route data file to pipeline
         if not event.is_directory and filename in self.filenames:
-
-            print("File created:", filename)
-            print("Watching file...")
-
-            # Start watching file until sample acquisition is complete
-            try:
-                sample_acquired = self.watch_file(path, filename, extension)
-            except Exception as error:
-                print("Unable to watch file:", error)
-                sample_acquired = None
-
-            # Route data file to MS-AutoQC pipeline
-            if sample_acquired:
-                print("Data acquisition completed for", filename)
-                qc.process_data_file(path, filename, extension, self.instrument_id, self.run_id)
-                print("Data processing complete.")
-
-            # Check if data file was the last sample in the sequence
-            if filename == self.filenames[-1]:
-
-                # If so, stop acquisition listening
-                print("Last sample acquired. Instrument run complete.")
-                self.observer.stop()
-
-                # Terminate acquisition listener process
-                print("Terminating acquisition listener process.")
-                terminate_job(self.instrument_id, self.run_id)
+            self.trigger_pipeline(path, filename, extension)
 
 
     def watch_file(self, path, filename, extension):
@@ -97,6 +75,38 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
                 db.update_md5_checksum(filename, new_md5)
 
 
+    def trigger_pipeline(self, path, filename, extension):
+
+        """
+        Routes data file to monitoring and processing functions
+        """
+
+        print("Watching file:", filename)
+
+        # Start watching file until sample acquisition is complete
+        try:
+            sample_acquired = self.watch_file(path, filename, extension)
+        except Exception as error:
+            print("Unable to watch file:", error)
+            sample_acquired = None
+
+        # Route data file to MS-AutoQC pipeline
+        if sample_acquired:
+            print("Data acquisition completed for", filename)
+            qc.process_data_file(path, filename, extension, self.instrument_id, self.run_id)
+            print("Data processing complete.")
+
+        # Check if data file was the last sample in the sequence
+        if filename == self.filenames[-1]:
+            # If so, stop acquisition listening
+            print("Last sample acquired. Instrument run complete.")
+            self.observer.stop()
+
+            # Terminate acquisition listener process
+            print("Terminating acquisition listener process.")
+            terminate_job(self.instrument_id, self.run_id)
+
+
 def start_listener(path, instrument_id, run_id):
 
     """
@@ -111,12 +121,14 @@ def start_listener(path, instrument_id, run_id):
     # Retrieve filenames for samples in run
     filenames = db.get_remaining_samples(instrument_id, run_id)
 
-    if is_completed_run:
+    # Get data file extension
+    extension = db.get_data_file_type(instrument_id)
 
-        # Get data file extension
-        extension = db.get_data_file_type(instrument_id)
-        path = path.replace("\\", "/")
-        path = path + "/" if path[-1] != "/" else path
+    # Format acquisition path
+    path = path.replace("\\", "/")
+    path = path + "/" if path[-1] != "/" else path
+
+    if is_completed_run:
 
         # Iterate through files and process each one
         for filename in filenames:
@@ -130,14 +142,33 @@ def start_listener(path, instrument_id, run_id):
             qc.process_data_file(path, filename, extension, instrument_id, run_id)
             print("Data processing for", filename, "complete.")
 
+        print("Last sample acquired. QC job complete.")
         terminate_job(instrument_id, run_id)
 
     else:
+        # Get samples that may have been unprocessed due to an error or accidental termination
+        missing_samples, current_sample = db.get_unprocessed_samples(instrument_id, run_id)
+
+        # Check for missed samples and process them before starting file monitor
+        if len(missing_samples) > 0:
+
+            # Iterate through files and process each one
+            for filename in missing_samples:
+
+                # If file is not in directory, skip it
+                full_path = path + filename + "." + extension
+                if not os.path.exists(full_path):
+                    continue
+
+                # Process data file
+                qc.process_data_file(path, filename, extension, instrument_id, run_id)
+                print("Data processing for", filename, "complete.")
+
         # Start file monitor and process files as they are created
         logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 
         observer = Observer()
-        event_handler = DataAcquisitionEventHandler(observer, filenames, instrument_id, run_id)
+        event_handler = DataAcquisitionEventHandler(observer, path, filenames, extension, instrument_id, run_id, current_sample)
         observer.schedule(event_handler, path, recursive=True)
         observer.start()
 

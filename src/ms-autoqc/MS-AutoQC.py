@@ -2306,7 +2306,7 @@ def populate_instrument_runs_table(instrument, refresh, resources, sync_update, 
             columns={"run_id": "Run ID",
                      "chromatography": "Chromatography",
                      "status": "Status"})
-        df_instrument_runs[::-1]
+        df_instrument_runs = df_instrument_runs[::-1]
 
         # Convert DataFrame into a dictionary
         instrument_runs = df_instrument_runs.to_dict("records")
