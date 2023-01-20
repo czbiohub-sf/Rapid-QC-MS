@@ -17,13 +17,12 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
     def __init__(self, observer, path, filenames, extension, instrument_id, run_id, current_sample):
 
         self.observer = observer
+        self.path = path
         self.filenames = filenames
+        self.extension = extension
         self.instrument_id = instrument_id
         self.run_id = run_id
         self.current_sample = current_sample
-
-        if os.path.exists(path + current_sample + "." + extension):
-            self.trigger_pipeline(path, current_sample, extension)
 
 
     def on_created(self, event):
@@ -35,12 +34,14 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
         # Remove directory path and file extension from filename
         path = event.src_path.replace("\\", "/")
         filename = path.split("/")[-1].split(".")[0]
-        extension = path.split("/")[-1].split(".")[-1]
-        path = path.replace(filename + "." + extension, "")
+
+        # For restarted jobs: process the sample that was being acquired when the job was interrupted
+        if os.path.exists(self.path + self.current_sample + "." + self.extension):
+            self.trigger_pipeline(self.path, self.current_sample, self.extension)
 
         # Route data file to pipeline
         if not event.is_directory and filename in self.filenames:
-            self.trigger_pipeline(path, filename, extension)
+            self.trigger_pipeline(self.path, filename, self.extension)
 
 
     def watch_file(self, path, filename, extension):
@@ -95,7 +96,7 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
         if sample_acquired:
             print("Data acquisition completed for", filename)
             qc.process_data_file(path, filename, extension, self.instrument_id, self.run_id)
-            print("Data processing complete.")
+            print("Data processing for", filename, "complete.")
 
         # Check if data file was the last sample in the sequence
         if filename == self.filenames[-1]:
