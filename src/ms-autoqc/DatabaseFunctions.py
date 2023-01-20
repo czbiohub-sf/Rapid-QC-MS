@@ -2117,47 +2117,33 @@ def get_unprocessed_samples(instrument_id, run_id):
     2. the most recent sample that was being monitored / processed
     """
 
-    # Get last processed sample in run
-    df_run = get_instrument_run(instrument_id, run_id)
-    latest_sample = df_run["latest_sample"].astype(str).values[0]
-
-    # Get acquisition path, data files, and data file extension
-    acquisition_path = df_run["acquisition_path"].astype(str).values[0]
-    data_files = os.listdir(acquisition_path)
-    extension = get_data_file_type(instrument_id)
-
     # Get samples in run
     df_samples = get_samples_in_run(instrument_id, run_id, "Both")
 
     # Get list of samples in run
     samples = df_samples["sample_id"].astype(str).tolist()
 
-    # Return if beginning of run
-    if latest_sample == "None":
-        return [], samples[0]
+    # Construct dictionary of unprocessed samples in instrument run
+    df_unprocessed_samples = df_samples.loc[df_samples["qc_result"].isnull()]
+    unprocessed_samples = df_unprocessed_samples["sample_id"].astype(str).tolist()
 
-    # Get index of current sample (the sample after latest_sample)
-    current_sample_index = samples.index(latest_sample) + 1
+    # Get acquisition path, data files, and data file extension
+    acquisition_path = get_acquisition_path(instrument_id, run_id)
+    extension = get_data_file_type(instrument_id)
+    directory_files = os.listdir(acquisition_path)
+    data_files = [file.split(".")[0] for file in directory_files if file.split(".")[0] in unprocessed_samples]
 
-    # Get samples that were acquired, but not processed (up to and including latest_sample)
-    df = df_samples[0:current_sample_index]
-    unprocessed_samples = df.loc[df["qc_result"].isnull()]["sample_id"].astype(str).tolist()
-
-    # If data files exist, add them to list of missing samples (which will then be processed)
-    missing_samples = []
-    for sample in unprocessed_samples:
-        filename = sample + "." + extension
-        if filename in data_files:
-            missing_samples.append(sample)
+    # Mark acquired data files
+    df_unprocessed_samples.loc[
+        df_unprocessed_samples["sample_id"].isin(data_files), "found"] = "Found"
+    unprocessed_samples = df_unprocessed_samples.dropna(subset=["found"])["sample_id"].astype(str).tolist()
 
     # Get current sample
-    if current_sample_index != len(samples):
-        current_sample = samples[current_sample_index]
-    else:
-        current_sample = latest_sample
+    current_sample = unprocessed_samples[-1]
+    del unprocessed_samples[-1]
 
     # Return as tuple
-    return missing_samples, current_sample
+    return unprocessed_samples, current_sample
 
 
 def get_current_sample(instrument_id, run_id):

@@ -69,6 +69,7 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
 
             # If the MD5 checksum after 3 mins is the same as before, file is done acquiring
             if new_md5 == old_md5:
+                print("MD5 checksums matched. Preparing to process file.")
                 time.sleep(180)
                 return True
             else:
