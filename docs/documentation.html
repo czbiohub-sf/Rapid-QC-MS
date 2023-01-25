@@ -93,6 +93,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
+<link href="./logo.png" rel="icon" type="image/png">
 <script src="site_libs/quarto-html/quarto.js"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
@@ -198,7 +199,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
    
   <ul>
   <li><a href="#database-schema" id="toc-database-schema" class="nav-link active" data-scroll-target="#database-schema">Database schema</a></li>
-  <li><a href="#design-pattern" id="toc-design-pattern" class="nav-link" data-scroll-target="#design-pattern">Design pattern</a></li>
+  <li><a href="#design-pattern" id="toc-design-pattern" class="nav-link" data-scroll-target="#design-pattern">Design pattern</a>
+  <ul class="collapse">
+  <li><a href="#frontend" id="toc-frontend" class="nav-link" data-scroll-target="#frontend">Frontend</a></li>
+  <li><a href="#backend" id="toc-backend" class="nav-link" data-scroll-target="#backend">Backend</a></li>
+  </ul></li>
   <li><a href="#general-workflow" id="toc-general-workflow" class="nav-link" data-scroll-target="#general-workflow">General workflow</a>
   <ul class="collapse">
   <li><a href="#ms-autoqc-starts-listening-to-the-data-acquisition-path" id="toc-ms-autoqc-starts-listening-to-the-data-acquisition-path" class="nav-link" data-scroll-target="#ms-autoqc-starts-listening-to-the-data-acquisition-path">1. MS-AutoQC starts listening to the data acquisition path</a></li>
@@ -238,19 +243,36 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>If you have any questions, concerns, or suggestions about the design of MS-AutoQC, please don’t hesitate to contact us at <a href="mailto:wasim.sandhu@czbiohub.org">wasim.sandhu@czbiohub.org</a> or <a href="mailto:brian.defelice@czbiohub.org">brian.defelice@czbiohub.org</a>.</p>
 <section id="database-schema" class="level1">
 <h1>Database schema</h1>
-<p>Data stays in persistence in two local SQLite databases: the main database and settings database.</p>
-<p>Together, the <strong>main database</strong> and <strong>methods directory</strong> – which stores MSP/TXT libraries, MS-DIAL parameter files, and the settings database – comprise a user’s MS-AutoQC workspace.</p>
+<p>Data stays in persistence in several SQLite databases: the instrument database(s) and the settings database.</p>
+<p>Together, the <strong>instrument databases</strong> and <strong>methods directory</strong> – which stores MSP/TXT libraries, MS-DIAL parameter files, and the settings database – comprise a user’s MS-AutoQC workspace.</p>
 <p>A diagram of the each database’s schema is shown below.</p>
-<p><strong>Main database:</strong> <img src="https://user-images.githubusercontent.com/7220175/209767222-3631e448-4af4-4a6e-86de-c2d05f4870d9.png" class="img-fluid"></p>
-<p><strong>Settings database:</strong> <img src="https://user-images.githubusercontent.com/7220175/209767228-2594f3b0-a112-4c41-938e-222ba274fa30.png" class="img-fluid"></p>
+<p><strong>Instrument database:</strong> <img src="https://user-images.githubusercontent.com/7220175/214639898-4f0378c3-f280-49ee-a5fd-784bb14c300e.png" class="img-fluid"></p>
+<p><strong>Settings database:</strong> <img src="https://user-images.githubusercontent.com/7220175/214639903-6dce09a2-2d06-49fa-8d6b-6a1fd1b9bbb4.png" class="img-fluid"></p>
 </section>
 <section id="design-pattern" class="level1">
 <h1>Design pattern</h1>
+<p>The architecture of MS-AutoQC was designed with flexibility and scalability in mind.</p>
 <p><img src="https://user-images.githubusercontent.com/7220175/209756420-b65f8002-5b11-4b87-85da-99d576e96214.png" class="img-fluid"></p>
+<section id="frontend" class="level3">
+<h3 class="anchored" data-anchor-id="frontend">Frontend</h3>
+<p>The frontend consists of a Dash app, which launches on startup and can be used from the browser. <a href="https://plotly.com/dash/">Dash</a> is a powerful, open-source Python framework (built atop React, Plotly, and Flask) for building web applications.</p>
+<p>In summary, <strong>components</strong> make up a user interface, and <strong>callbacks</strong> map inputs from one component to outputs of another. There is very little boilerplate code required to get started, and the library is extremely well-documented by the developers and community.</p>
+</section>
+<section id="backend" class="level3">
+<h3 class="anchored" data-anchor-id="backend">Backend</h3>
+<p>The backend is organized into five different files:</p>
+<ol type="1">
+<li><strong><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms-autoqc/AcquisitionListener.py">AcquisitionListener</a></strong> defines classes and functions for monitoring data acquisition paths and processing data files.</li>
+<li><strong><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms-autoqc/DatabaseFunctions.py">DatabaseFunctions</a></strong> provides highly-abstracted API for reading from and writing to databases.</li>
+<li><strong><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms-autoqc/AutoQCProcessing.py">AutoQCProcessing</a></strong> is a modular pipeline for processing data files, performing QC checks, and writing QC results to the database</li>
+<li><strong><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms-autoqc/SlackNotifications.py">SlackNotifications</a></strong> defines functions for controlling the Slack bot</li>
+<li><strong><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms-autoqc/PlotGeneration.py">PlotGeneration</a></strong> parses QC results from the database to generate Plotly graphs</li>
+</ol>
+</section>
 </section>
 <section id="general-workflow" class="level1">
 <h1>General workflow</h1>
-<p>The diagram below gives a broad overview of how MS-AutoQC listens to instrument runs and processes your data safely and securely. To summarize:</p>
+<p>The diagram below gives a broad overview of how MS-AutoQC listens to instrument runs and processes your data safely and securely.To summarize:</p>
 <ol type="1">
 <li>The user prepares their run sequence and starts an instrument run</li>
 <li>The user gives MS-AutoQC the sequence file and the data acquisition path</li>
@@ -571,70 +593,85 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </section>
 <section id="the-user-is-notified-of-qc-fails-and-warnings" class="level3">
 <h3 class="anchored" data-anchor-id="the-user-is-notified-of-qc-fails-and-warnings">7. The user is notified of QC fails and warnings</h3>
-<p>To-do…</p>
+<p>If quality control checks result in a “Fail” or “Warning” result, an alert will be sent via Slack and/or email (if the user opts in for notifications).</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Send Slack notification (if they are enabled)</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> db.slack_notifications_are_enabled():</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> qc_result <span class="op">!=</span> <span class="st">"Pass"</span>:</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>            alert <span class="op">=</span> <span class="st">"QC "</span> <span class="op">+</span> qc_result <span class="op">+</span> <span class="st">": "</span> <span class="op">+</span> filename</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>            slack_bot.send_message(alert)</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span>:</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"Failed to send Slack notification."</span>)</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    traceback.print_exc()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Currently, this is the simplest component of the pipeline, but posesses a large potential to transform analytical workflows. Future updates will bring more intelligent and informative messages, detailing what went wrong and which component of the LC-MS system may be causing the issue.</p>
+<p><strong>Jump to relevant functions:</strong></p>
+<ul>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/b43ae82a777a7ad8a33d1664a099ab4fd02c7234/src/ms-autoqc/DatabaseFunctions.py#L448:~:text=slack_notifications_are_enabled"><code>db.slack_notifications_are_enabled()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/b43ae82a777a7ad8a33d1664a099ab4fd02c7234/src/ms-autoqc/SlackNotifications.py#L6:~:text=def-,send_message"><code>slack_bot.send_message()</code></a></li>
+</ul>
 </section>
 <section id="the-dashboard-is-refreshed-with-qc-results" class="level3">
 <h3 class="anchored" data-anchor-id="the-dashboard-is-refreshed-with-qc-results">8. The dashboard is refreshed with QC results</h3>
 <p>After QC results are written to the database, metadata for the instrument run is updated to trigger a dashboard refresh. The number of samples processed, including the number of passes and fails, is updated using <code>update_sample_counters_for_run()</code>.</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> update_sample_counters_for_run(instrument_id, run_id, qc_result, latest_sample):</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co">    Increments "completed" count, as well as "pass" and "fail" counts accordingly</span></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    df_instrument_run <span class="op">=</span> get_instrument_run(instrument_id, run_id)</span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    completed <span class="op">=</span> df_instrument_run[<span class="st">"completed"</span>].astype(<span class="bu">int</span>).tolist()[<span class="dv">0</span>] <span class="op">+</span> <span class="dv">1</span></span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    passes <span class="op">=</span> df_instrument_run[<span class="st">"passes"</span>].astype(<span class="bu">int</span>).tolist()[<span class="dv">0</span>]</span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    fails <span class="op">=</span> df_instrument_run[<span class="st">"fails"</span>].astype(<span class="bu">int</span>).tolist()[<span class="dv">0</span>]</span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> qc_result <span class="op">==</span> <span class="st">"Pass"</span> <span class="kw">or</span> qc_result <span class="op">==</span> <span class="st">"Warning"</span>:</span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>        passes <span class="op">=</span> passes <span class="op">+</span> <span class="dv">1</span></span>
-<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> qc_result <span class="op">==</span> <span class="st">"Fail"</span>:</span>
-<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>        fails <span class="op">=</span> fails <span class="op">+</span> <span class="dv">1</span></span>
-<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>    db_metadata, connection <span class="op">=</span> connect_to_database(main_database)</span>
-<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>    instrument_runs_table <span class="op">=</span> sa.Table(<span class="st">"runs"</span>, db_metadata, autoload<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>    update_status <span class="op">=</span> (</span>
-<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>        sa.update(instrument_runs_table)</span>
-<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>            .where(instrument_runs_table.c.run_id <span class="op">==</span> run_id)</span>
-<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>            .values(</span>
-<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>                completed<span class="op">=</span>completed,</span>
-<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>                passes<span class="op">=</span>passes,</span>
-<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>                fails<span class="op">=</span>fails,</span>
-<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>                latest_sample<span class="op">=</span>latest_sample</span>
-<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>        )</span>
-<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>    connection.execute(update_status)</span>
-<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a>    connection.close()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> update_sample_counters_for_run(instrument_id, run_id, qc_result, latest_sample):</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co">    Increments "completed" count, as well as "pass" and "fail" counts accordingly</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    df_instrument_run <span class="op">=</span> get_instrument_run(instrument_id, run_id)</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    completed <span class="op">=</span> df_instrument_run[<span class="st">"completed"</span>].astype(<span class="bu">int</span>).tolist()[<span class="dv">0</span>] <span class="op">+</span> <span class="dv">1</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    passes <span class="op">=</span> df_instrument_run[<span class="st">"passes"</span>].astype(<span class="bu">int</span>).tolist()[<span class="dv">0</span>]</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    fails <span class="op">=</span> df_instrument_run[<span class="st">"fails"</span>].astype(<span class="bu">int</span>).tolist()[<span class="dv">0</span>]</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> qc_result <span class="op">==</span> <span class="st">"Pass"</span> <span class="kw">or</span> qc_result <span class="op">==</span> <span class="st">"Warning"</span>:</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>        passes <span class="op">=</span> passes <span class="op">+</span> <span class="dv">1</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> qc_result <span class="op">==</span> <span class="st">"Fail"</span>:</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>        fails <span class="op">=</span> fails <span class="op">+</span> <span class="dv">1</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>    db_metadata, connection <span class="op">=</span> connect_to_database(main_database)</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>    instrument_runs_table <span class="op">=</span> sa.Table(<span class="st">"runs"</span>, db_metadata, autoload<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>    update_status <span class="op">=</span> (</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>        sa.update(instrument_runs_table)</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>            .where(instrument_runs_table.c.run_id <span class="op">==</span> run_id)</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>            .values(</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>                completed<span class="op">=</span>completed,</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>                passes<span class="op">=</span>passes,</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>                fails<span class="op">=</span>fails,</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>                latest_sample<span class="op">=</span>latest_sample</span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>    connection.execute(update_status)</span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>    connection.close()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Meanwhile, the web app (served by Dash) stores its copy of the instrument run metadata in the user’s cache. Using a <a href="https://dash.plotly.com/dash-core-components/interval">Dash Interval</a> component, a Dash callback is triggered every 15 seconds to compare the run metadata in cache to the run metadata in the database.</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="at">@app.callback</span>(..., prevent_initial_call<span class="op">=</span><span class="va">True</span>, suppress_callback_exceptions<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> load_data(refresh, active_cell, table_data, resources, instrument_id):</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="co">    Updates and stores QC results in dcc.Store objects (user's browser session)</span></span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    trigger <span class="op">=</span> ctx.triggered_id</span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> active_cell:</span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>        run_id <span class="op">=</span> table_data[active_cell[<span class="st">"row"</span>]][<span class="st">"Run ID"</span>]</span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>        status <span class="op">=</span> table_data[active_cell[<span class="st">"row"</span>]][<span class="st">"Status"</span>]</span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Ensure that refresh does not trigger data parsing if no new samples processed</span></span>
-<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> trigger <span class="op">==</span> <span class="st">"refresh-interval"</span>:</span>
-<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>            completed_count_in_cache <span class="op">=</span> json.loads(resources)[<span class="st">"samples_completed"</span>]</span>
-<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>            actual_completed_count, total <span class="op">=</span> db.get_completed_samples_count(instrument_id, run_id, status)</span>
-<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> completed_count_in_cache <span class="op">==</span> actual_completed_count:</span>
-<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>                <span class="cf">raise</span> PreventUpdate</span>
-<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Otherwise, begin route: raw data -&gt; parsed data -&gt; user session cache -&gt; plots</span></span>
-<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> get_qc_results(instrument_id, run_id, status) <span class="op">+</span> (<span class="va">True</span>,)</span>
-<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
-<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> PreventUpdate</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="at">@app.callback</span>(..., prevent_initial_call<span class="op">=</span><span class="va">True</span>, suppress_callback_exceptions<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> load_data(refresh, active_cell, table_data, resources, instrument_id):</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co">    Updates and stores QC results in dcc.Store objects (user's browser session)</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    trigger <span class="op">=</span> ctx.triggered_id</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> active_cell:</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>        run_id <span class="op">=</span> table_data[active_cell[<span class="st">"row"</span>]][<span class="st">"Run ID"</span>]</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>        status <span class="op">=</span> table_data[active_cell[<span class="st">"row"</span>]][<span class="st">"Status"</span>]</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Ensure that refresh does not trigger data parsing if no new samples processed</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> trigger <span class="op">==</span> <span class="st">"refresh-interval"</span>:</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>            completed_count_in_cache <span class="op">=</span> json.loads(resources)[<span class="st">"samples_completed"</span>]</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>            actual_completed_count, total <span class="op">=</span> db.get_completed_samples_count(instrument_id, run_id, status)</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> completed_count_in_cache <span class="op">==</span> actual_completed_count:</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>                <span class="cf">raise</span> PreventUpdate</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Otherwise, begin route: raw data -&gt; parsed data -&gt; user session cache -&gt; plots</span></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> get_qc_results(instrument_id, run_id, status) <span class="op">+</span> (<span class="va">True</span>,)</span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> PreventUpdate</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>When a change in the database is detected (via comparing sample counters), all plots in the dashboard are re-populated. The callback continues to check for updates until the end of the instrument run, effectively updating itself in realtime.</p>
 <p><strong>Jump to relevant functions:</strong></p>
 <ul>
@@ -646,7 +683,6 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </section>
 <section id="google-drive-sync" class="level1">
 <h1>Google Drive sync</h1>
-<p>In progress…</p>
 
 
 </section>

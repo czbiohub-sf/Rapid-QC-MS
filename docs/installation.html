@@ -93,6 +93,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
+<link href="./logo.png" rel="icon" type="image/png">
 <script src="site_libs/quarto-html/quarto.js"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
@@ -204,7 +205,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   <li><a href="#important-note-1" id="toc-important-note-1" class="nav-link" data-scroll-target="#important-note-1">Important note</a></li>
   </ul></li>
   <li><a href="#download-ms-dial" id="toc-download-ms-dial" class="nav-link" data-scroll-target="#download-ms-dial">3. Download MS-DIAL</a></li>
-  <li><a href="#download-and-install-docker" id="toc-download-and-install-docker" class="nav-link" data-scroll-target="#download-and-install-docker">4. Download and install Docker</a></li>
+  <li><a href="#install-.net-framework" id="toc-install-.net-framework" class="nav-link" data-scroll-target="#install-.net-framework">4. Install .NET Framework</a></li>
   <li><a href="#install-msconvert" id="toc-install-msconvert" class="nav-link" data-scroll-target="#install-msconvert">5. Install MSConvert</a></li>
   <li><a href="#celebrate" id="toc-celebrate" class="nav-link" data-scroll-target="#celebrate">6. Celebrate!</a></li>
   </ul>
@@ -233,12 +234,12 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>Installing MS-AutoQC is relatively easy and straightforward. You’ll need to:</p>
 <ol type="1">
 <li>Install Python</li>
-<li>Download and install MS-AutoQC</li>
+<li>Install MS-AutoQC</li>
 <li>Download MS-DIAL</li>
-<li>Download and install Docker</li>
+<li>Install .NET Framework</li>
 <li>Install MSConvert</li>
 </ol>
-<p>If you run into trouble or have any questions, please feel free to <a href="https://github.com/czbiohub/MS-AutoQC/issues">open a new issue on GitHub</a>, or send an email to wasim.sandhu@czbiohub.org. You can also visit the <a href="https://github.com/czbiohub/MS-AutoQC/wiki/Troubleshooting">Troubleshooting</a> section to see if your issue has been documented already.</p>
+<p>If you run into trouble or have any questions, please feel free to <a href="https://github.com/czbiohub/MS-AutoQC/issues">open a new issue on GitHub</a>, or send an email to <a href="mailto:wasim.sandhu@czbiohub.org">wasim.sandhu@czbiohub.org</a>. You can also visit the <a href="https://github.com/czbiohub/MS-AutoQC/wiki/Troubleshooting">Troubleshooting</a> section to see if your issue has been documented already.</p>
 <section id="important-note" class="level1">
 <h1>Important note</h1>
 <p>While, to our knowledge, installation of the following software packages on data acquisition computers comes <em>at no risk</em>, it is possible for a wary user to install MS-AutoQC on a separate computer.</p>
@@ -248,7 +249,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </section>
 <section id="install-python" class="level1">
 <h1>1. Install Python</h1>
-<p>If you don’t have Python installed already, please <a href="https://www.python.org/downloads/">download and install the latest release of Python 3</a> for Windows or Mac (which is v3.11 at the time of this writing).</p>
+<p>If you don’t have Python installed already, you can <a href="https://www.python.org/downloads/">download and install the latest release of Python 3</a> for Windows or Mac (which is v3.11 at the time of this writing).</p>
 </section>
 <section id="install-ms-autoqc" class="level1">
 <h1>2. Install MS-AutoQC</h1>
@@ -268,23 +269,19 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </section>
 <section id="download-ms-dial" class="level1">
 <h1>3. Download MS-DIAL</h1>
-<p>Please <a href="http://prime.psc.riken.jp/compms/msdial/download/repository/">download the latest version of MS-DIAL 4</a> (which is v4.9.2 at the time of this writing). If the provided link doesn’t work, you can visit <a href="http://prime.psc.riken.jp/compms/msdial/main.html">the MS-DIAL website</a> to find it.</p>
-<p>Once the download has completed, extract the ZIP file into a directory of your choice.</p>
+<p>You can <a href="http://prime.psc.riken.jp/compms/msdial/main.html">download the latest version of MS-DIAL 4</a> (which is v4.9.2 at the time of this writing). Once the download has completed, extract the ZIP file into a directory of your choice.</p>
 </section>
-<section id="download-and-install-docker" class="level1">
-<h1>4. Download and install Docker</h1>
-<p>Docker is required to install the MSConvert Docker image, which allows MS-AutoQC to run it from the command-line.</p>
-<p>Please <a href="https://docs.docker.com/desktop/install/windows-install/">download and install Docker for Windows</a>.</p>
+<section id="install-.net-framework" class="level1">
+<h1>4. Install .NET Framework</h1>
+<p>Versions 4.7.2 (or newer) of the .NET Framework is required to install MSConvert. You <a href="https://dotnet.microsoft.com/en-us/download/dotnet-framework/thank-you/net472-web-installer">download and install the .NET Framework</a> from the official Microsoft website.</p>
 </section>
 <section id="install-msconvert" class="level1">
 <h1>5. Install MSConvert</h1>
-<p>Once Docker is installed, open a new instance of Command Prompt and enter the following to install the MSConvert Docker image:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>docker pull chambm<span class="op">/</span>pwiz<span class="op">-</span>skyline<span class="op">-</span>i<span class="op">-</span>agree<span class="op">-</span>to<span class="op">-</span>the<span class="op">-</span>vendor<span class="op">-</span>licenses</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>You can <a href="https://proteowizard.sourceforge.io/download.html">download and install MSConvert</a> from the ProteoWizard website. For Platform, select <em>Windows 32-bit installer (able to convert vendor files)</em>.</p>
 </section>
 <section id="celebrate" class="level1">
 <h1>6. Celebrate!</h1>
-<p>If you’ve reached this point, you’re one giant step closer to using MS-AutoQC for your LC-MS instrument runs!</p>
-<p>When you’re ready, please visit the <a href="./get-started.html">Get Started</a> section to learn how to configure and use your MS-AutoQC workspace.</p>
+<p>If you’ve reached this point, you’re one giant step closer to using MS-AutoQC for your LC-MS instrument runs! When you’re ready, please visit the <a href="./get-started.html">Get Started</a> section to learn how to configure and use your MS-AutoQC workspace.</p>
 
 
 </section>
