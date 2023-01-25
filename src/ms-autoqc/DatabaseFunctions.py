@@ -72,7 +72,7 @@ def connect_to_database(name):
     return db_metadata, connection
 
 
-def create_databases(instrument_id, new_instrument_only=False):
+def create_databases(instrument_id, new_instrument=False):
 
     """
     Initializes SQLite databases for 1) instrument data and 2) workspace settings
@@ -134,9 +134,10 @@ def create_databases(instrument_id, new_instrument_only=False):
         sa.Column("qc_result", TEXT)
     )
 
+    qc_db_metadata.create_all(qc_db_engine)
+
     # If only creating instrument database, save and return here
-    if new_instrument_only:
-        qc_db_metadata.create_all(qc_db_engine)
+    if new_instrument:
         set_device_identity(is_instrument_computer=True, instrument_id=instrument_id)
         return None
 
@@ -285,7 +286,7 @@ def create_databases(instrument_id, new_instrument_only=False):
     create_workspace_metadata()
 
     # Save device identity based on setup values
-    set_device_identity(is_instrument_computer, instrument_id)
+    set_device_identity(is_instrument_computer=True, instrument_id=instrument_id)
     return None
 
 

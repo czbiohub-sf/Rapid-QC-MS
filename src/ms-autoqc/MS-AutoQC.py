@@ -1799,7 +1799,10 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
 
         # Initialize a new database if one does not exist
         if not db.is_valid(instrument_id=instrument_id):
-            db.create_databases(instrument_id=instrument_id, new_instrument_only=True)
+            if methods_zip_file_id is not None:
+                db.create_databases(instrument_id=instrument_id, new_instrument=True)
+            else:
+                db.create_databases(instrument_id=instrument_id)
 
         # Handle Google Drive sync
         if google_drive_authenticated:
@@ -3655,7 +3658,7 @@ def capture_uploaded_istd_msp(button_click, contents, filename, chromatography, 
     if contents is not None and chromatography is not None and polarity is not None:
 
         # Decode file contents
-        content_type, content_string = contents.records(",")
+        content_type, content_string = contents.split(",")
         decoded = base64.b64decode(content_string)
         file = io.StringIO(decoded.decode("utf-8"))
 
