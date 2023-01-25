@@ -17,11 +17,6 @@ data_directory = os.path.join(root_directory, "data")
 methods_directory = os.path.join(data_directory, "methods")
 auth_directory = os.path.join(root_directory, "auth")
 
-# Location of main SQLite database
-main_database = "sqlite:///data/QC Database.db"
-main_db_file = os.path.join(data_directory, "QC Database.db")
-main_db_zip_file = os.path.join(data_directory, "QC Database.zip")
-
 # Location of settings SQLite database
 settings_database = "sqlite:///data/methods/Settings.db"
 settings_db_file = os.path.join(methods_directory, "Settings.db")
@@ -32,21 +27,43 @@ drive_settings_file = os.path.join(auth_directory, "settings.yaml")
 auth_container = [GoogleAuth(settings_file=drive_settings_file)]
 
 """
-The functions defined below operate on two databases:
+The functions defined below operate on two database types:
 
-- One storing instrument metadata, instrument run info, and sample / biological standard QC results
-- The other storing workspace settings for workspace access, chromatography methods, biological standards, 
-  QC configurations, and MS-DIAL configurations
+- One storing instrument run metadata, sample QC results, and biological standard QC results
+- The other storing instrument metadata, workspace settings for workspace access, chromatography methods, 
+biological standards, QC configurations, and MS-DIAL configurations
   
 In addition, this file also contains methods for syncing data and settings with Google Drive.
-To get an overview of all functions, please visit the documentation on http://ms-autoqc.github.io :)
+To get an overview of all functions, please visit the documentation on https://czbiohub.github.io/MS-AutoQC.
 """
 
-def connect_to_database(database_file):
+def get_database_file(instrument_id, sqlite_conn=False, zip=False):
+
+    """
+    Returns database file for a given instrument ID
+    """
+
+    if zip:
+        filename = instrument_id.replace(" ", "_") + ".zip"
+    else:
+        filename = instrument_id.replace(" ", "_") + ".db"
+
+    if sqlite_conn:
+        return "sqlite:///data/" + filename
+    else:
+        return os.path.join(data_directory, filename)
+
+
+def connect_to_database(name):
 
     """
     Connects to SQLite database of choice
     """
+
+    if name == "Settings":
+        database_file = settings_database
+    else:
+        database_file = get_database_file(instrument_id=name, sqlite_conn=True)
 
     engine = sa.create_engine(database_file)
     db_metadata = sa.MetaData(bind=engine)
@@ -55,25 +72,21 @@ def connect_to_database(database_file):
     return db_metadata, connection
 
 
-def create_databases(is_instrument_computer, instrument_identity=None):
+def create_databases(instrument_id, new_instrument_only=False):
 
     """
-    Initializes SQLite databases for 1) sample data and 2) workspace settings
+    Initializes SQLite databases for 1) instrument data and 2) workspace settings
     """
 
-    # Initialize SQLAlchemy
-    qc_db_engine = sa.create_engine(main_database)
-    settings_db_engine = sa.create_engine(settings_database)
-
+    # Create tables for instrument database
+    instrument_database = get_database_file(instrument_id=instrument_id, sqlite_conn=True)
+    qc_db_engine = sa.create_engine(instrument_database)
     qc_db_metadata = sa.MetaData()
-    settings_db_metadata = sa.MetaData()
 
-    # Create tables for QC Database.db
     bio_qc_results = sa.Table(
         "bio_qc_results", qc_db_metadata,
         sa.Column("id", INTEGER, primary_key=True),
         sa.Column("sample_id", TEXT),
-        sa.Column("instrument_id", TEXT),
         sa.Column("run_id", TEXT),
         sa.Column("precursor_mz", TEXT),
         sa.Column("retention_time", TEXT),
@@ -85,18 +98,10 @@ def create_databases(is_instrument_computer, instrument_identity=None):
         sa.Column("position", TEXT)
     )
 
-    instruments = sa.Table(
-        "instruments", qc_db_metadata,
-        sa.Column("id", INTEGER, primary_key=True),
-        sa.Column("name", TEXT),
-        sa.Column("vendor", TEXT)
-    )
-
     runs = sa.Table(
         "runs", qc_db_metadata,
         sa.Column("id", INTEGER, primary_key=True),
         sa.Column("run_id", TEXT),
-        sa.Column("instrument_id", TEXT),
         sa.Column("chromatography", TEXT),
         sa.Column("acquisition_path", TEXT),
         sa.Column("sequence", TEXT),
@@ -119,7 +124,6 @@ def create_databases(is_instrument_computer, instrument_identity=None):
         "sample_qc_results", qc_db_metadata,
         sa.Column("id", INTEGER, primary_key=True),
         sa.Column("sample_id", TEXT),
-        sa.Column("instrument_id", TEXT),
         sa.Column("run_id", TEXT),
         sa.Column("position", TEXT),
         sa.Column("md5", TEXT),
@@ -130,7 +134,25 @@ def create_databases(is_instrument_computer, instrument_identity=None):
         sa.Column("qc_result", TEXT)
     )
 
+    # If only creating instrument database, save and return here
+    if new_instrument_only:
+        qc_db_metadata.create_all(qc_db_engine)
+        set_device_identity(is_instrument_computer=True, instrument_id=instrument_id)
+        return None
+
     # Create tables for Settings.db
+    settings_db_engine = sa.create_engine(settings_database)
+    settings_db_metadata = sa.MetaData()
+
+    instruments = sa.Table(
+        "instruments", settings_db_metadata,
+        sa.Column("id", INTEGER, primary_key=True),
+        sa.Column("name", TEXT),
+        sa.Column("vendor", TEXT),
+        sa.Column("drive_id", TEXT),
+        sa.Column("last_modified", TEXT)
+    )
+
     biological_standards = sa.Table(
         "biological_standards", settings_db_metadata,
         sa.Column("id", INTEGER, primary_key=True),
@@ -245,9 +267,7 @@ def create_databases(is_instrument_computer, instrument_identity=None):
         sa.Column("slack_channel", TEXT),
         sa.Column("slack_enabled", INTEGER),
         sa.Column("gdrive_folder_id", TEXT),
-        sa.Column("main_db_file_id", TEXT),
         sa.Column("methods_zip_file_id", TEXT),
-        sa.Column("main_last_modified", TEXT),
         sa.Column("methods_last_modified", TEXT),
         sa.Column("msdial_directory", TEXT),
         sa.Column("is_instrument_computer", INTEGER),
@@ -255,7 +275,6 @@ def create_databases(is_instrument_computer, instrument_identity=None):
     )
 
     # Insert tables into database
-    qc_db_metadata.create_all(qc_db_engine)
     settings_db_metadata.create_all(settings_db_engine)
 
     # Insert default configurations for MS-DIAL and MS-AutoQC
@@ -266,7 +285,7 @@ def create_databases(is_instrument_computer, instrument_identity=None):
     create_workspace_metadata()
 
     # Save device identity based on setup values
-    set_device_identity(is_instrument_computer, instrument_identity)
+    set_device_identity(is_instrument_computer, instrument_id)
     return None
 
 
@@ -279,24 +298,6 @@ def execute_vacuum(database):
     db_metadata, connection = connect_to_database(database)
     connection.execute("VACUUM")
     connection.close()
-
-
-def vacuum_main_database():
-
-    """
-    Executes VACUUM command on main database
-    """
-
-    execute_vacuum(main_database)
-
-
-def vacuum_settings_database():
-
-    """
-    Executes VACUUM command on settings database
-    """
-
-    execute_vacuum(settings_database)
 
 
 def get_drive_instance():
@@ -365,24 +366,47 @@ def initialize_google_drive():
     return os.path.exists(credentials_file)
 
 
-def is_valid():
+def is_valid(instrument_id=None):
 
     """
     Checks that all required tables are present
     """
 
-    required_tables_in_main_db = ["bio_qc_results", "instruments", "runs", "sample_qc_results"]
-    required_tables_in_settings_db = ["biological_standards", "chromatography_methods", "email_notifications",
+    # Validate settings database
+    settings_db_required_tables = ["biological_standards", "chromatography_methods", "email_notifications", "instruments",
         "gdrive_users", "internal_standards", "msdial_parameters", "qc_parameters", "targeted_features", "workspace"]
 
-    tables_in_main_db = sa.create_engine(main_database).table_names()
-    tables_in_settings_db = sa.create_engine(settings_database).table_names()
+    try:
+        settings_db_tables = sa.create_engine(settings_database).table_names()
+        if len(settings_db_tables) < len(settings_db_required_tables):
+            return False
+    except:
+        return False
 
-    if len(tables_in_main_db) >= len(required_tables_in_main_db):
-        if len(tables_in_settings_db) >= len(required_tables_in_settings_db):
-            return True
+    # Validate instrument databases
+    instrument_db_required_tables = ["bio_qc_results", "runs", "sample_qc_results"]
 
-    return False
+    # If given an instrument ID, only validate that instrument's database
+    try:
+        if instrument_id is not None:
+            database = get_database_file(instrument_id, sqlite_conn=True)
+            instrument_db_tables = sa.create_engine(database).table_names()
+            if len(instrument_db_tables) < len(instrument_db_required_tables):
+                return False
+
+        # Otherwise, validate all instrument databases
+        else:
+            database_files = [file.replace(".db", "") for file in os.listdir(data_directory) if ".db" in file]
+            databases = [get_database_file(f, sqlite_conn=True) for f in database_files]
+
+            for database in databases:
+                instrument_db_tables = sa.create_engine(database).table_names()
+                if len(instrument_db_tables) < len(instrument_db_required_tables):
+                    return False
+    except:
+        return False
+
+    return True
 
 
 def sync_is_enabled():
@@ -394,14 +418,13 @@ def sync_is_enabled():
     if not is_valid():
         return False
 
-    df_workspace = get_table(settings_database, "workspace")
+    df_workspace = get_table("Settings", "workspace")
     gdrive_folder_id = df_workspace["gdrive_folder_id"].values[0]
-    main_db_file_id = df_workspace["main_db_file_id"].values[0]
     methods_zip_file_id = df_workspace["methods_zip_file_id"].values[0]
 
-    if gdrive_folder_id is not None and main_db_file_id is not None and methods_zip_file_id is not None:
-        if gdrive_folder_id != "None" and main_db_file_id != "None" and methods_zip_file_id != "None":
-            if gdrive_folder_id != "" and main_db_file_id != "" and methods_zip_file_id != "":
+    if gdrive_folder_id is not None and methods_zip_file_id is not None:
+        if gdrive_folder_id != "None" and methods_zip_file_id != "None":
+            if gdrive_folder_id != "" and methods_zip_file_id != "":
                 return True
 
     return False
@@ -416,7 +439,7 @@ def email_notifications_are_enabled():
     if not is_valid():
         return False
 
-    if len(get_table(settings_database, "email_notifications")) > 0:
+    if len(get_table("Settings", "email_notifications")) > 0:
         return True
 
     return False
@@ -432,7 +455,7 @@ def slack_notifications_are_enabled():
         return False
 
     try:
-        return bool(get_table(settings_database, "workspace")["slack_enabled"].astype(int).tolist()[0])
+        return bool(get_table("Settings", "workspace")["slack_enabled"].astype(int).tolist()[0])
     except:
         return False
 
@@ -443,7 +466,7 @@ def is_instrument_computer():
     Checks whether user's device is the instrument computer
     """
 
-    return bool(get_table(settings_database, "workspace")["is_instrument_computer"].astype(int).tolist()[0])
+    return bool(get_table("Settings", "workspace")["is_instrument_computer"].astype(int).tolist()[0])
 
 
 def get_md5_for_settings_db():
@@ -473,24 +496,43 @@ def settings_were_modified(md5_checksum):
         return False
 
 
-def zip_database():
+def zip_database(instrument_id=None, filename=None):
 
     """
-    Compresses main database file into a ZIP archive
+    Compresses instrument database file into a ZIP archive
     """
 
-    filename = main_db_zip_file.replace(".zip", "")
-    shutil.make_archive(filename, "zip", data_directory, "QC Database.db")
+    if instrument_id is None and filename is None:
+        return None
+
+    if filename is not None:
+        db_zip_file = os.path.join(data_directory, filename)
+        filename = filename.replace(".zip", ".db")
+
+    elif instrument_id is not None:
+        db_zip_file = get_database_file(instrument_id, zip=True)
+        filename = instrument_id.replace(" ", "_") + ".db"
+
+    file_without_extension = db_zip_file.replace(".zip", "")
+    shutil.make_archive(file_without_extension, "zip", data_directory, filename)
 
 
-def unzip_database():
+def unzip_database(instrument_id=None, filename=None):
 
     """
-    Unzips main database file
+    Unzips instrument database file
     """
 
-    shutil.unpack_archive(main_db_zip_file, data_directory, "zip")
-    os.remove(main_db_zip_file)
+    if instrument_id is None and filename is None:
+        return None
+
+    if instrument_id is not None:
+        db_zip_file = get_database_file(instrument_id, zip=True)
+    elif filename is not None:
+        db_zip_file = os.path.join(data_directory, filename)
+
+    shutil.unpack_archive(db_zip_file, data_directory, "zip")
+    os.remove(db_zip_file)
 
 
 def zip_methods():
@@ -535,11 +577,16 @@ def unzip_csv_files(input_zip, output_directory):
     os.remove(input_zip)
 
 
-def get_table(database, table_name):
+def get_table(database_name, table_name):
 
     """
     Returns table from database as a DataFrame
     """
+
+    if database_name == "Settings":
+        database = settings_database
+    else:
+        database = get_database_file(database_name, sqlite_conn=True)
 
     engine = sa.create_engine(database)
     return pd.read_sql("SELECT * FROM " + table_name, engine)
@@ -577,24 +624,34 @@ def generate_client_settings_yaml(client_id, client_secret):
                 file.write("\n")
 
 
-def insert_google_drive_ids(gdrive_folder_id, main_db_file_id, methods_zip_file_id):
+def insert_google_drive_ids(instrument_id, gdrive_folder_id, instrument_db_file_id, methods_zip_file_id):
 
     """
-    Inserts Google Drive ID's for MS-AutoQC folder and QC Database.db into "workspace" table
+    Inserts Google Drive ID's into corresponding tables for the following:
+    1. MS-AutoQC folder (gdrive_folder_id)
+    2. Instrument database zip file (instrument_db_file_id)
+    3. Methods directory zip file (methods_zip_file_id)
     """
 
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
+    instruments_table = sa.Table("instruments", db_metadata, autoload=True)
     workspace_table = sa.Table("workspace", db_metadata, autoload=True)
 
-    insert_google_drive_ids = (
+    # Instruments database
+    connection.execute((
+        sa.update(instruments_table)
+            .where((instruments_table.c.name == instrument_id))
+            .values(drive_id=instrument_db_file_id)
+    ))
+
+    # MS-AutoQC folder and Methods folder
+    connection.execute((
         sa.update(workspace_table)
             .where((workspace_table.c.id == 1))
             .values(gdrive_folder_id=gdrive_folder_id,
-                    main_db_file_id=main_db_file_id,
                     methods_zip_file_id=methods_zip_file_id)
-    )
+    ))
 
-    connection.execute(insert_google_drive_ids)
     connection.close()
 
 
@@ -605,7 +662,7 @@ def insert_new_instrument(name, vendor):
     """
 
     # Connect to database
-    db_metadata, connection = connect_to_database(main_database)
+    db_metadata, connection = connect_to_database("Settings")
 
     # Get "instruments" table
     instruments_table = sa.Table("instruments", db_metadata, autoload=True)
@@ -628,13 +685,23 @@ def get_instruments_list():
     """
 
     # Connect to SQLite database
-    engine = sa.create_engine(main_database)
+    engine = sa.create_engine(settings_database)
 
     # Get instruments table as DataFrame
     df_instruments = pd.read_sql("SELECT * FROM instruments", engine)
 
     # Return list of instruments
     return df_instruments["name"].astype(str).tolist()
+
+
+def get_instrument(instrument_id):
+
+    """
+    Returns record from "instruments" table as a DataFrame for a given instrument
+    """
+
+    engine = sa.create_engine(settings_database)
+    return pd.read_sql("SELECT * FROM instruments WHERE name = '" + instrument_id + "'", engine)
 
 
 def get_filenames_from_sequence(sequence):
@@ -675,7 +742,7 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, path, s
     num_samples = len(samples)
 
     # Connect to database
-    db_metadata, connection = connect_to_database(main_database)
+    db_metadata, connection = connect_to_database(instrument_id)
 
     # Get relevant tables
     runs_table = sa.Table("runs", db_metadata, autoload=True)
@@ -749,8 +816,9 @@ def get_instrument_run(instrument_id, run_id):
     Returns DataFrame of selected instrument run from "runs" table
     """
 
-    engine = sa.create_engine(main_database)
-    query = "SELECT * FROM runs WHERE instrument_id = '" + instrument_id + "' AND run_id = '" + run_id + "'"
+    database = get_database_file(instrument_id=instrument_id, sqlite_conn=True)
+    engine = sa.create_engine(database)
+    query = "SELECT * FROM runs WHERE run_id = '" + run_id + "'"
     df_instrument_run = pd.read_sql(query, engine)
     return df_instrument_run
 
@@ -772,9 +840,9 @@ def get_instrument_runs(instrument_id):
     Returns DataFrame of all runs on a given instrument from "runs" table
     """
 
-    engine = sa.create_engine(main_database)
-    query = "SELECT * FROM runs WHERE instrument_id = '" + instrument_id + "'"
-    return pd.read_sql(query, engine)
+    database = get_database_file(instrument_id, sqlite_conn=True)
+    engine = sa.create_engine(database)
+    return pd.read_sql("SELECT * FROM runs", engine)
 
 
 def delete_instrument_run(instrument_id, run_id):
@@ -784,7 +852,7 @@ def delete_instrument_run(instrument_id, run_id):
     """
 
     # Connect to database
-    db_metadata, connection = connect_to_database(main_database)
+    db_metadata, connection = connect_to_database(instrument_id)
 
     # Get relevant tables
     runs_table = sa.Table("runs", db_metadata, autoload=True)
@@ -794,8 +862,7 @@ def delete_instrument_run(instrument_id, run_id):
     # Delete from each table
     for table in [runs_table, sample_qc_results_table, bio_qc_results_table]:
         connection.execute((
-            sa.delete(table).where(
-                (table.c.instrument_id == instrument_id) & (runs_table.c.run_id == run_id))
+            sa.delete(table).where(runs_table.c.run_id == run_id)
         ))
 
     # Close the connection
@@ -811,14 +878,15 @@ def get_acquisition_path(instrument_id, run_id):
     return get_instrument_run(instrument_id, run_id)["acquisition_path"].astype(str).tolist()[0]
 
 
-def get_md5(sample_id):
+def get_md5(instrument_id, sample_id):
 
     """
     Returns MD5 checksum for a data file in "sample_qc_results" table
     """
 
     # Connect to database
-    engine = sa.create_engine(main_database)
+    database = get_database_file(name=instrument_id, sqlite_conn=True)
+    engine = sa.create_engine(database)
 
     # Check if sample is a biological standard
     table = "sample_qc_results"
@@ -835,14 +903,14 @@ def get_md5(sample_id):
     return df_sample_qc_results["md5"].astype(str).values[0]
 
 
-def update_md5_checksum(sample_id, md5_checksum):
+def update_md5_checksum(instrument_id, sample_id, md5_checksum):
 
     """
     Updates MD5 checksum for a data file in "sample_qc_results" table
     """
 
     # Connect to database
-    db_metadata, connection = connect_to_database(main_database)
+    db_metadata, connection = connect_to_database(instrument_id)
 
     # Check if sample is a biological standard and get relevant table
     qc_results_table = sa.Table("sample_qc_results", db_metadata, autoload=True)
@@ -864,14 +932,14 @@ def update_md5_checksum(sample_id, md5_checksum):
     connection.close()
 
 
-def write_qc_results(sample_id, run_id, json_mz, json_rt, json_intensity, qc_dataframe, qc_result, is_bio_standard):
+def write_qc_results(sample_id, instrument_id, run_id, json_mz, json_rt, json_intensity, qc_dataframe, qc_result, is_bio_standard):
 
     """
-    Updates m/z, RT, and intensity info (as JSON strings) in appropriate table upon MS-DIAL processing completion
+    Updates m/z, RT, and intensity info (as dictionary records) in appropriate table upon MS-DIAL processing completion
     """
 
     # Connect to database
-    db_metadata, connection = connect_to_database(main_database)
+    db_metadata, connection = connect_to_database(instrument_id)
 
     # Get "sample_qc_results" or "bio_qc_results" table
     if not is_bio_standard:
@@ -924,7 +992,7 @@ def insert_chromatography_method(method_id):
     """
 
     # Connect to database
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
 
     # Get "chromatography_methods" table and "biological_standards" table
     chromatography_table = sa.Table("chromatography_methods", db_metadata, autoload=True)
@@ -974,10 +1042,10 @@ def remove_chromatography_method(method_id):
     """
 
     # Delete corresponding MSPs from "methods" directory
-    df = get_table(settings_database, "chromatography_methods")
+    df = get_table("Settings", "chromatography_methods")
     df = df.loc[df["method_id"] == method_id]
 
-    df2 = get_table(settings_database, "biological_standards")
+    df2 = get_table("Settings", "biological_standards")
     df2 = df2.loc[df2["chromatography"] == method_id]
 
     files_to_delete = df["pos_istd_msp_file"].astype(str).tolist() + df["neg_istd_msp_file"].astype(str).tolist() + \
@@ -988,7 +1056,7 @@ def remove_chromatography_method(method_id):
             os.remove(os.path.join(methods_directory, file))
 
     # Connect to database and get relevant tables
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
     chromatography_table = sa.Table("chromatography_methods", db_metadata, autoload=True)
     biological_standards_table = sa.Table("biological_standards", db_metadata, autoload=True)
     internal_standards_table = sa.Table("internal_standards", db_metadata, autoload=True)
@@ -1026,7 +1094,7 @@ def update_msdial_config_for_internal_standards(chromatography, config_id):
     """
 
     # Connect to database and get relevant tables
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
     methods_table = sa.Table("chromatography_methods", db_metadata, autoload=True)
 
     # Update MS-DIAL configuration for chromatography method
@@ -1048,7 +1116,7 @@ def add_msp_to_database(msp_file, chromatography, polarity, bio_standard=None):
     """
 
     # Connect to database
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
 
     # Write MSP file to folder, store file path in database (further down in function)
     if not os.path.exists(methods_directory):
@@ -1280,7 +1348,7 @@ def add_csv_to_database(csv_file, chromatography, polarity):
     df_internal_standards.to_csv(txt_file_path, sep="\t", index=False)
 
     # Connect to database
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
 
     # Get internal_standards table
     internal_standards_table = sa.Table("internal_standards", db_metadata, autoload=True)
@@ -1449,7 +1517,7 @@ def generate_msdial_parameters_file(chromatography, polarity, msp_file_path, bio
                 file.write("\n")
 
     # Write path of parameters text file to chromatography method in database
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
     chromatography_table = sa.Table("chromatography_methods", db_metadata, autoload=True)
     biological_standards_table = sa.Table("biological_standards", db_metadata, autoload=True)
 
@@ -1495,7 +1563,7 @@ def add_msdial_configuration(msdial_config_name):
     """
 
     # Connect to database
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
 
     # Get MS-DIAL parameters table
     msdial_parameters_table = sa.Table("msdial_parameters", db_metadata, autoload=True)
@@ -1537,7 +1605,7 @@ def remove_msdial_configuration(msdial_config_name):
     """
 
     # Connect to database
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
 
     # Get MS-DIAL parameters table
     msdial_parameters_table = sa.Table("msdial_parameters", db_metadata, autoload=True)
@@ -1583,7 +1651,7 @@ def update_msdial_configuration(config_name, rt_begin, rt_end, mz_begin, mz_end,
     """
 
     # Connect to database
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
 
     # Get MS-DIAL parameters table
     msdial_parameters_table = sa.Table("msdial_parameters", db_metadata, autoload=True)
@@ -1687,7 +1755,7 @@ def get_msdial_directory():
     Returns location of MS-DIAL folder
     """
 
-    return get_table(settings_database, "workspace")["msdial_directory"].astype(str).values[0]
+    return get_table("Settings", "workspace")["msdial_directory"].astype(str).values[0]
 
 
 def get_msconvert_directory():
@@ -1707,7 +1775,7 @@ def update_msdial_directory(msdial_directory):
     Updates location of MS-DIAL folder
     """
 
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
     workspace_table = sa.Table("workspace", db_metadata, autoload=True)
 
     update_msdial_directory = (
@@ -1802,7 +1870,7 @@ def add_biological_standard(name, identifier):
     chromatography_methods = get_chromatography_methods()["method_id"].tolist()
 
     # Connect to database and get "biological_standards" table
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
     biological_standards_table = sa.Table("biological_standards", db_metadata, autoload=True)
 
     # Insert a biological standard row for each chromatography
@@ -1828,7 +1896,7 @@ def remove_biological_standard(name):
     """
 
     # Delete corresponding MSPs from "methods" directory
-    df = get_table(settings_database, "biological_standards")
+    df = get_table("Settings", "biological_standards")
     df = df.loc[df["name"] == name]
     files_to_delete = df["pos_bio_msp_file"].astype(str).tolist() + df["neg_bio_msp_file"].astype(str).tolist()
 
@@ -1837,7 +1905,7 @@ def remove_biological_standard(name):
             os.remove(os.path.join(methods_directory, file))
 
     # Connect to database and get relevant tables
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
     biological_standards_table = sa.Table("biological_standards", db_metadata, autoload=True)
     targeted_features_table = sa.Table("targeted_features", db_metadata, autoload=True)
 
@@ -1866,7 +1934,7 @@ def update_msdial_config_for_bio_standard(biological_standard, chromatography, c
     """
 
     # Connect to database and get relevant tables
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
     biological_standards_table = sa.Table("biological_standards", db_metadata, autoload=True)
 
     # Update MS-DIAL configuration for biological standard
@@ -1932,7 +2000,7 @@ def add_qc_configuration(qc_config_name):
     """
 
     # Connect to database
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
 
     # Get QC parameters table
     qc_parameters_table = sa.Table("qc_parameters", db_metadata, autoload=True)
@@ -1962,7 +2030,7 @@ def remove_qc_configuration(qc_config_name):
     """
 
     # Connect to database
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
 
     # Get QC parameters table
     qc_parameters_table = sa.Table("qc_parameters", db_metadata, autoload=True)
@@ -1984,15 +2052,17 @@ def get_qc_configuration_parameters(config_name=None, instrument_id=None, run_id
     Returns DataFrame of parameters for a selected QC configuration
     """
 
-    df_configurations = get_table(settings_database, "qc_parameters")
+    df_configurations = get_table("Settings", "qc_parameters")
 
     # Get selected configuration
     if config_name is not None:
         selected_config = df_configurations.loc[df_configurations["config_name"] == config_name]
+
     elif instrument_id is not None and run_id is not None:
-        df_runs = get_table(main_database, "runs")
-        config_name = df_runs.loc[(df_runs["run_id"] == run_id) & (df_runs["instrument_id"] == instrument_id)]["qc_config_id"].values[0]
-        selected_config = df_configurations.loc[df_configurations["config_name"] == config_name]
+        df_runs = get_table(instrument_id, "runs")
+        config_name = df_runs.loc[df_runs["run_id"] == run_id]["qc_config_id"].values[0]
+        selected_config = df_configurations.loc[
+            df_configurations["config_name"] == config_name]
 
     selected_config.drop(inplace=True, columns=["id", "config_name"])
 
@@ -2013,7 +2083,7 @@ def update_qc_configuration(config_name, intensity_dropouts_cutoff, library_rt_s
     """
 
     # Connect to database
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
 
     # Get QC parameters table
     qc_parameters_table = sa.Table("qc_parameters", db_metadata, autoload=True)
@@ -2044,18 +2114,18 @@ def get_samples_in_run(instrument_id, run_id, sample_type="Both"):
     """
 
     if sample_type == "Sample":
-        df = get_table(main_database, "sample_qc_results")
+        df = get_table(instrument_id, "sample_qc_results")
 
     elif sample_type == "Biological Standard":
-        df = get_table(main_database, "bio_qc_results")
+        df = get_table(instrument_id, "bio_qc_results")
 
     elif sample_type == "Both":
-        df_samples = get_table(main_database, "sample_qc_results")
-        df_bio_standards = get_table(main_database, "bio_qc_results")
+        df_samples = get_table(instrument_id, "sample_qc_results")
+        df_bio_standards = get_table(instrument_id, "bio_qc_results")
         df_bio_standards.drop(columns=["biological_standard"], inplace=True)
         df = df_bio_standards.append(df_samples, ignore_index=True)
 
-    return df.loc[(df["run_id"] == run_id) & (df["instrument_id"] == instrument_id)]
+    return df.loc[df["run_id"] == run_id]
 
 
 def get_samples_from_csv(instrument_id, run_id, sample_type="Both"):
@@ -2161,8 +2231,6 @@ def get_current_sample(instrument_id, run_id):
         return samples[1]
 
 
-
-
 def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, status, as_json=True):
 
     """
@@ -2193,7 +2261,7 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, s
 
     # Return DataFrame as JSON string
     if as_json:
-        return df_results.to_json(orient="split")
+        return df_results.to_json(orient="records")
     else:
         return df_results
 
@@ -2206,7 +2274,7 @@ def parse_biological_standard_data(instrument_id, run_id, result_type, polarity,
 
     # Get relevant QC results table from database
     if status == "Complete" or status == "Processing":
-        df_samples = get_table(main_database, "bio_qc_results")
+        df_samples = get_table(instrument_id, "bio_qc_results")
     elif status == "Active":
         id = instrument_id.replace(" ", "_") + "_" + run_id
         bio_standards_csv = os.path.join(data_directory, id, "csv", "bio_standards.csv")
@@ -2219,9 +2287,8 @@ def parse_biological_standard_data(instrument_id, run_id, result_type, polarity,
     df_samples = df_samples.loc[df_samples["sample_id"].str.contains(polarity)]
 
     # Filter by instrument
-    df_runs = get_table(main_database, "runs")
-    chromatography = df_runs.loc[
-        (df_runs["run_id"] == run_id) & (df_runs["instrument_id"] == instrument_id)]["chromatography"].values[0]
+    df_runs = get_table(instrument_id, "runs")
+    chromatography = df_runs.loc[df_runs["run_id"] == run_id]["chromatography"].values[0]
 
     # Filter by chromatography
     run_ids = df_runs.loc[df_runs["chromatography"] == chromatography]["run_id"].astype(str).tolist()
@@ -2236,7 +2303,7 @@ def parse_biological_standard_data(instrument_id, run_id, result_type, polarity,
 
     # Return DataFrame as JSON string
     if as_json:
-        return df_results.to_json(orient="split")
+        return df_results.to_json(orient="records")
     else:
         return df_results
 
@@ -2278,7 +2345,7 @@ def parse_internal_standard_qc_data(instrument_id, run_id, polarity, result_type
 
     # Return DataFrame as JSON string
     if as_json:
-        return df_results.to_json(orient="split")
+        return df_results.to_json(orient="records")
     else:
         return df_results
 
@@ -2289,7 +2356,7 @@ def get_workspace_users_list():
     Returns a list of users that have access to the MS-AutoQC workspace
     """
 
-    return get_table(settings_database, "gdrive_users")["email_address"].astype(str).tolist()
+    return get_table("Settings", "gdrive_users")["email_address"].astype(str).tolist()
 
 
 def add_user_to_workspace(email_address):
@@ -2305,7 +2372,7 @@ def add_user_to_workspace(email_address):
     drive = get_drive_instance()
 
     # Get ID of MS-AutoQC folder in Google Drive
-    gdrive_folder_id = get_table(settings_database, "workspace")["gdrive_folder_id"].values[0]
+    gdrive_folder_id = get_drive_folder_id()
 
     if gdrive_folder_id is not None:
         # Add user access by updating permissions
@@ -2316,7 +2383,7 @@ def add_user_to_workspace(email_address):
             "value": email_address})
 
         # Insert user email address in "gdrive_users" table
-        db_metadata, connection = connect_to_database(settings_database)
+        db_metadata, connection = connect_to_database("Settings")
         gdrive_users_table = sa.Table("gdrive_users", db_metadata, autoload=True)
 
         insert_user_email = gdrive_users_table.insert().values(
@@ -2344,12 +2411,12 @@ def delete_user_from_workspace(email_address):
     drive = get_drive_instance()
 
     # Get ID of MS-AutoQC folder in Google Drive
-    gdrive_folder_id = get_table(settings_database, "workspace")["gdrive_folder_id"].values[0]
+    gdrive_folder_id = get_drive_folder_id()
 
     if gdrive_folder_id is not None:
         # Get permission ID of user from database
         folder = drive.CreateFile({"id": gdrive_folder_id})
-        df_gdrive_users = get_table(settings_database, "gdrive_users")
+        df_gdrive_users = get_table("Settings", "gdrive_users")
         df_gdrive_users = df_gdrive_users.loc[df_gdrive_users["email_address"] == email_address]
         permission_id = df_gdrive_users["permission_id"].astype(str).values[0]
 
@@ -2357,7 +2424,7 @@ def delete_user_from_workspace(email_address):
         folder.DeletePermission(permission_id)
 
         # Delete user email address in "gdrive_users" table
-        db_metadata, connection = connect_to_database(settings_database)
+        db_metadata, connection = connect_to_database("Settings")
         gdrive_users_table = sa.Table("gdrive_users", db_metadata, autoload=True)
 
         delete_user_email = (
@@ -2372,21 +2439,27 @@ def delete_user_from_workspace(email_address):
         return "Error"
 
 
-def get_qc_results(sample_list, is_bio_standard=False):
+def get_qc_results(instrument_id, sample_list, is_bio_standard=False):
 
     """
     Returns DataFrame of QC results for a given sample list
     TODO: Fix for active instrument runs
     """
 
-    if is_bio_standard:
-        df = get_table(main_database, "bio_qc_results")
-    else:
-        df = get_table(main_database, "sample_qc_results")
+    if len(sample_list) == 0:
+        return pd.DataFrame()
 
-    df = df.loc[df["sample_id"].isin(sample_list)]
-    df = df[["sample_id", "qc_result"]]
-    return df
+    database = get_database_file(instrument_id=instrument_id, sqlite_conn=True)
+    engine = sa.create_engine(database)
+
+    sample_list = str(sample_list).replace("[", "(").replace("]", ")")
+
+    if is_bio_standard:
+        query = "SELECT sample_id, qc_result FROM bio_qc_results WHERE sample_id in " + sample_list
+    else:
+        query = "SELECT sample_id, qc_result FROM sample_qc_results WHERE sample_id in " + sample_list
+
+    return pd.read_sql(query, engine)
 
 
 def create_workspace_metadata():
@@ -2395,7 +2468,7 @@ def create_workspace_metadata():
     Creates row in "workspace" table to store metadata
     """
 
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
     workspace_table = sa.Table("workspace", db_metadata, autoload=True)
     connection.execute(workspace_table.insert().values({"id": 1}))
     connection.close()
@@ -2407,19 +2480,19 @@ def get_device_identity():
     Returns device identity
     """
 
-    return get_table(settings_database, "workspace")["instrument_identity"].astype(str).tolist()[0]
+    return get_table("Settings", "workspace")["instrument_identity"].astype(str).tolist()[0]
 
 
-def set_device_identity(is_instrument_computer, instrument_identity):
+def set_device_identity(is_instrument_computer, instrument_id):
 
     """
     Indicates whether the user's device is the instrument PC or not
     """
 
     if not is_instrument_computer:
-        instrument_identity = "Shared user"
+        instrument_id = "Shared user"
 
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
     workspace_table = sa.Table("workspace", db_metadata, autoload=True)
 
     update_identity = (
@@ -2427,7 +2500,7 @@ def set_device_identity(is_instrument_computer, instrument_identity):
             .where(workspace_table.c.id == 1)
             .values(
                 is_instrument_computer=is_instrument_computer,
-                instrument_identity=instrument_identity
+                instrument_identity=instrument_id
         )
     )
 
@@ -2442,7 +2515,7 @@ def run_is_on_instrument_pc(instrument_id, run_id):
     """
 
     instrument_id = get_instrument_run(instrument_id, run_id)["instrument_id"].astype(str).tolist()[0]
-    device_identity = get_table(settings_database, "workspace")["instrument_identity"].astype(str).tolist()[0]
+    device_identity = get_table("Settings", "workspace")["instrument_identity"].astype(str).tolist()[0]
 
     if instrument_id == device_identity:
         return True
@@ -2456,7 +2529,7 @@ def update_slack_bot_token(slack_bot_token):
     Updates Slack bot user OAuth 2.0 token in "workspace" table
     """
 
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
     workspace_table = sa.Table("workspace", db_metadata, autoload=True)
 
     update_slack_bot_token = (
@@ -2475,7 +2548,7 @@ def get_slack_bot_token():
     Returns Slack bot token stored in database
     """
 
-    return get_table(settings_database, "workspace")["slack_bot_token"].astype(str).values[0]
+    return get_table("Settings", "workspace")["slack_bot_token"].astype(str).values[0]
 
 
 def update_slack_channel(slack_channel, notifications_enabled):
@@ -2484,7 +2557,7 @@ def update_slack_channel(slack_channel, notifications_enabled):
     Updates Slack channel registered for notifications
     """
 
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
     workspace_table = sa.Table("workspace", db_metadata, autoload=True)
 
     update_slack_channel = (
@@ -2505,7 +2578,7 @@ def get_slack_channel():
     Returns Slack channel registered for notifications
     """
 
-    return get_table(settings_database, "workspace")["slack_channel"].astype(str).values[0]
+    return get_table("Settings", "workspace")["slack_channel"].astype(str).values[0]
 
 
 def get_slack_notifications_toggled():
@@ -2515,7 +2588,7 @@ def get_slack_notifications_toggled():
     """
 
     try:
-        return get_table(settings_database, "workspace")["slack_enabled"].astype(int).tolist()[0]
+        return get_table("Settings", "workspace")["slack_enabled"].astype(int).tolist()[0]
     except:
         return None
 
@@ -2526,7 +2599,7 @@ def get_email_notifications_list():
     Returns list of emails registered for MS-AutoQC notifications
     """
 
-    return get_table(settings_database, "email_notifications")["email_address"].astype(str).tolist()
+    return get_table("Settings", "email_notifications")["email_address"].astype(str).tolist()
 
 
 def register_email_for_notifications(email_address):
@@ -2535,7 +2608,7 @@ def register_email_for_notifications(email_address):
     Inserts email address into "email_notifications" table
     """
 
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
     email_notifications_table = sa.Table("email_notifications", db_metadata, autoload=True)
 
     insert_email_address = email_notifications_table.insert().values({
@@ -2552,7 +2625,7 @@ def delete_email_from_notifications(email_address):
     Deletes email address from "email_notifications" table
     """
 
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
     email_notifications_table = sa.Table("email_notifications", db_metadata, autoload=True)
 
     delete_email_address = (
@@ -2607,12 +2680,12 @@ def update_sample_counters_for_run(instrument_id, run_id, qc_result, latest_samp
     elif qc_result == "Fail":
         fails = fails + 1
 
-    db_metadata, connection = connect_to_database(main_database)
+    db_metadata, connection = connect_to_database(instrument_id)
     instrument_runs_table = sa.Table("runs", db_metadata, autoload=True)
 
     update_status = (
         sa.update(instrument_runs_table)
-            .where((instrument_runs_table.c.run_id == run_id) & (instrument_runs_table.c.instrument_id == instrument_id))
+            .where(instrument_runs_table.c.run_id == run_id)
             .values(
                 completed=completed,
                 passes=passes,
@@ -2631,12 +2704,12 @@ def mark_run_as_completed(instrument_id, run_id):
     Marks instrument run status as completed
     """
 
-    db_metadata, connection = connect_to_database(main_database)
+    db_metadata, connection = connect_to_database(instrument_id)
     instrument_runs_table = sa.Table("runs", db_metadata, autoload=True)
 
     update_status = (
         sa.update(instrument_runs_table)
-            .where((instrument_runs_table.c.run_id == run_id) & (instrument_runs_table.c.instrument_id == instrument_id))
+            .where(instrument_runs_table.c.run_id == run_id)
             .values(status="Complete")
     )
 
@@ -2655,12 +2728,12 @@ def skip_sample(instrument_id, run_id):
     next_sample = samples[1]
 
     # Set latest sample to next sample
-    db_metadata, connection = connect_to_database(main_database)
+    db_metadata, connection = connect_to_database(instrument_id)
     instrument_runs_table = sa.Table("runs", db_metadata, autoload=True)
 
     connection.execute((
         sa.update(instrument_runs_table)
-            .where((instrument_runs_table.c.run_id == run_id) & (instrument_runs_table.c.instrument_id == instrument_id))
+            .where(instrument_runs_table.c.run_id == run_id)
             .values(latest_sample=next_sample)
     ))
 
@@ -2673,12 +2746,12 @@ def store_pid(instrument_id, run_id, pid):
     Store acquisition listener process ID to allow termination later
     """
 
-    db_metadata, connection = connect_to_database(main_database)
+    db_metadata, connection = connect_to_database(instrument_id)
     instrument_runs_table = sa.Table("runs", db_metadata, autoload=True)
 
     update_pid = (
         sa.update(instrument_runs_table)
-            .where((instrument_runs_table.c.run_id == run_id) & (instrument_runs_table.c.instrument_id == instrument_id))
+            .where(instrument_runs_table.c.run_id == run_id)
             .values(pid=pid)
     )
 
@@ -2710,7 +2783,7 @@ def upload_to_google_drive(file_dict):
     drive = get_drive_instance()
 
     # Get Google Drive ID for the MS-AutoQC folder
-    folder_id = get_table(settings_database, "workspace")["gdrive_folder_id"].values[0]
+    folder_id = get_drive_folder_id()
 
     # Store Drive ID's of uploaded file(s)
     drive_ids = {}
@@ -2771,7 +2844,7 @@ def upload_qc_results(instrument_id, run_id):
     if len(df_samples) > 0:
         df_samples.to_csv(samples_csv_path, index=False)
 
-    df_bio_standards = get_table(main_database, "bio_qc_results")
+    df_bio_standards = get_table(instrument_id, "bio_qc_results")
     if len(df_bio_standards) > 0:
         df_bio_standards.to_csv(bio_standards_csv_path, index=False)
 
@@ -2804,12 +2877,12 @@ def upload_qc_results(instrument_id, run_id):
         drive_id = upload_to_google_drive(zip_file)[zip_filename]
 
         # Store Drive ID of ZIP file in local database
-        db_metadata, connection = connect_to_database(main_database)
+        db_metadata, connection = connect_to_database(instrument_id)
         runs_table = sa.Table("runs", db_metadata, autoload=True)
 
         connection.execute((
             sa.update(runs_table)
-                .where((runs_table.c.run_id == run_id) & (runs_table.c.instrument_id == instrument_id))
+                .where(runs_table.c.run_id == run_id)
                 .values(drive_id=drive_id)
         ))
 
@@ -2841,7 +2914,7 @@ def download_qc_results(instrument_id, run_id):
     zip_file_path = os.path.join(run_directory, zip_filename)
 
     # Get Google Drive folder ID
-    gdrive_folder_id = get_table(settings_database, "workspace")["gdrive_folder_id"].values[0]
+    gdrive_folder_id = get_drive_folder_id()
 
     # Find and download ZIP archive of CSV files from Google Drive
     for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
@@ -2862,16 +2935,34 @@ def download_qc_results(instrument_id, run_id):
     return (run_csv, samples_csv, bio_standards_csv_file)
 
 
-def upload_database(sync_settings=False):
+def get_drive_folder_id():
+
+    """
+    Returns Google Drive ID for the MS-AutoQC folder
+    """
+
+    return get_table("Settings", "workspace")["gdrive_folder_id"].values[0]
+
+
+def get_database_drive_id(instrument_id):
+
+    """
+    Returns Drive ID for a given instrument's database
+    """
+
+    df = get_table("Settings", "instruments")
+    return df.loc[df["name"] == instrument_id]["drive_id"].values[0]
+
+
+def upload_database(instrument_id, sync_settings=False):
 
     """
     Uploads database file and methods directory to Google Drive
     """
 
     # Get Google Drive ID's for the MS-AutoQC folder and database file
-    df_workspace = get_table(settings_database, "workspace")
-    gdrive_folder_id = df_workspace["gdrive_folder_id"].values[0]
-    main_db_file_id = df_workspace["main_db_file_id"].values[0]
+    gdrive_folder_id = get_drive_folder_id()
+    instrument_db_file_id = get_database_drive_id(instrument_id)
 
     # Get Google Drive instance
     drive = get_drive_instance()
@@ -2881,7 +2972,7 @@ def upload_database(sync_settings=False):
         return None
 
     # Vacuum database to optimize size
-    vacuum_main_database()
+    execute_vacuum(instrument_id)
 
     # Send upload signal
     send_sync_signal(gdrive_folder_id)
@@ -2891,16 +2982,17 @@ def upload_database(sync_settings=False):
         upload_methods()
 
     # Upload database to Google Drive
-    if gdrive_folder_id is not None and main_db_file_id is not None:
+    if gdrive_folder_id is not None and instrument_db_file_id is not None:
 
         # Upload zipped database
-        zip_database()
-        file = drive.CreateFile({"id": main_db_file_id, "title": "QC Database.zip"})
-        file.SetContentFile(main_db_zip_file)
+        zip_database(instrument_id=instrument_id)
+        file = drive.CreateFile(
+            {"id": instrument_db_file_id, "title": instrument_id.replace(" ", "_") + ".zip"})
+        file.SetContentFile(get_database_file(instrument_id, zip=True))
         file.Upload()
 
         # Save modifiedDate of database file
-        remember_last_modified(file["modifiedDate"], "QC Database.zip")
+        remember_last_modified(database=instrument_id, modified_date=file["modifiedDate"])
 
     else:
         return None
@@ -2911,27 +3003,28 @@ def upload_database(sync_settings=False):
     return time.strftime("%H:%M:%S")
 
 
-def download_database(sync_settings=False):
+def download_database(instrument_id, sync_settings=False):
 
     """
     Downloads database file from Google Drive (for users signed in to workspace externally from instrument PC)
     """
 
-    # # If the database was not modified by another instrument, skip download (for instruments only)
+    db_zip_file = instrument_id.replace(" ", "_") + ".zip"
+
+    # If the database was not modified by another instrument, skip download (for instruments only)
     if is_instrument_computer():
-        if not file_was_modified(filename="QC Database.zip"):
+        if not database_was_modified(instrument_id):
             return None
 
     # Get Google Drive instance
     drive = get_drive_instance()
 
     # Get Google Drive ID's for the MS-AutoQC folder and database file
-    df_workspace = get_table(settings_database, "workspace")
-    gdrive_folder_id = df_workspace["gdrive_folder_id"].values[0]
-    main_db_file_id = df_workspace["main_db_file_id"].values[0]
+    gdrive_folder_id = get_drive_folder_id()
+    instrument_db_file_id = get_instrument(instrument_id)["drive_id"].values[0]
 
     # If Google Drive folder is found, look for database next
-    if gdrive_folder_id is not None and main_db_file_id is not None:
+    if gdrive_folder_id is not None and instrument_db_file_id is not None:
 
         # Download newly added / modified MSP files in MS-AutoQC > methods
         if sync_settings == True:
@@ -2939,16 +3032,16 @@ def download_database(sync_settings=False):
 
         try:
             for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
-                if file["title"] == "QC Database.zip":
+                if file["title"] == db_zip_file:
 
                     # Download and unzip database
-                    os.chdir(data_directory)                # Change to data directory
-                    file.GetContentFile(file["title"])      # Download database and get file ID
-                    os.chdir(root_directory)                # Return to root directory
-                    unzip_database()                        # Unzip database
+                    os.chdir(data_directory)                        # Change to data directory
+                    file.GetContentFile(file["title"])              # Download database and get file ID
+                    os.chdir(root_directory)                        # Return to root directory
+                    unzip_database(instrument_id=instrument_id)     # Unzip database
 
                     # Save modifiedDate of database file
-                    remember_last_modified(file["modifiedDate"], "QC Database.zip")
+                    remember_last_modified(database=instrument_id, modified_date=file["modifiedDate"])
 
         except Exception as error:
             print("Error downloading database from Google Drive:", error)
@@ -2965,11 +3058,11 @@ def upload_methods():
     Uploads methods directory ZIP archive to Google Drive
     """
 
-    df_workspace = get_table(settings_database, "workspace")
+    df_workspace = get_table("Settings", "workspace")
     methods_zip_file_id = df_workspace["methods_zip_file_id"].values[0]
 
     # Vacuum database to optimize size
-    vacuum_settings_database()
+    execute_vacuum("Settings")
 
     # Get Google Drive instance
     drive = get_drive_instance()
@@ -2984,7 +3077,7 @@ def upload_methods():
         file.Upload()
 
         # Save modifiedDate of methods ZIP file
-        remember_last_modified(file["modifiedDate"], "methods.zip")
+        remember_last_modified(database="Settings", modified_date=file["modifiedDate"])
 
     else:
         return None
@@ -2999,7 +3092,7 @@ def download_methods(skip_check=False):
     # If the database was not modified by another instrument, skip download (for instruments only)
     if not skip_check:
         if is_instrument_computer():
-            if not file_was_modified(filename="methods.zip"):
+            if not database_was_modified("Settings"):
                 return None
 
     # Get device identity
@@ -3010,7 +3103,7 @@ def download_methods(skip_check=False):
     drive = get_drive_instance()
 
     # Get Google Drive folder ID
-    gdrive_folder_id = get_table(settings_database, "workspace")["gdrive_folder_id"].values[0]
+    gdrive_folder_id = get_drive_folder_id()
 
     try:
         # Download and unzip methods directory
@@ -3022,7 +3115,7 @@ def download_methods(skip_check=False):
                 unzip_methods()                         # Unzip methods directory
 
                 # Save modifiedDate of methods directory
-                remember_last_modified(file["modifiedDate"], "methods.zip")
+                remember_last_modified(database="Settings", modified_date=file["modifiedDate"])
 
     except Exception as error:
         print("Error downloading methods from Google Drive:", error)
@@ -3033,50 +3126,51 @@ def download_methods(skip_check=False):
     return time.strftime("%H:%M:%S")
 
 
-def remember_last_modified(modified_date, file):
+def remember_last_modified(database, modified_date):
 
     """
     Stores last modified time of database file in Google Drive (after upload)
     """
 
-    db_metadata, connection = connect_to_database(settings_database)
+    db_metadata, connection = connect_to_database("Settings")
+    instruments_table = sa.Table("instruments", db_metadata, autoload=True)
     workspace_table = sa.Table("workspace", db_metadata, autoload=True)
 
-    if file == "QC Database.zip":
-        connection.execute((
-            sa.update(workspace_table)
-                .where((workspace_table.c.id == 1))
-                .values(main_last_modified=modified_date)
-        ))
-
-    elif file == "methods.zip":
+    if database == "Settings":
         connection.execute((
             sa.update(workspace_table)
                 .where((workspace_table.c.id == 1))
                 .values(methods_last_modified=modified_date)
         ))
+    else:
+        connection.execute((
+            sa.update(instruments_table)
+            .where((instruments_table.c.name == database))
+            .values(last_modified=modified_date)
+        ))
 
     connection.close()
 
 
-def file_was_modified(filename):
+def database_was_modified(database_name):
 
     """
     Returns True if workspace file was modified by another instrument PC in Google Drive, and False if not
     """
 
     # Get Google Drive folder ID from database
-    df_workspace = get_table(settings_database, "workspace")
-    gdrive_folder_id = df_workspace["gdrive_folder_id"].values[0]
+    gdrive_folder_id = get_drive_folder_id()
+
+    # Compare "last modified" values
+    if database_name == "Settings":
+        local_last_modified = get_table("Settings", "workspace")["methods_last_modified"].values[0]
+        filename = "methods.zip"
+    else:
+        local_last_modified = get_instrument(database_name)["last_modified"].values[0]
+        filename = database_name.replace(" ", "_") + ".zip"
 
     # Get Google Drive instance
     drive = get_drive_instance()
-
-    # Compare "last modified" values
-    if filename == "QC Database.zip":
-        local_last_modified = df_workspace["main_last_modified"].astype(str).values[0]
-    elif filename == "methods.zip":
-        local_last_modified = df_workspace["methods_last_modified"].astype(str).values[0]
 
     drive_last_modified = None
     for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
@@ -3140,71 +3234,6 @@ def remove_sync_signal(folder):
         return False
 
 
-def csv_to_sql_database(instrument_id, run_id):
-
-    """
-    At the end of an active instrument run:
-
-    1. Before function call: database is downloaded from Google Drive
-    2. Deletes rows associated with run_id in SQLite database
-    3. Appends runs, sample_qc_results, and bio_qc_results data from CSV files
-    4. After function call: database is uploaded back to Google Drive
-
-    Should only be used if Google Drive sync is enabled.
-    """
-
-    id = instrument_id.replace(" ", "_") + "_" + run_id
-
-    # Connect to database
-    db_metadata, connection = connect_to_database(main_database)
-
-    # Delete rows from tables
-    for table_name in ["runs", "sample_qc_results", "bio_qc_results"]:
-        table = sa.Table(table_name, db_metadata, autoload=True)
-        connection.execute((
-            sa.delete(table)
-                .where((table.c.run_id == run_id) & (table.c.instrument_id == instrument_id))
-        ))
-
-    # Download and unzip CSV archive
-    download_qc_results(instrument_id, run_id)
-
-    # Get CSV paths
-    run_directory = os.path.join(data_directory, id)
-    run_csv = os.path.join(run_directory, "csv", "run.csv")
-    samples_csv = os.path.join(run_directory, "csv", "samples.csv")
-    bio_standards_csv = os.path.join(run_directory, "csv", "bio_standards.csv")
-
-    # Get instrument run CSV file as DataFrames and append rows to "runs" table
-    try:
-        df_instrument_run = pd.read_csv(run_csv, index_col=False)
-        dtype = {}
-        for column in ["id", "samples", "completed", "passes", "fails", "pid"]:
-            dtype[column] = INTEGER
-        df_instrument_run.to_sql("runs", connection, if_exists="append", index=False, dtype=dtype)
-    except Exception:
-        pass
-
-    # Append rows to "sample_qc_results" table
-    try:
-        df_samples = pd.read_csv(samples_csv, index_col=False)
-        df_samples.to_sql("sample_qc_results", connection, if_exists="append", index=False, dtype={"id": INTEGER})
-    except Exception:
-        pass
-
-    # Append rows to "bio_qc_results" table
-    try:
-        df_bio_standards = pd.read_csv(bio_standards_csv, index_col=False)
-        df_bio_standards = df_bio_standards.loc[
-            (df_bio_standards["run_id"] == run_id) & (df_bio_standards["instrument_id"] == instrument_id)]
-        df_bio_standards.to_sql("bio_qc_results", connection, if_exists="append", index=False, dtype={"id": INTEGER})
-    except Exception:
-        pass
-
-    # Close the connection
-    connection.close()
-
-
 def delete_active_run_csv_files(instrument_id, run_id):
 
     """
@@ -3215,24 +3244,26 @@ def delete_active_run_csv_files(instrument_id, run_id):
 
     # Find zip archive of CSV files in Google Drive and delete it
     drive = get_drive_instance()
-    gdrive_folder_id = get_table(settings_database, "workspace")["gdrive_folder_id"].values[0]
-    drive_file_list = drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList()
-    for file in drive_file_list:
-        if file["title"] == id:
-            file.Delete()
-            break
+    gdrive_folder_id = get_drive_folder_id()
+
+    if gdrive_folder_id is not None:
+        drive_file_list = drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList()
+        for file in drive_file_list:
+            if file["title"] == id:
+                file.Delete()
+                break
 
     # Delete zip archive from /data
     csv_directory = os.path.join(data_directory, id, "csv")
     shutil.rmtree(csv_directory)
 
     # Delete Drive ID from database
-    db_metadata, connection = connect_to_database(main_database)
+    db_metadata, connection = connect_to_database(instrument_id)
     runs_table = sa.Table("runs", db_metadata, autoload=True)
 
     connection.execute((
         sa.update(runs_table)
-            .where((runs_table.c.run_id == run_id) & (runs_table.c.instrument_id == instrument_id))
+            .where(runs_table.c.run_id == run_id)
             .values(drive_id=None)
     ))
 
@@ -3253,7 +3284,7 @@ def sync_on_run_completion(instrument_id, run_id):
 
     # Get Google Drive instance and folder ID
     drive = get_drive_instance()
-    gdrive_folder_id = get_table(settings_database, "workspace")["gdrive_folder_id"].values[0]
+    gdrive_folder_id = get_drive_folder_id()
 
     # Ensure another instrument is not uploading or syncing (give 3 attempts)
     while not safe_to_upload(gdrive_folder_id):
@@ -3278,13 +3309,6 @@ def sync_on_run_completion(instrument_id, run_id):
         print("sync_on_run_completion() – Error downloading database during sync:", error)
         return None
 
-    # Merge CSV files into database
-    try:
-        csv_to_sql_database(instrument_id, run_id)
-    except Exception as error:
-        print("sync_on_run_completion() – Error merging CSV files into database", error)
-        return None
-
     # Remove sync signal for upload
     try:
         remove_sync_signal(gdrive_folder_id)
@@ -3293,7 +3317,7 @@ def sync_on_run_completion(instrument_id, run_id):
 
     # Upload database to Google Drive
     try:
-        upload_database()
+        upload_database(instrument_id)
     except Exception as error:
         print("sync_on_run_completion() – Error uploading database during sync", error)
         return None
@@ -3312,7 +3336,7 @@ def get_data_file_type(instrument_id):
     Returns expected data file extension based on instrument vendor type (incomplete)
     """
 
-    engine = sa.create_engine(main_database)
+    engine = sa.create_engine(settings_database)
     df_instruments = pd.read_sql("SELECT * FROM instruments WHERE name='" + instrument_id + "'", engine)
     vendor = df_instruments["vendor"].astype(str).tolist()[0]
 
@@ -3368,8 +3392,15 @@ def pipeline_valid(module=None):
     Validates that MSConvert and MS-DIAL dependencies are installed
     """
 
-    msconvert_installed = os.path.exists(os.path.join(get_msconvert_directory(), "msconvert.exe"))
-    msdial_installed = os.path.exists(os.path.join(get_msdial_directory(), "MsdialConsoleApp.exe"))
+    try:
+        msconvert_installed = os.path.exists(os.path.join(get_msconvert_directory(), "msconvert.exe"))
+    except:
+        msconvert_installed = False
+
+    try:
+        msdial_installed = os.path.exists(os.path.join(get_msdial_directory(), "MsdialConsoleApp.exe"))
+    except:
+        msdial_installed = False
 
     if module == "msdial":
         return msdial_installed

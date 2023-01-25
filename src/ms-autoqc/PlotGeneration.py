@@ -248,7 +248,7 @@ def get_qc_results(instrument_id, run_id, status="Complete", drive=None, biologi
                 "sample_id": "Sample",
                 "position": "Position",
                 "qc_result": "QC"})
-        df_samples = df_samples.to_json(orient="split")
+        df_samples = df_samples.to_json(orient="records")
 
     except Exception as error:
         print("Error loading samples from database:", error)
@@ -257,13 +257,13 @@ def get_qc_results(instrument_id, run_id, status="Complete", drive=None, biologi
 
     # Get internal standards from data
     if df_rt_pos is not None:
-        pos_internal_standards = pd.read_json(df_rt_pos, orient="split").columns.tolist()
+        pos_internal_standards = pd.read_json(df_rt_pos, orient="records").columns.tolist()
         pos_internal_standards.remove("Sample")
     else:
         pos_internal_standards = []
 
     if df_rt_neg is not None:
-        neg_internal_standards = pd.read_json(df_rt_neg, orient="split").columns.tolist()
+        neg_internal_standards = pd.read_json(df_rt_neg, orient="records").columns.tolist()
         neg_internal_standards.remove("Sample")
     else:
         neg_internal_standards = []
@@ -291,6 +291,7 @@ def generate_sample_metadata_dataframe(sample, df_rt, df_mz, df_intensity, df_de
     df_sample_istd = pd.DataFrame()
     df_sample_info = pd.DataFrame()
 
+
     # Get sequence and metadata
     df_sequence = df_sequence.loc[df_sequence["File Name"].astype(str) == sample]
     df_metadata = df_metadata.loc[df_metadata["Filename"].astype(str) == sample]
@@ -298,7 +299,7 @@ def generate_sample_metadata_dataframe(sample, df_rt, df_mz, df_intensity, df_de
     # Index the selected sample, then make sure all columns in all dataframes are in the same order
     columns = df_rt.columns.tolist()
     internal_standards = df_rt.columns.tolist()
-    del internal_standards[0]
+    internal_standards.remove("Sample")
     df_sample_istd["Internal Standard"] = internal_standards
 
     # Precursor m/z
@@ -367,7 +368,7 @@ def generate_sample_metadata_dataframe(sample, df_rt, df_mz, df_intensity, df_de
     return df_sample_istd, df_sample_info
 
 
-def generate_bio_standard_dataframe(clicked_sample, run_id, df_rt, df_mz, df_intensity):
+def generate_bio_standard_dataframe(clicked_sample, instrument_id, run_id, df_rt, df_mz, df_intensity):
 
     """
     Aggregates and returns 2 DataFrames for a selected sample:
@@ -376,7 +377,7 @@ def generate_bio_standard_dataframe(clicked_sample, run_id, df_rt, df_mz, df_int
     """
 
     metabolites = df_mz.columns.tolist()
-    del metabolites[0]
+    metabolites.remove("Name")
 
     df_sample_features = pd.DataFrame()
     df_sample_features["Metabolite name"] = metabolites
@@ -387,7 +388,8 @@ def generate_bio_standard_dataframe(clicked_sample, run_id, df_rt, df_mz, df_int
 
     df_sample_info = pd.DataFrame()
     df_sample_info["Sample ID"] = [clicked_sample]
-    qc_result = db.get_qc_results(sample_list=[clicked_sample], is_bio_standard=True)["qc_result"].values[0]
+    qc_result = db.get_qc_results(
+        instrument_id=instrument_id, sample_list=[clicked_sample], is_bio_standard=True)["qc_result"].values[0]
     df_sample_info["QC Result"] = [qc_result]
 
     df_sample_info = df_sample_info.append(df_sample_info.iloc[0])

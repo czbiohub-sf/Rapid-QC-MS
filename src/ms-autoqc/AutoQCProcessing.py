@@ -651,7 +651,7 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
 
     try:
         # Write QC results to database and upload to Google Drive
-        db.write_qc_results(filename, run_id, mz_record, rt_record, intensity_record, qc_record, qc_result, is_bio_standard)
+        db.write_qc_results(filename, instrument_id, run_id, mz_record, rt_record, intensity_record, qc_record, qc_result, is_bio_standard)
 
         # Update sample counters to trigger dashboard update
         db.update_sample_counters_for_run(instrument_id=instrument_id, run_id=run_id, qc_result=qc_result, latest_sample=filename)

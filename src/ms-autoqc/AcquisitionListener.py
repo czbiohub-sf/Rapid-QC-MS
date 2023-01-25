@@ -53,7 +53,7 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
 
         # Write initial MD5 checksum to database
         md5_checksum = get_md5(path + filename + "." + extension)
-        db.update_md5_checksum(filename, md5_checksum)
+        db.update_md5_checksum(self.instrument_id, filename, md5_checksum)
 
         # Watch file indefinitely
         while os.path.exists(path):
@@ -64,7 +64,7 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
             time.sleep(180)
 
             new_md5 = get_md5(path + filename + "." + extension)
-            old_md5 = db.get_md5(filename)
+            old_md5 = db.get_md5(self.instrument_id, filename)
 
             print("Comparing MD5 checksums...")
 
@@ -74,7 +74,7 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
                 time.sleep(180)
                 return True
             else:
-                db.update_md5_checksum(filename, new_md5)
+                db.update_md5_checksum(self.instrument_id, filename, new_md5)
 
 
     def trigger_pipeline(self, path, filename, extension):

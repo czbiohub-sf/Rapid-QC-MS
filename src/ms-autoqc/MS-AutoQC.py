@@ -29,9 +29,6 @@ for directory in [data_directory, auth_directory, methods_directory]:
 credentials_file = os.path.join(auth_directory, "credentials.txt")
 drive_settings_file = os.path.join(auth_directory, "settings.yaml")
 
-# Database path
-db_zip_file = os.path.join(root_directory, "data", "QC Database.zip")
-
 local_stylesheet = {
     "href": "https://fonts.googleapis.com/css2?"
             "family=Lato:wght@400;700&display=swap",
@@ -168,7 +165,7 @@ def serve_layout():
 
                                 # Button to start new MS-AutoQC job
                                 html.Div(className="d-grid gap-2", children=[
-                                    dbc.Button("New MS-AutoQC Job",
+                                    dbc.Button("Setup New QC Job",
                                         id="setup-new-run-button",
                                         style={"margin-top": "15px",
                                             "line-height": "1.75"},
@@ -578,7 +575,7 @@ def serve_layout():
 
                         # Modal for starting an instrument run listener
                         dbc.Modal(id="setup-new-run-modal", size="lg", centered=True, is_open=False, scrollable=True, children=[
-                            dbc.ModalHeader(dbc.ModalTitle(id="setup-new-run-modal-title", children="New MS-AutoQC Job"), close_button=True),
+                            dbc.ModalHeader(dbc.ModalTitle(id="setup-new-run-modal-title", children="New QC Job"), close_button=True),
                             dbc.ModalBody(id="setup-new-run-modal-body", className="modal-styles-2", children=[
 
                                 # Text field for entering your run ID
@@ -1592,7 +1589,8 @@ def sync_with_google_drive(on_page_load):
 
     # Download database on page load (or refresh) if sync is enabled
     if db.sync_is_enabled():
-        return db.download_database()
+        instrument_id = db.get_instruments_list()[0]
+        return db.download_database(instrument_id)
 
     # If Google Drive sync is not enabled, perform no action
     else:
@@ -1668,7 +1666,6 @@ def launch_google_drive_authentication(setup_auth_button_clicks, sign_in_auth_bu
               Output("google-drive-button-1-popover", "children"),
               Output("google-drive-button-1-popover", "is_open"),
               Output("gdrive-folder-id-1", "data"),
-              Output("gdrive-database-file-id-1", "data"),
               Output("gdrive-methods-zip-id-1", "data"),
               Input("google-drive-authenticated-1", "data"), prevent_initial_call=True)
 def check_first_time_google_drive_authentication(google_drive_is_authenticated):
@@ -1683,43 +1680,34 @@ def check_first_time_google_drive_authentication(google_drive_is_authenticated):
 
         # Initial values
         gdrive_folder_id = None
-        gdrive_database_file_id = None
         gdrive_methods_zip_id = None
         popover_message = [dbc.PopoverHeader("No existing workspace found."),
                            dbc.PopoverBody("A new MS-AutoQC workspace will be created.")]
 
-        # Check for database in Google Drive
+        # Check for workspace in Google Drive
         for file in drive.ListFile({"q": "'root' in parents and trashed=false"}).GetList():
             if file["title"] == "MS-AutoQC":
                 gdrive_folder_id = file["id"]
                 break
 
-        # If Google Drive folder is found, look for database next
+        # If Google Drive folder is found, look for settings database next
         if gdrive_folder_id is not None:
             for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
-
-                if file["title"] == "QC Database.zip":
-                    os.chdir(data_directory)                # Switch to data directory
-                    file.GetContentFile(file["title"])      # Download database ZIP archive
-                    gdrive_database_file_id = file["id"]    # Get database ZIP file ID
-                    os.chdir(root_directory)                # Switch back to root directory
-                    db.unzip_database()                     # Unzip database ZIP archive
-
-                elif file["title"] == "methods.zip":
+                if file["title"] == "methods.zip":
                     os.chdir(data_directory)                # Switch to data directory
                     file.GetContentFile(file["title"])      # Download methods ZIP archive
                     gdrive_methods_zip_id = file["id"]      # Get methods ZIP file ID
                     os.chdir(root_directory)                # Switch back to root directory
                     db.unzip_methods()                      # Unzip methods ZIP archive
 
-            if gdrive_database_file_id is not None:
+            if gdrive_methods_zip_id is not None:
                 popover_message = [dbc.PopoverHeader("Workspace found!"),
                     dbc.PopoverBody("This instrument will be added to the existing MS-AutoQC workspace.")]
 
-        return "You're signed in!", "success", False, popover_message, True, gdrive_folder_id, gdrive_database_file_id, gdrive_methods_zip_id
+        return "You're signed in!", "success", False, popover_message, True, gdrive_folder_id, gdrive_methods_zip_id
 
     else:
-        return "Sign in to Google Drive", "primary", True, "", False, None, None, None
+        return "Sign in to Google Drive", "primary", True, "", False, None, None
 
 
 @app.callback(Output("first-time-instrument-vendor", "label"),
@@ -1794,15 +1782,14 @@ def ui_feedback_for_complete_setup_button(button_click):
               State("first-time-instrument-vendor", "label"),
               State("google-drive-authenticated-1", "data"),
               State("gdrive-folder-id-1", "data"),
-              State("gdrive-database-file-id-1", "data"),
               State("gdrive-methods-zip-id-1", "data"), prevent_initial_call=True)
 def complete_first_time_setup(button_click, instrument_id, instrument_vendor, google_drive_authenticated,
-    gdrive_folder_id, main_db_file_id, methods_zip_file_id):
+    gdrive_folder_id, methods_zip_file_id):
 
     """
     Upon "Complete setup" button click, this callback completes the following:
-    1. If database DOES exist in Google Drive, downloads database
-    2. If database DOES NOT exist in Google Drive, initializes new SQLite database
+    1. If databases DO exist in Google Drive, downloads databases
+    2. If databases DO NOT exist in Google Drive, initializes new SQLite database
     3. Adds instrument to "instruments" table
     4. Uploads database to Google Drive folder
     5. Dismisses setup window
@@ -1811,8 +1798,8 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
     if button_click:
 
         # Initialize a new database if one does not exist
-        if not db.is_valid():
-            db.create_databases(is_instrument_computer=True, instrument_identity=instrument_id)
+        if not db.is_valid(instrument_id=instrument_id):
+            db.create_databases(instrument_id=instrument_id, new_instrument_only=True)
 
         # Handle Google Drive sync
         if google_drive_authenticated:
@@ -1836,20 +1823,27 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
             # Add instrument to database
             db.insert_new_instrument(instrument_id, instrument_vendor)
 
-            # Upload/update database to Google Drive folder
-            db.zip_database()
+            # Download other instrument databases
+            for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
+                if file["title"] != "methods.zip":
+                    os.chdir(data_directory)                    # Switch to data directory
+                    file.GetContentFile(file["title"])          # Download database ZIP archive
+                    os.chdir(root_directory)                    # Switch back to root directory
+                    db.unzip_database(filename=file["title"])   # Unzip database ZIP archive
 
-            if main_db_file_id is not None:
-                file = drive.CreateFile({"id": main_db_file_id, "title": "QC Database.zip"})
-            else:
-                metadata = {
-                    "title": "QC Database.zip",
-                    "parents": [{"id": gdrive_folder_id}],
-                }
-                file = drive.CreateFile(metadata=metadata)
+            # Sync newly created instrument database to Google Drive folder
+            db.zip_database(instrument_id=instrument_id)
+            filename = instrument_id.replace(" ", "_") + ".zip"
 
-            file.SetContentFile(db_zip_file)
+            metadata = {
+                "title": filename,
+                "parents": [{"id": gdrive_folder_id}],
+            }
+            file = drive.CreateFile(metadata=metadata)
+            file.SetContentFile(db.get_database_file(instrument_id, zip=True))
             file.Upload()
+
+            # Grab Google Drive file ID
             main_db_file_id = file["id"]
 
             # Create local methods directory
@@ -1870,16 +1864,18 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
 
             file.SetContentFile(methods_zip_file)
             file.Upload()
+
+            # Grab Google Drive file ID
             methods_zip_file_id = file["id"]
 
             # Save user credentials
             db.save_google_drive_credentials()
 
             # Save Google Drive ID's for each file
-            db.insert_google_drive_ids(gdrive_folder_id, main_db_file_id, methods_zip_file_id)
+            db.insert_google_drive_ids(instrument_id, gdrive_folder_id, main_db_file_id, methods_zip_file_id)
 
             # Sync database with Drive again to save Google Drive ID's
-            db.upload_database(sync_settings=True)
+            db.upload_database(instrument_id, sync_settings=True)
 
         else:
             # Add instrument to database
@@ -1911,8 +1907,6 @@ def check_workspace_login_google_drive_authentication(google_drive_is_authentica
 
         # Initial values
         gdrive_folder_id = None
-        gdrive_database_file_id = None
-        methods_zip_file_id = None
 
         # Failed popover message
         button_text = "Sign in to Google Drive"
@@ -1934,15 +1928,23 @@ def check_workspace_login_google_drive_authentication(google_drive_is_authentica
                     gdrive_folder_id = file["id"]
                     break
 
-        # If Google Drive folder is found, look for database next
+        # If Google Drive folder is found, download methods directory and all databases next
         if gdrive_folder_id is not None:
             for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
-                if file["title"] == "QC Database.zip":
+
+                # Download and unzip instrument databases
+                if file["title"] != "methods.zip":
+                    os.chdir(data_directory)                    # Switch to data directory
+                    file.GetContentFile(file["title"])          # Download database ZIP archive
+                    os.chdir(root_directory)                    # Switch back to root directory
+                    db.unzip_database(filename=file["title"])   # Unzip database ZIP archive
+
+                # Download and unzip methods directory
+                else:
                     os.chdir(data_directory)                # Switch to data directory
-                    file.GetContentFile(file["title"])      # Download database ZIP archive
-                    gdrive_database_file_id = file["id"]    # Get database ZIP file ID
+                    file.GetContentFile(file["title"])      # Download methods ZIP archive
                     os.chdir(root_directory)                # Switch back to root directory
-                    db.unzip_database()                     # Unzip database ZIP archive
+                    db.unzip_methods()                      # Unzip methods ZIP archive
 
             # Popover alert
             button_text = "Signed in to Google Drive"
@@ -2015,30 +2017,14 @@ def ui_feedback_for_workspace_login_button(button_click):
 @app.callback(Output("workspace-has-been-setup-2", "data"),
               Input("first-time-sign-in-button", "children"),
               State("device-identity-checkbox", "value"),
-              State("device-identity-selection", "value"),
-              State("gdrive-folder-id-2", "data"), prevent_initial_call=True)
-def ui_feedback_for_login_button(button_click, is_instrument_computer, instrument_id, gdrive_folder_id):
+              State("device-identity-selection", "value"), prevent_initial_call=True)
+def ui_feedback_for_login_button(button_click, is_instrument_computer, instrument_id):
 
     """
     Dismisses setup window and signs in to MS-AutoQC workspace
     """
 
     if button_click:
-
-        # If device is instrument computer, need to download methods folder
-        if is_instrument_computer:
-
-            # Get Google Drive instance
-            drive = db.get_drive_instance()
-
-            # Download methods directory
-            if gdrive_folder_id is not None:
-                for file in drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList():
-                    if file["title"] == "methods.zip":
-                        os.chdir(data_directory)                # Switch to data directory
-                        file.GetContentFile(file["title"])      # Download methods ZIP archive
-                        os.chdir(root_directory)                # Switch back to root directory
-                        db.unzip_methods()                      # Unzip methods ZIP archive
 
         # Set device identity and proceed
         db.set_device_identity(is_instrument_computer, instrument_id)
@@ -2075,9 +2061,10 @@ def dismiss_setup_window(workspace_has_been_setup_1, workspace_has_been_setup_2)
               Input("google-drive-authenticated-3", "data"),
               Input("google-drive-authenticated", "data"),
               Input("settings-modal", "is_open"),
-              State("google-drive-sync-form-text", "children"), prevent_initial_call=True)
+              State("google-drive-sync-form-text", "children"),
+              State("tabs", "value"), prevent_initial_call=True)
 def update_google_drive_sync_status_in_settings(google_drive_authenticated, google_drive_authenticated_on_start,
-    settings_is_open, form_text):
+    settings_is_open, form_text, instrument_id):
 
     """
     Updates Google Drive sync status in user settings on user authentication
@@ -2134,16 +2121,16 @@ def update_google_drive_sync_status_in_settings(google_drive_authenticated, goog
                     gdrive_folder_id = file["id"]
                     break
 
-            # Update database in Google Drive folder
-            db.zip_database()
+            # Upload database to Google Drive folder
+            db.zip_database(instrument_id=instrument_id)
 
             metadata = {
-                "title": "QC Database.zip",
+                "title": instrument_id.replace(" ", "_") + ".zip",
                 "parents": [{"id": gdrive_folder_id}],
             }
 
             file = drive.CreateFile(metadata=metadata)
-            file.SetContentFile(db_zip_file)
+            file.SetContentFile(db.get_database_file(instrument_id, zip=True))
             file.Upload()
             main_db_file_id = file["id"]
 
@@ -2165,10 +2152,10 @@ def update_google_drive_sync_status_in_settings(google_drive_authenticated, goog
             methods_zip_file_id = file["id"]
 
             # Put Google Drive ID's into database
-            db.insert_google_drive_ids(gdrive_folder_id, main_db_file_id, methods_zip_file_id)
+            db.insert_google_drive_ids(instrument_id, gdrive_folder_id, main_db_file_id, methods_zip_file_id)
 
             # Sync database
-            db.upload_database(sync_settings=True)
+            db.upload_database(instrument_id, sync_settings=True)
 
             # Save user credentials
             db.save_google_drive_credentials()
@@ -2391,6 +2378,8 @@ def load_data(refresh, active_cell, table_data, resources, instrument_id):
     trigger = ctx.triggered_id
 
     if active_cell:
+
+        # Get run ID and status
         run_id = table_data[active_cell["row"]]["Run ID"]
         status = table_data[active_cell["row"]]["Status"]
 
@@ -2434,7 +2423,9 @@ def load_data(refresh, active_cell, table_data, resources, instrument_id):
             return get_qc_results(instrument_id, run_id) + (True,)
 
     else:
-        raise PreventUpdate
+        return (None, None, None, None, None, None, None, None, None, None,
+                None, None, None, None, None, None, None, None, None, None,
+                None, None, None, None, None, None, None, None, None)
 
 
 @app.callback(Output("close-load-modal", "data"),
@@ -2454,7 +2445,7 @@ def populate_sample_tables(samples):
     """
 
     if samples is not None:
-        df_samples = pd.read_json(samples, orient="split")
+        df_samples = pd.DataFrame(json.loads(samples))
         return df_samples.to_dict("records")
     else:
         return None
@@ -2482,13 +2473,13 @@ def update_dropdowns_on_polarity_change(polarity, table_data, samples, bio_inten
     """
 
     if samples is not None:
-        df_samples = pd.read_json(samples, orient="split")
+        df_samples = pd.DataFrame(json.loads(samples))
 
         if polarity == "Neg":
             istd_dropdown = json.loads(neg_internal_standards)
 
             if bio_intensity_neg is not None:
-                df = pd.read_json(bio_intensity_neg, orient="split")
+                df = pd.DataFrame(json.loads(bio_intensity_neg))
                 df.drop(columns=["Name"], inplace=True)
                 bio_dropdown = df.columns.tolist()
             else:
@@ -2501,7 +2492,7 @@ def update_dropdowns_on_polarity_change(polarity, table_data, samples, bio_inten
             istd_dropdown = json.loads(pos_internal_standards)
 
             if bio_intensity_pos is not None:
-                df = pd.read_json(bio_intensity_pos, orient="split")
+                df = pd.DataFrame(json.loads(bio_intensity_pos))
                 df.drop(columns=["Name"], inplace=True)
                 bio_dropdown = df.columns.tolist()
             else:
@@ -2536,7 +2527,7 @@ def apply_sample_filter_to_plots(filter, polarity, samples, metadata):
 
     # Get complete list of samples (including blanks + pools) in polarity
     if samples is not None:
-        df_samples = pd.read_json(samples, orient="split")
+        df_samples = pd.DataFrame(json.loads(samples))
         df_samples = df_samples.loc[df_samples["Sample"].str.contains(polarity)]
         sample_list = df_samples["Sample"].tolist()
     else:
@@ -2601,13 +2592,13 @@ def populate_istd_rt_plot(polarity, internal_standard, selected_samples, rt_pos,
     df_istd_rt_neg = pd.DataFrame()
 
     if rt_pos is not None:
-        df_istd_rt_pos = pd.read_json(rt_pos, orient="split")
+        df_istd_rt_pos = pd.DataFrame(json.loads(rt_pos))
 
     if rt_neg is not None:
-        df_istd_rt_neg = pd.read_json(rt_neg, orient="split")
+        df_istd_rt_neg = pd.DataFrame(json.loads(rt_neg))
 
     # Get samples
-    df_samples = pd.read_json(samples, orient="split")
+    df_samples = pd.DataFrame(json.loads(samples))
     samples = df_samples["Sample"].astype(str).tolist()
     identifiers = db.get_biological_standard_identifiers()
     for identifier in identifiers:
@@ -2684,13 +2675,13 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
     df_istd_intensity_neg = pd.DataFrame()
 
     if intensity_pos is not None:
-        df_istd_intensity_pos = pd.read_json(intensity_pos, orient="split")
+        df_istd_intensity_pos = pd.DataFrame(json.loads(intensity_pos))
 
     if intensity_neg is not None:
-        df_istd_intensity_neg = pd.read_json(intensity_neg, orient="split")
+        df_istd_intensity_neg = pd.DataFrame(json.loads(intensity_neg))
 
     # Get samples
-    df_samples = pd.read_json(samples, orient="split")
+    df_samples = pd.DataFrame(json.loads(samples))
     samples = df_samples["Sample"].astype(str).tolist()
     identifiers = db.get_biological_standard_identifiers()
     for identifier in identifiers:
@@ -2774,13 +2765,13 @@ def populate_istd_mz_plot(polarity, internal_standard, selected_samples, delta_m
     df_istd_mz_neg = pd.DataFrame()
 
     if delta_mz_pos is not None:
-        df_istd_mz_pos = pd.read_json(delta_mz_pos, orient="split")
+        df_istd_mz_pos = pd.DataFrame(json.loads(delta_mz_pos))
 
     if delta_mz_neg is not None:
-        df_istd_mz_neg = pd.read_json(delta_mz_neg, orient="split")
+        df_istd_mz_neg = pd.DataFrame(json.loads(delta_mz_neg))
 
     # Get samples (and filter out biological standards)
-    df_samples = pd.read_json(samples, orient="split")
+    df_samples = pd.DataFrame(json.loads(samples))
     samples = df_samples["Sample"].astype(str).tolist()
     identifiers = db.get_biological_standard_identifiers()
     for identifier in identifiers:
@@ -2878,15 +2869,15 @@ def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, in
     # Get biological standard m/z, RT, and intensity data
     if polarity == "Pos":
         if rt_pos is not None and intensity_pos is not None and mz_pos is not None:
-            df_bio_rt = pd.read_json(rt_pos, orient="split")
-            df_bio_intensity = pd.read_json(intensity_pos, orient="split")
-            df_bio_mz = pd.read_json(mz_pos, orient="split")
+            df_bio_rt = pd.DataFrame(json.loads(rt_pos))
+            df_bio_intensity = pd.DataFrame(json.loads(intensity_pos))
+            df_bio_mz = pd.DataFrame(json.loads(mz_pos))
 
     elif polarity == "Neg":
         if rt_neg is not None and intensity_neg is not None and mz_neg is not None:
-            df_bio_rt = pd.read_json(rt_neg, orient="split")
-            df_bio_intensity = pd.read_json(intensity_neg, orient="split")
-            df_bio_mz = pd.read_json(mz_neg, orient="split")
+            df_bio_rt = pd.DataFrame(json.loads(rt_neg))
+            df_bio_intensity = pd.DataFrame(json.loads(intensity_neg))
+            df_bio_mz = pd.DataFrame(json.loads(mz_neg))
 
     if click_data is not None:
         selected_feature = click_data["points"][0]["hovertext"]
@@ -2938,11 +2929,11 @@ def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_p
     # Get intensity data
     if polarity == "Pos":
         if intensity_pos is not None:
-            df_bio_intensity = pd.read_json(intensity_pos, orient="split")
+            df_bio_intensity = pd.DataFrame(json.loads(intensity_pos))
 
     elif polarity == "Neg":
         if intensity_neg is not None:
-            df_bio_intensity = pd.read_json(intensity_neg, orient="split")
+            df_bio_intensity = pd.DataFrame(json.loads(intensity_neg))
 
     # Get clicked or selected feature from biological standard m/z-RT plot
     if not selected_feature:
@@ -3023,8 +3014,10 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
         clicked_sample = mz_click["points"][0]["x"]
         clicked_sample = clicked_sample.replace(": Precursor m/z Info", "")
 
-    # Get run ID and chromatography method
-    run_id = json.loads(resources)["run_id"]
+    # Get instrument ID and run ID
+    resources = json.loads(resources)
+    instrument_id = resources["instrument"]
+    run_id = resources["run_id"]
 
     # Get sequence and metadata
     df_sequence = pd.read_json(sequence, orient="split")
@@ -3052,24 +3045,24 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
     if not is_bio_standard:
 
         if polarity == "Pos":
-            df_rt = pd.read_json(rt_pos, orient="split")
-            df_intensity = pd.read_json(intensity_pos, orient="split")
-            df_mz = pd.read_json(mz_pos, orient="split")
-            df_delta_rt = pd.read_json(delta_rt_pos, orient="split")
-            df_in_run_delta_rt = pd.read_json(in_run_delta_rt_pos, orient="split")
-            df_delta_mz = pd.read_json(delta_mz_pos, orient="split")
-            df_warnings = pd.read_json(qc_warnings_pos, orient="split")
-            df_fails = pd.read_json(qc_fails_pos, orient="split")
+            df_rt = pd.DataFrame(json.loads(rt_pos))
+            df_intensity = pd.DataFrame(json.loads(intensity_pos))
+            df_mz = pd.DataFrame(json.loads(mz_pos))
+            df_delta_rt = pd.DataFrame(json.loads(delta_rt_pos))
+            df_in_run_delta_rt = pd.DataFrame(json.loads(in_run_delta_rt_pos))
+            df_delta_mz = pd.DataFrame(json.loads(delta_mz_pos))
+            df_warnings = pd.DataFrame(json.loads(qc_warnings_pos))
+            df_fails = pd.DataFrame(json.loads(qc_fails_pos))
 
         elif polarity == "Neg":
-            df_rt = pd.read_json(rt_neg, orient="split")
-            df_intensity = pd.read_json(intensity_neg, orient="split")
-            df_mz = pd.read_json(mz_neg, orient="split")
-            df_delta_rt = pd.read_json(delta_rt_neg, orient="split")
-            df_in_run_delta_rt = pd.read_json(in_run_delta_rt_neg, orient="split")
-            df_delta_mz = pd.read_json(delta_mz_neg, orient="split")
-            df_warnings = pd.read_json(qc_warnings_neg, orient="split")
-            df_fails = pd.read_json(qc_fails_neg, orient="split")
+            df_rt = pd.DataFrame(json.loads(rt_neg))
+            df_intensity = pd.DataFrame(json.loads(intensity_neg))
+            df_mz = pd.DataFrame(json.loads(mz_neg))
+            df_delta_rt = pd.DataFrame(json.loads(delta_rt_neg))
+            df_in_run_delta_rt = pd.DataFrame(json.loads(in_run_delta_rt_neg))
+            df_delta_mz = pd.DataFrame(json.loads(delta_mz_neg))
+            df_warnings = pd.DataFrame(json.loads(qc_warnings_neg))
+            df_fails = pd.DataFrame(json.loads(qc_fails_neg))
 
         df_sample_features, df_sample_info = generate_sample_metadata_dataframe(clicked_sample, df_rt, df_mz, df_intensity,
             df_delta_rt, df_in_run_delta_rt, df_delta_mz, df_warnings, df_fails, df_sequence, df_metadata)
@@ -3077,16 +3070,16 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
     elif is_bio_standard:
 
         if polarity == "Pos":
-            df_rt = pd.read_json(bio_rt_pos, orient="split")
-            df_intensity = pd.read_json(bio_intensity_pos, orient="split")
-            df_mz = pd.read_json(bio_mz_pos, orient="split")
+            df_rt = pd.DataFrame(json.loads(bio_rt_pos))
+            df_intensity = pd.DataFrame(json.loads(bio_intensity_pos))
+            df_mz = pd.DataFrame(json.loads(bio_mz_pos))
 
         elif polarity == "Neg":
-            df_rt = pd.read_json(bio_rt_neg, orient="split")
-            df_intensity = pd.read_json(bio_intensity_neg, orient="split")
-            df_mz = pd.read_json(bio_mz_neg, orient="split")
+            df_rt = pd.DataFrame(json.loads(bio_rt_neg))
+            df_intensity = pd.DataFrame(json.loads(bio_intensity_neg))
+            df_mz = pd.DataFrame(json.loads(bio_mz_neg))
 
-        df_sample_features, df_sample_info = generate_bio_standard_dataframe(clicked_sample, run_id, df_rt, df_mz, df_intensity)
+        df_sample_features, df_sample_info = generate_bio_standard_dataframe(clicked_sample, instrument_id, run_id, df_rt, df_mz, df_intensity)
 
     # Create tables from DataFrames
     metadata_table = dbc.Table.from_dataframe(df_sample_info, striped=True, bordered=True, hover=True)
@@ -3200,7 +3193,7 @@ def get_users_with_workspace_access(on_page_load, user_added, user_deleted):
 
     # Get users from database
     if db.is_valid():
-        df_gdrive_users = db.get_table("sqlite:///data/methods/Settings.db", "gdrive_users")
+        df_gdrive_users = db.get_table("Settings", "gdrive_users")
         df_gdrive_users = df_gdrive_users.rename(
             columns={"id": "User",
                      "name": "Name",
@@ -3662,7 +3655,7 @@ def capture_uploaded_istd_msp(button_click, contents, filename, chromatography, 
     if contents is not None and chromatography is not None and polarity is not None:
 
         # Decode file contents
-        content_type, content_string = contents.split(",")
+        content_type, content_string = contents.records(",")
         decoded = base64.b64decode(content_string)
         file = io.StringIO(decoded.decode("utf-8"))
 
@@ -4497,7 +4490,7 @@ def toggle_new_run_modal(button_clicks, success, instrument_name, browse_folder_
 
     button = ctx.triggered_id
 
-    modal_title = "New MS-AutoQC Job – " + instrument_name
+    modal_title = "New QC Job – " + instrument_name
 
     open_modal = True, 1, modal_title
     close_modal = False, 0, modal_title
@@ -4782,7 +4775,7 @@ def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, b
         db.store_pid(instrument_id, run_id, process.pid)
 
         if db.is_instrument_computer() and db.sync_is_enabled():
-            return db.upload_database()
+            return db.upload_database(instrument_id)
 
     # If this is for a completed run, begin iterating through the files and process them
     elif job_type == "completed":
@@ -4836,7 +4829,7 @@ def list_directories_in_file_explorer(file_explorer_is_open, selected_data_folde
 
         if start_folder is None:
             if sys.platform == "win32":
-                start_folder = "C:/Users/"
+                start_folder = "C:/"
             elif sys.platform == "darwin":
                 start_folder = "/Users/"
 
@@ -4982,7 +4975,7 @@ def update_folder_path_text_field(select_folder_button, selected_folder, setting
               Input("instrument-run-table", "active_cell"),
               State("instrument-run-table", "data"),
               Input("refresh-interval", "n_intervals"),
-              State("tabs", "value"),
+              Input("tabs", "value"),
               Input("start-run-monitor-modal", "is_open"), prevent_initial_call=True)
 def update_progress_bar_during_active_instrument_run(active_cell, table_data, refresh, instrument_id, new_job_started):
 
@@ -5002,13 +4995,15 @@ def update_progress_bar_during_active_instrument_run(active_cell, table_data, re
         progress_label = str(percent_complete) + "%"
         header_text = run_id + " – " + str(completed) + " out of " + str(total) + " samples processed"
 
-        if percent_complete != 100.0 or status != "Complete":
-            return {"display": "block"}, header_text, percent_complete, progress_label, False
+        if status != "Complete":
+            refresh_interval_disabled = False
         else:
-            return {"display": "none"}, None, None, None, True
+            refresh_interval_disabled = True
+
+        return {"display": "block"}, header_text, percent_complete, progress_label, refresh_interval_disabled
 
     else:
-        raise PreventUpdate
+        return {"display": "none"}, None, None, None, True
 
 
 @app.callback(Output("settings-button", "style"),
