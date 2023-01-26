@@ -32,7 +32,7 @@ def get_qc_results(instrument_id, run_id, status="Complete", drive=None, biologi
     # Download CSV files if instrument run is active
     if status == "Active" and drive is not None:
         if not db.is_instrument_computer():
-            db.download_qc_results(drive, instrument_id, run_id)
+            db.download_qc_results(instrument_id, run_id)
 
     # Get run information / metadata
     if status == "Complete":

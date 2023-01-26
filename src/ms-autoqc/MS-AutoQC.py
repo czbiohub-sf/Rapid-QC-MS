@@ -2299,6 +2299,9 @@ def populate_instrument_runs_table(instrument, refresh, resources, sync_update, 
         run_id = resources["run_id"]
         status = resources["status"]
 
+        if db.sync_is_enabled():
+            db.download_database(instrument)
+
         completed_count_in_cache = resources["samples_completed"]
         actual_completed_count, total = db.get_completed_samples_count(instrument, run_id, status)
 
@@ -2412,6 +2415,9 @@ def load_data(refresh, active_cell, table_data, resources, instrument_id):
         # Ensure that refresh does not trigger data parsing if no new samples processed
         if trigger == "refresh-interval":
             try:
+                if db.sync_is_enabled():
+                    db.download_database(instrument_id)
+
                 completed_count_in_cache = json.loads(resources)["samples_completed"]
                 actual_completed_count, total = db.get_completed_samples_count(instrument_id, run_id, status)
 

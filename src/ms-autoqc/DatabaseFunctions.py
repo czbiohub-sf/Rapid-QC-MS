@@ -2150,7 +2150,12 @@ def get_samples_from_csv(instrument_id, run_id, sample_type="Both"):
         df_bio_standards.drop(columns=["biological_standard"], inplace=True)
         df = df_bio_standards.append(df_samples, ignore_index=True)
 
-    return df.loc[df["run_id"] == run_id]
+    df = df.loc[df["run_id"] == run_id]
+
+    try:
+        df.drop(columns=["id"], inplace=True)
+    finally:
+        return df
 
 
 def get_remaining_samples(instrument_id, run_id):
@@ -2255,7 +2260,7 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, s
 
     # Initialize DataFrame with individual records of sample data
     results = df_samples[result_type].astype(str).tolist()
-    results = [ast.literal_eval(result) if result != "None" else {} for result in results]
+    results = [ast.literal_eval(result) if result != "None" and result != "nan" else {} for result in results]
     df_results = pd.DataFrame(results)
     df_results.drop(columns=["Name"], inplace=True)
     df_results["Sample"] = sample_ids
@@ -2298,7 +2303,7 @@ def parse_biological_standard_data(instrument_id, run_id, result_type, polarity,
 
     # Initialize DataFrame with individual records of sample data
     results = df_samples[result_type].fillna('{}').tolist()
-    results = [ast.literal_eval(result) for result in results]
+    results = [ast.literal_eval(result) if result != "None" and result != "nan" else {} for result in results]
     df_results = pd.DataFrame(results)
     df_results["Name"] = run_ids
 
