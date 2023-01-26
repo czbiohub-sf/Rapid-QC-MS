@@ -36,8 +36,10 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
         filename = path.split("/")[-1].split(".")[0]
 
         # For restarted jobs: process the sample that was being acquired when the job was interrupted
-        if os.path.exists(self.path + self.current_sample + "." + self.extension):
-            self.trigger_pipeline(self.path, self.current_sample, self.extension)
+        if self.current_sample is not None:
+            if os.path.exists(self.path + self.current_sample + "." + self.extension):
+                self.trigger_pipeline(self.path, self.current_sample, self.extension)
+                self.current_sample = None
 
         # Route data file to pipeline
         if not event.is_directory and filename in self.filenames:
@@ -150,6 +152,7 @@ def start_listener(path, instrument_id, run_id):
     else:
         # Get samples that may have been unprocessed due to an error or accidental termination
         missing_samples, current_sample = db.get_unprocessed_samples(instrument_id, run_id)
+        print("Current sample:", current_sample)
 
         # Check for missed samples and process them before starting file monitor
         if len(missing_samples) > 0:

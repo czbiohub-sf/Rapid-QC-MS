@@ -2214,8 +2214,7 @@ def get_unprocessed_samples(instrument_id, run_id):
         current_sample = unprocessed_samples[-1]
         del unprocessed_samples[-1]
     else:
-        unprocessed_samples = []
-        current_sample = samples[0]
+        current_sample = None
 
     # Return as tuple
     return unprocessed_samples, current_sample
