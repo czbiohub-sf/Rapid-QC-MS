@@ -2285,7 +2285,7 @@ def reset_instrument_table(instrument):
               State("study-resources", "data"),
               Input("google-drive-sync-update", "data"),
               Input("start-run-monitor-modal", "is_open"))
-def populate_instrument_runs_table(instrument, refresh, resources, sync_update, new_job_started):
+def populate_instrument_runs_table(instrument_id, refresh, resources, sync_update, new_job_started):
 
     """
     Dash callback for populating tables with list of past/active instrument runs
@@ -2300,17 +2300,17 @@ def populate_instrument_runs_table(instrument, refresh, resources, sync_update, 
         status = resources["status"]
 
         if db.sync_is_enabled():
-            db.download_database(instrument)
+            db.download_qc_results(instrument_id, run_id)
 
         completed_count_in_cache = resources["samples_completed"]
-        actual_completed_count, total = db.get_completed_samples_count(instrument, run_id, status)
+        actual_completed_count, total = db.get_completed_samples_count(instrument_id, run_id, status)
 
         if completed_count_in_cache == actual_completed_count:
             raise PreventUpdate
 
-    if instrument != "tab-1":
+    if instrument_id != "tab-1":
         # Get instrument runs from database
-        df_instrument_runs = db.get_instrument_runs(instrument)
+        df_instrument_runs = db.get_instrument_runs(instrument_id)
 
         if len(df_instrument_runs) == 0:
             empty_table = [{"Run ID": "N/A", "Chromatography": "N/A", "Status": "N/A"}]
@@ -2416,7 +2416,7 @@ def load_data(refresh, active_cell, table_data, resources, instrument_id):
         if trigger == "refresh-interval":
             try:
                 if db.sync_is_enabled():
-                    db.download_database(instrument_id)
+                    db.download_qc_results(instrument_id, run_id)
 
                 completed_count_in_cache = json.loads(resources)["samples_completed"]
                 actual_completed_count, total = db.get_completed_samples_count(instrument_id, run_id, status)

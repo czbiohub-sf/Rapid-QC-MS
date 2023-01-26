@@ -60,23 +60,32 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
         # Watch file indefinitely
         while os.path.exists(path):
 
-            print("MD5 checksums do not match. Waiting 3 minutes...")
-
             # Wait 3 minutes
+            print("MD5 checksums do not match. Waiting 3 minutes...")
             time.sleep(180)
 
+            # Compare checksums
             new_md5 = get_md5(path + filename + "." + extension)
             old_md5 = db.get_md5(self.instrument_id, filename)
 
-            print("Comparing MD5 checksums...")
-
-            # If the MD5 checksum after 3 mins is the same as before, file is done acquiring
+            # If the MD5 checksum after 3 mins is the same as before, compare one more time
             if new_md5 == old_md5:
+
+                # Wait 3 minutes again
                 print("MD5 checksums matched. Preparing to process file.")
                 time.sleep(180)
-                return True
+
+                # Compare checksums
+                new_md5 = get_md5(path + filename + "." + extension)
+                old_md5 = db.get_md5(filename)
+
+                # If match, route data file for processing. If not, repeat entire process.
+                if new_md5 == old_md5:
+                    return True
+                else:
+                    db.update_md5_checksum(filename, new_md5)
             else:
-                db.update_md5_checksum(self.instrument_id, filename, new_md5)
+                db.update_md5_checksum(filename, new_md5)
 
 
     def trigger_pipeline(self, path, filename, extension):
