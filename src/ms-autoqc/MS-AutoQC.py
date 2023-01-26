@@ -1553,6 +1553,7 @@ def serve_layout():
             dcc.Store(id="job-action-failed"),
 
             # Dummy inputs for Google Drive authentication
+            dcc.Store(id="google-drive-download-database"),
             dcc.Store(id="workspace-has-been-setup-1"),
             dcc.Store(id="workspace-has-been-setup-2"),
             dcc.Store(id="google-drive-authenticated-1"),
@@ -1583,14 +1584,36 @@ Dash callbacks
 def sync_with_google_drive(on_page_load):
 
     """
-    For MS-AutoQC installed on instrument computers, this will upload database to Google Drive on page load
     For users signed in to MS-AutoQC from an external device, this will download the database on page load
     """
 
     # Download database on page load (or refresh) if sync is enabled
     if db.sync_is_enabled():
         instrument_id = db.get_instruments_list()[0]
-        return db.download_database(instrument_id)
+        if instrument_id != db.get_device_identity():
+            return db.download_database(instrument_id)
+        else:
+            return None
+
+    # If Google Drive sync is not enabled, perform no action
+    else:
+        raise PreventUpdate
+
+
+@app.callback(Output("google-drive-download-database", "data"),
+              Input("tabs", "value"), prevent_initial_call=True)
+def sync_with_google_drive(instrument_id):
+
+    """
+    For users signed in to MS-AutoQC from an external device, this will download the selected instrument database
+    """
+
+    # Download database on page load (or refresh) if sync is enabled
+    if db.sync_is_enabled():
+        if instrument_id != db.get_device_identity():
+            return db.download_database(instrument_id)
+        else:
+            return None
 
     # If Google Drive sync is not enabled, perform no action
     else:
@@ -4772,18 +4795,13 @@ def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, b
                 msp_file_path = db.get_msp_file_path(chromatography, polarity, bio_standard)
                 db.generate_msdial_parameters_file(chromatography, polarity, msp_file_path, bio_standard)
 
-    # If this is for an active run, initialize run monitoring at the given directory
-    if job_type == "active":
-        process = psutil.Popen(["py", "AcquisitionListener.py", acquisition_path, instrument_id, run_id])
-        db.store_pid(instrument_id, run_id, process.pid)
+    # Start AcquisitionListener process in the background
+    process = psutil.Popen(["py", "AcquisitionListener.py", acquisition_path, instrument_id, run_id])
+    db.store_pid(instrument_id, run_id, process.pid)
 
-        if db.is_instrument_computer() and db.sync_is_enabled():
-            return db.upload_database(instrument_id)
-
-    # If this is for a completed run, begin iterating through the files and process them
-    elif job_type == "completed":
-        process = psutil.Popen(["py", "AcquisitionListener.py", acquisition_path, instrument_id, run_id])
-        db.store_pid(instrument_id, run_id, process.pid)
+    # Upload database to Google Drive
+    if db.is_instrument_computer() and db.sync_is_enabled():
+        db.upload_database(instrument_id)
 
     return True, False
 

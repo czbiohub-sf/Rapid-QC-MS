@@ -756,7 +756,6 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, path, s
     # Prepare insert of user-inputted run data
     insert_run = runs_table.insert().values(
         {"run_id": run_id,
-         "instrument_id": instrument_id,
          "chromatography": chromatography,
          "acquisition_path": path,
          "sequence": sequence,
@@ -785,7 +784,6 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, path, s
         if not is_bio_standard:
             insert_sample = sample_qc_results_table.insert().values(
                 {"sample_id": sample,
-                 "instrument_id": instrument_id,
                  "run_id": run_id,
                  "position": positions[index]})
 
@@ -793,7 +791,6 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, path, s
         else:
             insert_sample = bio_qc_results_table.insert().values(
                 {"sample_id": sample,
-                 "instrument_id": instrument_id,
                  "run_id": run_id,
                  "biological_standard": identifiers[identifier],
                  "position": positions[index]})
@@ -1765,7 +1762,7 @@ def get_msconvert_directory():
     Returns MSConvert.exe function call
     """
 
-    user = get_msdial_directory().split("/")[2]
+    user = get_msdial_directory().replace("\\", "/").split("/")[2]
     msconvert_folder = [f.path for f in os.scandir("C:/Users/" + user + "/AppData/Local/Apps/") if f.is_dir() and "ProteoWizard" in f.name][0]
     return msconvert_folder
 
@@ -3016,9 +3013,8 @@ def download_database(instrument_id, sync_settings=False):
     db_zip_file = instrument_id.replace(" ", "_") + ".zip"
 
     # If the database was not modified by another instrument, skip download (for instruments only)
-    if is_instrument_computer():
-        if not database_was_modified(instrument_id):
-            return None
+    if not database_was_modified(instrument_id):
+        return None
 
     # Get Google Drive instance
     drive = get_drive_instance()
@@ -3095,9 +3091,8 @@ def download_methods(skip_check=False):
 
     # If the database was not modified by another instrument, skip download (for instruments only)
     if not skip_check:
-        if is_instrument_computer():
-            if not database_was_modified("Settings"):
-                return None
+        if not database_was_modified("Settings"):
+            return None
 
     # Get device identity
     instrument_bool = is_instrument_computer()
@@ -3308,7 +3303,7 @@ def sync_on_run_completion(instrument_id, run_id):
 
     # If modified, download up-to-date database
     try:
-        download_database()
+        download_database(instrument_id)
     except Exception as error:
         print("sync_on_run_completion() – Error downloading database during sync:", error)
         return None
