@@ -44,7 +44,10 @@ def get_qc_results(instrument_id, run_id, status="Complete", drive=None, biologi
     df_sequence = df_run["sequence"].values[0]
     df_metadata = df_run["metadata"].values[0]
     completed = df_run["completed"].astype(int).tolist()[0]
-    biological_standards = ast.literal_eval(df_run["biological_standards"].values[0])
+
+    biological_standards = df_run["biological_standards"].values[0]
+    if biological_standards is not None:
+        biological_standards = ast.literal_eval(biological_standards)
 
     # Get internal standards in chromatography method
     precursor_mz_dict = db.get_internal_standards_dict(chromatography, "precursor_mz")

@@ -2210,8 +2210,12 @@ def get_unprocessed_samples(instrument_id, run_id):
     unprocessed_samples = df_unprocessed_samples.dropna(subset=["found"])["sample_id"].astype(str).tolist()
 
     # Get current sample
-    current_sample = unprocessed_samples[-1]
-    del unprocessed_samples[-1]
+    if len(unprocessed_samples) > 0:
+        current_sample = unprocessed_samples[-1]
+        del unprocessed_samples[-1]
+    else:
+        unprocessed_samples = []
+        current_sample = samples[0]
 
     # Return as tuple
     return unprocessed_samples, current_sample
@@ -3123,7 +3127,7 @@ def download_methods(skip_check=False):
         return None
 
     # Update user device identity
-    set_device_identity(is_instrument_computer=instrument_bool, instrument_identity=device_identity)
+    set_device_identity(is_instrument_computer=instrument_bool, instrument_id=device_identity)
     return time.strftime("%H:%M:%S")
 
 
