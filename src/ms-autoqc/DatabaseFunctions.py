@@ -832,7 +832,7 @@ def get_instrument_run_from_csv(instrument_id, run_id):
     return pd.read_csv(run_csv_file, index_col=False)
 
 
-def get_instrument_runs(instrument_id):
+def get_instrument_runs(instrument_id, as_list=False):
 
     """
     Returns DataFrame of all runs on a given instrument from "runs" table
@@ -840,7 +840,12 @@ def get_instrument_runs(instrument_id):
 
     database = get_database_file(instrument_id, sqlite_conn=True)
     engine = sa.create_engine(database)
-    return pd.read_sql("SELECT * FROM runs", engine)
+    df = pd.read_sql("SELECT * FROM runs", engine)
+
+    if as_list:
+        return df["run_id"].astype(str).tolist()
+    else:
+        return df
 
 
 def delete_instrument_run(instrument_id, run_id):
@@ -2449,7 +2454,6 @@ def get_qc_results(instrument_id, sample_list, is_bio_standard=False):
 
     """
     Returns DataFrame of QC results for a given sample list
-    TODO: Fix for active instrument runs
     """
 
     if len(sample_list) == 0:
@@ -2650,7 +2654,10 @@ def get_completed_samples_count(instrument_id, run_id, status):
     """
 
     if status == "Active" and sync_is_enabled():
-        df_instrument_run = get_instrument_run_from_csv(instrument_id, run_id)
+        if get_device_identity() == instrument_id:
+            df_instrument_run = get_instrument_run(instrument_id, run_id)
+        else:
+            df_instrument_run = get_instrument_run_from_csv(instrument_id, run_id)
     else:
         df_instrument_run = get_instrument_run(instrument_id, run_id)
 

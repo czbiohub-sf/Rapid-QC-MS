@@ -35,7 +35,7 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
         elif status == "Active":
             load_from = "csv"
     else:
-        load_from = "csv"
+        load_from = "database"
 
     if load_from == "database":
         df_run = db.get_instrument_run(instrument_id, run_id)

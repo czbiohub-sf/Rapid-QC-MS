@@ -2301,7 +2301,7 @@ def populate_instrument_runs_table(instrument_id, refresh, resources, sync_updat
         run_id = resources["run_id"]
         status = resources["status"]
 
-        if db.sync_is_enabled():
+        if db.sync_is_enabled() and status != "Complete":
             db.download_qc_results(instrument_id, run_id)
 
         completed_count_in_cache = resources["samples_completed"]
@@ -2417,7 +2417,7 @@ def load_data(refresh, active_cell, table_data, resources, instrument_id):
         # Ensure that refresh does not trigger data parsing if no new samples processed
         if trigger == "refresh-interval":
             try:
-                if db.sync_is_enabled():
+                if db.sync_is_enabled() and status != "Complete":
                     db.download_qc_results(instrument_id, run_id)
 
                 completed_count_in_cache = json.loads(resources)["samples_completed"]
@@ -4783,29 +4783,31 @@ def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, b
     3b. Iterating through and processing data files for a completed run
     """
 
-    # Write a new instrument run to the database
-    db.insert_new_run(run_id, instrument_id, chromatography, bio_standards, acquisition_path, sequence, metadata, qc_config_id, job_type)
+    if run_id not in db.get_instrument_runs(instrument_id, as_list=True):
 
-    # Get MSPs and generate parameters files for MS-DIAL processing
-    for polarity in ["Positive", "Negative"]:
+        # Write a new instrument run to the database
+        db.insert_new_run(run_id, instrument_id, chromatography, bio_standards, acquisition_path, sequence, metadata, qc_config_id, job_type)
 
-        # Generate parameters files for processing samples
-        msp_file_path = db.get_msp_file_path(chromatography, polarity)
-        db.generate_msdial_parameters_file(chromatography, polarity, msp_file_path)
+        # Get MSPs and generate parameters files for MS-DIAL processing
+        for polarity in ["Positive", "Negative"]:
 
-        # Generate parameters files for processing each biological standard
-        if bio_standards is not None:
-            for bio_standard in bio_standards:
-                msp_file_path = db.get_msp_file_path(chromatography, polarity, bio_standard)
-                db.generate_msdial_parameters_file(chromatography, polarity, msp_file_path, bio_standard)
+            # Generate parameters files for processing samples
+            msp_file_path = db.get_msp_file_path(chromatography, polarity)
+            db.generate_msdial_parameters_file(chromatography, polarity, msp_file_path)
 
-    # Start AcquisitionListener process in the background
-    process = psutil.Popen(["py", "AcquisitionListener.py", acquisition_path, instrument_id, run_id])
-    db.store_pid(instrument_id, run_id, process.pid)
+            # Generate parameters files for processing each biological standard
+            if bio_standards is not None:
+                for bio_standard in bio_standards:
+                    msp_file_path = db.get_msp_file_path(chromatography, polarity, bio_standard)
+                    db.generate_msdial_parameters_file(chromatography, polarity, msp_file_path, bio_standard)
 
-    # Upload database to Google Drive
-    if db.is_instrument_computer() and db.sync_is_enabled():
-        db.upload_database(instrument_id)
+        # Start AcquisitionListener process in the background
+        process = psutil.Popen(["py", "AcquisitionListener.py", acquisition_path, instrument_id, run_id])
+        db.store_pid(instrument_id, run_id, process.pid)
+
+        # Upload database to Google Drive
+        if db.is_instrument_computer() and db.sync_is_enabled():
+            db.upload_database(instrument_id)
 
     return True, False
 
@@ -5037,18 +5039,17 @@ def update_progress_bar_during_active_instrument_run(active_cell, table_data, re
         return {"display": "none"}, None, None, None, True, {"display": "none"}
 
 
-@app.callback(Output("settings-button", "style"),
-              Output("setup-new-run-button", "style"),
-              Input("on-page-load", "data"))
-def hide_elements_for_non_instrument_devices(on_page_load):
+@app.callback(Output("setup-new-run-button", "style"),
+              Input("tabs", "value"), prevent_initial_call=True)
+def hide_elements_for_non_instrument_devices(instrument_id):
 
     """
-    Hides settings and job setup button for users who have signed in from an external device
+    Hides job setup button for shared users
     """
 
     if db.is_valid():
-        if not db.is_instrument_computer():
-            return {"display": "none"}, {"display": "none"}
+        if db.get_device_identity() != instrument_id:
+            return {"display": "none"}
         else:
             raise PreventUpdate
     else:
