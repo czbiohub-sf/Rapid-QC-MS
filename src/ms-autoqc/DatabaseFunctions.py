@@ -860,7 +860,7 @@ def delete_instrument_run(instrument_id, run_id):
     # Delete from each table
     for table in [runs_table, sample_qc_results_table, bio_qc_results_table]:
         connection.execute((
-            sa.delete(table).where(runs_table.c.run_id == run_id)
+            sa.delete(table).where(table.c.run_id == run_id)
         ))
 
     # Close the connection
@@ -3244,7 +3244,7 @@ def delete_active_run_csv_files(instrument_id, run_id):
     Checks for and deletes CSV files from Google Drive at the end of an active instrument run
     """
 
-    id = instrument_id.replace(" ", "_") + "_" + run_id + ".zip"
+    id = instrument_id.replace(" ", "_") + "_" + run_id
 
     # Find zip archive of CSV files in Google Drive and delete it
     drive = get_drive_instance()
@@ -3253,13 +3253,9 @@ def delete_active_run_csv_files(instrument_id, run_id):
     if gdrive_folder_id is not None:
         drive_file_list = drive.ListFile({"q": "'" + gdrive_folder_id + "' in parents and trashed=false"}).GetList()
         for file in drive_file_list:
-            if file["title"] == id:
+            if file["title"] == id + ".zip":
                 file.Delete()
                 break
-
-    # Delete zip archive from /data
-    csv_directory = os.path.join(data_directory, id, "csv")
-    shutil.rmtree(csv_directory)
 
     # Delete Drive ID from database
     db_metadata, connection = connect_to_database(instrument_id)
@@ -3289,35 +3285,6 @@ def sync_on_run_completion(instrument_id, run_id):
     # Get Google Drive instance and folder ID
     drive = get_drive_instance()
     gdrive_folder_id = get_drive_folder_id()
-
-    # Ensure another instrument is not uploading or syncing (give 3 attempts)
-    while not safe_to_upload(gdrive_folder_id):
-        time.sleep(15)
-        if not safe_to_upload(gdrive_folder_id):
-            time.sleep(15)
-            if not safe_to_upload(gdrive_folder_id):
-                return False
-        break
-
-    # Send sync signal
-    try:
-        send_sync_signal(gdrive_folder_id)
-    except Exception as error:
-        print("sync_on_run_completion() – Error sending sync signal:", error)
-        return None
-
-    # If modified, download up-to-date database
-    try:
-        download_database(instrument_id)
-    except Exception as error:
-        print("sync_on_run_completion() – Error downloading database during sync:", error)
-        return None
-
-    # Remove sync signal for upload
-    try:
-        remove_sync_signal(gdrive_folder_id)
-    except Exception as error:
-        print("sync_on_run_completion() – Error removing sync signal", error)
 
     # Upload database to Google Drive
     try:

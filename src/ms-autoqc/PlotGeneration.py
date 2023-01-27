@@ -16,8 +16,7 @@ bootstrap_colors = {
     "yellow-low-opacity": "rgba(255, 193, 7, 0.4)"
 }
 
-def get_qc_results(instrument_id, run_id, status="Complete", drive=None, biological_standard=None,
-                   biological_standards_only=False, for_benchmark_plot=False):
+def get_qc_results(instrument_id, run_id, status="Complete", biological_standard=None, biological_standards_only=False, for_benchmark_plot=False):
 
     """
     Loads and parses QC results for samples and biological standards from either CSV
@@ -29,16 +28,15 @@ def get_qc_results(instrument_id, run_id, status="Complete", drive=None, biologi
 
     start = time.time()
 
-    # Download CSV files if instrument run is active
-    if status == "Active" and drive is not None:
-        if not db.is_instrument_computer():
-            db.download_qc_results(instrument_id, run_id)
-
     # Get run information / metadata
-    if status == "Complete":
+    if db.get_device_identity() != instrument_id and db.sync_is_enabled():
+        if status == "Complete":
+            df_run = db.get_instrument_run(instrument_id, run_id)
+        elif status == "Active":
+            db.download_qc_results(instrument_id, run_id)
+            df_run = db.get_instrument_run_from_csv(instrument_id, run_id)
+    else:
         df_run = db.get_instrument_run(instrument_id, run_id)
-    elif status == "Active":
-        df_run = db.get_instrument_run_from_csv(instrument_id, run_id)
 
     chromatography = df_run["chromatography"].values[0]
     df_sequence = df_run["sequence"].values[0]

@@ -132,7 +132,7 @@ def serve_layout():
                                             dbc.Progress(id="active-run-progress-bar", animated=False),
 
                                             # Buttons for managing MS-AutoQC jobs
-                                            html.Div(className="d-flex justify-content-center btn-toolbar", children=[
+                                            html.Div(id="job-controller-panel", className="d-flex justify-content-center btn-toolbar", children=[
                                                 # Button to mark current job as complete
                                                 html.Div(className="me-1", children=[
                                                     dbc.Button("Mark as Completed",
@@ -144,7 +144,7 @@ def serve_layout():
 
                                                 # Button to restart job
                                                 html.Div(className="me-1", children=[
-                                                    dbc.Button("Skip Sample",
+                                                    dbc.Button("Restart Job",
                                                         id="restart-job-button",
                                                         className="run-button",
                                                         outline=True,
@@ -2448,11 +2448,7 @@ def load_data(refresh, active_cell, table_data, resources, instrument_id):
                     db.store_pid(instrument_id, run_id, process.pid)
 
         # If new sample, route raw data -> parsed data -> user session cache -> plots
-        if status == "Active" and db.sync_is_enabled():
-            drive = db.get_drive_instance()
-            return get_qc_results(instrument_id, run_id, status, drive) + (True,)
-        else:
-            return get_qc_results(instrument_id, run_id) + (True,)
+        return get_qc_results(instrument_id, run_id, status) + (True,)
 
     else:
         return (None, None, None, None, None, None, None, None, None, None,
@@ -4999,6 +4995,7 @@ def update_folder_path_text_field(select_folder_button, selected_folder, setting
               Output("active-run-progress-bar", "value"),
               Output("active-run-progress-bar", "label"),
               Output("refresh-interval", "disabled"),
+              Output("job-controller-panel", "style"),
               Input("instrument-run-table", "active_cell"),
               State("instrument-run-table", "data"),
               Input("refresh-interval", "n_intervals"),
@@ -5022,15 +5019,20 @@ def update_progress_bar_during_active_instrument_run(active_cell, table_data, re
         progress_label = str(percent_complete) + "%"
         header_text = run_id + " – " + str(completed) + " out of " + str(total) + " samples processed"
 
-        if status != "Complete":
-            refresh_interval_disabled = False
-        else:
+        if status == "Complete":
             refresh_interval_disabled = True
+        else:
+            refresh_interval_disabled = False
 
-        return {"display": "block"}, header_text, percent_complete, progress_label, refresh_interval_disabled
+        if db.get_device_identity() == instrument_id:
+            controller_panel_visibility = {"display": "block"}
+        else:
+            controller_panel_visibility = {"display": "none"}
+
+        return {"display": "block"}, header_text, percent_complete, progress_label, refresh_interval_disabled, controller_panel_visibility
 
     else:
-        return {"display": "none"}, None, None, None, True
+        return {"display": "none"}, None, None, None, True, {"display": "none"}
 
 
 @app.callback(Output("settings-button", "style"),
@@ -5080,10 +5082,9 @@ def confirm_action_on_job(mark_job_as_completed, job_completed, restart_job, job
         return True, title, body, "Mark Job as Completed", "success"
 
     elif trigger == "restart-job-button":
-        title = "Skip sample and restart " + run_id + "?"
-        body = dbc.Label("This will skip the current sample and restart the acquisition listener process for " +
-            run_id + ". Continue?")
-        return True, title, body, "Skip Sample and Restart Job", "warning"
+        title = "Restart " + run_id + "?"
+        body = dbc.Label("This will restart the acquisition listener process for " + run_id + ". Continue?")
+        return True, title, body, "Restart Job", "warning"
 
     elif trigger == "delete-job-button":
         title = "Delete " + run_id + " on " + instrument_id + "?"
@@ -5139,12 +5140,9 @@ def perform_action_on_job(confirm_button, modal_title, resources):
             traceback.print_exc()
             return None, None, None, True
 
-    elif "Skip" in modal_title:
+    elif "Restart" in modal_title:
 
         try:
-            # Skip sample
-            db.skip_sample(instrument_id, run_id)
-
             # Kill current acquisition listener (acquisition listener will be restarted automatically)
             pid = db.get_pid(instrument_id, run_id)
             qc.kill_subprocess(pid)
@@ -5158,7 +5156,7 @@ def perform_action_on_job(confirm_button, modal_title, resources):
             return None, True, None, None
 
         except:
-            print("Could not skip sample and restart listener.")
+            print("Could not restart listener.")
             traceback.print_exc()
             return None, None, None, True
 
@@ -5167,6 +5165,11 @@ def perform_action_on_job(confirm_button, modal_title, resources):
         try:
             # Delete instrument run from database
             db.delete_instrument_run(instrument_id, run_id)
+
+            # Sync with Google Drive
+            if db.sync_is_enabled():
+                db.upload_database(instrument_id)
+                db.delete_active_run_csv_files(instrument_id, run_id)
 
             # Delete temporary data file directory
             db.delete_temp_directory(instrument_id, run_id)
