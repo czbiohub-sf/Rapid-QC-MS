@@ -576,9 +576,16 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
     # Get MS-DIAL directory
     msdial_directory = db.get_msdial_directory()
 
-    # Run MSConvert
+    # Run MSConvert (and give 5 more attempts if it fails)
     try:
         mzml_file = run_msconvert(path, filename, extension, mzml_file_directory)
+
+        for attempt in range(5):
+            if not os.path.exists(mzml_file):
+                time.sleep(180)
+                mzml_file = run_msconvert(path, filename, extension, mzml_file_directory)
+            else:
+                break
     except:
         mzml_file = None
         print("Failed to run MSConvert.")

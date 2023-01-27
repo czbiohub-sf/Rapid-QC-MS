@@ -68,22 +68,12 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
             new_md5 = get_md5(path + filename + "." + extension)
             old_md5 = db.get_md5(self.instrument_id, filename)
 
-            # If the MD5 checksum after 3 mins is the same as before, compare one more time
+            # If the MD5 checksum after 3 mins is the same as before, route to pipeline
             if new_md5 == old_md5:
-
-                # Wait 3 minutes again
                 print("MD5 checksums matched. Preparing to process file.")
                 time.sleep(180)
+                return True
 
-                # Compare checksums
-                new_md5 = get_md5(path + filename + "." + extension)
-                old_md5 = db.get_md5(filename)
-
-                # If match, route data file for processing. If not, repeat entire process.
-                if new_md5 == old_md5:
-                    return True
-                else:
-                    db.update_md5_checksum(filename, new_md5)
             else:
                 db.update_md5_checksum(filename, new_md5)
 
