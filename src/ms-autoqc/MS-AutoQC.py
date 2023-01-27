@@ -132,32 +132,34 @@ def serve_layout():
                                             dbc.Progress(id="active-run-progress-bar", animated=False),
 
                                             # Buttons for managing MS-AutoQC jobs
-                                            html.Div(id="job-controller-panel", className="d-flex justify-content-center btn-toolbar", children=[
-                                                # Button to mark current job as complete
-                                                html.Div(className="me-1", children=[
-                                                    dbc.Button("Mark as Completed",
-                                                        id="mark-as-completed-button",
-                                                        className="run-button",
-                                                        outline=True,
-                                                        color="success"),
-                                                ]),
+                                            html.Div(id="job-controller-panel", children=[
+                                                html.Div(className="d-flex justify-content-center btn-toolbar", children=[
+                                                    # Button to mark current job as complete
+                                                    html.Div(className="me-1", children=[
+                                                        dbc.Button("Mark as Completed",
+                                                            id="mark-as-completed-button",
+                                                            className="run-button",
+                                                            outline=True,
+                                                            color="success"),
+                                                    ]),
 
-                                                # Button to restart job
-                                                html.Div(className="me-1", children=[
-                                                    dbc.Button("Restart Job",
-                                                        id="restart-job-button",
-                                                        className="run-button",
-                                                        outline=True,
-                                                        color="warning"),
-                                                ]),
+                                                    # Button to restart job
+                                                    html.Div(className="me-1", children=[
+                                                        dbc.Button("Restart Job",
+                                                            id="restart-job-button",
+                                                            className="run-button",
+                                                            outline=True,
+                                                            color="warning"),
+                                                    ]),
 
-                                                # Button to delete job
-                                                html.Div(className="me-1", children=[
-                                                    dbc.Button("Delete Job",
-                                                        id="delete-job-button",
-                                                        className="run-button",
-                                                        outline=True,
-                                                        color="danger"),
+                                                    # Button to delete job
+                                                    html.Div(className="me-1", children=[
+                                                        dbc.Button("Delete Job",
+                                                            id="delete-job-button",
+                                                            className="run-button",
+                                                            outline=True,
+                                                            color="danger"),
+                                                    ]),
                                                 ]),
                                             ]),
                                         ])
