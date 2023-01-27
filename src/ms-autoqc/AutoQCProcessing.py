@@ -343,7 +343,7 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
 
         # Get in-run RT average for each internal standard
         df_compare["In-run RT average"] = np.nan
-        df_run_retention_times = db.parse_internal_standard_data(instrument_id, run_id, "retention_time", polarity, "Processing", False)
+        df_run_retention_times = db.parse_internal_standard_data(instrument_id, run_id, "retention_time", polarity, "processing", False)
 
         if df_run_retention_times is not None:
             # Calculate in-run RT average for each internal standard

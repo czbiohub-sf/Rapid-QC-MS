@@ -397,7 +397,7 @@ def is_valid(instrument_id=None):
 
         # Otherwise, validate all instrument databases
         else:
-            database_files = [file.replace(".db", "") for file in os.listdir(data_directory) if ".db" in file]
+            database_files = [file.replace(".db", "") for file in os.listdir(data_directory) if ".db" in file and "journal.db" not in file]
             databases = [get_database_file(f, sqlite_conn=True) for f in database_files]
 
             for database in databases:
@@ -2237,16 +2237,16 @@ def get_current_sample(instrument_id, run_id):
         return samples[1]
 
 
-def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, status, as_json=True):
+def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, load_from, as_json=True):
 
     """
     Returns JSON-ified DataFrame of samples (as rows) vs. internal standards (as columns)
     """
 
     # Get relevant QC results table from database
-    if status == "Complete" or status == "Processing":
+    if load_from == "database" or load_from == "processing":
         df_samples = get_samples_in_run(instrument_id, run_id, "Sample")
-    elif status == "Active":
+    elif load_from == "csv":
         df_samples = get_samples_from_csv(instrument_id, run_id, "Sample")
 
     # Filter by polarity
@@ -2254,7 +2254,7 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, s
     sample_ids = df_samples["sample_id"].astype(str).tolist()
 
     # Return None if results are None
-    if status == "Processing":
+    if load_from == "processing":
         if len(df_samples[result_type].dropna()) == 0:
             return None
 
@@ -2272,16 +2272,16 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, s
         return df_results
 
 
-def parse_biological_standard_data(instrument_id, run_id, result_type, polarity, biological_standard, status, as_json=True):
+def parse_biological_standard_data(instrument_id, run_id, result_type, polarity, biological_standard, load_from, as_json=True):
 
     """
     Returns JSON-ified DataFrame of instrument runs (as columns) vs. targeted features (as rows)
     """
 
     # Get relevant QC results table from database
-    if status == "Complete" or status == "Processing":
+    if load_from == "database":
         df_samples = get_table(instrument_id, "bio_qc_results")
-    elif status == "Active":
+    elif load_from == "csv":
         id = instrument_id.replace(" ", "_") + "_" + run_id
         bio_standards_csv = os.path.join(data_directory, id, "csv", "bio_standards.csv")
         df_samples = pd.read_csv(bio_standards_csv, index_col=False)
@@ -2314,16 +2314,16 @@ def parse_biological_standard_data(instrument_id, run_id, result_type, polarity,
         return df_results
 
 
-def parse_internal_standard_qc_data(instrument_id, run_id, polarity, result_type, status, as_json=True):
+def parse_internal_standard_qc_data(instrument_id, run_id, polarity, result_type, load_from, as_json=True):
 
     """
     Returns JSON-ified DataFrame of samples (as rows) vs. internal standards (as columns)
     """
 
     # Get relevant QC results table from database
-    if status == "Complete" or status == "Processing":
+    if load_from == "database" or load_from == "processing":
         df_samples = get_samples_in_run(instrument_id, run_id, "Sample")
-    elif status == "Active":
+    elif load_from == "csv":
         df_samples = get_samples_from_csv(instrument_id, run_id, "Sample")
 
     # Filter by polarity

@@ -31,12 +31,17 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
     # Get run information / metadata
     if db.get_device_identity() != instrument_id and db.sync_is_enabled():
         if status == "Complete":
-            df_run = db.get_instrument_run(instrument_id, run_id)
+            load_from = "database"
         elif status == "Active":
-            db.download_qc_results(instrument_id, run_id)
-            df_run = db.get_instrument_run_from_csv(instrument_id, run_id)
+            load_from = "csv"
     else:
+        load_from = "csv"
+
+    if load_from == "database":
         df_run = db.get_instrument_run(instrument_id, run_id)
+    elif load_from == "csv":
+        db.download_qc_results(instrument_id, run_id)
+        df_run = db.get_instrument_run_from_csv(instrument_id, run_id)
 
     chromatography = df_run["chromatography"].values[0]
     df_sequence = df_run["sequence"].values[0]
@@ -70,42 +75,42 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
 
         try:
             df_bio_mz_pos = db.parse_biological_standard_data(instrument_id=instrument_id, run_id=run_id,
-                result_type="precursor_mz", polarity="Pos", biological_standard=biological_standard, status=status)
+                result_type="precursor_mz", polarity="Pos", biological_standard=biological_standard, load_from=load_from)
         except Exception as error:
             print("Error loading positive (–) mode biological standard precursor m/z data:", error)
             df_bio_mz_pos = None
 
         try:
             df_bio_rt_pos = db.parse_biological_standard_data(instrument_id=instrument_id, run_id=run_id,
-                result_type="retention_time", polarity="Pos", biological_standard=biological_standard, status=status)
+                result_type="retention_time", polarity="Pos", biological_standard=biological_standard, load_from=load_from)
         except Exception as error:
             print("Error loading positive (–) mode biological standard precursor m/z data:", error)
             df_bio_rt_pos = None
 
         try:
             df_bio_intensity_pos = db.parse_biological_standard_data(instrument_id=instrument_id, run_id=run_id,
-                result_type="intensity", polarity="Pos", biological_standard=biological_standard, status=status)
+                result_type="intensity", polarity="Pos", biological_standard=biological_standard, load_from=load_from)
         except Exception as error:
             print("Error loading positive (–) mode biological standard retention time data:", error)
             df_bio_intensity_pos = None
 
         try:
             df_bio_mz_neg = db.parse_biological_standard_data(instrument_id=instrument_id, run_id=run_id,
-                result_type="precursor_mz", polarity="Neg", biological_standard=biological_standard, status=status)
+                result_type="precursor_mz", polarity="Neg", biological_standard=biological_standard, load_from=load_from)
         except Exception as error:
             print("Error loading negative (–) mode biological standard precursor m/z data:", error)
             df_bio_mz_neg = None
 
         try:
             df_bio_rt_neg = db.parse_biological_standard_data(instrument_id=instrument_id, run_id=run_id,
-                result_type="retention_time", polarity="Neg", biological_standard=biological_standard, status=status)
+                result_type="retention_time", polarity="Neg", biological_standard=biological_standard, load_from=load_from)
         except Exception as error:
             print("Error loading positive (–) mode biological standard retention time data:", error)
             df_bio_rt_neg = None
 
         try:
             df_bio_intensity_neg = db.parse_biological_standard_data(instrument_id=instrument_id, run_id=run_id,
-                result_type="intensity", polarity="Neg", biological_standard=biological_standard, status=status)
+                result_type="intensity", polarity="Neg", biological_standard=biological_standard, load_from=load_from)
         except Exception as error:
             print("Error loading negative (–) mode biological standard intensity data:", error)
             df_bio_intensity_neg = None
@@ -126,121 +131,121 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
     # Parse m/z, RT, and intensity data for internal standards into DataFrames
     try:
         df_mz_pos = db.parse_internal_standard_data(instrument_id=instrument_id,
-            run_id=run_id, result_type="precursor_mz", polarity="Pos", status=status)
+            run_id=run_id, result_type="precursor_mz", polarity="Pos", load_from=load_from)
     except Exception as error:
         print("Error loading positive (+) mode precursor m/z data:", error)
         df_mz_pos = None
 
     try:
         df_rt_pos = db.parse_internal_standard_data(instrument_id=instrument_id,
-            run_id=run_id, result_type="retention_time", polarity="Pos", status=status)
+            run_id=run_id, result_type="retention_time", polarity="Pos", load_from=load_from)
     except Exception as error:
         print("Error loading positive (+) mode retention time data:", error)
         df_rt_pos = None
 
     try:
         df_intensity_pos = db.parse_internal_standard_data(instrument_id=instrument_id,
-            run_id=run_id, result_type="intensity", polarity="Pos", status=status)
+            run_id=run_id, result_type="intensity", polarity="Pos", load_from=load_from)
     except Exception as error:
         print("Error loading positive (+) mode intensity data:", error)
         df_intensity_pos = None
 
     try:
         df_mz_neg = db.parse_internal_standard_data(instrument_id=instrument_id,
-            run_id=run_id, result_type="precursor_mz", polarity="Neg", status=status)
+            run_id=run_id, result_type="precursor_mz", polarity="Neg", load_from=load_from)
     except Exception as error:
         print("Error loading negative (–) mode precursor m/z data:", error)
         df_mz_neg = None
 
     try:
         df_rt_neg = db.parse_internal_standard_data(instrument_id=instrument_id,
-            run_id=run_id, result_type="retention_time", polarity="Neg", status=status)
+            run_id=run_id, result_type="retention_time", polarity="Neg", load_from=load_from)
     except Exception as error:
         print("Error loading negative (–) mode retention time data:", error)
         df_rt_neg = None
 
     try:
         df_intensity_neg = db.parse_internal_standard_data(instrument_id=instrument_id,
-            run_id=run_id, result_type="intensity", polarity="Neg", status=status)
+            run_id=run_id, result_type="intensity", polarity="Neg", load_from=load_from)
     except Exception as error:
         print("Error loading negative (–) mode intensity data:", error)
         df_intensity_neg = None
 
     try:
         df_delta_rt_pos = db.parse_internal_standard_qc_data(instrument_id=instrument_id,
-            run_id=run_id, result_type="Delta RT", polarity="Pos", status=status)
+            run_id=run_id, result_type="Delta RT", polarity="Pos", load_from=load_from)
     except Exception as error:
         print("Error loading positive (+) mode delta RT data:", error)
         df_delta_rt_pos = None
 
     try:
         df_delta_rt_neg = db.parse_internal_standard_qc_data(instrument_id=instrument_id,
-            run_id=run_id, result_type="Delta RT", polarity="Neg", status=status)
+            run_id=run_id, result_type="Delta RT", polarity="Neg", load_from=load_from)
     except Exception as error:
         print("Error loading negative (–) mode delta RT data:", error)
         df_delta_rt_neg = None
 
     try:
         df_in_run_delta_rt_pos = db.parse_internal_standard_qc_data(instrument_id=instrument_id,
-            run_id=run_id, result_type="In-run delta RT", polarity="Pos", status=status)
+            run_id=run_id, result_type="In-run delta RT", polarity="Pos", load_from=load_from)
     except Exception as error:
         print("Error loading positive (+) mode in-run delta RT data:", error)
         df_in_run_delta_rt_pos = None
 
     try:
         df_in_run_delta_rt_neg = db.parse_internal_standard_qc_data(instrument_id=instrument_id,
-            run_id=run_id, result_type="In-run delta RT", polarity="Neg", status=status)
+            run_id=run_id, result_type="In-run delta RT", polarity="Neg", load_from=load_from)
     except Exception as error:
         print("Error loading negative (–) mode in-run delta RT data:", error)
         df_in_run_delta_rt_neg = None
 
     try:
         df_delta_mz_pos = db.parse_internal_standard_qc_data(instrument_id=instrument_id,
-            run_id=run_id, result_type="Delta m/z", polarity="Pos", status=status)
+            run_id=run_id, result_type="Delta m/z", polarity="Pos", load_from=load_from)
     except Exception as error:
         print("Error loading positive (+) mode delta m/z data:", error)
         df_delta_mz_pos = None
 
     try:
         df_delta_mz_neg = db.parse_internal_standard_qc_data(instrument_id=instrument_id,
-            run_id=run_id, result_type="Delta m/z", polarity="Neg", status=status)
+            run_id=run_id, result_type="Delta m/z", polarity="Neg", load_from=load_from)
     except Exception as error:
         print("Error loading negative (–) mode delta m/z data:", error)
         df_delta_mz_neg = None
 
     try:
         df_warnings_pos = db.parse_internal_standard_qc_data(instrument_id=instrument_id,
-            run_id=run_id, result_type="Warnings", polarity="Pos", status=status)
+            run_id=run_id, result_type="Warnings", polarity="Pos", load_from=load_from)
     except Exception as error:
         print("Error loading positive (+) mode QC warnings data:", error)
         df_warnings_pos = None
 
     try:
         df_warnings_neg = db.parse_internal_standard_qc_data(instrument_id=instrument_id,
-            run_id=run_id, result_type="Warnings", polarity="Neg", status=status)
+            run_id=run_id, result_type="Warnings", polarity="Neg", load_from=load_from)
     except Exception as error:
         print("Error loading negative (–) mode QC warnings data:", error)
         df_warnings_neg = None
 
     try:
         df_fails_pos = db.parse_internal_standard_qc_data(instrument_id=instrument_id,
-            run_id=run_id, result_type="Fails", polarity="Pos", status=status)
+            run_id=run_id, result_type="Fails", polarity="Pos", load_from=load_from)
     except Exception as error:
         print("Error loading positive (+) mode QC fails data:", error)
         df_fails_pos = None
 
     try:
         df_fails_neg = db.parse_internal_standard_qc_data(instrument_id=instrument_id,
-            run_id=run_id, result_type="Fails", polarity="Neg", status=status)
+            run_id=run_id, result_type="Fails", polarity="Neg", load_from=load_from)
     except Exception as error:
         print("Error loading negative (+) mode QC fails data:", error)
         df_fails_neg = None
 
     # Generate DataFrame for sample table
     try:
-        if status == "Complete":
+        if load_from == "database":
             df_samples = db.get_samples_in_run(instrument_id, run_id, "Both")
-        elif status == "Active":
+        elif load_from == "csv":
             df_samples = db.get_samples_from_csv(instrument_id, run_id, "Both")
 
         df_samples = df_samples[["sample_id", "position", "qc_result"]]
