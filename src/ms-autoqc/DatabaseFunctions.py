@@ -2677,21 +2677,30 @@ def get_run_progress(instrument_id, run_id, status):
     return round(percent_complete, 1)
 
 
-def update_sample_counters_for_run(instrument_id, run_id, qc_result, latest_sample):
+def update_sample_counters_for_run(instrument_id, run_id, latest_sample):
 
     """
     Increments "completed" count, as well as "pass" and "fail" counts accordingly
     """
 
-    df_instrument_run = get_instrument_run(instrument_id, run_id)
-    completed = df_instrument_run["completed"].astype(int).tolist()[0] + 1
-    passes = df_instrument_run["passes"].astype(int).tolist()[0]
-    fails = df_instrument_run["fails"].astype(int).tolist()[0]
+    df = get_samples_in_run(instrument_id, run_id, "Both")
 
-    if qc_result == "Pass" or qc_result == "Warning":
-        passes = passes + 1
-    elif qc_result == "Fail":
-        fails = fails + 1
+    try:
+        passes = int(df["qc_result"].value_counts()["Pass"])
+    except:
+        passes = 0
+
+    try:
+        warnings = int(df["qc_result"].value_counts()["Warning"])
+    except:
+        warnings = 0
+
+    try:
+        fails = int(df["qc_result"].value_counts()["Fail"])
+    except:
+        fails = 0
+
+    completed = passes + fails
 
     db_metadata, connection = connect_to_database(instrument_id)
     instrument_runs_table = sa.Table("runs", db_metadata, autoload=True)

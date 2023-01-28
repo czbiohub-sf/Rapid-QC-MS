@@ -661,7 +661,7 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
         db.write_qc_results(filename, instrument_id, run_id, mz_record, rt_record, intensity_record, qc_record, qc_result, is_bio_standard)
 
         # Update sample counters to trigger dashboard update
-        db.update_sample_counters_for_run(instrument_id=instrument_id, run_id=run_id, qc_result=qc_result, latest_sample=filename)
+        db.update_sample_counters_for_run(instrument_id=instrument_id, run_id=run_id, latest_sample=filename)
 
         # If sync is enabled, upload the QC results to Google Drive
         if db.sync_is_enabled():
