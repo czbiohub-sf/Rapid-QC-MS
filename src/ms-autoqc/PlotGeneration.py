@@ -529,9 +529,14 @@ def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity):
     bio_df["Retention time (min)"] =  df_rt.loc[df_rt["Name"] == run_id][metabolites].iloc[0].astype(float).values
     bio_df["Intensity"] =  df_intensity.loc[df_intensity["Name"] == run_id][metabolites].iloc[0].astype(float).values
 
-    # Get standard deviation of feature intensities
+    # Get percent change of feature intensities (only for runs previous to this one)
     df_intensity = df_intensity.fillna(0)
-    feature_intensity_from_study = df_intensity.loc[df_intensity["Name"] == run_id][metabolites].iloc[0].astype(float).values
+
+    try:
+        index_of_run = df_intensity.loc[df_intensity["Name"] == run_id].index.tolist()[0]
+        df_intensity = df_intensity[0:index_of_run + 1]
+    finally:
+        feature_intensity_from_study = df_intensity.loc[df_intensity["Name"] == run_id][metabolites].iloc[0].astype(float).values
 
     if len(df_intensity) > 1:
         average_intensity_in_studies = df_intensity.loc[df_intensity["Name"] != run_id][metabolites].astype(float).mean().values
