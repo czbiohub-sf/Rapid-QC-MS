@@ -843,10 +843,10 @@ def serve_layout():
                                         dbc.Alert(id="email-deletion-alert", is_open=False, duration=5000),
 
                                         # Register recipients for email notifications
-                                        dbc.Label("Register email notification recipients"),
+                                        dbc.Label("Register recipients for email notifications"),
                                         html.Br(),
                                         dbc.InputGroup([
-                                            dbc.Input(placeholder="name@example.com",
+                                            dbc.Input(placeholder="recipient@example.com",
                                                 id="email-notifications-text-field"),
                                             dbc.Button("Register email", color="primary", outline=True,
                                                 id="add-email-button", n_clicks=0),

@@ -644,14 +644,21 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
         qc_record = None
         qc_result = "Fail"
 
-    # Send Slack notification (if they are enabled)
+    # Send email and Slack notification (if they are enabled)
     try:
-        if db.slack_notifications_are_enabled():
-            if qc_result != "Pass":
-                alert = "QC " + qc_result + ": " + filename
-                if peak_list is None:
-                    alert = "Failed to process " + filename
+        if qc_result != "Pass":
+            alert = "QC " + qc_result + ": " + filename
+            if peak_list is None:
+                alert = "Failed to process " + filename
+
+            # Send Slack
+            if db.slack_notifications_are_enabled():
                 slack_bot.send_message(alert)
+
+            # Send email
+            if db.email_notifications_are_enabled():
+                db.send_email(alert, "Please check on your instrument run accordingly.")
+
     except:
         print("Failed to send Slack notification.")
         traceback.print_exc()

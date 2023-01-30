@@ -10,6 +10,11 @@ import sqlalchemy as sa
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
 from sqlalchemy import INTEGER, REAL, TEXT
+import base64
+from email.message import EmailMessage
+import google.auth as google_auth
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 # Initialize directories
 root_directory = os.getcwd()
@@ -23,6 +28,7 @@ settings_db_file = os.path.join(methods_directory, "Settings.db")
 
 # Google Drive authentication files
 credentials_file = os.path.join(auth_directory, "credentials.txt")
+alt_credentials = os.path.join(auth_directory, "email_credentials.txt")
 drive_settings_file = os.path.join(auth_directory, "settings.yaml")
 auth_container = [GoogleAuth(settings_file=drive_settings_file)]
 
@@ -362,7 +368,16 @@ def initialize_google_drive():
         gauth.LocalWebserverAuth()
 
     if not os.path.exists(credentials_file) and is_valid():
-        gauth.SaveCredentialsFile(credentials_file)
+        save_google_drive_credentials()
+
+    # Makes small modification for emails (for usage with Google's google.auth)
+    if not os.path.exists(alt_credentials):
+        data = None
+        with open(credentials_file, "r") as file:
+            data = json.load(file)
+            data["type"] = "authorized_user"
+        with open(alt_credentials, "w") as file:
+            json.dump(data, file)
 
     return os.path.exists(credentials_file)
 
@@ -616,6 +631,11 @@ def generate_client_settings_yaml(client_id, client_secret):
         "save_credentials_file: auth/credentials.txt",
         "\n",
         "get_refresh_token: True",
+        "\n",
+        "oauth_scope:",
+        "  - https://www.googleapis.com/auth/drive",
+        "  - https://www.googleapis.com/auth/gmail.send",
+        "  - https://www.googleapis.com/auth/userinfo.email"
     ]
 
     with open(settings_yaml_file, "w") as file:
@@ -2603,13 +2623,26 @@ def get_slack_notifications_toggled():
         return None
 
 
-def get_email_notifications_list():
+def get_email_notifications_list(as_string=False):
 
     """
     Returns list of emails registered for MS-AutoQC notifications
     """
 
-    return get_table("Settings", "email_notifications")["email_address"].astype(str).tolist()
+    email_list = get_table("Settings", "email_notifications")["email_address"].astype(str).tolist()
+
+    if as_string:
+        email_list_string = ""
+
+        for email in email_list:
+            email_list_string += email
+            if email != email_list[-1]:
+                email_list_string += ","
+
+        return email_list_string
+
+    else:
+        return email_list
 
 
 def register_email_for_notifications(email_address):
@@ -2989,15 +3022,8 @@ def upload_database(instrument_id, sync_settings=False):
     # Get Google Drive instance
     drive = get_drive_instance()
 
-    # Ensure that another device is not currently uploading to Google Drive
-    if not safe_to_upload(gdrive_folder_id):
-        return None
-
     # Vacuum database to optimize size
     execute_vacuum(instrument_id)
-
-    # Send upload signal
-    send_sync_signal(gdrive_folder_id)
 
     # Upload methods directory to Google Drive
     if sync_settings == True:
@@ -3018,9 +3044,6 @@ def upload_database(instrument_id, sync_settings=False):
 
     else:
         return None
-
-    # Indicate that uploading is complete
-    remove_sync_signal(gdrive_folder_id)
 
     return time.strftime("%H:%M:%S")
 
@@ -3395,3 +3418,32 @@ def pipeline_valid(module=None):
         return msconvert_installed
     else:
         return msconvert_installed and msdial_installed
+
+
+def send_email(subject, message_body):
+
+    """
+    Sends email using Google authenticated credentials
+    """
+
+    try:
+        credentials = google_auth.load_credentials_from_file(alt_credentials)[0]
+
+        service = build("gmail", "v1", credentials=credentials)
+        message = EmailMessage()
+
+        message.set_content(message_body)
+
+        message["Subject"] = subject
+        message["To"] = get_email_notifications_list(as_string=True)
+
+        encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+        create_message = { "raw": encoded_message }
+
+        send_message = (service.users().messages().send(userId="me", body=create_message).execute())
+
+    except Exception as error:
+        traceback.print_exc()
+        send_message = None
+
+    return send_message
