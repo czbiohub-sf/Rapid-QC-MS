@@ -74,11 +74,10 @@ def metadata_is_valid(filename, contents):
     return True
 
 
-def chromatography_is_valid(chromatography):
+def chromatography_valid(chromatography):
 
     """
-    Validates that the given chromatography method's MSP / TXT files exist, and that
-    the MSP files exist for the selected biological standard(s) as well
+    Validates that the given chromatography method's MSP / TXT files exist
     """
 
     # Get chromatography method from database
@@ -94,6 +93,30 @@ def chromatography_is_valid(chromatography):
 
     if not os.path.isfile(pos_msp_file) or not os.path.isfile(neg_msp_file):
         return False
+
+    return True
+
+
+def biological_standards_valid(chromatography, biological_standards):
+
+    """
+    Validates that the given list of biological standards have MSP files
+    """
+
+    # Query the provided biological standards from the database
+    df = db.get_biological_standards()
+    df = df.loc[df["chromatography"] == chromatography]
+    df = df.loc[df["name"].isin(biological_standards)]
+
+    # Check whether the method's MSP / TXT files exist, and return False if they don't
+    pos_msp_files = df["pos_bio_msp_file"].astype(str).tolist()
+    neg_msp_files = df["neg_bio_msp_file"].astype(str).tolist()
+    msp_files = pos_msp_files + neg_msp_files
+
+    for file in msp_files:
+        file_path = os.path.join(os.getcwd(), "data", "methods", file)
+        if not os.path.isfile(file_path):
+            return False
 
     return True
 

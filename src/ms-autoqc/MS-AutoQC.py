@@ -599,7 +599,7 @@ def serve_layout():
                                     dbc.FormFeedback(
                                         "Please ensure that your chromatography method has identification files "
                                         "(MSP or CSV) configured for positive and negative mode in Settings > "
-                                        "Internal Standards.", type="invalid")
+                                        "Internal Standards and Settings > Biological Standards.", type="invalid")
                                 ]),
 
                                 html.Br(),
@@ -611,12 +611,7 @@ def serve_layout():
                                         options=[], placeholder="Select biological standards...",
                                         style={"text-align": "left", "height": "1.5", "font-size": "1rem",
                                             "width": "100%", "display": "inline-block"},
-                                        multi=True),
-                                    dbc.FormFeedback("Looks good!", type="valid"),
-                                    dbc.FormFeedback(
-                                        "Please ensure that your biological standard has MSP files configured "
-                                        "for both positive and negative mode in Settings > Biological Standards.",
-                                        type="invalid")
+                                        multi=True)
                                 ]),
 
                                 html.Br(),
@@ -4656,6 +4651,7 @@ def update_new_job_button_text(job_type):
               Output("data-acquisition-folder-path", "invalid"),
               Input("instrument-run-id", "value"),
               Input("start-run-chromatography-dropdown", "value"),
+              Input("start-run-bio-standards-dropdown", "value"),
               Input("start-run-qc-configs-dropdown", "value"),
               Input("sequence-upload-button", "contents"),
               State("sequence-upload-button", "filename"),
@@ -4675,10 +4671,10 @@ def update_new_job_button_text(job_type):
               State("data-acquisition-folder-path", "valid"),
               State("data-acquisition-folder-path", "invalid"),
               State("tabs", "value"), prevent_initial_call=True)
-def validation_feedback_for_new_run_setup_form(run_id, chromatography, qc_config, sequence_contents, sequence_filename,
-    metadata_contents, metadata_filename, data_acquisition_path, run_id_valid, run_id_invalid, chromatography_valid,
-    chromatography_invalid, qc_config_valid, qc_config_invalid, sequence_valid, sequence_invalid, metadata_valid,
-    metadata_invalid, path_valid, path_invalid, instrument):
+def validation_feedback_for_new_run_setup_form(run_id, chromatography, bio_standards, qc_config, sequence_contents,
+    sequence_filename, metadata_contents, metadata_filename, data_acquisition_path, run_id_valid, run_id_invalid,
+    chromatography_valid, chromatography_invalid, qc_config_valid, qc_config_invalid, sequence_valid, sequence_invalid,
+    metadata_valid, metadata_invalid, path_valid, path_invalid, instrument):
 
     """
     Extensive form validation and feedback for setting up a new MS-AutoQC job
@@ -4698,7 +4694,19 @@ def validation_feedback_for_new_run_setup_form(run_id, chromatography, qc_config
 
     # Chromatography validation
     if chromatography is not None:
-        if qc.chromatography_is_valid(chromatography):
+        if qc.chromatography_valid(chromatography):
+            chromatography_valid, chromatography_invalid = True, False
+        else:
+            chromatography_valid, chromatography_invalid = False, True
+
+    # Biological standard validation
+    if bio_standards is not None:
+        if qc.biological_standards_valid(chromatography, bio_standards):
+            chromatography_valid, chromatography_invalid = True, False
+        else:
+            chromatography_valid, chromatography_invalid = False, True
+    elif chromatography is not None:
+        if qc.chromatography_valid(chromatography):
             chromatography_valid, chromatography_invalid = True, False
         else:
             chromatography_valid, chromatography_invalid = False, True
@@ -4739,7 +4747,7 @@ def validation_feedback_for_new_run_setup_form(run_id, chromatography, qc_config
             path_valid, path_invalid = False, True
 
     return run_id_valid, run_id_invalid, chromatography_valid, chromatography_invalid, qc_config_valid, qc_config_invalid, \
-           sequence_valid, sequence_invalid, metadata_valid, metadata_invalid, path_valid, path_invalid
+        sequence_valid, sequence_invalid, metadata_valid, metadata_invalid, path_valid, path_invalid
 
 
 @app.callback(Output("monitor-new-run-button", "disabled"),
