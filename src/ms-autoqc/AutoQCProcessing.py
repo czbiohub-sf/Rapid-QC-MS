@@ -384,9 +384,8 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
         without_ms2 = df_compare["MSMS spectrum"].isnull()
         if len(df_compare[with_ms2]) > 0:
             rt_threshold = db.get_msdial_configuration_parameters("Default", parameter="post_id_rt_tolerance")
-            outside_rt_threshold = df_compare["Delta RT"].astype(float) > rt_threshold
+            outside_rt_threshold = df_compare["Delta RT"].abs() > rt_threshold
             annotations_to_drop = df_compare.loc[(without_ms2) & (outside_rt_threshold)]
-            print(annotations_to_drop)
             df_compare.drop(annotations_to_drop.index, inplace=True)
 
         # Get in-run RT average for each internal standard
@@ -759,6 +758,3 @@ def kill_subprocess(pid):
     except Exception as error:
         print("Error killing acquisition listener.")
         traceback.print_exc()
-
-# # Testing data pipeline
-# process_data_file("C:/Users/wasim.sandhu/Downloads/EMGO001/", "EMGO001_Pos_B_3_QE1_HILIC_014", "raw", "Thermo QE 1", "EMGO001")

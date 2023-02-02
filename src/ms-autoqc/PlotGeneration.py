@@ -26,8 +26,6 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
     Output: tuple of multiple tables encoded as JSON strings
     """
 
-    start = time.time()
-
     # Get run information / metadata
     if db.get_device_identity() != instrument_id and db.sync_is_enabled():
         if status == "Complete":
@@ -273,9 +271,6 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
         neg_internal_standards.remove("Sample")
     else:
         neg_internal_standards = []
-
-    end = time.time()
-    print("Loading time:", end - start)
 
     return (df_rt_pos, df_rt_neg, df_intensity_pos, df_intensity_neg, df_mz_pos, df_mz_neg, df_sequence, df_metadata,
         df_bio_rt_pos, df_bio_rt_neg, df_bio_intensity_pos, df_bio_intensity_neg, df_bio_mz_pos, df_bio_mz_neg,
