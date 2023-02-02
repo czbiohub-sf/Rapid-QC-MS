@@ -252,11 +252,24 @@ def peak_list_to_dataframe(sample_peak_list, df_features):
     df.rename(columns={"Title": "Name"}, inplace=True)
 
     # Get only the m/z, RT, and intensity columns
-    df = df[["Name", "Precursor m/z", "RT (min)", "Height"]]
+    df = df[["Name", "Precursor m/z", "RT (min)", "Height", "MSMS spectrum"]]
 
     # Query only internal standards (or targeted features for biological standard)
     feature_list = df_features["name"].astype(str).tolist()
-    df = df.loc[df["Name"].isin(feature_list)]
+    without_ms2_feature_list = ["w/o MS2:" + feature for feature in feature_list]
+    df = df.loc[(df["Name"].isin(feature_list)) | (df["Name"].isin(without_ms2_feature_list))]
+
+    # Label annotations with and without MS2
+    with_ms2 = df["MSMS spectrum"].notnull()
+    without_ms2 = df["MSMS spectrum"].isnull()
+    df.loc[with_ms2, "MSMS spectrum"] = "MS2"
+
+    # Handle annotations made without MS2
+    if len(df[with_ms2]) > 0:
+        df.replace(["w/o MS2:"], "", regex=True, inplace=True)      # Remove "w/o MS2" from annotation name
+        ms2_matching = True                                         # Boolean that says MS/MS was used for identification
+    else:
+        ms2_matching = False
 
     # Get duplicate annotations in a DataFrame
     df_duplicates = df[df.duplicated(subset=["Name"], keep=False)]
@@ -284,6 +297,26 @@ def peak_list_to_dataframe(sample_peak_list, df_features):
             # Absolute values
             df_annotation["Delta m/z"] = df_annotation["Delta m/z"].abs()
             df_annotation["Delta RT"] = df_annotation["Delta RT"].abs()
+
+            # First, remove duplicates without MS2 (if an MSP with MS2 spectra was used for processing)
+            if ms2_matching:
+                new_df = df_annotation.loc[df_annotation["MSMS spectrum"].notnull()]
+
+                # If annotations with MS2 remain, use them moving forward
+                if len(new_df) > 1:
+                    df_annotation = new_df
+
+                # If no annotations with MS2 remain, filter annotations without MS2 by height
+                else:
+                    # Choose the annotation with the highest intensity
+                    if len(df_annotation) > 1:
+                        df_annotation = df_annotation.loc[
+                            df_annotation["Height"] == df_annotation["Height"].max()]
+
+                    # If there's only one annotation without MS2 left, choose as the "correct" annotation
+                    if len(df_annotation) == 1:
+                        df = df.append(df_annotation, ignore_index=True)
+                        continue
 
             # Append the annotation with the lowest delta RT and delta m/z to the peak list DataFrame
             df_rectified = df_annotation.loc[
@@ -323,31 +356,13 @@ def peak_list_to_dataframe(sample_peak_list, df_features):
 def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio_standard):
 
     """
-    Main algorithm that performs QC checks on sample data
+    Algorithm that performs QC checks on sample data
     """
 
     polarity = polarity.replace("itive", "").replace("ative", "")
 
     # Handles sample QC checks
     if not is_bio_standard:
-
-        # Handle duplicate features by picking the one with the highest intensity
-        # Note: if strict RT and m/z tolerances are specified in the MS-DIAL configuration, this should not be a problem
-        duplicates_list = df_peak_list.loc[df_peak_list.duplicated(subset="Name")]["Name"].tolist()
-
-        # If duplicates are found,
-        if len(duplicates_list) > 0:
-
-            # For each duplicate feature,
-            for duplicate in duplicates_list:
-
-                # Index the duplicates of that feature and keep the one with the highest intensity
-                df_duplicates = df_peak_list.loc[df_peak_list["Name"] == duplicate]
-
-                duplicates_to_drop = df_peak_list.loc[
-                    (df_peak_list["Name"] == duplicate) & (df_peak_list["Height"] != df_duplicates["Height"].max())]
-
-                df_peak_list.drop(duplicates_to_drop.index, inplace=True)
 
         # Refactor internal standards DataFrame
         df_features = df_features.rename(
@@ -363,6 +378,16 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
         df_compare = pd.merge(df_features, df_peak_list, on="Name")
         df_compare["Delta RT"] = df_compare["RT (min)"].astype(float) - df_compare["Library RT"].astype(float)
         df_compare["Delta m/z"] = df_compare["Precursor m/z"].astype(float) - df_compare["Library m/z"].astype(float)
+
+        # Get MS-DIAL RT threshold and filter out annotations without MS2 that are outside threshold
+        with_ms2 = df_compare["MSMS spectrum"].notnull()
+        without_ms2 = df_compare["MSMS spectrum"].isnull()
+        if len(df_compare[with_ms2]) > 0:
+            rt_threshold = db.get_msdial_configuration_parameters("Default", parameter="post_id_rt_tolerance")
+            outside_rt_threshold = df_compare["Delta RT"].astype(float) > rt_threshold
+            annotations_to_drop = df_compare.loc[(without_ms2) & (outside_rt_threshold)]
+            print(annotations_to_drop)
+            df_compare.drop(annotations_to_drop.index, inplace=True)
 
         # Get in-run RT average for each internal standard
         df_compare["In-run RT average"] = np.nan
@@ -734,3 +759,6 @@ def kill_subprocess(pid):
     except Exception as error:
         print("Error killing acquisition listener.")
         traceback.print_exc()
+
+# # Testing data pipeline
+# process_data_file("C:/Users/wasim.sandhu/Downloads/EMGO001/", "EMGO001_Pos_B_3_QE1_HILIC_014", "raw", "Thermo QE 1", "EMGO001")

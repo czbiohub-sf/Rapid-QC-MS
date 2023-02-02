@@ -1644,10 +1644,10 @@ def remove_msdial_configuration(msdial_config_name):
     connection.close()
 
 
-def get_msdial_configuration_parameters(msdial_config_name):
+def get_msdial_configuration_parameters(msdial_config_name, parameter=None):
 
     """
-    Returns a tuple of parameters defined for a selected MS-DIAL configuration
+    Returns tuple of parameters defined for a selected MS-DIAL configuration
     """
 
     # Get "msdial_parameters" table from database as a DataFrame
@@ -1660,8 +1660,10 @@ def get_msdial_configuration_parameters(msdial_config_name):
 
     selected_config.drop(["id", "config_name"], inplace=True, axis=1)
 
-    # Get parameters of selected configuration as a tuple
-    return tuple(selected_config.to_records(index=False)[0])
+    if parameter is not None:
+        return selected_config[parameter].values[0]
+    else:
+        return tuple(selected_config.to_records(index=False)[0])
 
 
 def update_msdial_configuration(config_name, rt_begin, rt_end, mz_begin, mz_end, ms1_centroid_tolerance,
