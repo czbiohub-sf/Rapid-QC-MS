@@ -686,7 +686,7 @@ def serve_layout():
                                 # Switch between running AutoQC on a live run vs. past completed run
                                 html.Div(children=[
                                     dbc.Label("Is this an active or completed instrument run?"),
-                                    dbc.RadioItems(id="autoqc-job-type", value="active", options=[
+                                    dbc.RadioItems(id="ms_autoqc-job-type", value="active", options=[
                                         {"label": "Monitor an active instrument run",
                                          "value": "active"},
                                         {"label": "QC a completed instrument run",
@@ -4608,7 +4608,7 @@ def capture_uploaded_metadata(contents, filename):
 @app.callback(Output("monitor-new-run-button", "children"),
               Output("data-acquisition-path-title", "children"),
               Output("data-acquisition-path-form-text", "children"),
-              Input("autoqc-job-type", "value"))
+              Input("ms_autoqc-job-type", "value"))
 def update_new_job_button_text(job_type):
 
     """
@@ -4779,7 +4779,7 @@ def enable_new_autoqc_job_button(run_id_valid, chromatography_valid, qc_config_v
               State("new-metadata", "data"),
               State("data-acquisition-folder-path", "value"),
               State("start-run-qc-configs-dropdown", "value"),
-              State("autoqc-job-type", "value"), prevent_initial_call=True)
+              State("ms_autoqc-job-type", "value"), prevent_initial_call=True)
 def new_autoqc_job_setup(button_clicks, run_id, instrument_id, chromatography, bio_standards, sequence, metadata,
     acquisition_path, qc_config_id, job_type):
 
@@ -5193,16 +5193,3 @@ def perform_action_on_job(confirm_button, modal_title, resources):
 
     else:
         raise PreventUpdate
-
-
-if __name__ == "__main__":
-
-    # if sys.platform == "win32":
-    #     chrome_path = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
-    #     webbrowser.register("chrome", None, webbrowser.BackgroundBrowser(chrome_path))
-    #     webbrowser.get("chrome").open("http://127.0.0.1:8050/")
-    # elif sys.platform == "darwin":
-    #     webbrowser.get("chrome").open("http://127.0.0.1:8050/", new=1)
-
-    # Start Dash app
-    app.run_server(threaded=False, debug=False, port=8050)

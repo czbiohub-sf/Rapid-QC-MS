@@ -18,17 +18,16 @@ classifiers = [
 ]
 keywords = ["mass-spectrometry", "mass-spec", "autoqc", "mass-spec-quality-control"]
 dependencies = [
-    "dash==2.6.1",
-    "dash_bootstrap_components==1.2.1",
-    "google-api-python-client==1.8.0",
     "pandas==1.4.2",
     "plotly==5.6.0",
+    "dash==2.6.1",
+    "dash_bootstrap_components==1.2.1",
     "psutil==5.9.4",
     "pydrive2==1.14.0",
     "slack_sdk==3.18.1",
     "sqlalchemy==1.4.32",
     "watchdog==2.1.9",
-    'tomli; python_version < "3.11"',
+    'tomli; python_version <= "3.11"',
 ]
 requires-python = ">=3.8"
 
@@ -36,7 +35,7 @@ requires-python = ">=3.8"
 dev = []
 
 [project.urls]
-Homepage = "https://ms-autoqc.github.io"
+Homepage = "https://czbiohub.github.io/MS-AutoQC"
 
 [project.scripts]
-ms-autoqc = "ms-autoqc.__main__:main"
+open_autoqc = "ms_autoqc.__main__:main"
