@@ -158,8 +158,13 @@ def run_msconvert(path, filename, extension, output_folder):
     Converts data files in closed vendor format to open mzML format
     """
 
-    # Copy original data file to output folder
-    shutil.copy2(path + filename + "." + extension, output_folder)
+    # Remove files in output folder (if any)
+    try:
+        for file in os.listdir(output_folder):
+            os.remove(file)
+    finally:
+        # Copy original data file to output folder
+        shutil.copy2(path + filename + "." + extension, output_folder)
 
     # Get MSConvert.exe
     try:
@@ -378,15 +383,22 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
         df_compare = pd.merge(df_features, df_peak_list, on="Name")
         df_compare["Delta RT"] = df_compare["RT (min)"].astype(float) - df_compare["Library RT"].astype(float)
         df_compare["Delta m/z"] = df_compare["Precursor m/z"].astype(float) - df_compare["Library m/z"].astype(float)
+        df_peak_list_copy = df_peak_list.copy()
 
         # Get MS-DIAL RT threshold and filter out annotations without MS2 that are outside threshold
         with_ms2 = df_compare["MSMS spectrum"].notnull()
         without_ms2 = df_compare["MSMS spectrum"].isnull()
+        annotations_without_ms2 = df_compare[without_ms2]["Name"].astype(str).tolist()
+
         if len(df_compare[with_ms2]) > 0:
             rt_threshold = db.get_msdial_configuration_parameters("Default", parameter="post_id_rt_tolerance")
             outside_rt_threshold = df_compare["Delta RT"].abs() > rt_threshold
             annotations_to_drop = df_compare.loc[(without_ms2) & (outside_rt_threshold)]
+
             df_compare.drop(annotations_to_drop.index, inplace=True)
+            annotations_to_drop = annotations_to_drop["Name"].astype(str).tolist()
+            annotations_to_drop = df_peak_list_copy[df_peak_list_copy["Name"].isin(annotations_to_drop)]
+            df_peak_list_copy.drop(annotations_to_drop.index, inplace=True)
 
         # Get in-run RT average for each internal standard
         df_compare["In-run RT average"] = np.nan
@@ -413,7 +425,7 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
         qc_dataframe["Warnings"] = ""
         qc_dataframe["Fails"] = ""
         for feature in df_features["Name"].astype(str).tolist():
-            if feature not in df_peak_list["Name"].astype(str).tolist():
+            if feature not in df_peak_list_copy["Name"].astype(str).tolist():
                 row = {"Name": feature,
                        "Delta m/z": np.nan,
                        "Delta RT": np.nan,
@@ -507,6 +519,9 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
             else:
                 if len(qc_dataframe.loc[warnings]) > len(qc_dataframe) / 2 and qc_result != "Fail":
                     qc_result = "Warning"
+
+        # Mark annotations without MS2
+        qc_dataframe.loc[qc_dataframe["Name"].isin(annotations_without_ms2), "Warnings"] = "No MS2"
 
     # Handles biological standard QC checks
     else:
