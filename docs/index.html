@@ -20,6 +20,69 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1.6em;
   vertical-align: middle;
 }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
 </style>
 
 
@@ -95,8 +158,8 @@ ul.task-list li input[type="checkbox"] {
  <span class="menu-text">Installation</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./get-started.html">
- <span class="menu-text">Get Started</span></a>
+    <a class="nav-link" href="./getting-started.html">
+ <span class="menu-text">Getting Started</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="./user-guide.html">
@@ -105,6 +168,10 @@ ul.task-list li input[type="checkbox"] {
   <li class="nav-item">
     <a class="nav-link" href="./documentation.html">
  <span class="menu-text">Documentation</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./reference.html">
+ <span class="menu-text">Reference</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="./faq.html">
@@ -135,8 +202,8 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#download" id="toc-download" class="nav-link active" data-scroll-target="#download">Download</a></li>
-  <li><a href="#requirements" id="toc-requirements" class="nav-link" data-scroll-target="#requirements">Requirements</a></li>
+  <li><a href="#requirements" id="toc-requirements" class="nav-link active" data-scroll-target="#requirements">Requirements</a></li>
+  <li><a href="#installation" id="toc-installation" class="nav-link" data-scroll-target="#installation">Installation</a></li>
   <li><a href="#supported-vendors" id="toc-supported-vendors" class="nav-link" data-scroll-target="#supported-vendors">Supported Vendors</a></li>
   </ul>
 </nav>
@@ -163,7 +230,7 @@ ul.task-list li input[type="checkbox"] {
 
 <p><strong>MS-AutoQC</strong> is an all-in-one solution for automated quality control of liquid chromatography-mass spectrometry (LC-MS) data, both during and after data acquisition.</p>
 <p><img src="https://user-images.githubusercontent.com/7220175/200887970-d8bcc29e-3a9a-4a51-912a-56a223d50f8a.png" class="img-fluid"> <br></p>
-<p>It offers a fast, straightforward approach to ensure collection of high-quality data, allowing for less time exploring raw data and more time conducting experiments.</p>
+<p>It offers a fast, straightforward approach to ensure collection of high-quality data, allowing for less time investigating raw data and more time conducting experiments.</p>
 <p>Developed at the <a href="https://www.czbiohub.org/mass-spec/">Mass Spectrometry Platform of CZ Biohub San Francisco</a>, MS-AutoQC provides a host of key features to streamline untargeted metabolomics research, such as:</p>
 <ul>
 <li><strong>Automated and user-defined quality control checks</strong> during instrument runs</li>
@@ -171,22 +238,25 @@ ul.task-list li input[type="checkbox"] {
 <li><strong>Interactive data visualization</strong> of internal standard retention time, <em>m/z</em>, and intensity across samples</li>
 <li><strong>Google Drive cloud sync</strong> and secure, Google-authenticated access to QC results from any device</li>
 </ul>
-<section id="download" class="level1">
-<h1>Download</h1>
-<p>You can download MS-AutoQC v1.0.0 on GitHub: <a href="https://github.com/czbiohub/MS-AutoQC/releases">https://github.com/czbiohub/MS-AutoQC/releases</a></p>
-<p>Please keep in mind that MS-AutoQC is currently in beta development. If you encounter a bug or issue, please report it by <a href="https://github.com/czbiohub/MS-AutoQC/issues">opening an issue on GitHub</a>.</p>
-</section>
 <section id="requirements" class="level1">
 <h1>Requirements</h1>
 <p><strong>MS-AutoQC was designed to run on Windows platforms</strong> because of its dependency on <a href="https://proteowizard.sourceforge.io/tools/msconvert.html">MSConvert</a> for vendor format data conversion and <a href="http://prime.psc.riken.jp/compms/msdial/main.html">MS-DIAL</a> for data processing and identification. However, MacOS users can still use MS-AutoQC to monitor / view their instrument run data.</p>
-<p>In addition, MS-AutoQC requires Python 3.9+ and various Python packages, including Pandas, SQLAlchemy, Plotly, Dash, Bootstrap, Watchdog, and the Google Drive and Slack API. These are installed automatically during setup.</p>
-<p><strong>Note:</strong> Installation of Python and various Python packages on MS instrument computers comes at no risk, but MS-AutoQC can be run and installed on an separate network computer if preferred. To learn more, please read the <a href="https://github.com/czbiohub/MS-AutoQC/wiki/Installation">installation guide</a>.</p>
+<p>In addition, MS-AutoQC requires Python 3.8+ and various Python packages, including Pandas, SQLAlchemy, Plotly, Dash, Bootstrap, Watchdog, Google API, and Slack API. These are installed automatically during setup.</p>
+<p><strong>Note:</strong> Installation of Python and various Python packages on MS instrument computers comes at no risk. For extra security and peace of mind, you can opt to install MS-AutoQC in a virtual environment. To learn more, please read the <a href="./installation.html">installation guide</a>.</p>
+</section>
+<section id="installation" class="level1">
+<h1>Installation</h1>
+<p>Installing MS-AutoQC is easy. Simply open your Terminal or Command Prompt and type:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>py <span class="op">-</span>m pip install ms<span class="op">-</span>autoqc</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Python dependencies are installed automatically, but dependencies such as MSConvert and MS-DIAL will need to be installed manually. Check out the <a href="./installation.html">installation guide</a> for more details.</p>
+<p>If necessary, you can download and install MS-AutoQC v1.0.0 <a href="https://github.com/czbiohub/MS-AutoQC/releases">manually from GitHub</a> – although we strongly recommend using pip!</p>
+<p>Please keep in mind that MS-AutoQC is still in beta development. If you encounter a bug or issue, please report it by <a href="https://github.com/czbiohub/MS-AutoQC/issues">opening an issue on GitHub</a>.</p>
 </section>
 <section id="supported-vendors" class="level1">
 <h1>Supported Vendors</h1>
 <p>MS-AutoQC was designed to be a universal, open-source solution for data quality control. Because MSConvert converts raw acquired data into open mzML format before routing it to the data processing pipeline, the package will work seamlessly with data of all vendor formats.</p>
 <p><strong>However, MS-AutoQC has only been tested extensively on Thermo Fisher mass spectrometers and Thermo RAW files.</strong> As such, it is expected that there may be bugs / issues with processing data of other vendor formats.</p>
-<p>If you would like to help us comprehensively test support on Agilent / Bruker / Sciex / Waters instruments, please send an email to <a href="mailto:wasim.sandhu@czbiohub.org">wasim.sandhu@czbiohub.org</a>!</p>
+<p>We are welcome to collaboration! If you would like to help us comprehensively test support on Agilent / Bruker / Sciex / Waters instruments, please send an email to <a href="mailto:brian.defelice@czbiohub.org">brian.defelice@czbiohub.org</a>.</p>
 
 
 </section>

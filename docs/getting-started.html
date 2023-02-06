@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>MS-AutoQC - Get Started</title>
+<title>MS-AutoQC - Getting Started</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -158,8 +158,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
  <span class="menu-text">Installation</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link active" href="./get-started.html" aria-current="page">
- <span class="menu-text">Get Started</span></a>
+    <a class="nav-link active" href="./getting-started.html" aria-current="page">
+ <span class="menu-text">Getting Started</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="./user-guide.html">
@@ -168,6 +168,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   <li class="nav-item">
     <a class="nav-link" href="./documentation.html">
  <span class="menu-text">Documentation</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./reference.html">
+ <span class="menu-text">Reference</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="./faq.html">
@@ -213,9 +217,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   <li><a href="#b.-select-the-chromatography-and-polarity-to-modify" id="toc-b.-select-the-chromatography-and-polarity-to-modify" class="nav-link" data-scroll-target="#b.-select-the-chromatography-and-polarity-to-modify">3b. Select the chromatography and polarity to modify</a></li>
   <li><a href="#c.-add-an-internal-standard-library" id="toc-c.-add-an-internal-standard-library" class="nav-link" data-scroll-target="#c.-add-an-internal-standard-library">3c. Add an internal standard library</a></li>
   </ul></li>
-  <li><a href="#configure-autoqc-parameters" id="toc-configure-autoqc-parameters" class="nav-link" data-scroll-target="#configure-autoqc-parameters">4. Configure AutoQC parameters</a></li>
+  <li><a href="#configure-qc-parameters" id="toc-configure-qc-parameters" class="nav-link" data-scroll-target="#configure-qc-parameters">4. Configure QC parameters</a></li>
   <li><a href="#specify-ms-dial-location" id="toc-specify-ms-dial-location" class="nav-link" data-scroll-target="#specify-ms-dial-location">5. Specify MS-DIAL location</a></li>
-  <li><a href="#setup-a-new-run" id="toc-setup-a-new-run" class="nav-link" data-scroll-target="#setup-a-new-run">6. Setup a new run</a></li>
+  <li><a href="#setup-a-new-qc-job" id="toc-setup-a-new-qc-job" class="nav-link" data-scroll-target="#setup-a-new-qc-job">6. Setup a new QC job</a></li>
   <li><a href="#optional-configure-biological-standards" id="toc-optional-configure-biological-standards" class="nav-link" data-scroll-target="#optional-configure-biological-standards">7. <em>Optional: Configure biological standards</em></a></li>
   <li><a href="#optional-configure-ms-dial-processing-parameters" id="toc-optional-configure-ms-dial-processing-parameters" class="nav-link" data-scroll-target="#optional-configure-ms-dial-processing-parameters">8. <em>Optional: Configure MS-DIAL processing parameters</em></a></li>
   <li><a href="#optional-configure-google-drive-sync" id="toc-optional-configure-google-drive-sync" class="nav-link" data-scroll-target="#optional-configure-google-drive-sync">9. <em>Optional: Configure Google Drive sync</em></a></li>
@@ -229,7 +233,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Get Started</h1>
+<h1 class="title">Getting Started</h1>
 </div>
 
 
@@ -248,7 +252,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="important-note" class="level1">
 <h1>Important note</h1>
 <p><strong>This section does NOT show you how to install MS-AutoQC!</strong></p>
-<p>If you haven’t already, please follow the steps in the <a href="https://github.com/czbiohub/MS-AutoQC/wiki/Installation">installation guide</a> before you start configuring methods and parameters.</p>
+<p>If you haven’t already, please follow the steps in the <a href="./installation.html">installation guide</a> before you start configuring methods and parameters.</p>
 </section>
 <section id="new-instrument-setup" class="level1">
 <h1>New instrument setup</h1>
@@ -272,9 +276,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </section>
 <section id="start-ms-autoqc" class="level2">
 <h2 class="anchored" data-anchor-id="start-ms-autoqc">1. Start MS-AutoQC</h2>
-<p>You can start MS-AutoQC using Python. For example, if the MS-AutoQC folder path was <code>C:/Users/Wasim/Downloads/MS-AutoQC</code>, the user should enter the following commands in Command Prompt:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>cd C:<span class="op">/</span>Users<span class="op">/</span>Wasim<span class="op">/</span>Downloads<span class="op">/</span>MS<span class="op">-</span>AutoQC</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>python MS<span class="op">-</span>AutoQC.py</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>To launch MS-AutoQC, open a Terminal or Command Prompt window and type:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>py <span class="op">-</span>m start_autoqc</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="create-a-new-workspace" class="level2">
 <h2 class="anchored" data-anchor-id="create-a-new-workspace">2. Create a new workspace</h2>
@@ -316,35 +319,21 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="a.-add-a-chromatography-method" class="level3">
 <h3 class="anchored" data-anchor-id="a.-add-a-chromatography-method">3a. Add a chromatography method</h3>
 <p>Navigate to <strong>Settings (in the top right corner) &gt; Internal Standards.</strong> Once you’re there, it should look something like this:</p>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="https://user-images.githubusercontent.com/7220175/201776872-a2ea8bf7-fac9-453a-a7a2-f0dcf2596e5a.png" class="img-fluid figure-img"></p>
-<p></p><figcaption class="figure-caption">Settings &gt; Internal Standards</figcaption><p></p>
-</figure>
-</div>
+<p><img src="https://user-images.githubusercontent.com/7220175/201776872-a2ea8bf7-fac9-453a-a7a2-f0dcf2596e5a.png" class="img-fluid"></p>
 <p>In the <strong>Manage chromatography methods</strong> section at the top, add a new chromatography method by giving it a name and clicking <strong>Add method</strong>.</p>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="https://user-images.githubusercontent.com/7220175/201778888-2d17d60c-618e-4182-a96a-9eb13d231326.png" class="img-fluid figure-img"></p>
-<p></p><figcaption class="figure-caption">Add a new chromatography method</figcaption><p></p>
-</figure>
-</div>
+<p><img src="https://user-images.githubusercontent.com/7220175/201778888-2d17d60c-618e-4182-a96a-9eb13d231326.png" class="img-fluid"></p>
 <p>If successful, you should see your new method in the <strong>Chromatography methods</strong> table.</p>
 </section>
 <section id="b.-select-the-chromatography-and-polarity-to-modify" class="level3">
 <h3 class="anchored" data-anchor-id="b.-select-the-chromatography-and-polarity-to-modify">3b. Select the chromatography and polarity to modify</h3>
 <p>Internal standards must be configured for both positive and negative mode for each chromatography method.</p>
 <p>Let’s start by selecting the chromatography method you created, and then selecting <strong>Positive Mode</strong> for the polarity.</p>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="https://user-images.githubusercontent.com/7220175/201782171-c7090fa6-3123-4a7c-adee-0252ce1a3c99.png" class="img-fluid figure-img"></p>
-<p></p><figcaption class="figure-caption">Configure chromatography methods</figcaption><p></p>
-</figure>
-</div>
+<p><img src="https://user-images.githubusercontent.com/7220175/201782171-c7090fa6-3123-4a7c-adee-0252ce1a3c99.png" class="img-fluid"></p>
 </section>
 <section id="c.-add-an-internal-standard-library" class="level3">
 <h3 class="anchored" data-anchor-id="c.-add-an-internal-standard-library">3c. Add an internal standard library</h3>
-<p>Now, we can specify our internal standard library. MS-AutoQC accepts identification libraries in either MSP or CSV format (although it is important to note that MS-DIAL cannot perform MS2 spectral matching using CSV libraries during identification).</p>
+<p>Now, we can specify our internal standard library. MS-AutoQC accepts identification libraries in either MSP or CSV format.</p>
+<p>It is important to note that MS-DIAL can only perform MS2 spectral matching using MSP libraries. If you use a CSV library, identification will be performed via m/z and RT matches.</p>
 <p>Here is an example internal standard library in CSV format:</p>
 <table class="table">
 <thead>
@@ -371,76 +360,21 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <td>4.908</td>
 </tr>
 <tr class="even">
-<td>1_Carnitine_d3</td>
-<td>165.1313</td>
-<td>7.8</td>
+<td>…</td>
+<td>…</td>
+<td>…</td>
 </tr>
 <tr class="odd">
-<td>1_Acetylcarnitine_d3</td>
-<td>207.1418647</td>
-<td>7.169</td>
-</tr>
-<tr class="even">
-<td>1_TMAO_d9</td>
-<td>85.13218108</td>
-<td>5.495</td>
-</tr>
-<tr class="odd">
-<td>1_Choline_d9</td>
-<td>114.1713062</td>
-<td>5.123</td>
-</tr>
-<tr class="even">
-<td>1_CUDA</td>
-<td>341.2798695</td>
-<td>1.104</td>
-</tr>
-<tr class="odd">
-<td>1_Glutamine_d5</td>
-<td>152.1078024</td>
-<td>8.642</td>
-</tr>
-<tr class="even">
-<td>1_Glutamic Acid_d3</td>
-<td>151.0792645</td>
-<td>8.805</td>
-</tr>
-<tr class="odd">
-<td>1_Arginine_d7</td>
-<td>182.1628894</td>
-<td>9.497</td>
-</tr>
-<tr class="even">
-<td>1_Alanine_d3</td>
-<td>93.07378516</td>
-<td>8.14</td>
-</tr>
-<tr class="odd">
-<td>1_Valine d8</td>
-<td>126.136469</td>
-<td>7.809</td>
-</tr>
-<tr class="even">
-<td>1_Tryptophan d5</td>
-<td>210.1285378</td>
-<td>6.897</td>
-</tr>
-<tr class="odd">
-<td>1_Serine d3</td>
-<td>109.0686998</td>
-<td>8.704</td>
-</tr>
-<tr class="even">
 <td>1_Lysine d8</td>
 <td>155.1630181</td>
 <td>9.578</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>1_Phenylalanine d8</td>
 <td>174.136469</td>
 <td>6.92</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>1_Hippuric acid d5</td>
 <td>185.0969033</td>
 <td>3.011</td>
@@ -448,57 +382,37 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 <p>And here is one internal standard from a library in MSP format:</p>
-<pre class="console"><code>NAME: 1_HippuricAcid_d5
-SCANNUMBER: 1229
-RETENTIONTIME: 3.011485
-PRECURSORMZ: 185.0967
-PRECURSORTYPE: [M+H]+
-IONMODE: Positive
-INTENSITY: 2.157809E+07
-ISOTOPE: M + 0
-INCHIKEY:
-SMILES:
-FORMULA:
-Num Peaks: 33
-51.02318    5550
-56.94302    2599
-57.93503    32786
-...
-171.3111    3202
-181.08981   2837
-185.09656   4996</code></pre>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>NAME: <span class="dv">1</span><span class="er">_HippuricAcid_d5</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>SCANNUMBER: <span class="dv">1229</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>RETENTIONTIME: <span class="fl">3.011485</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>PRECURSORMZ: <span class="fl">185.0967</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>PRECURSORTYPE: [M<span class="op">+</span>H]<span class="op">+</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>IONMODE: Positive</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>INTENSITY: <span class="fl">2.157809E+07</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>ISOTOPE: M <span class="op">+</span> <span class="dv">0</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>INCHIKEY:</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>SMILES:</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>FORMULA:</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>Num Peaks: <span class="dv">33</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="fl">51.02318</span>    <span class="dv">5550</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="fl">56.94302</span>    <span class="dv">2599</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="fl">57.93503</span>    <span class="dv">32786</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>...</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="fl">171.3111</span>    <span class="dv">3202</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="fl">181.08981</span>   <span class="dv">2837</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="fl">185.09656</span>   <span class="dv">4996</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Click the <strong>Browse Files</strong> button to browse for your MSP or CSV file, then click the <strong>Add MSP to <chromatography> Positive Mode</chromatography></strong> button.</p>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="https://user-images.githubusercontent.com/7220175/201782255-797d9dcf-23fe-45c1-a9ab-bdd090387494.png" class="img-fluid figure-img"></p>
-<p></p><figcaption class="figure-caption">Add internal standard identification files</figcaption><p></p>
-</figure>
-</div>
+<p><img src="https://user-images.githubusercontent.com/7220175/201782255-797d9dcf-23fe-45c1-a9ab-bdd090387494.png" class="img-fluid"></p>
 <p>That’s it! Now, you can select Negative Mode from the polarity dropdown and add your negative mode internal standards. Once you’re done, your screen should look something like this:</p>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="https://user-images.githubusercontent.com/7220175/201782345-11c3608d-ce21-4461-971b-0f082b41676a.png" class="img-fluid figure-img"></p>
-<p></p><figcaption class="figure-caption">Internal standard settings configured</figcaption><p></p>
-</figure>
-</div>
+<p><img src="https://user-images.githubusercontent.com/7220175/201782345-11c3608d-ce21-4461-971b-0f082b41676a.png" class="img-fluid"></p>
 </section>
 </section>
-<section id="configure-autoqc-parameters" class="level2">
-<h2 class="anchored" data-anchor-id="configure-autoqc-parameters">4. Configure AutoQC parameters</h2>
+<section id="configure-qc-parameters" class="level2">
+<h2 class="anchored" data-anchor-id="configure-qc-parameters">4. Configure QC parameters</h2>
 <p>Once you have configured your chromatography methods, you can then navigate to <strong>Settings &gt; QC Configurations</strong> to define your QC criteria.</p>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="https://user-images.githubusercontent.com/7220175/201806318-e2ca414a-9940-421c-803c-d7112c1fb1d4.png" class="img-fluid figure-img"></p>
-<p></p><figcaption class="figure-caption">Settings &gt; QC configurations</figcaption><p></p>
-</figure>
-</div>
+<p><img src="https://user-images.githubusercontent.com/7220175/201806318-e2ca414a-9940-421c-803c-d7112c1fb1d4.png" class="img-fluid"></p>
 <p>MS-AutoQC stores individual parameters in configurations, so that you can configure a specific configuration to fit each chromatography method.</p>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="https://user-images.githubusercontent.com/7220175/201807660-b260a6db-5b01-4f78-80fb-7c7710e987b5.png" class="img-fluid figure-img"></p>
-<p></p><figcaption class="figure-caption">Settings &gt; QC configurations</figcaption><p></p>
-</figure>
-</div>
+<p><img src="https://user-images.githubusercontent.com/7220175/201807660-b260a6db-5b01-4f78-80fb-7c7710e987b5.png" class="img-fluid"></p>
 <p>You can specify these parameters however you’d like, and enable / disable them as needed. To revert a configuration back to the default recommended settings, simply click the <strong>Reset default settings</strong> button.</p>
 <p>Once you’re done, don’t forget to click <strong>Save changes</strong>!</p>
 </section>
@@ -507,16 +421,11 @@ Num Peaks: 33
 <p>The last thing to do is to specify the location of your MS-DIAL v4 download.</p>
 <p>To do this, navigate to <strong>Settings &gt; MS-DIAL Configurations</strong> and browse (or enter) the folder path into the <strong>MS-DIAL download location</strong> field.</p>
 <p>For example, if the downloaded MS-DIAL files are located in <code>C:\Users\eliaslab\Documents\MSDIAL</code>, then enter this into the text field and click <strong>Save Changes</strong>.</p>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="https://user-images.githubusercontent.com/7220175/201808621-84f8ae3c-3aa8-4619-b1b5-54826c64a918.png" class="img-fluid figure-img"></p>
-<p></p><figcaption class="figure-caption">Settings &gt; MS-DIAL Configurations</figcaption><p></p>
-</figure>
-</div>
+<p><img src="https://user-images.githubusercontent.com/7220175/201808621-84f8ae3c-3aa8-4619-b1b5-54826c64a918.png" class="img-fluid"></p>
 </section>
-<section id="setup-a-new-run" class="level2">
-<h2 class="anchored" data-anchor-id="setup-a-new-run">6. Setup a new run</h2>
-<p>Setting up a new MS-AutoQC job was designed to be as fast and easy as possible. To get MS-AutoQC monitoring an active instrument run (or QC’ing a completed batch), the user simply needs to enter a few fields of information:</p>
+<section id="setup-a-new-qc-job" class="level2">
+<h2 class="anchored" data-anchor-id="setup-a-new-qc-job">6. Setup a new QC job</h2>
+<p>Setting up a new QC job was designed to be as fast and easy as possible. To get MS-AutoQC monitoring an active instrument run (or QC’ing a completed batch), the user simply needs to enter a few fields of information:</p>
 <ol type="1">
 <li>Run ID</li>
 <li>Chromatography method</li>
@@ -525,12 +434,7 @@ Num Peaks: 33
 <li><em>Optional: sample metadata</em></li>
 <li>Data acquisition path</li>
 </ol>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="https://user-images.githubusercontent.com/7220175/201810821-5c17d974-6e58-4e34-97cd-473dd6890fb5.png" class="img-fluid figure-img"></p>
-<p></p><figcaption class="figure-caption">New MS-AutoQC Job</figcaption><p></p>
-</figure>
-</div>
+<p><img src="https://user-images.githubusercontent.com/7220175/201810821-5c17d974-6e58-4e34-97cd-473dd6890fb5.png" class="img-fluid"></p>
 <p>MS-AutoQC will intelligently validate that everything is in place for it to start working. It does this by:</p>
 <ol type="1">
 <li>Ensuring that the run ID is unique so that data is not corrupted</li>
@@ -540,12 +444,7 @@ Num Peaks: 33
 <li>Validating biological standard libraries and sample metadata columns</li>
 </ol>
 <p>Once it has validated these fields, the blue button will become enabled and you’re all set to begin.</p>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="https://user-images.githubusercontent.com/7220175/201812308-743bbf4b-339c-4af2-a2c1-754730292107.png" class="img-fluid figure-img"></p>
-<p></p><figcaption class="figure-caption">New MS-AutoQC Job</figcaption><p></p>
-</figure>
-</div>
+<p><img src="https://user-images.githubusercontent.com/7220175/201812308-743bbf4b-339c-4af2-a2c1-754730292107.png" class="img-fluid"></p>
 </section>
 <section id="optional-configure-biological-standards" class="level2">
 <h2 class="anchored" data-anchor-id="optional-configure-biological-standards">7. <em>Optional: Configure biological standards</em></h2>
