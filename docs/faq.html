@@ -20,6 +20,69 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1.6em;
   vertical-align: middle;
 }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
 </style>
 
 
@@ -135,7 +198,28 @@ ul.task-list li input[type="checkbox"] {
 <!-- sidebar -->
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#general" id="toc-general" class="nav-link active" data-scroll-target="#general">General</a></li>
+  <li><a href="#installation" id="toc-installation" class="nav-link" data-scroll-target="#installation">Installation</a>
+  <ul class="collapse">
+  <li><a href="#how-can-i-install-ms-autoqc-manually" id="toc-how-can-i-install-ms-autoqc-manually" class="nav-link" data-scroll-target="#how-can-i-install-ms-autoqc-manually">How can I install MS-AutoQC manually?</a>
+  <ul class="collapse">
+  <li><a href="#download" id="toc-download" class="nav-link" data-scroll-target="#download">1. Download</a></li>
+  <li><a href="#install" id="toc-install" class="nav-link" data-scroll-target="#install">2. Install</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#setup" id="toc-setup" class="nav-link" data-scroll-target="#setup">Setup</a>
+  <ul class="collapse">
+  <li><a href="#why-isnt-msconvert-being-detected-by-ms-autoqc" id="toc-why-isnt-msconvert-being-detected-by-ms-autoqc" class="nav-link" data-scroll-target="#why-isnt-msconvert-being-detected-by-ms-autoqc">Why isn’t MSConvert being detected by MS-AutoQC?</a></li>
+  <li><a href="#why-isnt-ms-dial-being-detected-by-ms-autoqc" id="toc-why-isnt-ms-dial-being-detected-by-ms-autoqc" class="nav-link" data-scroll-target="#why-isnt-ms-dial-being-detected-by-ms-autoqc">Why isn’t MS-DIAL being detected by MS-AutoQC?</a></li>
+  </ul></li>
+  <li><a href="#usage" id="toc-usage" class="nav-link" data-scroll-target="#usage">Usage</a></li>
+  <li><a href="#development" id="toc-development" class="nav-link" data-scroll-target="#development">Development</a></li>
+  </ul>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -157,9 +241,62 @@ ul.task-list li input[type="checkbox"] {
 
 </header>
 
-<p>Frequently Asked Questions</p>
+<p>This section provides a list of frequently asked questions. If you don’t find an answer to your question, please feel free to reach out and <a href="mailto:brian.defelice@czbiohub.org">contact us</a>.</p>
+<section id="general" class="level1">
+<h1>General</h1>
+</section>
+<section id="installation" class="level1">
+<h1>Installation</h1>
+<section id="how-can-i-install-ms-autoqc-manually" class="level2">
+<h2 class="anchored" data-anchor-id="how-can-i-install-ms-autoqc-manually">How can I install MS-AutoQC manually?</h2>
+<p>While it is recommended that you use <code>pip</code>, here is a short guide on how to install MS-AutoQC manually.</p>
+<section id="download" class="level3">
+<h3 class="anchored" data-anchor-id="download">1. Download</h3>
+<p>Navigate to the <a href="https://github.com/czbiohub/MS-AutoQC/releases">Releases page</a> on the GitHub repository. Download the latest version – which is <code>v1.0.0</code> at the time of this writing – and extract the ZIP file when the download is complete.</p>
+</section>
+<section id="install" class="level3">
+<h3 class="anchored" data-anchor-id="install">2. Install</h3>
+<p>Open a Command Prompt or Terminal window and enter the following commands. Replace <code>&lt;folder&gt;</code> with the location of your MS-AutoQC download e.g.&nbsp;<code>C:/Users/John/Downloads/MS-AutoQC</code>.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>cd <span class="op">&lt;</span>folder<span class="op">&gt;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>py <span class="op">-</span>m pip install .</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Once that’s done, you should be able to launch MS-AutoQC using <code>py -m start_autoqc</code>.</p>
+</section>
+</section>
+</section>
+<section id="setup" class="level1">
+<h1>Setup</h1>
+<section id="why-isnt-msconvert-being-detected-by-ms-autoqc" class="level2">
+<h2 class="anchored" data-anchor-id="why-isnt-msconvert-being-detected-by-ms-autoqc">Why isn’t MSConvert being detected by MS-AutoQC?</h2>
+<p>If MSConvert is not being detected, try each of the following and see if it solves the problem:</p>
+<ul>
+<li>Refresh the page in the browser</li>
+<li>Restart the computer</li>
+<li>Reinstall MSConvert</li>
+<li>Reinstall .NET Framework</li>
+</ul>
+</section>
+<section id="why-isnt-ms-dial-being-detected-by-ms-autoqc" class="level2">
+<h2 class="anchored" data-anchor-id="why-isnt-ms-dial-being-detected-by-ms-autoqc">Why isn’t MS-DIAL being detected by MS-AutoQC?</h2>
+<p>If MS-DIAL isn’t being located, you might have provided MS-AutoQC the wrong folder.</p>
+<ul>
+<li><p>Check to make sure that the directory you have provided in Settings &gt; MS-DIAL Configurations isn’t a folder <em>containing</em> the MS-DIAL folder.</p></li>
+<li><p>Once you have saved a new MS-DIAL directory, refresh the page in your browser and try again.</p></li>
+</ul>
+<p>If this doesn’t solve the problem, check to make sure <code>MSDialConsoleApp.exe</code> exists in your MS-DIAL folder.</p>
+<ul>
+<li>If it doesn’t, you may have a newer version of MS-DIAL. Go to the <a href="http://prime.psc.riken.jp/compms/msdial/main.html">MS-DIAL website</a> and download any one of the v4 releases.</li>
+</ul>
+<p>If all else fails, try to rename your folder to something with no spaces such as <code>MS-DIAL</code>.</p>
+</section>
+</section>
+<section id="usage" class="level1">
+<h1>Usage</h1>
+</section>
+<section id="development" class="level1">
+<h1>Development</h1>
 
 
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

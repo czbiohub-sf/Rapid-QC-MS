@@ -202,11 +202,18 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#how-to-set-up-google-drive-sync" id="toc-how-to-set-up-google-drive-sync" class="nav-link active" data-scroll-target="#how-to-set-up-google-drive-sync">How to set up Google Drive sync</a>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#setting-up-google-drive-sync" id="toc-setting-up-google-drive-sync" class="nav-link" data-scroll-target="#setting-up-google-drive-sync">Setting up Google Drive sync</a>
   <ul class="collapse">
   <li><a href="#create-a-project-in-the-google-cloud-console" id="toc-create-a-project-in-the-google-cloud-console" class="nav-link" data-scroll-target="#create-a-project-in-the-google-cloud-console">1. Create a project in the Google Cloud Console</a></li>
   <li><a href="#configure-the-oauth-consent-screen" id="toc-configure-the-oauth-consent-screen" class="nav-link" data-scroll-target="#configure-the-oauth-consent-screen">2. Configure the OAuth consent screen</a></li>
   <li><a href="#generate-the-oauth-client-id" id="toc-generate-the-oauth-client-id" class="nav-link" data-scroll-target="#generate-the-oauth-client-id">3. Generate the OAuth Client ID</a></li>
+  </ul></li>
+  <li><a href="#setting-up-slack-notifications" id="toc-setting-up-slack-notifications" class="nav-link" data-scroll-target="#setting-up-slack-notifications">Setting up Slack notifications</a>
+  <ul class="collapse">
+  <li><a href="#create-your-slack-bot" id="toc-create-your-slack-bot" class="nav-link" data-scroll-target="#create-your-slack-bot">1. Create your Slack bot</a></li>
+  <li><a href="#generate-an-oauth-token" id="toc-generate-an-oauth-token" class="nav-link" data-scroll-target="#generate-an-oauth-token">2. Generate an OAuth token</a></li>
+  <li><a href="#give-token-to-ms-autoqc" id="toc-give-token-to-ms-autoqc" class="nav-link" data-scroll-target="#give-token-to-ms-autoqc">3. Give token to MS-AutoQC</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -231,14 +238,17 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 </header>
 
+<section id="overview" class="level2">
+<h2 class="anchored" data-anchor-id="overview">Overview</h2>
 <p>This page offers brief tutorials for usage and configuration of various MS-AutoQC features. Be sure to use the navigation guide on the right (or Ctrl+F) to find what you’re looking for.</p>
-<section id="how-to-set-up-google-drive-sync" class="level2">
-<h2 class="anchored" data-anchor-id="how-to-set-up-google-drive-sync">How to set up Google Drive sync</h2>
+</section>
+<section id="setting-up-google-drive-sync" class="level2">
+<h2 class="anchored" data-anchor-id="setting-up-google-drive-sync">Setting up Google Drive sync</h2>
 <p>To allow access to your workspace from any device, you must first create a project in the Google Cloud Console and generate an OAuth Client ID for your installation of MS-AutoQC.</p>
 <p><strong>These actions only need to be performed once.</strong> Upon completion, any shared user will be able to use the Client ID and Client Secret to sign in to your workspace.</p>
 <section id="create-a-project-in-the-google-cloud-console" class="level3">
 <h3 class="anchored" data-anchor-id="create-a-project-in-the-google-cloud-console">1. Create a project in the Google Cloud Console</h3>
-<p>Navigate to the Google Cloud Console. The landing page should look something like this:</p>
+<p>Navigate to the <a href="https://console.cloud.google.com/">Google Cloud Console</a>. The landing page should look something like this:</p>
 <p><img src="https://user-images.githubusercontent.com/7220175/217104786-794fa8dc-074f-4f4d-bf65-51abada3d95d.png" class="img-fluid"></p>
 <p>Choose <strong>Create or select a project</strong>, then click <strong>New Project</strong>.</p>
 <p>Name the project <strong>MS-AutoQC</strong> and click <strong>Create</strong>.</p>
@@ -246,7 +256,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </section>
 <section id="configure-the-oauth-consent-screen" class="level3">
 <h3 class="anchored" data-anchor-id="configure-the-oauth-consent-screen">2. Configure the OAuth consent screen</h3>
-<p>From the sidebar, navigate to <strong>APIs &amp; Services &gt; OAuth consent screen</strong>.</p>
+<p>From the sidebar, navigate to <strong><a href="https://console.cloud.google.com/apis/credentials/consent">APIs &amp; Services &gt; OAuth consent screen</a></strong>.</p>
 <p>For user type, choose <strong>Internal</strong> and click <strong>Create</strong>. Fill in the following:</p>
 <ul>
 <li>App name: MS-AutoQC</li>
@@ -263,13 +273,40 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </section>
 <section id="generate-the-oauth-client-id" class="level3">
 <h3 class="anchored" data-anchor-id="generate-the-oauth-client-id">3. Generate the OAuth Client ID</h3>
-<p>From the sidebar, navigate to <strong>APIs &amp; Services &gt; Credentials</strong>.</p>
+<p>From the sidebar, navigate to <strong><a href="https://console.cloud.google.com/apis/credentials">APIs &amp; Services &gt; Credentials</a></strong>.</p>
 <p>Click the <strong>Create Credentials</strong> button and select <strong>OAuth client ID</strong>.</p>
 <p><img src="https://user-images.githubusercontent.com/7220175/217107214-e1e950c1-7131-4c95-ae07-e3d06e0cbae8.png" class="img-fluid"></p>
 <p>For application type, choose <strong>Desktop application</strong>. Name the application <strong>MS-AutoQC</strong>.</p>
 <p>Once you’re done, click <strong>Create</strong>. A dialog window will appear, providing your client ID and client secret.</p>
 <p><img src="https://user-images.githubusercontent.com/7220175/217111496-32c84253-6abb-4178-a108-20f2a84ef387.png" class="img-fluid"></p>
 <p>That’s it – you’re all set! Copy these and save them somewhere accessible. If you’re here from the Getting Started tutorial, <a href="./getting-started.html#optional-sync-with-google-drive">click here</a> to head back and use these credentials to <strong>set up</strong> or <strong>sign in</strong> to your workspace.</p>
+</section>
+</section>
+<section id="setting-up-slack-notifications" class="level2">
+<h2 class="anchored" data-anchor-id="setting-up-slack-notifications">Setting up Slack notifications</h2>
+<p>To set up Slack notifications, you must create your own Slack bot, generate an OAuth token for it, and give that token to MS-AutoQC in Settings &gt; General.</p>
+<p><strong>You only need to do this once!</strong> After that, MS-AutoQC will use your token to alert you about QC warnings and QC fails.</p>
+<section id="create-your-slack-bot" class="level3">
+<h3 class="anchored" data-anchor-id="create-your-slack-bot">1. Create your Slack bot</h3>
+<p>Navigate to the <a href="https://api.slack.com/apps">Slack API console</a> and click the <strong>Create New App</strong> button.</p>
+<p>Choose to create your app <strong>From Scratch</strong>. Fill in the App Name and your Slack workspace, then click <strong>Create App</strong>.</p>
+<p><img src="https://user-images.githubusercontent.com/7220175/217332096-0e07f90c-a7a5-4b74-9602-0ff9706ca577.png" class="img-fluid"></p>
+</section>
+<section id="generate-an-oauth-token" class="level3">
+<h3 class="anchored" data-anchor-id="generate-an-oauth-token">2. Generate an OAuth token</h3>
+<p>From the sidebar, navigate to <strong>Features &gt; OAuth &amp; Permissions</strong>.</p>
+<p>Scroll down to the <strong>Scopes</strong> section. For <strong>Bot Token Scopes</strong>, add the following OAuth scopes:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>chat:write</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>chat:write.public</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>incoming<span class="op">-</span>webhook</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><img src="https://user-images.githubusercontent.com/7220175/217333810-f02cc17a-cb5f-43a8-b4d5-49f3b735e383.png" class="img-fluid"></p>
+<p>Now, scroll back up to the <strong>OAuth Tokens for Your Workspace</strong> section and click <strong>Install to Workspace</strong>. Once that’s done, you will have generated your Bot User OAuth Token!</p>
+</section>
+<section id="give-token-to-ms-autoqc" class="level3">
+<h3 class="anchored" data-anchor-id="give-token-to-ms-autoqc">3. Give token to MS-AutoQC</h3>
+<p>In MS-AutoQC, navigate to <strong>Settings &gt; General</strong> and paste the token you generated in the Slack API client credentials field. Click <strong>Save bot token</strong>.</p>
+<p>Now, enter the name of the channel you’d like MS-AutoQC to post messages to. Once you’re done, toggle <strong>Enable notifications</strong> and you’re all set.</p>
+<p><img src="https://user-images.githubusercontent.com/7220175/209615187-08b15542-3dd4-44b6-8094-e3b183f81d60.png" class="img-fluid"></p>
 
 
 </section>
