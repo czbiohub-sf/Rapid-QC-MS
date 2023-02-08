@@ -5065,7 +5065,7 @@ def hide_elements_for_non_instrument_devices(instrument_id):
         if db.get_device_identity() != instrument_id:
             return {"display": "none"}
         else:
-            return {"display": "block"}
+            return {"display": "block", "margin-top": "15px", "line-height": "1.75"}
     else:
         raise PreventUpdate
 
