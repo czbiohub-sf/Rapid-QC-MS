@@ -38,4 +38,4 @@ dev = []
 Homepage = "https://czbiohub.github.io/MS-AutoQC"
 
 [project.scripts]
-open_autoqc = "ms_autoqc.__main__:main"
+ms_autoqc = "ms_autoqc.__main__:main"

@@ -9,11 +9,11 @@ import dash_bootstrap_components as dbc
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
 
-from PlotGeneration import *
-from AcquisitionListener import *
-import DatabaseFunctions as db
-import AutoQCProcessing as qc
-import SlackNotifications as bot
+from ms_autoqc.PlotGeneration import *
+from ms_autoqc.AcquisitionListener import *
+import ms_autoqc.DatabaseFunctions as db
+import ms_autoqc.AutoQCProcessing as qc
+import ms_autoqc.SlackNotifications as bot
 
 # Initialize directories
 root_directory = os.getcwd()

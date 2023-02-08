@@ -2,7 +2,7 @@ import os, json, ast, traceback, time
 import plotly.express as px
 import pandas as pd
 import numpy as np
-import DatabaseFunctions as db
+import ms_autoqc.DatabaseFunctions as db
 
 # Bootstrap color dictionary
 bootstrap_colors = {

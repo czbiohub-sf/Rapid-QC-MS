@@ -1,5 +1,5 @@
 import ssl
-import DatabaseFunctions as db
+import ms_autoqc.DatabaseFunctions as db
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
