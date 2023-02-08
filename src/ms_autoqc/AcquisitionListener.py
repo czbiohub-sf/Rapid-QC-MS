@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import hashlib
-import DatabaseFunctions as db
-import AutoQCProcessing as qc
+import ms_autoqc.DatabaseFunctions as db
+import ms_autoqc.AutoQCProcessing as qc
 
 class DataAcquisitionEventHandler(FileSystemEventHandler):
 

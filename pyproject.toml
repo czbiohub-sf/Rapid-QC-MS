@@ -39,3 +39,6 @@ Homepage = "https://czbiohub.github.io/MS-AutoQC"
 
 [project.scripts]
 ms_autoqc = "ms_autoqc.__main__:main"
+
+[tool.setuptools.package-data]
+"ms_autoqc.assets" = ["*.css", "*.ico"]

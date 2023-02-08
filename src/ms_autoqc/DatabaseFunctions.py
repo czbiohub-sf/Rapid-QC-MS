@@ -16,6 +16,10 @@ import google.auth as google_auth
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+# Set ms_autoqc/src as the working directory
+src_folder = os.path.dirname(os.path.realpath(__file__))
+os.chdir(src_folder)
+
 # Initialize directories
 root_directory = os.getcwd()
 data_directory = os.path.join(root_directory, "data")

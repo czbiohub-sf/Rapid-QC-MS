@@ -15,6 +15,10 @@ import ms_autoqc.DatabaseFunctions as db
 import ms_autoqc.AutoQCProcessing as qc
 import ms_autoqc.SlackNotifications as bot
 
+# Set ms_autoqc/src as the working directory
+src_folder = os.path.dirname(os.path.realpath(__file__))
+os.chdir(src_folder)
+
 # Initialize directories
 root_directory = os.getcwd()
 data_directory = os.path.join(root_directory, "data")
