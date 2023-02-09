@@ -1590,6 +1590,11 @@ def sync_with_google_drive(on_page_load):
 
     # Download database on page load (or refresh) if sync is enabled
     if db.sync_is_enabled():
+
+        # Sync methods directory
+        db.download_methods()
+
+        # Download instrument database
         instrument_id = db.get_instruments_list()[0]
         if instrument_id != db.get_device_identity():
             return db.download_database(instrument_id)

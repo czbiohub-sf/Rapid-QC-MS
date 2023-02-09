@@ -3148,6 +3148,12 @@ def download_methods(skip_check=False):
     instrument_bool = is_instrument_computer()
     device_identity = get_device_identity()
 
+    # Get MS-DIAL directory
+    try:
+        msdial_directory = get_msdial_directory()
+    except:
+        msdial_directory = None
+
     # Get Google Drive instance
     drive = get_drive_instance()
 
@@ -3169,6 +3175,9 @@ def download_methods(skip_check=False):
     except Exception as error:
         print("Error downloading methods from Google Drive:", error)
         return None
+
+    # Update MS-DIAL directory
+    update_msdial_directory(msdial_directory)
 
     # Update user device identity
     set_device_identity(is_instrument_computer=instrument_bool, instrument_id=device_identity)
