@@ -3220,8 +3220,9 @@ def close_sync_modal(sync_finished):
 @app.callback(Output("workspace-users-table", "children"),
               Input("on-page-load", "data"),
               Input("google-drive-user-added", "data"),
-              Input("google-drive-user-deleted", "data"))
-def get_users_with_workspace_access(on_page_load, user_added, user_deleted):
+              Input("google-drive-user-deleted", "data"),
+              Input("google-drive-sync-update", "data"))
+def get_users_with_workspace_access(on_page_load, user_added, user_deleted, sync_update):
 
     """
     Returns table of users that have access to the MS-AutoQC workspace
@@ -3329,8 +3330,9 @@ def ui_feedback_for_deleting_gdrive_user(user_deleted_result):
 
 
 @app.callback(Output("slack-bot-token", "placeholder"),
-              Input("slack-bot-token-saved", "data"))
-def get_slack_bot_token(token_save_result):
+              Input("slack-bot-token-saved", "data"),
+              Input("google-drive-sync-update", "data"))
+def get_slack_bot_token(token_save_result, sync_update):
 
     """
     Get Slack bot token saved in database
@@ -3382,8 +3384,9 @@ def ui_alert_on_slack_token_save(token_save_result):
 
 @app.callback(Output("slack-channel", "value"),
               Output("slack-notifications-enabled", "value"),
-              Input("slack-channel-saved", "data"))
-def get_slack_channel(result):
+              Input("slack-channel-saved", "data"),
+              Input("google-drive-sync-update", "data"))
+def get_slack_channel(result, sync_update):
 
     """
     Gets Slack channel and notification toggle setting from database
@@ -3451,8 +3454,9 @@ def ui_alert_on_slack_notifications_toggle(result):
 @app.callback(Output("email-notifications-table", "children"),
               Input("on-page-load", "data"),
               Input("email-added", "data"),
-              Input("email-deleted", "data"))
-def get_emails_registered_for_notifications(on_page_load, email_added, email_deleted):
+              Input("email-deleted", "data"),
+              Input("google-drive-sync-update", "data"))
+def get_emails_registered_for_notifications(on_page_load, email_added, email_deleted, sync_update):
 
     """
     Returns table of emails that are registered for email notifications
@@ -3562,8 +3566,9 @@ def ui_feedback_for_deleting_email(email_deleted_result):
               State("add-chromatography-text-field", "value"),
               Input("istd-msp-added", "data"),
               Input("chromatography-removed", "data"),
-              Input("chromatography-msdial-config-added", "data"))
-def add_chromatography_method(on_page_load, button_click, chromatography_method, msp_added, method_removed, config_added):
+              Input("chromatography-msdial-config-added", "data"),
+              Input("google-drive-sync-update", "data"))
+def add_chromatography_method(on_page_load, button_click, chromatography_method, msp_added, method_removed, config_added, sync_update):
 
     """
     Add chromatography method to database
@@ -3734,8 +3739,9 @@ def ui_feedback_for_adding_msp_to_chromatography(msp_added):
 @app.callback(Output("msdial-directory", "value"),
               Input("file-explorer-select-button", "n_clicks"),
               Input("settings-modal", "is_open"),
-              State("selected-msdial-folder", "data"))
-def get_msdial_directory(select_folder_button, settings_modal_is_open, selected_folder):
+              State("selected-msdial-folder", "data"),
+              Input("google-drive-sync-update", "data"))
+def get_msdial_directory(select_folder_button, settings_modal_is_open, selected_folder, sync_update):
 
     """
     Returns (previously inputted by user) location of MS-DIAL directory
@@ -3830,8 +3836,9 @@ def delete_msdial_configuration(button_click, msdial_config_id):
               Output("msdial-configs-dropdown", "value"),
               Input("on-page-load", "data"),
               Input("msdial-config-added", "data"),
-              Input("msdial-config-removed", "data"))
-def get_msdial_configs_for_dropdown(on_page_load, on_config_added, on_config_removed):
+              Input("msdial-config-removed", "data"),
+              Input("google-drive-sync-update", "data"))
+def get_msdial_configs_for_dropdown(on_page_load, on_config_added, on_config_removed, sync_update):
 
     """
     Retrieves list of user-created configurations of MS-DIAL parameters from database
@@ -4050,8 +4057,9 @@ def delete_qc_configuration(button_click, qc_config_id):
               Output("qc-configs-dropdown", "value"),
               Input("on-page-load", "data"),
               Input("qc-config-added", "data"),
-              Input("qc-config-removed", "data"))
-def get_qc_configs_for_dropdown(on_page_load, qc_config_added, qc_config_removed):
+              Input("qc-config-removed", "data"),
+              Input("google-drive-sync-update", "data"))
+def get_qc_configs_for_dropdown(on_page_load, qc_config_added, qc_config_removed, sync_update):
 
     """
     Retrieves list of user-created configurations of QC parameters from database
@@ -4210,9 +4218,10 @@ def show_alert_on_qc_parameter_reset(parameters_reset):
               Input("chromatography-added", "data"),
               Input("chromatography-removed", "data"),
               Input("bio-msp-added", "data"),
-              Input("bio-standard-msdial-config-added", "data"))
+              Input("bio-standard-msdial-config-added", "data"),
+              Input("google-drive-sync-update", "data"))
 def get_biological_standards(on_page_load, on_standard_added, on_standard_removed, on_method_added, on_method_removed,
-    on_msp_added, on_bio_standard_msdial_config_added):
+    on_msp_added, on_bio_standard_msdial_config_added, sync_update):
 
     """
     Populates dropdown and table of biological standards
@@ -4417,8 +4426,9 @@ def add_msp_to_bio_standard_button_feedback(chromatography, polarity, bio_standa
 @app.callback(Output("bio-standard-msdial-configs-dropdown", "options"),
               Output("istd-msdial-configs-dropdown", "options"),
               Input("msdial-config-added", "data"),
-              Input("msdial-config-removed", "data"))
-def populate_msdial_configs_for_biological_standard(msdial_config_added, msdial_config_removed):
+              Input("msdial-config-removed", "data"),
+              Input("google-drive-sync-update", "data"))
+def populate_msdial_configs_for_biological_standard(msdial_config_added, msdial_config_removed, sync_update):
 
     """
     In Settings > Biological Standards, populates the MS-DIAL configurations dropdown
