@@ -2290,8 +2290,10 @@ def reset_instrument_table(instrument):
               Input("refresh-interval", "n_intervals"),
               State("study-resources", "data"),
               Input("google-drive-sync-update", "data"),
-              Input("start-run-monitor-modal", "is_open"))
-def populate_instrument_runs_table(instrument_id, refresh, resources, sync_update, new_job_started):
+              Input("start-run-monitor-modal", "is_open"),
+              Input("job-marked-completed", "data"),
+              Input("job-deleted", "data"))
+def populate_instrument_runs_table(instrument_id, refresh, resources, sync_update, new_job_started, job_marked_completed, job_deleted):
 
     """
     Dash callback for populating tables with list of past/active instrument runs

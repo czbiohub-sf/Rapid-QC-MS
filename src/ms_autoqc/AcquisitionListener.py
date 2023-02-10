@@ -61,7 +61,7 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
         while os.path.exists(path):
 
             # Wait 3 minutes
-            print("MD5 checksums do not match. Waiting 3 minutes...")
+            print("Waiting 3 minutes...")
             time.sleep(180)
 
             # Compare checksums
@@ -70,18 +70,23 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
 
             # If the MD5 checksum after 3 mins is the same as before, route to pipeline
             if new_md5 == old_md5:
+                print("MD5 checksums matched.")
+
                 if next_sample is None:
-                    print("MD5 checksums matched. Preparing to process file.")
+                    print("Preparing to process file.")
                     time.sleep(180)
                     return True
                 else:
                     if os.path.exists(path + next_sample + "." + extension):
+                        print("Preparing to process file.")
                         time.sleep(180)
                         return True
                     else:
-                        db.update_md5_checksum(filename, new_md5)
+                        print("Waiting for instrument to start acquiring next sample:", next_sample)
+                        db.update_md5_checksum(self.instrument_id, filename, new_md5)
             else:
-                db.update_md5_checksum(filename, new_md5)
+                print("MD5 checksums do not match.")
+                db.update_md5_checksum(self.instrument_id, filename, new_md5)
 
 
     def trigger_pipeline(self, path, filename, extension):
@@ -93,13 +98,16 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
         print("Watching file:", filename)
 
         # Get next sample
-        next_sample = db.get_next_sample(filename, instrument_id, run_id)
+        try:
+            next_sample = db.get_next_sample(filename, self.instrument_id, self.run_id)
+        except:
+            next_sample = None
 
         # Start watching file until sample acquisition is complete
         try:
             sample_acquired = self.watch_file(path, filename, extension, next_sample)
         except Exception as error:
-            print("Unable to watch file:", error)
+            print("Error while watching file:", error)
             sample_acquired = None
 
         # Route data file to MS-AutoQC pipeline

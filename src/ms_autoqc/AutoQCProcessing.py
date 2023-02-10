@@ -646,14 +646,12 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
 
         # For active instrument runs, give 3 more attempts if MSConvert fails
         if not db.is_completed_run(instrument_id, run_id):
-            print("Here")
             for attempt in range(3):
                 if not os.path.exists(mzml_file):
                     print("MSConvert crashed, trying again in 3 minutes...")
                     time.sleep(180)
                     mzml_file = run_msconvert(path, filename, extension, mzml_file_directory)
                 else:
-                    mzml_file = None
                     break
     except:
         mzml_file = None

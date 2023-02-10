@@ -912,7 +912,7 @@ def get_md5(instrument_id, sample_id):
     """
 
     # Connect to database
-    database = get_database_file(name=instrument_id, sqlite_conn=True)
+    database = get_database_file(instrument_id, sqlite_conn=True)
     engine = sa.create_engine(database)
 
     # Check if sample is a biological standard
