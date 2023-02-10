@@ -46,7 +46,7 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
             self.trigger_pipeline(self.path, filename, self.extension)
 
 
-    def watch_file(self, path, filename, extension):
+    def watch_file(self, path, filename, extension, next_sample=None):
 
         """
         Returns True if MD5 checksum on file matches the MD5 checksum written to the database 3 minutes ago.
@@ -70,10 +70,16 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
 
             # If the MD5 checksum after 3 mins is the same as before, route to pipeline
             if new_md5 == old_md5:
-                print("MD5 checksums matched. Preparing to process file.")
-                time.sleep(180)
-                return True
-
+                if next_sample is None:
+                    print("MD5 checksums matched. Preparing to process file.")
+                    time.sleep(180)
+                    return True
+                else:
+                    if os.path.exists(path + next_sample + "." + extension):
+                        time.sleep(180)
+                        return True
+                    else:
+                        db.update_md5_checksum(filename, new_md5)
             else:
                 db.update_md5_checksum(filename, new_md5)
 
@@ -86,9 +92,12 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
 
         print("Watching file:", filename)
 
+        # Get next sample
+        next_sample = db.get_next_sample(filename, instrument_id, run_id)
+
         # Start watching file until sample acquisition is complete
         try:
-            sample_acquired = self.watch_file(path, filename, extension)
+            sample_acquired = self.watch_file(path, filename, extension, next_sample)
         except Exception as error:
             print("Unable to watch file:", error)
             sample_acquired = None
@@ -138,6 +147,7 @@ def start_listener(path, instrument_id, run_id):
 
             # If file is not in directory, skip it
             full_path = path + filename + "." + extension
+
             if not os.path.exists(full_path):
                 continue
 

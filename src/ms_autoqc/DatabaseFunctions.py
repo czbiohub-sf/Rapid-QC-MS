@@ -2189,6 +2189,26 @@ def get_samples_from_csv(instrument_id, run_id, sample_type="Both"):
         return df
 
 
+def get_next_sample(sample_id, instrument_id, run_id):
+
+    """
+    Returns sample following the given sample, or None if last sample
+    """
+
+    # Get list of samples in run
+    samples = get_samples_in_run(instrument_id, run_id, "Both")["sample_id"].astype(str).tolist()
+
+    # Find sample in list
+    sample_index = samples.index(sample_id)
+    next_sample_index = sample_index + 1
+
+    # Return next sample
+    if next_sample_index != len(samples):
+        return samples[next_sample_index]
+    else:
+        return None
+
+
 def get_remaining_samples(instrument_id, run_id):
 
     """
