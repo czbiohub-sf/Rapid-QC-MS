@@ -161,7 +161,9 @@ def run_msconvert(path, filename, extension, output_folder):
     # Remove files in output folder (if any)
     try:
         for file in os.listdir(output_folder):
-            os.remove(file)
+            os.remove(output_folder + file)
+    except Exception as error:
+        print(error)
     finally:
         # Copy original data file to output folder
         shutil.copy2(path + filename + "." + extension, output_folder)
@@ -638,16 +640,21 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
     # Get MS-DIAL directory
     msdial_directory = db.get_msdial_directory()
 
-    # Run MSConvert (and give 5 more attempts if it fails)
+    # Run MSConvert
     try:
         mzml_file = run_msconvert(path, filename, extension, mzml_file_directory)
 
-        for attempt in range(5):
-            if not os.path.exists(mzml_file):
-                time.sleep(180)
-                mzml_file = run_msconvert(path, filename, extension, mzml_file_directory)
-            else:
-                break
+        # For active instrument runs, give 3 more attempts if MSConvert fails
+        if not db.is_completed_run(instrument_id, run_id):
+            print("Here")
+            for attempt in range(3):
+                if not os.path.exists(mzml_file):
+                    print("MSConvert crashed, trying again in 3 minutes...")
+                    time.sleep(180)
+                    mzml_file = run_msconvert(path, filename, extension, mzml_file_directory)
+                else:
+                    mzml_file = None
+                    break
     except:
         mzml_file = None
         print("Failed to run MSConvert.")
@@ -705,6 +712,7 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
         intensity_record = None
         qc_record = None
         qc_result = "Fail"
+        peak_list = None
 
     # Send email and Slack notification (if they are enabled)
     try:
