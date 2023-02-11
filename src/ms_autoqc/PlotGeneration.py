@@ -246,12 +246,13 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
         elif load_from == "csv":
             df_samples = db.get_samples_from_csv(instrument_id, run_id, "Both")
 
-        df_samples = df_samples[["sample_id", "position", "qc_result"]]
+        df_samples = df_samples[["sample_id", "position", "qc_result", "polarity"]]
         df_samples = df_samples.rename(
             columns={
                 "sample_id": "Sample",
                 "position": "Position",
-                "qc_result": "QC"})
+                "qc_result": "QC",
+                "polarity": "Polarity"})
         df_samples = df_samples.to_json(orient="records")
 
     except Exception as error:
@@ -291,11 +292,6 @@ def generate_sample_metadata_dataframe(sample, df_rt, df_mz, df_intensity, df_de
 
     df_sample_istd = pd.DataFrame()
     df_sample_info = pd.DataFrame()
-
-
-    # Get sequence and metadata
-    df_sequence = df_sequence.loc[df_sequence["File Name"].astype(str) == sample]
-    df_metadata = df_metadata.loc[df_metadata["Filename"].astype(str) == sample]
 
     # Index the selected sample, then make sure all columns in all dataframes are in the same order
     columns = df_rt.columns.tolist()
@@ -350,16 +346,19 @@ def generate_sample_metadata_dataframe(sample, df_rt, df_mz, df_intensity, df_de
     df_sample_istd["Fails"] = df_fails.iloc[0].astype(str).values.tolist()
 
     if len(df_sequence) > 0:
+        df_sequence = df_sequence.loc[df_sequence["File Name"].astype(str) == sample]
         df_sample_info["Sample ID"] = df_sequence["L1 Study"].astype(str).values
         df_sample_info["Position"] = df_sequence["Position"].astype(str).values
         df_sample_info["Injection Volume"] = df_sequence["Inj Vol"].astype(str).values + " uL"
         df_sample_info["Instrument Method"] = df_sequence["Instrument Method"].astype(str).values
 
     if len(df_metadata) > 0:
-        df_sample_info["Species"] = df_metadata["Species"].astype(str).values
-        df_sample_info["Matrix"] = df_metadata["Matrix"].astype(str).values
-        df_sample_info["Growth-Harvest Conditions"] = df_metadata["Growth-Harvest Conditions"].astype(str).values
-        df_sample_info["Treatment"] = df_metadata["Treatment"].astype(str).values
+        df_metadata = df_metadata.loc[df_metadata["Filename"].astype(str) == sample]
+        if len(df_metadata) > 0:
+            df_sample_info["Species"] = df_metadata["Species"].astype(str).values
+            df_sample_info["Matrix"] = df_metadata["Matrix"].astype(str).values
+            df_sample_info["Growth-Harvest Conditions"] = df_metadata["Growth-Harvest Conditions"].astype(str).values
+            df_sample_info["Treatment"] = df_metadata["Treatment"].astype(str).values
 
     df_sample_info = df_sample_info.append(df_sample_info.iloc[0])
     df_sample_info.iloc[0] = df_sample_info.columns.tolist()

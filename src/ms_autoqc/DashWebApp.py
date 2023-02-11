@@ -2272,8 +2272,9 @@ def get_instrument_tabs(instruments, check_workspace_setup, sync_update):
 
 @app.callback(Output("instrument-run-table", "active_cell"),
               Output("instrument-run-table", "selected_cells"),
-              Input("tabs", "value"), prevent_initial_call=True)
-def reset_instrument_table(instrument):
+              Input("tabs", "value"),
+              Input("job-deleted", "data"), prevent_initial_call=True)
+def reset_instrument_table(instrument, job_deleted):
 
     """
     Removes selected cell highlight upon tab switch to different instrument
@@ -2484,6 +2485,7 @@ def populate_sample_tables(samples):
 
     if samples is not None:
         df_samples = pd.DataFrame(json.loads(samples))
+        df_samples = df_samples[["Sample", "Position", "QC"]]
         return df_samples.to_dict("records")
     else:
         return None
@@ -2566,7 +2568,7 @@ def apply_sample_filter_to_plots(filter, polarity, samples, metadata):
     # Get complete list of samples (including blanks + pools) in polarity
     if samples is not None:
         df_samples = pd.DataFrame(json.loads(samples))
-        df_samples = df_samples.loc[df_samples["Sample"].str.contains(polarity)]
+        df_samples = df_samples.loc[df_samples["Polarity"].str.contains(polarity)]
         sample_list = df_samples["Sample"].tolist()
     else:
         raise PreventUpdate
@@ -2637,18 +2639,18 @@ def populate_istd_rt_plot(polarity, internal_standard, selected_samples, rt_pos,
 
     # Get samples
     df_samples = pd.DataFrame(json.loads(samples))
-    samples = df_samples["Sample"].astype(str).tolist()
+    samples = df_samples.loc[df_samples["Polarity"] == polarity]["Sample"].astype(str).tolist()
+
+    # Filter out biological standards
     identifiers = db.get_biological_standard_identifiers()
     for identifier in identifiers:
         samples = [x for x in samples if identifier not in x]
 
     # Filter samples and internal standards by polarity
     if polarity == "Pos":
-        samples = [x for x in samples if "Pos" in x]
         internal_standards = json.loads(pos_internal_standards)
         df_istd_rt = df_istd_rt_pos
     elif polarity == "Neg":
-        samples = [x for x in samples if "Neg" in x]
         internal_standards = json.loads(neg_internal_standards)
         df_istd_rt = df_istd_rt_neg
 
@@ -2720,7 +2722,8 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
 
     # Get samples
     df_samples = pd.DataFrame(json.loads(samples))
-    samples = df_samples["Sample"].astype(str).tolist()
+    samples = df_samples.loc[df_samples["Polarity"] == polarity]["Sample"].astype(str).tolist()
+
     identifiers = db.get_biological_standard_identifiers()
     for identifier in identifiers:
         samples = [x for x in samples if identifier not in x]
@@ -2730,11 +2733,9 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
 
     # Filter samples and internal standards by polarity
     if polarity == "Pos":
-        samples = [x for x in samples if "Pos" in x]
         internal_standards = json.loads(pos_internal_standards)
         df_istd_intensity = df_istd_intensity_pos
     elif polarity == "Neg":
-        samples = [x for x in samples if "Neg" in x]
         internal_standards = json.loads(neg_internal_standards)
         df_istd_intensity = df_istd_intensity_neg
 
@@ -2810,19 +2811,18 @@ def populate_istd_mz_plot(polarity, internal_standard, selected_samples, delta_m
 
     # Get samples (and filter out biological standards)
     df_samples = pd.DataFrame(json.loads(samples))
-    samples = df_samples["Sample"].astype(str).tolist()
+    samples = df_samples.loc[df_samples["Polarity"] == polarity]["Sample"].astype(str).tolist()
+
     identifiers = db.get_biological_standard_identifiers()
     for identifier in identifiers:
         samples = [x for x in samples if identifier not in x]
 
     # Filter samples and internal standards by polarity
     if polarity == "Pos":
-        samples = [x for x in samples if "Pos" in x]
         internal_standards = json.loads(pos_internal_standards)
         df_istd_mz = df_istd_mz_pos
 
     elif polarity == "Neg":
-        samples = [x for x in samples if "Neg" in x]
         internal_standards = json.loads(neg_internal_standards)
         df_istd_mz = df_istd_mz_neg
 
@@ -3056,6 +3056,7 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
     resources = json.loads(resources)
     instrument_id = resources["instrument"]
     run_id = resources["run_id"]
+    status = resources["status"]
 
     # Get sequence and metadata
     df_sequence = pd.read_json(sequence, orient="split")
@@ -3063,12 +3064,6 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
         df_metadata = pd.read_json(metadata, orient="split")
     except:
         df_metadata = pd.DataFrame()
-
-    # Get polarity from sample name
-    if "Pos" in clicked_sample:
-        polarity = "Pos"
-    elif "Neg" in clicked_sample:
-        polarity = "Neg"
 
     # Check whether sample is a biological standard or not
     is_bio_standard = False
@@ -3078,6 +3073,9 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
         if identifier in clicked_sample:
             is_bio_standard = True
             break
+
+    # Get polarity
+    polarity = db.get_polarity_for_sample(instrument_id, run_id, clicked_sample, status)
 
     # Generate DataFrames with quantified features and metadata for selected sample
     if not is_bio_standard:

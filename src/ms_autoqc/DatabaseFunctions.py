@@ -98,6 +98,7 @@ def create_databases(instrument_id, new_instrument=False):
         sa.Column("id", INTEGER, primary_key=True),
         sa.Column("sample_id", TEXT),
         sa.Column("run_id", TEXT),
+        sa.Column("polarity", TEXT),
         sa.Column("precursor_mz", TEXT),
         sa.Column("retention_time", TEXT),
         sa.Column("intensity", TEXT),
@@ -135,6 +136,7 @@ def create_databases(instrument_id, new_instrument=False):
         sa.Column("id", INTEGER, primary_key=True),
         sa.Column("sample_id", TEXT),
         sa.Column("run_id", TEXT),
+        sa.Column("polarity", TEXT),
         sa.Column("position", TEXT),
         sa.Column("md5", TEXT),
         sa.Column("precursor_mz", TEXT),
@@ -729,7 +731,7 @@ def get_instrument(instrument_id):
     return pd.read_sql("SELECT * FROM instruments WHERE name = '" + instrument_id + "'", engine)
 
 
-def get_filenames_from_sequence(sequence):
+def get_filenames_from_sequence(sequence, vendor="Thermo Fisher"):
 
     """
     Takes sequence file as JSON string and returns filtered DataFrame
@@ -747,7 +749,34 @@ def get_filenames_from_sequence(sequence):
         ~(df_sequence["File Name"].str.contains(r"_wash_", na=False)) &
         ~(df_sequence["File Name"].str.contains(r"shutdown", na=False))]
 
+    # Derive polarity from instrument method filename
+    df_sequence.loc[df_sequence["Instrument Method"].str.contains(r"Pos", na=False), "Polarity"] = "Pos"
+    df_sequence.loc[df_sequence["Instrument Method"].str.contains(r"Neg", na=False), "Polarity"] = "Neg"
+
     return df_sequence
+
+
+def get_polarity_for_sample(instrument_id, run_id, sample_id, status):
+
+    """
+    Returns polarity of given sample (very inefficient)
+    """
+
+    if get_device_identity() != instrument_id and sync_is_enabled():
+        if status == "Complete":
+            df = get_samples_in_run(instrument_id, run_id, "Both")
+        elif status == "Active":
+            df = get_samples_from_csv(instrument_id, run_id, "Both")
+    else:
+        df = get_samples_in_run(instrument_id, run_id, "Both")
+
+    try:
+        polarity = df.loc[df["sample_id"] == sample_id]["polarity"].astype(str).values[0]
+    except:
+        print("Could not find polarity for sample in database.")
+        polarity = "Neg" if "Neg" in sample_id else "Pos"
+
+    return polarity
 
 
 def insert_new_run(run_id, instrument_id, chromatography, bio_standards, path, sequence, metadata, qc_config_id, job_type):
@@ -762,6 +791,7 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, path, s
     df_sequence = get_filenames_from_sequence(sequence)
 
     samples = df_sequence["File Name"].astype(str).tolist()
+    polarities = df_sequence["Polarity"].astype(str).tolist()
     positions = df_sequence["Position"].astype(str).tolist()
 
     num_samples = len(samples)
@@ -809,6 +839,7 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, path, s
             insert_sample = sample_qc_results_table.insert().values(
                 {"sample_id": sample,
                  "run_id": run_id,
+                 "polarity": polarities[index],
                  "position": positions[index]})
 
         # Prepare insert of the sample row into the "bio_qc_results" table
@@ -816,6 +847,7 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, path, s
             insert_sample = bio_qc_results_table.insert().values(
                 {"sample_id": sample,
                  "run_id": run_id,
+                 "polarity": polarities[index],
                  "biological_standard": identifiers[identifier],
                  "position": positions[index]})
 
@@ -1770,9 +1802,9 @@ def get_parameter_file_path(chromatography, polarity, biological_standard=None):
 
     df = pd.read_sql(query, engine)
 
-    if polarity == "Positive":
+    if polarity == "Pos":
         parameter_file = df["pos_parameter_file"].astype(str).values[0]
-    elif polarity == "Negative":
+    elif polarity == "Neg":
         parameter_file = df["neg_parameter_file"].astype(str).values[0]
 
     return parameter_file
@@ -1843,6 +1875,11 @@ def get_internal_standards(chromatography, polarity):
     Returns DataFrame of internal standards for a given chromatography method and polarity
     """
 
+    if polarity == "Pos":
+        polarity = "Positive Mode"
+    elif polarity == "Neg":
+        polarity = "Negative Mode"
+
     engine = sa.create_engine(settings_database)
 
     query = "SELECT * FROM internal_standards " + \
@@ -1856,6 +1893,11 @@ def get_targeted_features(biological_standard, chromatography, polarity):
     """
     Returns DataFrame of metabolite targets for a given biological standard, chromatography, and polarity
     """
+
+    if polarity == "Pos":
+        polarity = "Positive Mode"
+    elif polarity == "Neg":
+        polarity = "Negative Mode"
 
     engine = sa.create_engine(settings_database)
 
@@ -2301,7 +2343,7 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, l
         df_samples = get_samples_from_csv(instrument_id, run_id, "Sample")
 
     # Filter by polarity
-    df_samples = df_samples.loc[df_samples["sample_id"].str.contains(polarity)]
+    df_samples = df_samples.loc[df_samples["polarity"] == polarity]
     sample_ids = df_samples["sample_id"].astype(str).tolist()
 
     # Return None if results are None
@@ -2341,7 +2383,7 @@ def parse_biological_standard_data(instrument_id, run_id, result_type, polarity,
     df_samples = df_samples.loc[df_samples["biological_standard"] == biological_standard]
 
     # Filter by polarity
-    df_samples = df_samples.loc[df_samples["sample_id"].str.contains(polarity)]
+    df_samples = df_samples.loc[df_samples["polarity"] == polarity]
 
     # Filter by instrument
     df_runs = get_table(instrument_id, "runs")
@@ -2378,7 +2420,7 @@ def parse_internal_standard_qc_data(instrument_id, run_id, polarity, result_type
         df_samples = get_samples_from_csv(instrument_id, run_id, "Sample")
 
     # Filter by polarity
-    df_samples = df_samples.loc[df_samples["sample_id"].str.contains(polarity)]
+    df_samples = df_samples.loc[df_samples["polarity"] == polarity]
 
     # For results DataFrame, each index corresponds to the result type
     get_result_index = {

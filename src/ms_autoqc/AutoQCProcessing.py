@@ -134,8 +134,7 @@ def convert_sequence_to_json(sequence_contents, vendor="Thermo Fisher"):
         df_sequence = df_sequence.drop(df_sequence.index[0])
 
     # Convert DataFrames to JSON strings
-    sequence = df_sequence.to_json(orient="split")
-    return sequence
+    return df_sequence.to_json(orient="split")
 
 
 def convert_metadata_to_json(metadata_contents):
@@ -148,8 +147,7 @@ def convert_metadata_to_json(metadata_contents):
     df_metadata = pd.read_csv(metadata_contents, index_col=False)
 
     # Convert DataFrames to JSON strings
-    metadata = df_metadata.to_json(orient="split")
-    return metadata
+    return df_metadata.to_json(orient="split")
 
 
 def run_msconvert(path, filename, extension, output_folder):
@@ -365,8 +363,6 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
     """
     Algorithm that performs QC checks on sample data
     """
-
-    polarity = polarity.replace("itive", "").replace("ative", "")
 
     # Handles sample QC checks
     if not is_bio_standard:
@@ -604,14 +600,9 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
     mzml_file_directory = mzml_file_directory + "/"
     qc_results_directory = qc_results_directory + "/"
 
-    # Retrieve chromatography, polarity, samples, and biological standards using run ID
+    # Retrieve chromatography, samples, and biological standards using run ID
     df_run = db.get_instrument_run(instrument_id, run_id)
     chromatography = df_run["chromatography"].astype(str).values[0]
-
-    if "Pos" in filename:
-        polarity = "Positive"
-    elif "Neg" in filename:
-        polarity = "Negative"
 
     df_samples = db.get_samples_in_run(instrument_id, run_id, sample_type="Sample")
     df_biological_standards = db.get_samples_in_run(instrument_id, run_id, sample_type="Biological Standard")
@@ -622,19 +613,38 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
         # Get biological standard type
         biological_standard = df_biological_standards.loc[
             df_biological_standards["sample_id"] == filename]
+
+        # Get polarity
+        try:
+            polarity = biological_standard["polarity"].astype(str).values[0]
+        except Exception as error:
+            print("Could not read polarity from database:", error)
+            print("Using default positive mode.")
+            polarity = "Pos"
+
         biological_standard = biological_standard["biological_standard"].astype(str).values[0]
 
         # Get parameters and features for that biological standard type
         msdial_parameters = db.get_parameter_file_path(chromatography, polarity, biological_standard)
-        df_features = db.get_targeted_features(biological_standard, chromatography, polarity + " Mode")
+        df_features = db.get_targeted_features(biological_standard, chromatography, polarity)
         is_bio_standard = True
 
     elif filename in df_samples["sample_id"].astype(str).tolist():
+
+        # Get polarity
+        try:
+            polarity = df_samples.loc[df_samples["sample_id"] == filename]["polarity"].astype(str).values[0]
+        except Exception as error:
+            print("Could not read polarity from database:", error)
+            print("Using default positive mode.")
+            polarity = "Positive"
+
         msdial_parameters = db.get_parameter_file_path(chromatography, polarity)
-        df_features = db.get_internal_standards(chromatography, polarity + " Mode")
+        df_features = db.get_internal_standards(chromatography, polarity)
         is_bio_standard = False
 
     else:
+        print("Error! Could not retrieve MS-DIAL libraries and parameters.")
         return
 
     # Get MS-DIAL directory
