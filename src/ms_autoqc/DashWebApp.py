@@ -2902,7 +2902,7 @@ def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, in
     # Toggle a different biological standard
     if selected_bio_standard is not None:
         rt_pos, rt_neg, intensity_pos, intensity_neg, mz_pos, mz_neg = get_qc_results(instrument_id=instrument_id,
-            run_id=run_id, status=status, drive=drive, biological_standard=selected_bio_standard, biological_standards_only=True)
+            run_id=run_id, status=status, biological_standard=selected_bio_standard, biological_standards_only=True)
 
     # Get biological standard m/z, RT, and intensity data
     if polarity == "Pos":
