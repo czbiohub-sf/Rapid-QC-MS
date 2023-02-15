@@ -50,7 +50,18 @@ To get an overview of all functions, please visit the documentation on https://c
 def get_database_file(instrument_id, sqlite_conn=False, zip=False):
 
     """
-    Returns database file for a given instrument ID
+    Returns database file for a given instrument ID.
+
+    Args:
+        instrument_id (str):
+            Instrument ID that specifies which database file to retrieve
+        sqlite_conn (bool, default False):
+            Whether to receive the path for establishing a SQLite connection
+        zip (bool, default False):
+            Whether to receive the path of the database file in the local app directory
+
+    Returns:
+        str: Path for the database file
     """
 
     if zip:
@@ -67,7 +78,18 @@ def get_database_file(instrument_id, sqlite_conn=False, zip=False):
 def connect_to_database(name):
 
     """
-    Connects to SQLite database of choice
+    Establishes a connection to a SQLite database of choice
+
+    Args:
+        name (str):
+            Name of the database, either "Settings" or an instrument ID
+
+    Returns:
+        sqlalchemy.MetaData:
+            A container object that consists of different features of a database being described
+        sqlalchemy.Connection:
+            An object that represents a single DBAPI connection, and always emits SQL statements within
+            the context of a transaction block
     """
 
     if name == "Settings":
@@ -85,7 +107,23 @@ def connect_to_database(name):
 def create_databases(instrument_id, new_instrument=False):
 
     """
-    Initializes SQLite databases for 1) instrument data and 2) workspace settings
+    Initializes SQLite databases for 1) instrument data and 2) workspace settings.
+
+    Creates the following tables in the instrument database: "runs", "bio_qc_results", "sample_qc_results".
+
+    Creates the following tables in the settings database: "biological_standards", "chromatography_methods",
+    "email_notifications", "instruments", "gdrive_users", "internal_standards", "msdial_parameters", "qc_parameters",
+    "targeted_features", "workspace".
+
+    Args:
+        instrument_id (str):
+            Instrument ID to name the new database ("Thermo QE 1" becomes "Thermo_QE_1.db")
+        new_instrument (bool, default False):
+            Whether a new instrument database is being added to a workspace, or whether a new
+            instrument database AND settings database are being created for the first time
+
+    Returns:
+        None
     """
 
     # Create tables for instrument database
@@ -305,7 +343,13 @@ def create_databases(instrument_id, new_instrument=False):
 def execute_vacuum(database):
 
     """
-    Executes VACUUM command on given database
+    Executes VACUUM command on the database of choice.
+
+    Args:
+        database (str): name of the database, either "Settings" or Instrument ID
+
+    Returns:
+        None
     """
 
     db_metadata, connection = connect_to_database(database)
@@ -316,7 +360,7 @@ def execute_vacuum(database):
 def get_drive_instance():
 
     """
-    Returns user-authenticated Google Drive instance
+    Returns user-authenticated Google Drive instance.
     """
 
     return GoogleDrive(auth_container[0])
@@ -325,7 +369,7 @@ def get_drive_instance():
 def launch_google_drive_authentication():
 
     """
-    Launches Google Drive authentication flow and sets authentication instance
+    Launches Google Drive authentication flow and sets authentication instance.
     """
 
     auth_container[0] = GoogleAuth(settings_file=drive_settings_file)
@@ -335,7 +379,7 @@ def launch_google_drive_authentication():
 def save_google_drive_credentials():
 
     """
-    Saves Google credentials to a credentials.txt file
+    Saves Google credentials to a credentials.txt file.
     """
 
     auth_container[0].SaveCredentialsFile(credentials_file)
@@ -345,6 +389,12 @@ def initialize_google_drive():
 
     """
     Initializes instance of Google Drive using credentials.txt and settings.yaml in /auth directory
+
+    Args:
+        None
+
+    Returns:
+        bool: Whether the Google client credentials file (in the "auth" directory) exists.
     """
 
     # Create Google Drive instance
@@ -391,7 +441,14 @@ def initialize_google_drive():
 def is_valid(instrument_id=None):
 
     """
-    Checks that all required tables are present
+    Checks that all required tables in all databases (or a single database of choice) are present.
+
+    Args:
+        instrument_id (str, default None):
+            Specified if validating a specific database
+
+    Returns:
+        None
     """
 
     # Validate settings database
@@ -434,7 +491,12 @@ def is_valid(instrument_id=None):
 def sync_is_enabled():
 
     """
-    Checks whether Google Drive sync is enabled
+    Checks whether Google Drive sync is enabled simply by querying whether Google Drive ID's exist in the database.
+
+    Typically used for separating sync-specific functionality.
+
+    Returns:
+        bool: Whether Google Drive sync is enabled or not
     """
 
     if not is_valid():
@@ -455,10 +517,19 @@ def sync_is_enabled():
 def email_notifications_are_enabled():
 
     """
-    Checks whether email notifications are enabled
+    Checks whether email notifications are enabled.
+
+    Returns True if databases are valid, Google Drive sync is enabled, and if email addresses were
+    registered by user in Settings > General. Returns False if any condition is not met.
+
+    Returns:
+        bool: True if email notifications are enabled, False if not
     """
 
     if not is_valid():
+        return False
+
+    if not sync_is_enabled():
         return False
 
     if len(get_table("Settings", "email_notifications")) > 0:
@@ -470,7 +541,12 @@ def email_notifications_are_enabled():
 def slack_notifications_are_enabled():
 
     """
-    Checks whether Slack notifications are enabled
+    Checks whether Slack notifications are enabled.
+
+    Returns True if user enabled Slack notifications in Settings > General, and False if not.
+
+    Returns:
+        bool: True if Slack notifications are enabled, False if not
     """
 
     if not is_valid():
@@ -485,7 +561,16 @@ def slack_notifications_are_enabled():
 def is_instrument_computer():
 
     """
-    Checks whether user's device is the instrument computer
+    Checks whether user's device is the instrument computer.
+
+    This is specified during setup. If the user created a new instrument, or signed in as an instrument device, then
+    this will return True. If the user signed in to their workspace from a non-instrument device, this will return False.
+
+    Typically used to organize / hide UI functions for instrument and non-instrument devices
+    that MS-AutoQC is installed on.
+
+    Returns:
+        True if device is instrument computer, False if not
     """
 
     return bool(get_table("Settings", "workspace")["is_instrument_computer"].astype(int).tolist()[0])
@@ -494,7 +579,12 @@ def is_instrument_computer():
 def get_md5_for_settings_db():
 
     """
-    Returns MD5 checksum for the settings database file
+    Calculates and returns MD5 checksum for the settings database file.
+
+    Typically used for checking whether the user changed settings and prompting a Google Drive sync (if sync is enabled).
+
+    Returns:
+        An MD5 checksum of /data/methods/Settings.db
     """
 
     hash_md5 = hashlib.md5()
@@ -509,7 +599,17 @@ def get_md5_for_settings_db():
 def settings_were_modified(md5_checksum):
 
     """
-    Checks whether settings database file has been modified
+    Checks whether settings database file has been modified.
+
+    This is done by comparing the checksum computed when Settings were opened (given as a parameter)
+    with the checksum computed when Settings were closed (in this function call).
+
+    Args:
+        md5_checksum (str):
+            An MD5 checksum of /data/methods/Settings.db that was computed when the user opened Settings in the app
+
+    Returns:
+        bool: True if checksums don't match, False if checksums match.
     """
 
     if md5_checksum != get_md5_for_settings_db():
@@ -521,7 +621,21 @@ def settings_were_modified(md5_checksum):
 def zip_database(instrument_id=None, filename=None):
 
     """
-    Compresses instrument database file into a ZIP archive
+    Compresses instrument database file into a ZIP archive in /data directory.
+
+    Used for fast downloads / uploads over network connections to Google Drive (if Google Drive sync is enabled).
+
+    The zip archive is accessible by filename and path in the /data directory. For example, zipping
+    the database for "Thermo QE 1" will generate a zip file with path "../data/Thermo_QE_1.zip".
+
+    Args:
+        instrument_id (str, default None):
+            If specified, selects a database to zip by instrument ID (ex: "Thermo QE 1")
+        filename (str, default None):
+            If specified, selects a database to zip by filename (ex: "Thermo_QE_1.zip")
+
+    Returns:
+        None
     """
 
     if instrument_id is None and filename is None:
@@ -542,7 +656,16 @@ def zip_database(instrument_id=None, filename=None):
 def unzip_database(instrument_id=None, filename=None):
 
     """
-    Unzips instrument database file
+    Unzips ZIP archive containing instrument database file and deletes the archive when complete.
+
+    Args:
+        instrument_id (str, default None):
+            If specified, selects a database to zip by instrument ID (ex: "Thermo QE 1")
+        filename (str, default None):
+            If specified, selects a database to zip by filename (ex: "Thermo_QE_1.zip")
+
+    Returns:
+        None
     """
 
     if instrument_id is None and filename is None:
@@ -560,7 +683,10 @@ def unzip_database(instrument_id=None, filename=None):
 def zip_methods():
 
     """
-    Compresses methods directory into a ZIP archive
+    Compresses methods directory into a ZIP archive in /data directory.
+
+    Returns:
+        Path for zip archive of methods directory (ex: "../data/methods.zip")
     """
 
     output_directory_and_name = os.path.join(data_directory, "methods.zip").replace(".zip", "")
@@ -571,7 +697,7 @@ def zip_methods():
 def unzip_methods():
 
     """
-    Unzips methods directory
+    Unzips ZIP archive containing methods directory and deletes the archive when complete.
     """
 
     input_zip = os.path.join(data_directory, "methods.zip")
@@ -582,7 +708,20 @@ def unzip_methods():
 def zip_csv_files(input_directory, output_directory_and_name):
 
     """
-    Compresses CSV files into a ZIP archive
+    Compresses CSV files into a ZIP archive in /data directory.
+
+    Used for fast upload of instrument run data to Google Drive during an active instrument run (if Google Drive sync is enabled).
+
+    Args:
+        input_directory (str):
+            The temporary directory for files pertaining to an instrument run, denoted as "Instrument_ID_Run_ID".
+            For example, a job with ID "BRDE001" created under instrument with ID "Thermo QE 1" would have its files
+            stored in "/data/Thermo_QE_1_BRDE001".
+        output_directory_and_name (str):
+            Essentially, the file path for the ZIP archive (ex: "/data/Instrument_ID_Run_ID").
+
+    Returns:
+        Path for zip archive of CSV files with instrument run data (ex: "../data/Instrument_ID_Run_ID.zip")
     """
 
     shutil.make_archive(output_directory_and_name, "zip", input_directory)
@@ -592,7 +731,7 @@ def zip_csv_files(input_directory, output_directory_and_name):
 def unzip_csv_files(input_zip, output_directory):
 
     """
-    Unzips archive of CSV files
+    Unzips ZIP archive of CSV files and deletes the archive upon completion.
     """
 
     shutil.unpack_archive(input_zip, output_directory, "zip")
@@ -602,7 +741,18 @@ def unzip_csv_files(input_zip, output_directory):
 def get_table(database_name, table_name):
 
     """
-    Returns table from database as a DataFrame
+    Retrieves table from database as a pandas DataFrame object.
+
+    TODO: Improve this function to accept column and record queries
+
+    Args:
+        database_name (str):
+            The database to query, using instrument ID or "Settings"
+        table_name (str):
+            The table to retrieve
+
+    Returns:
+        DataFrame of table.
     """
 
     if database_name == "Settings":
@@ -617,7 +767,19 @@ def get_table(database_name, table_name):
 def generate_client_settings_yaml(client_id, client_secret):
 
     """
-    Generates a settings.yaml file for Google authentication in /auth directory
+    Generates a settings.yaml file for Google authentication in the /auth directory.
+
+    Client ID and client secret are generated and provided by the user in the Google Cloud Console.
+
+    See: https://docs.iterative.ai/PyDrive2/oauth/#automatic-and-custom-authentication-with-settings-yaml
+
+    Args:
+        client_id (str):
+            The Client ID of the MS-AutoQC application, generated and provided by the user
+        client_secret (str):
+            The Client Secret of the MS-AutoQC application, generated and provided by the user
+    Returns:
+        None
     """
 
     auth_directory = os.path.join(os.getcwd(), "auth")
@@ -654,10 +816,27 @@ def generate_client_settings_yaml(client_id, client_secret):
 def insert_google_drive_ids(instrument_id, gdrive_folder_id, instrument_db_file_id, methods_zip_file_id):
 
     """
-    Inserts Google Drive ID's into corresponding tables for the following:
-    1. MS-AutoQC folder (gdrive_folder_id)
-    2. Instrument database zip file (instrument_db_file_id)
-    3. Methods directory zip file (methods_zip_file_id)
+    Inserts Google Drive ID's into corresponding tables to enable Google Drive sync.
+
+    This function is called when a user creates a new instrument in their workspace.
+
+    The ID's for the following files / folders in Google Drive are stored in the database:
+    1. MS-AutoQC folder
+    2. Instrument database zip file
+    3. Methods directory zip file
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        gdrive_folder_id (str):
+            Google Drive ID for the MS-AutoQC folder (found in the user's root directory in Drive)
+        instrument_db_file_id (str):
+            Google Drive ID for the instrument database ZIP file
+        methods_zip_file_id (str):
+            Google Drive ID for the methods directory ZIP file
+
+    Returns:
+        None
     """
 
     db_metadata, connection = connect_to_database("Settings")
@@ -685,7 +864,18 @@ def insert_google_drive_ids(instrument_id, gdrive_folder_id, instrument_db_file_
 def insert_new_instrument(name, vendor):
 
     """
-    Inserts a new instrument into the "instruments" table
+    Inserts a new instrument into the "instruments" table in the Settings database.
+
+    The name is the instrument ID, and the vendor is one of 5 options: Thermo Fisher, Agilent, Bruker, Sciex, and Waters.
+
+    Args:
+        name (str):
+            Instrument ID
+        vendor (str):
+            Instrument vendor
+
+    Returns:
+        None
     """
 
     # Connect to database
@@ -708,7 +898,7 @@ def insert_new_instrument(name, vendor):
 def get_instruments_list():
 
     """
-    Returns list of instruments in database
+    Returns list of instruments in database.
     """
 
     # Connect to SQLite database
@@ -725,6 +915,12 @@ def get_instrument(instrument_id):
 
     """
     Returns record from "instruments" table as a DataFrame for a given instrument
+
+    Args:
+        instrument_id (str): Instrument ID
+
+    Returns:
+        DataFrame containing the name, vendor, and drive_id for the given instrument
     """
 
     engine = sa.create_engine(settings_database)
@@ -734,7 +930,23 @@ def get_instrument(instrument_id):
 def get_filenames_from_sequence(sequence, vendor="Thermo Fisher"):
 
     """
-    Takes sequence file as JSON string and returns filtered DataFrame
+    Filters preblanks, washes, and shutdown injections from sequence file, and simultaneously assigns
+    polariy to each sample based on presence of "Pos" or "Neg" in Instrument Method column.
+
+    This function is called upon starting a new QC job.
+
+    TODO: Adapt this function for other instrument vendors.
+    TODO: Check the method filename, not entire file path, for "Pos" and "Neg".
+        A folder containing "Pos" or "Neg" will give incorrect polarity assignments.
+
+    Args:
+        sequence (str):
+            The acquisition sequence file, encoded as a JSON string in "split" format
+        vendor (str):
+            The instrument vendor (see to-do statements)
+
+    Returns:
+        DataFrame of acquisition sequence, with preblanks / washes / shutdowns filtered out and polarities assigned
     """
 
     df_sequence = pd.read_json(sequence, orient="split")
@@ -759,7 +971,19 @@ def get_filenames_from_sequence(sequence, vendor="Thermo Fisher"):
 def get_polarity_for_sample(instrument_id, run_id, sample_id, status):
 
     """
-    Returns polarity of given sample (very inefficient)
+    Returns polarity for a given sample.
+
+    TODO: Loading hundreds of rows of data before querying for one sample is massively inefficient.
+        This function was written in haste and can be easily implemented in a much better way.
+
+    Args:
+        instrument_id (str): Instrument ID
+        run_id (str): Instrument run ID (job ID)
+        sample_id (str): Sample ID
+        status (str): Job status
+
+    Returns:
+        Polarity for the given sample, as either "Pos" or "Neg".
     """
 
     if get_device_identity() != instrument_id and sync_is_enabled():
@@ -782,9 +1006,35 @@ def get_polarity_for_sample(instrument_id, run_id, sample_id, status):
 def insert_new_run(run_id, instrument_id, chromatography, bio_standards, path, sequence, metadata, qc_config_id, job_type):
 
     """
-    1. Inserts a new instrument run into the "runs" table
-    2. Inserts sample rows into the "sample_qc_results" table
-    3. Inserts biological standard sample rows into the "bio_qc_results" table
+    Initializes sample records in database for a new QC job.
+
+    Performs the following functions:
+        1. Inserts a record for the new instrument run into the "runs" table
+        2. Inserts sample rows into the "sample_qc_results" table
+        3. Inserts biological standard sample rows into the "bio_qc_results" table
+
+    Args:
+        run_id (str):
+            Instrument run ID (job ID)
+        instrument_id (str):
+            Instrument ID
+        chromatography (str):
+            Chromatography method
+        bio_standards (str):
+            Biological standards
+        path (str):
+            Data acquisition path
+        sequence (str):
+            Acquisition sequence table, as JSON string in "records" format
+        metadata (str):
+            Sample metadata table, as JSON string in "records" format
+        qc_config_id (str):
+            Name of QC configuration
+        job_type (str):
+            Either "completed" or "active"
+
+    Returns:
+        None
     """
 
     # Get list of samples from sequence
@@ -867,7 +1117,14 @@ def insert_new_run(run_id, instrument_id, chromatography, bio_standards, path, s
 def get_instrument_run(instrument_id, run_id):
 
     """
-    Returns DataFrame of selected instrument run from "runs" table
+    Returns DataFrame of given instrument run from "runs" table.
+
+    Args:
+        instrument_id (str): Instrument ID
+        run_id (str): Run ID
+
+    Returns:
+        DataFrame containing record for instrument run
     """
 
     database = get_database_file(instrument_id=instrument_id, sqlite_conn=True)
@@ -880,7 +1137,17 @@ def get_instrument_run(instrument_id, run_id):
 def get_instrument_run_from_csv(instrument_id, run_id):
 
     """
-    Returns DataFrame of selected instrument run from CSV files during active runs
+    Returns DataFrame of selected instrument run from CSV files during active instrument runs.
+
+    This function is called when a user views an active instrument run from an external device
+    (to prevent downloading / uploading the database file with each sample acquisition).
+
+    Args:
+        instrument_id (str): Instrument ID
+        run_id (str): Run ID
+
+    Returns:
+        DataFrame containing record for instrument run
     """
 
     id = instrument_id.replace(" ", "_") + "_" + run_id
@@ -892,6 +1159,15 @@ def get_instrument_runs(instrument_id, as_list=False):
 
     """
     Returns DataFrame of all runs on a given instrument from "runs" table
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        as_list (str, default False):
+            If True, returns only a list of names of instrument runs (jobs)
+
+    Returns:
+        DataFrame containing records for instrument runs (QC jobs) for the given instrument
     """
 
     database = get_database_file(instrument_id, sqlite_conn=True)
@@ -907,7 +1183,14 @@ def get_instrument_runs(instrument_id, as_list=False):
 def delete_instrument_run(instrument_id, run_id):
 
     """
-    Deletes instrument run from all tables in the database
+    Deletes all records for an instrument run (QC job) from the database.
+
+    Args:
+        instrument_id (str): Instrument ID
+        run_id (str): Run ID
+
+    Returns:
+        None
     """
 
     # Connect to database
@@ -931,7 +1214,14 @@ def delete_instrument_run(instrument_id, run_id):
 def get_acquisition_path(instrument_id, run_id):
 
     """
-    Returns acquisition path for a given instrument run
+    Retrieves acquisition path for a given instrument run.
+
+    Args:
+        instrument_id (str): Instrument ID
+        run_id (str): Run ID
+
+    Returns:
+        Acquisition path for the given instrument run
     """
 
     return get_instrument_run(instrument_id, run_id)["acquisition_path"].astype(str).tolist()[0]
@@ -940,7 +1230,19 @@ def get_acquisition_path(instrument_id, run_id):
 def get_md5(instrument_id, sample_id):
 
     """
-    Returns MD5 checksum for a data file in "sample_qc_results" table
+    Returns MD5 checksum for a data file in "sample_qc_results" table.
+
+    Used for comparing MD5 checksums during active instrument runs.
+
+    TODO: This function will return incorrect results if two different instrument runs
+        have samples with the same sample ID. It needs to include "run_id" in the SQL query.
+
+    Args:
+        instrument_id (str): Instrument ID
+        sample_id (str): Sample ID
+
+    Returns:
+        MD5 checksum stored for the data file.
     """
 
     # Connect to database
@@ -965,7 +1267,21 @@ def get_md5(instrument_id, sample_id):
 def update_md5_checksum(instrument_id, sample_id, md5_checksum):
 
     """
-    Updates MD5 checksum for a data file in "sample_qc_results" table
+    Updates MD5 checksum for a data file during sample acquisition.
+
+    TODO: This function will return incorrect results if two different instrument runs
+        have samples with the same sample ID. It needs to include "run_id" in the SQL query.
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        sample_id (str):
+            Sample ID (filename) of data file
+        md5_checksum (str):
+            MD5 checksum for the sample data file
+
+    Returns:
+        None
     """
 
     # Connect to database
@@ -994,7 +1310,40 @@ def update_md5_checksum(instrument_id, sample_id, md5_checksum):
 def write_qc_results(sample_id, instrument_id, run_id, json_mz, json_rt, json_intensity, qc_dataframe, qc_result, is_bio_standard):
 
     """
-    Updates m/z, RT, and intensity info (as dictionary records) in appropriate table upon MS-DIAL processing completion
+    Writes QC results (as dictionary records) to sample record upon MS-DIAL processing completion.
+
+    QC results consist of m/z, RT, and intensity data for internal standards (or targeted metabolites in biological standards),
+    as well as a DataFrame containing delta m/z, delta RT, in-run delta RT, warnings, and fails (qc_dataframe) and overall QC result
+    (which will be "Pass" or "Fail").
+
+    The data is encoded as dictionary in "records" format: [{'col1': 1, 'col2': 0.5}, {'col1': 2, 'col2': 0.75}].
+    This dictionary is cast to a string before being passed to this function.
+
+    TODO: Update names of arguments from json_x to record_x, as the data is no longer encoded as JSON strings.
+        The data is now encoded in "records" format as a string.
+
+    Args:
+        sample_id (str):
+            Sample ID
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (Job ID)
+        json_mz (str):
+            String dict of internal standard m/z data in "records" format
+        json_rt (str):
+            String dict of internal standard RT data in "records" format
+        json_intensity (str):
+            String dict of internal standard intensity data in "records" format
+        qc_dataframe (str):
+            String dict of various QC data in "records" format
+        qc_result (str):
+            QC result for sample, either "Pass" or "Fail"
+        is_bio_standard (bool):
+            Whether the sample is a biological standard
+
+    Returns:
+        None
     """
 
     # Connect to database
@@ -1026,7 +1375,7 @@ def write_qc_results(sample_id, instrument_id, run_id, json_mz, json_rt, json_in
 def get_chromatography_methods():
 
     """
-    Returns DataFrame of chromatography methods
+    Returns DataFrame of chromatography methods from the Settings database.
     """
 
     engine = sa.create_engine(settings_database)
@@ -1037,7 +1386,7 @@ def get_chromatography_methods():
 def get_chromatography_methods_list():
 
     """
-    Returns list of chromatography method ID's
+    Returns list of chromatography method ID's from the Settings database.
     """
 
     df_methods = get_chromatography_methods()
@@ -1047,7 +1396,13 @@ def get_chromatography_methods_list():
 def insert_chromatography_method(method_id):
 
     """
-    Inserts new chromatography method in "chromatography_methods" table
+    Inserts new chromatography method in the "chromatography_methods" table of the Settings database.
+
+    Args:
+        method_id (str): Name of the chromatography method
+
+    Returns:
+        None
     """
 
     # Connect to database
@@ -1092,12 +1447,21 @@ def insert_chromatography_method(method_id):
 def remove_chromatography_method(method_id):
 
     """
-    1. Removes chromatography method in "chromatography_methods" table
-    2. Removes method from "biological_standards" table
-    3. Removes associated internal standards from "internal_standards" table
-    4. Removes associated targeted features from "targeted_features" table
-    5. Deletes corresponding MSPs from folders
-    6. Deletes corresponding MSPs from Google Drive (if sync is enabled)
+    Deletes chromatography method and all associated records from the Settings database.
+
+    Details:
+        1. Removes chromatography method in "chromatography_methods" table
+        2. Removes method from "biological_standards" table
+        3. Removes associated internal standards from "internal_standards" table
+        4. Removes associated targeted features from "targeted_features" table
+        5. Deletes corresponding MSPs from folders
+        6. Deletes corresponding MSPs from Google Drive (if sync is enabled)
+
+    Args:
+        method_id (str): Name of the chromatography method
+
+    Returns:
+        None
     """
 
     # Delete corresponding MSPs from "methods" directory
@@ -1149,7 +1513,19 @@ def remove_chromatography_method(method_id):
 def update_msdial_config_for_internal_standards(chromatography, config_id):
 
     """
-    Updates MS-DIAL configuration for a given chromatography method
+    Updates MS-DIAL configuration for a given chromatography method.
+
+    This MS-DIAL configuration will be used to generate a parameters file
+    for processing samples run with this chromatography method.
+
+    Args:
+        chromatography (str):
+            Chromatography method ID (name)
+        config_id (str):
+            MS-DIAL configuration ID (name)
+
+    Returns:
+        None
     """
 
     # Connect to database and get relevant tables
@@ -1170,8 +1546,25 @@ def update_msdial_config_for_internal_standards(chromatography, config_id):
 def add_msp_to_database(msp_file, chromatography, polarity, bio_standard=None):
 
     """
-    Parses compounds from MSP into "internal_standards" or "targeted_features" table,
-    and inserts location of pos/neg MSP files into "chromatography_methods" table
+    Parses compounds from MSP into the Settings database.
+
+    This function writes features from an MSP file into the "internal_standards" or "targeted_features" table,
+    and inserts location of pos/neg MSP files into "chromatography_methods" table.
+
+    TODO: The MSP/TXT libraries have standardized names; there is no need to store the filename in the database.
+
+    Args:
+        msp_file (io.StringIO):
+            In-memory text-stream file object
+        chromatography (str):
+            Chromatography method ID (name)
+        polarity (str):
+            Polarity for which MSP should be used for ("Positive Mode" or "Negative Mode")
+        bio_standard (str, default None):
+            Parses MSP and applies to biological standard within a chromatography-polarity combination
+
+    Returns:
+        None
     """
 
     # Connect to database
@@ -1383,8 +1776,23 @@ def add_msp_to_database(msp_file, chromatography, polarity, bio_standard=None):
 def add_csv_to_database(csv_file, chromatography, polarity):
 
     """
+    Parses compounds from a CSV file into the Settings database.
+
     Parses compounds from a CSV into the "internal_standards" table, and stores
-    the location of the pos/neg TXT files in "chromatography_methods" table
+    the location of the pos/neg TXT files in "chromatography_methods" table.
+
+    TODO: The MSP/TXT libraries have standardized names; there is no need to store the filename in the database.
+
+    Args:
+        csv_file (io.StringIO):
+            In-memory text-stream file object
+        chromatography (str):
+            Chromatography method ID (name)
+        polarity (str):
+            Polarity for which MSP should be used for ("Positive Mode" or "Negative Mode")
+
+    Returns:
+        None
     """
 
     # Convert CSV file into Python dictionary
@@ -1465,7 +1873,7 @@ def add_csv_to_database(csv_file, chromatography, polarity):
 def get_msdial_configurations():
 
     """
-    Returns list of user configurations of MS-DIAL parameters
+    Returns list of user configurations of MS-DIAL parameters from Settings database.
     """
 
     engine = sa.create_engine(settings_database)
@@ -1476,7 +1884,23 @@ def get_msdial_configurations():
 def generate_msdial_parameters_file(chromatography, polarity, msp_file_path, bio_standard=None):
 
     """
-    Uses parameters from user-curated MS-DIAL configuration to create a parameters.txt file for command-line MS-DIAL
+    Uses parameters from user-curated MS-DIAL configuration to create a parameters.txt file for MS-DIAL.
+
+    TODO: Currently, this function is only called upon a new job setup. To allow changes during a QC job,
+        this function should be called every time the user makes a configuration save in Settings > MS-DIAL Configurations.
+
+    Args:
+        chromatography (str):
+            Chromatography method ID (name)
+        polarity (str):
+            Polarity ("Positive" or "Negative")
+        msp_file_path (str):
+            MSP library file path
+        bio_standard (str, default None):
+            Specifies that the parameters file is for a biological standard
+
+    Returns:
+        None
     """
 
     # Get parameters of selected configuration
@@ -1618,7 +2042,13 @@ def generate_msdial_parameters_file(chromatography, polarity, msp_file_path, bio
 def add_msdial_configuration(msdial_config_name):
 
     """
-    Inserts new user configuration of MS-DIAL parameters into the "msdial_parameters" table
+    Inserts new user configuration of MS-DIAL parameters into the "msdial_parameters" table in Settings database.
+
+    Args:
+        msdial_config_name (str): MS-DIAL configuration ID
+
+    Returns:
+        None
     """
 
     # Connect to database
@@ -1660,7 +2090,13 @@ def add_msdial_configuration(msdial_config_name):
 def remove_msdial_configuration(msdial_config_name):
 
     """
-    Deletes user configuration of MS-DIAL parameters from the "msdial_parameters" table
+    Deletes user configuration of MS-DIAL parameters from the "msdial_parameters" table.
+
+    Args:
+        msdial_config_name (str): MS-DIAL configuration ID
+
+    Returns:
+        None
     """
 
     # Connect to database
@@ -1683,7 +2119,22 @@ def remove_msdial_configuration(msdial_config_name):
 def get_msdial_configuration_parameters(msdial_config_name, parameter=None):
 
     """
-    Returns tuple of parameters defined for a selected MS-DIAL configuration
+    Returns tuple of parameters defined for a selected MS-DIAL configuration.
+
+    TODO: The MS-DIAL configuration is returned as a tuple for a concise implementation of get_msdial_parameters_for_config()
+        in the DashWebApp module. While convenient there, this function is not optimal for maintainability. Should return
+        the entire DataFrame record instead.
+
+    See update_msdial_configuration() for details on parameters.
+
+    Args:
+        msdial_config_name (str):
+            MS-DIAL configuration ID
+        parameter (str, default None):
+            If specified, returns only the value for the given parameter
+
+    Returns:
+        Tuple of parameters for the given MS-DIAL configuration, or single parameter value.
     """
 
     # Get "msdial_parameters" table from database as a DataFrame
@@ -1708,7 +2159,56 @@ def update_msdial_configuration(config_name, rt_begin, rt_end, mz_begin, mz_end,
     alignment_rt_factor, alignment_mz_factor, peak_count_filter, qc_at_least_filter):
 
     """
-    Updates parameters of a selected MS-DIAL configuration
+    Updates and saves changes of all parameters for a selected MS-DIAL configuration.
+
+    For details on MS-DIAL parameters, see: https://mtbinfo-team.github.io/mtbinfo.github.io/MS-DIAL/tutorial#section-2-3
+
+    Args:
+        config_name (str):
+            Name / ID of MS-DIAL configuration
+        rt_begin (int):
+            Minimum retention time in RT range for analysis range
+        rt_end (int):
+            Maximum retention time in RT range for analysis
+        mz_begin (float):
+            Minimum precursor mass in m/z range for analysis range
+        mz_end (float):
+            Maximum precursor mass in m/z range for analysis range
+        ms1_centroid_tolerance (float):
+            MS1 centroid tolerance
+        ms2_centroid_tolerance (float):
+            MS2 centroid tolerance
+        smoothing_method (str):
+            Peak smoothing method for peak detection
+        smoothing_level (int):
+            Peak smoothing level
+        mass_slice_width (float):
+            Mass slice width
+        min_peak_width (int):
+            Minimum peak width threshold
+        min_peak_height (int):
+            Minimum peak height threshold
+        post_id_rt_tolerance (float):
+            Post-identification retention time tolerance
+        post_id_mz_tolerance (float):
+            Post-identification precursor m/z tolerance
+        post_id_score_cutoff (int):
+            Similarity score cutoff after peak identification
+        alignment_rt_tolerance (float):
+            Post-alignment retention time tolerance
+        alignment_mz_tolerance (float):
+            Post-alignment precursor m/z tolerance
+        alignment_rt_factor (float):
+            Post-alignment retention time factor
+        alignment_mz_factor (float):
+            Post-alignment precursor m/z tolerance
+        peak_count_filter (int):
+            Peak count filter
+        qc_at_least_filter (str):
+            QC at least filter
+
+    Returns:
+        None
     """
 
     # Connect to database
@@ -1752,7 +2252,21 @@ def get_msp_file_path(chromatography, polarity, bio_standard=None):
 
     """
     Returns file paths of MSPs for a selected chromatography / polarity (both stored
-    in the methods folder upon user upload) for MS-DIAL parameter file generation
+    in the methods folder upon user upload) for MS-DIAL parameter file generation.
+
+    TODO: Once added to workspace, MSP / TXT library file names are standardized. No need to store / retrieve from database.
+        Get the file path using the filename e.g. return directory + chromatography + "_" + polarity + ".msp".
+
+    Args:
+        chromatography (str):
+            Chromatography method ID
+        polarity (str):
+            Polarity, either "Positive" or "Negative"
+        bio_standard (str, default None):
+            Name of biological standard
+
+    Returns:
+        MSP / TXT library file path.
     """
 
     # Connect to database
@@ -1789,7 +2303,21 @@ def get_msp_file_path(chromatography, polarity, bio_standard=None):
 def get_parameter_file_path(chromatography, polarity, biological_standard=None):
 
     """
-    Returns file path of parameters file stored in database
+    Returns file path of parameters file stored in database.
+
+    TODO: Once generated, MS-DIAL parameter filenames are standardized. No need to store / retrieve from database.
+        Get the file path using the filename e.g. return directory + chromatography + "_" + polarity + "_Parameters.txt".
+
+    Args:
+        chromatography (str):
+            Chromatography method ID
+        polarity (str):
+            Polarity, either "Positive" or "Negative"
+        bio_standard (str, default None):
+            Name of biological standard
+
+    Returns:
+        File path for MS-DIAL parameters.txt file.
     """
 
     engine = sa.create_engine(settings_database)
@@ -1813,7 +2341,7 @@ def get_parameter_file_path(chromatography, polarity, biological_standard=None):
 def get_msdial_directory():
 
     """
-    Returns location of MS-DIAL folder
+    Returns location of MS-DIAL directory.
     """
 
     return get_table("Settings", "workspace")["msdial_directory"].astype(str).values[0]
@@ -1822,7 +2350,15 @@ def get_msdial_directory():
 def get_msconvert_directory():
 
     """
-    Returns MSConvert.exe function call
+    Returns location of MSConvert directory.
+
+    This function uses the MS-DIAL directory path to retrieve user ID, which it then uses to
+    retrieve the path for MSConvert.exe in C:/Users/<username>/AppData/Local/Apps.
+
+    TODO: There is probably a better way to implement this.
+
+    Returns:
+        Location of MSConvert directory in C:/Users/<username>/AppData/Local/Apps/ProteoWizard.
     """
 
     user = get_msdial_directory().replace("\\", "/").split("/")[2]
@@ -1833,7 +2369,13 @@ def get_msconvert_directory():
 def update_msdial_directory(msdial_directory):
 
     """
-    Updates location of MS-DIAL folder
+    Updates location of MS-DIAL directory, stored in "workspace" table of the Settings database.
+
+    Args:
+        msdial_directory (str): New MS-DIAL directory location
+
+    Returns:
+        None
     """
 
     db_metadata, connection = connect_to_database("Settings")
@@ -1852,7 +2394,21 @@ def update_msdial_directory(msdial_directory):
 def get_internal_standards_dict(chromatography, value_type):
 
     """
-    Returns dictionary of internal standard keys mapped to either m/z or RT values
+    Returns dictionary of internal standard keys mapped to either m/z or RT values.
+
+    This function is used to establish a y-axis range for internal standard retention time plots.
+    See load_istd_rt_plot() in the PlotGeneration module.
+
+    TODO: This function needs to filter for polarity!
+
+    Args:
+        chromatography (str):
+            Chromatography method to retrieve internal standards for
+        value_type (str):
+            Data type ("precursor_mz", "retention_time", "ms2_spectrum")
+
+    Returns:
+        Dictionary with key-value pairs of { internal_standard: value_type }
     """
 
     engine = sa.create_engine(settings_database)
@@ -1872,7 +2428,16 @@ def get_internal_standards_dict(chromatography, value_type):
 def get_internal_standards(chromatography, polarity):
 
     """
-    Returns DataFrame of internal standards for a given chromatography method and polarity
+    Returns DataFrame of internal standards for a given chromatography method and polarity.
+
+    Args:
+        chromatography (str):
+            Chromatography method ID
+        polarity (str):
+            Polarity (either "Pos" or "Neg")
+
+    Returns:
+        DataFrame of "internal_standards" table from Settings database, filtered by chromatography and polarity.
     """
 
     if polarity == "Pos":
@@ -1891,7 +2456,18 @@ def get_internal_standards(chromatography, polarity):
 def get_targeted_features(biological_standard, chromatography, polarity):
 
     """
-    Returns DataFrame of metabolite targets for a given biological standard, chromatography, and polarity
+    Returns DataFrame of metabolite targets for a given biological standard, chromatography, and polarity.
+
+    Args:
+        biological_standard (str):
+            Name of biological standard
+        chromatography (str):
+            Chromatography method ID (name)
+        polarity (str):
+            Polarity (either "Pos" or "Neg")
+
+    Returns:
+        DataFrame of "targeted_features" table from Settings database, filtered by chromatography and polarity.
     """
 
     if polarity == "Pos":
@@ -1912,7 +2488,7 @@ def get_targeted_features(biological_standard, chromatography, polarity):
 def get_biological_standards():
 
     """
-    Returns DataFrame of the "biological_standards" table
+    Returns DataFrame of the "biological_standards" table from the Settings database.
     """
 
     # Get table from database as a DataFrame
@@ -1924,7 +2500,7 @@ def get_biological_standards():
 def get_biological_standards_list():
 
     """
-    Returns list of biological standards in the database
+    Returns list of biological standards from the Settings database.
     """
 
     df_biological_standards = get_biological_standards()
@@ -1934,7 +2510,19 @@ def get_biological_standards_list():
 def add_biological_standard(name, identifier):
 
     """
-    Inserts new biological standard into "biological_standards" table
+    Creates new biological standard with name and identifier.
+
+    The biological standard identifier is a text substring used to distinguish between sample and biological standard.
+    MS-AutoQC checks filenames in the sequence for this identifier to process samples accordingly.
+
+    Args:
+        name (str):
+            Name of biological standard
+        identifier (str):
+            String identifier in filename for biological standard
+
+    Returns:
+        None
     """
 
     # Get list of chromatography methods
@@ -1963,7 +2551,13 @@ def add_biological_standard(name, identifier):
 def remove_biological_standard(name):
 
     """
-    Deletes biological standard (and corresponding MSPs) from database
+    Deletes biological standard and corresponding MSPs from Settings database.
+
+    Args:
+        name (str): Name of the biological standard
+
+    Returns:
+        None
     """
 
     # Delete corresponding MSPs from "methods" directory
@@ -2001,7 +2595,18 @@ def remove_biological_standard(name):
 def update_msdial_config_for_bio_standard(biological_standard, chromatography, config_id):
 
     """
-    Updates MS-DIAL configuration for a given biological standard and chromatography method
+    Updates MS-DIAL configuration for given biological standard and chromatography method combination.
+
+    Args:
+        biological_standard (str):
+            Name of the biological standard
+        chromatography (str):
+            Chromatography method
+        config_id (str):
+            Name of MS-DIAL configuration to set for this biological standard - chromatography combination
+
+    Returns:
+        None
     """
 
     # Connect to database and get relevant tables
@@ -2023,7 +2628,15 @@ def update_msdial_config_for_bio_standard(biological_standard, chromatography, c
 def get_biological_standard_identifiers(bio_standards=None):
 
     """
-    Returns dictionary of identifiers for a given list of biological standards
+    Returns dictionary of identifiers for a given list of biological standards.
+
+    If no list is provided, returns dict of identifiers for all biological standards.
+
+    Args:
+        bio_standards (list, default None): List of biological standards
+
+    Returns:
+        Dictionary with key-value pairs of { identifier: biological_standard }
     """
 
     df_bio_standards = get_biological_standards()
@@ -2048,7 +2661,7 @@ def get_biological_standard_identifiers(bio_standards=None):
 def get_qc_configurations():
 
     """
-    Returns a DataFrame of QC parameter configurations
+    Returns DataFrame of "qc_parameters" table from Settings database.
     """
 
     engine = sa.create_engine(settings_database)
@@ -2058,7 +2671,7 @@ def get_qc_configurations():
 def get_qc_configurations_list():
 
     """
-    Returns a list of QC parameter configurations
+    Returns list of names of QC configurations from Settings database.
     """
 
     return get_qc_configurations()["config_name"].astype(str).tolist()
@@ -2067,7 +2680,13 @@ def get_qc_configurations_list():
 def add_qc_configuration(qc_config_name):
 
     """
-    Adds a new QC configuration to the "qc_parameters" table
+    Adds a new QC configuration to the "qc_parameters" table in the Settings database.
+
+    Args:
+        qc_config_name (str): Name of the QC configuration
+
+    Returns:
+        None
     """
 
     # Connect to database
@@ -2097,7 +2716,13 @@ def add_qc_configuration(qc_config_name):
 def remove_qc_configuration(qc_config_name):
 
     """
-    Deletes QC configuration from the "qc_parameters" table
+    Deletes QC configuration from the "qc_parameters" table in the Settings database.
+
+    Args:
+        qc_config_name (str): Name of the QC configuration
+
+    Returns:
+        None
     """
 
     # Connect to database
@@ -2120,7 +2745,20 @@ def remove_qc_configuration(qc_config_name):
 def get_qc_configuration_parameters(config_name=None, instrument_id=None, run_id=None):
 
     """
-    Returns DataFrame of parameters for a selected QC configuration
+    Returns DataFrame of parameters for a selected QC configuration.
+
+    The DataFrame has columns for each parameter, as well as for whether the parameter is enabled.
+
+    Args:
+        config_name (str, default None):
+            Name of QC configuration
+        instrument_id (str, default None):
+            Instrument ID (name)
+        run_id (str, default None):
+            Instrument run ID (job ID)
+
+    Returns:
+        DataFrame of parameters for QC configuration.
     """
 
     df_configurations = get_table("Settings", "qc_parameters")
@@ -2150,7 +2788,33 @@ def update_qc_configuration(config_name, intensity_dropouts_cutoff, library_rt_s
     library_mz_shift_cutoff, intensity_enabled, library_rt_enabled, in_run_rt_enabled, library_mz_enabled):
 
     """
-    Updates parameters for a given QC configuration
+    Updates parameters for the given QC configuration.
+
+    Due to the database schema, booleans are stored as integers: 0 for False and 1 for True. They need to be
+    cast back to booleans in get_qc_configuration_parameters(). A schema change would remove the bloat.
+
+    Args:
+        config_name (str):
+            Name of QC configuration
+        intensity_dropouts_cutoff (int):
+            Minimum number of internal standard intensity dropouts to constitute a QC fail
+        library_rt_shift_cutoff (float):
+            Maximum shift from library RT values to constitute a QC fail
+        in_run_rt_shift_cutoff (float):
+            Maximum shift from in-run RT values to constitute a QC fail
+        library_mz_shift_cutoff (float):
+            Maximum shift from library m/z values to constitute a QC fail
+        intensity_enabled (bool):
+            Enables / disables QC check for intensity dropout cutoffs
+        library_rt_enabled (bool):
+            Enables / disables QC check for library RT shifts
+        in_run_rt_enabled (bool):
+            Enables / disables QC check for in-run RT shifts
+        library_mz_enabled (bool):
+            Enables / disables QC check for library m/z shifts
+
+    Returns:
+        None
     """
 
     # Connect to database
@@ -2181,7 +2845,18 @@ def update_qc_configuration(config_name, intensity_dropouts_cutoff, library_rt_s
 def get_samples_in_run(instrument_id, run_id, sample_type="Both"):
 
     """
-    Returns DataFrame of samples in a given run using local database
+    Returns DataFrame of samples for a given instrument run from instrument database.
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+        sample_type (str):
+            Sample type, either "Sample" or "Biological Standard" or "Both"
+
+    Returns:
+        DataFrame of sample tables for a given instrument run.
     """
 
     if sample_type == "Sample":
@@ -2202,7 +2877,21 @@ def get_samples_in_run(instrument_id, run_id, sample_type="Both"):
 def get_samples_from_csv(instrument_id, run_id, sample_type="Both"):
 
     """
-    Returns DataFrame of samples in a given run using CSV files from Google Drive
+    Returns DataFrame of samples in a given run using CSV files from Google Drive.
+
+    CSV files of the run metadata, samples, and biological standards tables are stored
+    in the ../data/Instrument_ID_Run_ID/csv directory, and removed on job completion.
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+        sample_type (str):
+            Sample type, either "Sample" or "Biological Standard" or "Both"
+
+    Returns:
+        DataFrame of samples for a given instrument run.
     """
 
     id = instrument_id.replace(" ", "_") + "_" + run_id
@@ -2234,7 +2923,18 @@ def get_samples_from_csv(instrument_id, run_id, sample_type="Both"):
 def get_next_sample(sample_id, instrument_id, run_id):
 
     """
-    Returns sample following the given sample, or None if last sample
+    Returns sample following the given sample, or None if last sample.
+
+    Args:
+        sample_id (str):
+            Sample ID
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+
+    Returns:
+        str: The next sample in the instrument run after the given sample ID, or None if last sample.
     """
 
     # Get list of samples in run
@@ -2254,7 +2954,19 @@ def get_next_sample(sample_id, instrument_id, run_id):
 def get_remaining_samples(instrument_id, run_id):
 
     """
-    Returns list of samples remaining in a given instrument run
+    Returns list of samples remaining in a given instrument run (QC job).
+
+    TODO: This function should just return the samples with null values in the "qc_result" column.
+        The "latest_sample" value in the "runs" table may be unreliable.
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+
+    Returns:
+        list: List of samples remaining in a QC job.
     """
 
     # Get last processed sample in run
@@ -2278,9 +2990,17 @@ def get_remaining_samples(instrument_id, run_id):
 def get_unprocessed_samples(instrument_id, run_id):
 
     """
-    For an active run, returns:
-    1. list of samples that were not processed due to error / runtime termination
-    2. the most recent sample that was being monitored / processed
+    For an active run, returns 1) a list of samples that were not processed due to error / runtime termination,
+    and 2) the current sample being monitored / processed.
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+
+    Returns:
+        tuple: List of unprocessed samples for the given instrument run, and current sample being monitored / processed.
     """
 
     # Get samples in run
@@ -2318,7 +3038,18 @@ def get_unprocessed_samples(instrument_id, run_id):
 def get_current_sample(instrument_id, run_id):
 
     """
-    Returns the current sample being monitored / processed
+    Returns the current sample being monitored / processed.
+
+    TODO: The "latest_sample" is the last sample to be processed. Nomenclature needs to be updated in many places.
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+
+    Returns:
+        str: Current sample being monitored / processed.
     """
 
     # Get latest sample in run
@@ -2333,7 +3064,32 @@ def get_current_sample(instrument_id, run_id):
 def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, load_from, as_json=True):
 
     """
-    Returns JSON-ified DataFrame of samples (as rows) vs. internal standards (as columns)
+    Parses data from database into JSON-ified DataFrame for samples (as rows) vs. internal standards (as columns).
+
+    Data is stored in a column (for example, "retention_time") as a single-record string dict with the following structure:
+
+    | Sample     | iSTD 1 | iSTD 2 | ... |
+    | ---------- | ------ | ------ | ... |
+    | SAMPLE_001 | 1.207  | 1.934  | ... |
+
+    These records are concatenated together with this function using pd.DataFrame(), which is 100x faster than pd.concat().
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+        result_type (str):
+            Column in sample_qc_results table to parse (either "retention_time" or "precursor_mz" or "intensity")
+        polarity (str):
+            Polarity ("Pos" or "Neg")
+        load_from (str):
+            Specifies whether to load data from CSV file (during Google Drive sync of active run) or instrument database
+        as_json (bool, default True):
+            Whether to return table as JSON string or as DataFrame
+
+    Returns:
+        DataFrame of samples (rows) vs. internal standards (columns) as JSON string.
     """
 
     # Get relevant QC results table from database
@@ -2368,7 +3124,43 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, l
 def parse_biological_standard_data(instrument_id, run_id, result_type, polarity, biological_standard, load_from, as_json=True):
 
     """
-    Returns JSON-ified DataFrame of instrument runs (as columns) vs. targeted features (as rows)
+    Parses biological standard data into JSON-ified DataFrame of targeted features (as columns) vs. instrument runs (as rows).
+
+    The bio_qc_results table in the instrument database is first filtered by biological standard, chromatography, and polarity.
+    Then, the sample name is replaced with the instrument run it was associated with.
+
+    Data is stored in a column (for example, "intensity") as a single-record string dict with the following structure:
+
+    | Name                | Metabolite 1 | Metabolite 2 | ... |
+    | ------------------- | ------------ | ------------ | ... |
+    | INSTRUMENT_RUN_001  | 13597340     | 53024853     | ... |
+
+    These records are concatenated together with this function using pd.DataFrame(), which is 100x faster than pd.concat().
+
+    | Name                | Metabolite 1 | Metabolite 2 | ... |
+    | ------------------- | ------------ | ------------ | ... |
+    | INSTRUMENT_RUN_001  | 13597340     | 53024853     | ... |
+    | INSTRUMENT_RUN_002  | 23543246     | 102030406    | ... |
+    | ...                 | ...          | ...          | ... |
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+        result_type (str):
+            Column in bio_qc_results table to parse (either "retention_time" or "precursor_mz" or "intensity")
+        polarity (str):
+            Polarity ("Pos" or "Neg")
+        biological_standard (str):
+            Name of biological standard
+        load_from (str):
+            Specifies whether to load data from CSV file (during Google Drive sync of active run) or instrument database
+        as_json (bool, default True):
+            Whether to return table as JSON string or as DataFrame
+
+    Returns:
+        JSON-ified DataFrame of targeted features for a biological standard (columns) vs. instrument runs (rows).
     """
 
     # Get relevant QC results table from database
@@ -2410,7 +3202,32 @@ def parse_biological_standard_data(instrument_id, run_id, result_type, polarity,
 def parse_internal_standard_qc_data(instrument_id, run_id, polarity, result_type, load_from, as_json=True):
 
     """
-    Returns JSON-ified DataFrame of samples (as rows) vs. internal standards (as columns)
+    Parses QC data into JSON-ified DataFrame for samples (as rows) vs. internal standards (as columns).
+
+    The QC DataFrame is stored in the "qc_dataframe" column as a single-record string dict with the following structure:
+
+    | Sample     | Delta m/z | Delta RT | In-run delta RT | Warnings | Fails |
+    | ---------- | --------- | -------- | --------------- | -------- | ----- |
+    | SAMPLE_001 | 0.000001  | 0.001    | 0.00001         | None     | None  |
+
+    These records are concatenated together with this function using pd.DataFrame(), which is 100x faster than pd.concat().
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+        polarity (str):
+            Polarity ("Pos" or "Neg")
+        result_type (str):
+            Column in sample_qc_results table to parse (either "retention_time" or "precursor_mz" or "intensity")
+        load_from (str):
+            Specifies whether to load data from CSV file (during Google Drive sync of active run) or instrument database
+        as_json (bool, default True):
+            Whether to return table as JSON string or as DataFrame
+
+    Returns:
+        JSON-ified DataFrame of QC data for samples (as rows) vs. internal standards (as columns).
     """
 
     # Get relevant QC results table from database
@@ -2452,7 +3269,7 @@ def parse_internal_standard_qc_data(instrument_id, run_id, polarity, result_type
 def get_workspace_users_list():
 
     """
-    Returns a list of users that have access to the MS-AutoQC workspace
+    Returns a list of users that have access to the MS-AutoQC workspace.
     """
 
     return get_table("Settings", "gdrive_users")["email_address"].astype(str).tolist()
@@ -2461,7 +3278,15 @@ def get_workspace_users_list():
 def add_user_to_workspace(email_address):
 
     """
-    Gives user access to workspace in Google Drive, stores email in database
+    Gives user access to workspace in Google Drive and stores email address in database.
+
+    Access is granted by sharing the MS-AutoQC folder in Google Drive with the user's Google account.
+
+    Args:
+        email_address (str): Email address for Google account to grant access to workspace.
+
+    Returns:
+        None
     """
 
     if email_address in get_workspace_users_list():
@@ -2500,7 +3325,13 @@ def add_user_to_workspace(email_address):
 def delete_user_from_workspace(email_address):
 
     """
-    Removes user access to workspace in Google Drive, deletes email in database
+    Removes user access to workspace in Google Drive and deletes email from database.
+
+    Args:
+        email_address (str): Email address for Google account whose access will to be revoked.
+
+    Returns:
+        None
     """
 
     if email_address not in get_workspace_users_list():
@@ -2541,7 +3372,20 @@ def delete_user_from_workspace(email_address):
 def get_qc_results(instrument_id, sample_list, is_bio_standard=False):
 
     """
-    Returns DataFrame of QC results for a given sample list
+    Returns DataFrame of QC results for a given sample list.
+
+    TODO: This function will break if samples in different runs have the same sample ID. Add run ID filter.
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        sample_list (list):
+            List of samples to query
+        is_bio_standard (bool, default False):
+            Whether the list is biological standards (True) or samples (False)
+
+    Returns:
+        DataFrame of QC results for a given sample list.
     """
 
     if len(sample_list) == 0:
@@ -2563,7 +3407,7 @@ def get_qc_results(instrument_id, sample_list, is_bio_standard=False):
 def create_workspace_metadata():
 
     """
-    Creates row in "workspace" table to store metadata
+    Creates record in "workspace" table to store various metadata.
     """
 
     db_metadata, connection = connect_to_database("Settings")
@@ -2575,7 +3419,7 @@ def create_workspace_metadata():
 def get_device_identity():
 
     """
-    Returns device identity
+    Returns device identity (either an Instrument ID or "Shared user").
     """
 
     return get_table("Settings", "workspace")["instrument_identity"].astype(str).tolist()[0]
@@ -2584,7 +3428,16 @@ def get_device_identity():
 def set_device_identity(is_instrument_computer, instrument_id):
 
     """
-    Indicates whether the user's device is the instrument PC or not
+    Indicates whether the user's device is the instrument PC or not.
+
+    Args:
+        is_instrument_computer (bool):
+            Whether the device is an instrument computer or not
+        instrument_id (str):
+            Instrument ID (if None, set to "Shared user")
+
+    Returns:
+        None
     """
 
     if not is_instrument_computer:
@@ -2609,7 +3462,18 @@ def set_device_identity(is_instrument_computer, instrument_id):
 def run_is_on_instrument_pc(instrument_id, run_id):
 
     """
-    Validates that the current device is the instrument PC on which the run was started
+    Validates that the current device is the instrument PC on which the run was started.
+
+    TODO: Use this function in PlotGeneration and DashWebApp module.
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID
+
+    Returns:
+        True if instrument run was started on the current device, and False if not.
     """
 
     instrument_id = get_instrument_run(instrument_id, run_id)["instrument_id"].astype(str).tolist()[0]
@@ -2624,7 +3488,15 @@ def run_is_on_instrument_pc(instrument_id, run_id):
 def update_slack_bot_token(slack_bot_token):
 
     """
-    Updates Slack bot user OAuth 2.0 token in "workspace" table
+    Updates Slack bot user OAuth 2.0 token in "workspace" table of Settings database.
+
+    For details on the Slack API, see: https://slack.dev/python-slack-sdk/
+
+    Args:
+        slack_bot_token (str): Slack bot user OAuth token
+
+    Returns:
+        None
     """
 
     db_metadata, connection = connect_to_database("Settings")
@@ -2643,7 +3515,7 @@ def update_slack_bot_token(slack_bot_token):
 def get_slack_bot_token():
 
     """
-    Returns Slack bot token stored in database
+    Returns Slack bot token stored in "workspace" table of Settings database.
     """
 
     return get_table("Settings", "workspace")["slack_bot_token"].astype(str).values[0]
@@ -2652,7 +3524,16 @@ def get_slack_bot_token():
 def update_slack_channel(slack_channel, notifications_enabled):
 
     """
-    Updates Slack channel registered for notifications
+    Updates Slack channel registered for notifications in "workspace" table of Settings database.
+
+    Args:
+        slack_channel (str):
+            Slack channel to post messages to
+        notifications_enabled (bool):
+            Whether to send Slack notifications for QC warnings and fails
+
+    Returns:
+        None
     """
 
     db_metadata, connection = connect_to_database("Settings")
@@ -2673,7 +3554,7 @@ def update_slack_channel(slack_channel, notifications_enabled):
 def get_slack_channel():
 
     """
-    Returns Slack channel registered for notifications
+    Returns Slack channel registered for notifications.
     """
 
     return get_table("Settings", "workspace")["slack_channel"].astype(str).values[0]
@@ -2682,7 +3563,7 @@ def get_slack_channel():
 def get_slack_notifications_toggled():
 
     """
-    Returns Slack notification toggled setting
+    Returns Slack notification toggle setting.
     """
 
     try:
@@ -2694,7 +3575,14 @@ def get_slack_notifications_toggled():
 def get_email_notifications_list(as_string=False):
 
     """
-    Returns list of emails registered for MS-AutoQC notifications
+    Returns list of emails registered for email notifications for QC warnings and fails.
+
+    Args:
+        as_string (bool, default False):
+            Whether to return the list as a string (for Gmail API) or as list object (for display in Settings page)
+
+    Returns:
+        List of emails registered for QC warning/fail notifications.
     """
 
     email_list = get_table("Settings", "email_notifications")["email_address"].astype(str).tolist()
@@ -2716,7 +3604,13 @@ def get_email_notifications_list(as_string=False):
 def register_email_for_notifications(email_address):
 
     """
-    Inserts email address into "email_notifications" table
+    Inserts email address into "email_notifications" table in Settings database.
+
+    Args:
+        email_address (str): Email address to register for notifications.
+
+    Returns:
+        None
     """
 
     db_metadata, connection = connect_to_database("Settings")
@@ -2733,7 +3627,13 @@ def register_email_for_notifications(email_address):
 def delete_email_from_notifications(email_address):
 
     """
-    Deletes email address from "email_notifications" table
+    Deletes email address from "email_notifications" table in Settings database.
+
+    Args:
+        email_address (str): Email address to unsubscribe from notifications.
+
+    Returns:
+        None
     """
 
     db_metadata, connection = connect_to_database("Settings")
@@ -2751,7 +3651,18 @@ def delete_email_from_notifications(email_address):
 def get_completed_samples_count(instrument_id, run_id, status):
 
     """
-    Returns tuple containing count for completed samples and total samples in a given run
+    Returns tuple containing count for completed samples and total samples in a given instrument run.
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+        status (str):
+            Instrument run (QC job) status, either "Active" or "Complete"
+
+    Returns:
+        Tuple with number of completed samples and total samples for a given instrument run.
     """
 
     if status == "Active" and sync_is_enabled():
@@ -2770,7 +3681,18 @@ def get_completed_samples_count(instrument_id, run_id, status):
 def get_run_progress(instrument_id, run_id, status):
 
     """
-    Returns progress of instrument run as a percentage of samples completed
+    Returns progress of instrument run as a percentage of samples completed.
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+        status (str):
+            Instrument run (QC job) status, either "Active" or "Complete"
+
+    Returns:
+        float: Percent of samples processed for the given instrument run.
     """
 
     completed, total_samples = get_completed_samples_count(instrument_id, run_id, status)
@@ -2781,7 +3703,21 @@ def get_run_progress(instrument_id, run_id, status):
 def update_sample_counters_for_run(instrument_id, run_id, latest_sample):
 
     """
-    Increments "completed" count, as well as "pass" and "fail" counts accordingly
+    Increments "completed" count, as well as "pass" and "fail" counts accordingly.
+
+    TODO: The "latest_sample" is the last sample to be processed / completed.
+        Nomenclature should be updated for clarity.
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+        latest_sample (str):
+            Last sample to be processed
+
+    Returns:
+        None
     """
 
     df = get_samples_in_run(instrument_id, run_id, "Both")
@@ -2824,7 +3760,16 @@ def update_sample_counters_for_run(instrument_id, run_id, latest_sample):
 def mark_run_as_completed(instrument_id, run_id):
 
     """
-    Marks instrument run status as completed
+    Marks instrument run status as completed.
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+
+    Returns:
+        None
     """
 
     db_metadata, connection = connect_to_database(instrument_id)
@@ -2843,7 +3788,19 @@ def mark_run_as_completed(instrument_id, run_id):
 def skip_sample(instrument_id, run_id):
 
     """
-    Skip sample (use if MS-DIAL gets stuck processing a corrupted file)
+    Skips sample by setting "latest_sample" value for instrument run to the next sample.
+
+    This function was used after restarting the acquisition listener when MS-DIAL got stuck processing a corrupted file.
+    Now that MS-DIAL runs in the background, it is deprecated and should be removed.
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+
+    Returns:
+        None
     """
 
     # Get next sample
@@ -2866,7 +3823,18 @@ def skip_sample(instrument_id, run_id):
 def store_pid(instrument_id, run_id, pid):
 
     """
-    Store acquisition listener process ID to allow termination later
+    Stores acquisition listener subprocess ID to allow for checkup and termination.
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+        pid (str):
+            Process ID for acquisition listener subprocess
+
+    Returns:
+        None
     """
 
     db_metadata, connection = connect_to_database(instrument_id)
@@ -2885,7 +3853,16 @@ def store_pid(instrument_id, run_id, pid):
 def get_pid(instrument_id, run_id):
 
     """
-    Retrieves acquisition listener process ID from "runs" table
+    Retrieves acquisition listener process ID from "runs" table in Settings database.
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+
+    Returns:
+        None
     """
 
     try:
@@ -2897,9 +3874,14 @@ def get_pid(instrument_id, run_id):
 def upload_to_google_drive(file_dict):
 
     """
-    Uploads files to MS-AutoQC folder in Google Drive
-    Input: dictionary with key-value structure { filename : file path }
-    Output: dictionary with key-value structure { filename : Google Drive ID }
+    Uploads files to MS-AutoQC folder in Google Drive.
+
+    Args:
+        file_dict (dict):
+            Dictionary with key-value structure { filename : file path }
+
+    Returns:
+        dict: Dictionary with key-value structure { filename : Google Drive ID }
     """
 
     # Get Google Drive instance
@@ -2934,7 +3916,16 @@ def upload_to_google_drive(file_dict):
 def upload_qc_results(instrument_id, run_id):
     
     """
-    Uploads QC results for a given run to Google Drive as a CSV file
+    Uploads QC results for a given instrument run to Google Drive as CSV files.
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+
+    Returns:
+        None
     """
 
     id = instrument_id.replace(" ", "_") + "_" + run_id
@@ -3015,7 +4006,16 @@ def upload_qc_results(instrument_id, run_id):
 def download_qc_results(instrument_id, run_id):
 
     """
-    Downloads CSV files of QC results from Google Drive and stores in data directory
+    Downloads CSV files of QC results from Google Drive and stores in /data directory.
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+
+    Returns:
+        tuple: Paths of run.csv, samples.csv, and bio_standards.csv, respectively.
     """
 
     id = instrument_id.replace(" ", "_") + "_" + run_id
@@ -3061,7 +4061,7 @@ def download_qc_results(instrument_id, run_id):
 def get_drive_folder_id():
 
     """
-    Returns Google Drive ID for the MS-AutoQC folder
+    Returns Google Drive ID for the MS-AutoQC folder (found in user's root Drive directory).
     """
 
     return get_table("Settings", "workspace")["gdrive_folder_id"].values[0]
@@ -3070,7 +4070,13 @@ def get_drive_folder_id():
 def get_database_drive_id(instrument_id):
 
     """
-    Returns Drive ID for a given instrument's database
+    Returns Google Drive ID for a given instrument's database.
+
+    Args:
+        instrument_id (str): Instrument ID
+
+    Returns:
+        str: Google Drive ID for the instrument database ZIP archive.
     """
 
     df = get_table("Settings", "instruments")
@@ -3080,7 +4086,16 @@ def get_database_drive_id(instrument_id):
 def upload_database(instrument_id, sync_settings=False):
 
     """
-    Uploads database file and methods directory to Google Drive
+    Uploads database file and methods directory to Google Drive as ZIP archives.
+
+    Args:
+        instrument_id (str):
+            Instrument ID for the instrument database to upload
+        sync_settings (bool, default False):
+            Whether to upload methods directory as well
+
+    Returns:
+        str: Timestamp upon upload completion.
     """
 
     # Get Google Drive ID's for the MS-AutoQC folder and database file
@@ -3119,7 +4134,18 @@ def upload_database(instrument_id, sync_settings=False):
 def download_database(instrument_id, sync_settings=False):
 
     """
-    Downloads database file from Google Drive (for users signed in to workspace externally from instrument PC)
+    Downloads instrument database ZIP file from Google Drive.
+
+    This function is called when accessing an instrument database from a device other than the given instrument.
+
+    Args:
+        instrument_id (str):
+            Instrument ID for the instrument database to download
+        sync_settings (bool, default False):
+            Whether to download methods directory as well
+
+    Returns:
+        str: Timestamp upon download completion.
     """
 
     db_zip_file = instrument_id.replace(" ", "_") + ".zip"
@@ -3167,7 +4193,7 @@ def download_database(instrument_id, sync_settings=False):
 def upload_methods():
 
     """
-    Uploads methods directory ZIP archive to Google Drive
+    Uploads methods directory ZIP archive to Google Drive.
     """
 
     df_workspace = get_table("Settings", "workspace")
@@ -3198,7 +4224,13 @@ def upload_methods():
 def download_methods(skip_check=False):
 
     """
-    Downloads methods directory ZIP archive from Google Drive
+    Downloads methods directory ZIP archive from Google Drive.
+
+    Args:
+        skip_check (bool, default False): If True, skips checking whether database was modified
+
+    Returns:
+        None
     """
 
     # If the database was not modified by another instrument, skip download (for instruments only)
@@ -3249,7 +4281,18 @@ def download_methods(skip_check=False):
 def remember_last_modified(database, modified_date):
 
     """
-    Stores last modified time of database file in Google Drive (after upload)
+    Stores last modified time of database file in Google Drive.
+
+    This function is called after file upload, and used for comparison before download.
+
+    Args:
+        database (str):
+            Name of database (either Instrument ID or "Settings")
+        modified_date (str):
+            Modified date of file uploaded to Google Drive
+
+    Returns:
+        None
     """
 
     db_metadata, connection = connect_to_database("Settings")
@@ -3275,7 +4318,13 @@ def remember_last_modified(database, modified_date):
 def database_was_modified(database_name):
 
     """
-    Returns True if workspace file was modified by another instrument PC in Google Drive, and False if not
+    Returns True if workspace file was modified by another instrument PC in Google Drive, and False if not.
+
+    Args:
+        database_name (str): Name of database
+
+    Returns:
+        Returns True if workspace file was modified by another instrument PC in Google Drive, and False if not.
     """
 
     # Get Google Drive folder ID from database
@@ -3307,7 +4356,15 @@ def database_was_modified(database_name):
 def send_sync_signal(folder_id):
 
     """
-    Uploads empty file to signal that an instrument PC is syncing to Google Drive
+    Uploads empty file to signal that an instrument PC is syncing to Google Drive.
+
+    TODO: This method is deprecated. Please remove if no plans for usage.
+
+    Args:
+        folder_id (str): Google Drive folder ID
+
+    Returns:
+        bool: True if sync signal was sent, False if not.
     """
 
     # Get Google Drive instance
@@ -3323,7 +4380,15 @@ def send_sync_signal(folder_id):
 def safe_to_upload(folder_id):
 
     """
-    Returns False if another device is currently uploading to Google Drive, else True
+    Returns False if another device is currently uploading to Google Drive, else True.
+
+    TODO: This method is deprecated. Please remove if no plans for usage.
+
+    Args:
+        folder_id (str): Google Drive folder ID
+
+    Returns:
+        bool: False if another device is currently uploading to Google Drive, True if not.
     """
 
     # Get Google Drive instance
@@ -3336,17 +4401,25 @@ def safe_to_upload(folder_id):
     return True
 
 
-def remove_sync_signal(folder):
+def remove_sync_signal(folder_id):
 
     """
-    Uploads empty file to signal that an instrument PC is syncing to Google Drive
+    Removes empty signal file to signal that an instrument PC has completed syncing to Google Drive.
+
+    TODO: This method is deprecated. Please remove if no plans for usage.
+
+    Args:
+        folder_id (str): Google Drive folder ID
+
+    Returns:
+        bool: True if sync signal was removed, False if not.
     """
 
     # Get Google Drive instance
     drive = get_drive_instance()
 
     try:
-        for file in drive.ListFile({"q": "'" + folder + "' in parents and trashed=false"}).GetList():
+        for file in drive.ListFile({"q": "'" + folder_id + "' in parents and trashed=false"}).GetList():
             if file["title"] == "Syncing":
                 file.Delete()
         return True
@@ -3357,7 +4430,16 @@ def remove_sync_signal(folder):
 def delete_active_run_csv_files(instrument_id, run_id):
 
     """
-    Checks for and deletes CSV files from Google Drive at the end of an active instrument run
+    Checks for and deletes CSV files from Google Drive at the end of an active instrument run.
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+
+    Returns:
+        None
     """
 
     id = instrument_id.replace(" ", "_") + "_" + run_id
@@ -3390,12 +4472,19 @@ def sync_on_run_completion(instrument_id, run_id):
 
     """
     Syncs database with Google Drive at the end of an active instrument run.
-    1. Ensure another instrument is not syncing
-    2. Send sync signal
-    3. If modified, download up-to-date database
-    4. Merge active run CSV files into database
-    5. Upload database to Google Drive
-    6. Delete active run CSV files
+
+    Performs the following actions:
+        1. Upload database to Google Drive
+        2. Delete active run CSV files
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+
+    Returns:
+        None
     """
 
     # Get Google Drive instance and folder ID
@@ -3420,7 +4509,15 @@ def sync_on_run_completion(instrument_id, run_id):
 def get_data_file_type(instrument_id):
 
     """
-    Returns expected data file extension based on instrument vendor type (incomplete)
+    Returns expected data file extension based on instrument vendor type.
+
+    TODO: Modify this function as needed when adding support for other instrument vendors.
+
+    Args:
+        instrument_id (str): Instrument ID
+
+    Returns:
+        Data file extension for instrument vendor.
     """
 
     engine = sa.create_engine(settings_database)
@@ -3442,7 +4539,16 @@ def get_data_file_type(instrument_id):
 def is_completed_run(instrument_id, run_id):
 
     """
-    Returns True if the job is for a completed run, and False if job is for an active run
+    Returns True if the given QC job is for a completed run, and False if for an active run.
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+
+    Returns:
+        bool: True if the job is for a completed run, and False if job is for an active run.
     """
 
     try:
@@ -3460,7 +4566,18 @@ def is_completed_run(instrument_id, run_id):
 def delete_temp_directory(instrument_id, run_id):
 
     """
-    Deletes temporary data file directory in local app directory
+    Deletes temporary data file directory in local app directory.
+
+    This function is called at the end of an instrument run (QC job).
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+
+    Returns:
+        None
     """
 
     # Delete temporary data file directory
@@ -3476,7 +4593,15 @@ def delete_temp_directory(instrument_id, run_id):
 def pipeline_valid(module=None):
 
     """
-    Validates that MSConvert and MS-DIAL dependencies are installed
+    Validates that MSConvert and MS-DIAL dependencies are installed.
+
+    This function is called during job setup validation.
+
+    Args:
+        module (str, default None): If specified, only validates given module.
+
+    Returns:
+        bool: Whether MSConvert.exe and MsdialConsoleApp.exe exist.
     """
 
     try:
@@ -3500,7 +4625,20 @@ def pipeline_valid(module=None):
 def send_email(subject, message_body):
 
     """
-    Sends email using Google authenticated credentials
+    Sends email using Google authenticated credentials.
+
+    This function is called for QC warnings and fails if:
+        1. Google Drive sync is enabled
+        2. Email addresses are registered for notifications
+
+    Args:
+        subject (str):
+            Subject of email
+        message_body (str):
+            Body of email
+
+    Returns:
+        On success, an email.message.EmailMessage object.
     """
 
     try:
