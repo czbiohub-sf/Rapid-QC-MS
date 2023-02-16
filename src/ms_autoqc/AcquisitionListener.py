@@ -11,7 +11,8 @@ import ms_autoqc.AutoQCProcessing as qc
 class DataAcquisitionEventHandler(FileSystemEventHandler):
 
     """
-    Event handler that alerts when the data file has completed sample acquisition
+    Event handler that alerts when the data file has completed sample acquisition.
+    For more information, see: https://python-watchdog.readthedocs.io/en/stable/
     """
 
     def __init__(self, observer, path, filenames, extension, instrument_id, run_id, current_sample):
@@ -28,7 +29,17 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
     def on_created(self, event):
 
         """
-        Listen for data file creation
+        Listens to data acquisition path and starts watching newly-created data files,
+        but only if the filename exists in the sequence.
+
+        If the acquisition listener process was restarted, the last sample being acquired
+        or monitored will be reprocessed.
+
+        Args:
+            event (FileCreatedEvent): Event representing file / directory creation.
+
+        Returns:
+            None
         """
 
         # Remove directory path and file extension from filename
@@ -49,8 +60,22 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
     def watch_file(self, path, filename, extension, next_sample=None):
 
         """
-        Returns True if MD5 checksum on file matches the MD5 checksum written to the database 3 minutes ago.
-        Effectively determines whether sample acquisition has been completed.
+        Returns True if MD5 checksums match AND next sample in sequence has begun acquiring,
+        effectively determining whether sample acquisition has been completed.
+
+        Checksum matching is checking if the MD5 checksum computed for the file matches the
+        MD5 checksum that was written to the database 3 minutes ago.
+
+        If watching the last sample in the sequence, this function will skip checking for the next sample.
+
+        Args:
+            path (str): Data acquisition path
+            filename (str): Name of sample data file
+            extension (str): Data file extension, derived from instrument vendor
+            next_sample (str, default None): Next sample in sequence after current sample being watched
+
+        Returns:
+            bool: True if data acquisition is deemed complete.
         """
 
         # Write initial MD5 checksum to database
@@ -92,7 +117,20 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
     def trigger_pipeline(self, path, filename, extension):
 
         """
-        Routes data file to monitoring and processing functions
+        Wrapper function that routes data file to monitoring and processing functions.
+
+        This function is called every time a data file is created in the data acquisition path.
+        See watch_file() and process_data_file() for more information.
+
+        At the end of the instrument run, marks job as completed and kills listener process.
+
+        Args:
+            path (str): Data acquisition path
+            filename (str): Name of sample data file
+            extension (str): Data file extension, derived from instrument vendor
+
+        Returns:
+            None
         """
 
         print("Watching file:", filename)
@@ -130,7 +168,27 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
 def start_listener(path, instrument_id, run_id):
 
     """
-    Watchdog file monitor to get files in directory upon data acquisition completion
+    Initializes acquisition listener process to process data files upon sample acquisition completion.
+
+    If the QC job is for a completed instrument run (i.e. all data files have been previously acquired and exist
+    in a directory), then this function simply iterates through the list of filenames and processes each sample.
+
+    If the QC job is for an active instrument run, this function initializes the Watchdog file monitor to capture
+    incoming data files and wait for them to finish writing before processing each sample.
+
+    In addition, to handle crashes, restarted jobs, and other events, this function checks for and processes
+    all unprocessed samples in active instrument runs. Unprocessed samples are defined as data files that exist but
+    do not have QC results in the database.
+    
+    For more information on the Watchdog package, see: https://python-watchdog.readthedocs.io/en/stable/
+
+    Args:
+        path (str): Data acquisition path
+        instrument_id (str): Instrument ID
+        run_id (str): Instrument run ID (job ID)
+
+    Returns:
+        None
     """
 
     print("Run monitoring initiated for", path)
@@ -205,7 +263,22 @@ def start_listener(path, instrument_id, run_id):
 def terminate_job(instrument_id, run_id):
 
     """
-    Wraps up job after the last data file has been routed to the pipeline
+    Wraps up QC job after the last data file has been routed to the pipeline.
+
+    Performs the following functions:
+        1. Marks instrument run as completed
+        2. Uploads database to Google Drive (if Google Drive sync is enabled)
+        3. Deletes temporary data file directory in /data
+        4. Kills acquisition listener process
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+
+    Returns:
+        None
     """
 
     # Mark instrument run as completed
@@ -223,15 +296,21 @@ def terminate_job(instrument_id, run_id):
     qc.kill_subprocess(pid)
 
 
-def get_md5(filename):
+def get_md5(file_path):
 
     """
-    Returns MD5 checksum of a file
+    Computes MD5 checksum for a given file.
+
+    Args:
+        file_path (str): File path
+
+    Returns:
+        str: MD5 checksum for the given file.
     """
 
     hash_md5 = hashlib.md5()
 
-    with open(filename, "rb") as f:
+    with open(file_path, "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
             hash_md5.update(chunk)
 
@@ -239,5 +318,6 @@ def get_md5(filename):
 
 
 if __name__ == "__main__":
+
     # Start listening to data file directory
     start_listener(path=sys.argv[1], instrument_id=sys.argv[2], run_id=sys.argv[3])
