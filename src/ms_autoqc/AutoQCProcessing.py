@@ -12,7 +12,20 @@ pd.options.mode.chained_assignment = None
 def sequence_is_valid(filename, contents, vendor="Thermo Fisher"):
 
     """
-    Validates that instrument sequence file contains the correct columns
+    Validates that instrument sequence file contains the correct columns.
+
+    TODO: Add support for other mass spectrometry instrument vendors here.
+
+    Args:
+        filename (str):
+            Acquisition sequence file name
+        contents (io.StringIO):
+            Acquisition sequence as in-memory file object
+        vendor (str, default "Thermo Fisher"):
+            Instrument vendor for parsing sequence
+
+    Returns:
+        True if sequence table is valid, otherwise False.
     """
 
     if ".csv" not in filename:
@@ -47,7 +60,16 @@ def sequence_is_valid(filename, contents, vendor="Thermo Fisher"):
 def metadata_is_valid(filename, contents):
 
     """
-    Validates that metadata file contains the required columns
+    Validates that sample metadata file contains the required columns.
+
+    Args:
+        filename (str):
+            Metadata file name
+        contents (io.StringIO):
+            Metadata file as in-memory file object
+
+    Returns:
+        True if metadata table is valid, otherwise False.
     """
 
     if ".csv" not in filename:
@@ -77,7 +99,15 @@ def metadata_is_valid(filename, contents):
 def chromatography_valid(chromatography):
 
     """
-    Validates that the given chromatography method's MSP / TXT files exist
+    Validates that MSP / TXT files for the given chromatography method exist.
+
+    TODO: Per Brian, some labs don't run in both polarities. Will need to make this function flexible for that.
+
+    Args:
+        chromatography (str): Chromatography method ID to validate
+
+    Returns:
+        True if chromatography method files exist, False if not.
     """
 
     # Get chromatography method from database
@@ -100,7 +130,16 @@ def chromatography_valid(chromatography):
 def biological_standards_valid(chromatography, biological_standards):
 
     """
-    Validates that the given list of biological standards have MSP files
+    Validates that the given list of biological standards have MSP files.
+
+    Args:
+        chromatography (str):
+            Chromatography method ID to validate
+        biological_standards (list):
+            List of biological standards to validate
+
+    Returns:
+        True if all MSP / TXT files exist, False if not.
     """
 
     # Query the provided biological standards from the database
@@ -124,7 +163,19 @@ def biological_standards_valid(chromatography, biological_standards):
 def convert_sequence_to_json(sequence_contents, vendor="Thermo Fisher"):
 
     """
-    Converts sequence table to JSON string for database storage
+    Converts sequence table to JSON string for database storage.
+
+    TODO: Convert to "records" orient instead. Much faster to load data using pd.DataFrame(json.loads(json_string))
+        instead of pd.read_json(json_string, orient="split").
+
+    Args:
+        sequence_contents (io.StringIO):
+            Acquisition file as in-memory file object
+        vendor (str, default "Thermo Fisher"):
+            Instrument vendor for parsing sequence
+
+    Returns:
+        JSON string of acquisition sequence DataFrame in "split" format.
     """
 
     # Select columns from sequence using correct vendor software nomenclature
@@ -140,7 +191,16 @@ def convert_sequence_to_json(sequence_contents, vendor="Thermo Fisher"):
 def convert_metadata_to_json(metadata_contents):
 
     """
-    Converts sequence and metadata files to JSON strings for database storage
+    Converts sequence and metadata files to JSON strings for database storage.
+
+    TODO: Convert to "records" orient instead. Much faster to load data using pd.DataFrame(json.loads(json_string))
+        instead of pd.read_json(json_string, orient="split").
+
+    Args:
+        metadata_contents (io.StringIO): Metadata file as in-memory file object
+
+    Returns:
+        JSON string of sample metadata DataFrame in "split" format.
     """
 
     # Select columns from metadata
@@ -153,7 +213,26 @@ def convert_metadata_to_json(metadata_contents):
 def run_msconvert(path, filename, extension, output_folder):
 
     """
-    Converts data files in closed vendor format to open mzML format
+    Makes a copy of data file and converts it from instrument vendor format to open mzML format.
+
+    This function runs msconvert.exe in a background process. It checks every second for 30 seconds if the
+    mzML file was created, and if it hangs, will terminate the msconvert subprocess and return None.
+
+    TODO: As MS-AutoQC has evolved, some arguments for this function have become redundant.
+        The output folder is always fixed, so this parameter should be removed.
+
+    Args:
+        path (str):
+            Data acquisition path (with "/" at the end)
+        filename (str):
+            Name of sample data file
+        extension (str):
+            Data file extension, derived from instrument vendor
+        output_folder (str):
+            Output directory for mzML file – this is always ../data/instrument_id_run_id/data
+
+    Returns:
+        File path for mzML file (*.mzml)
     """
 
     # Remove files in output folder (if any)
@@ -202,7 +281,25 @@ def run_msconvert(path, filename, extension, output_folder):
 def run_msdial_processing(filename, msdial_path, parameter_file, input_folder, output_folder):
 
     """
-    Processes data files using MS-DIAL command line tools
+    Processes data file (in mzML format) using the MS-DIAL console app.
+
+    TODO: As MS-AutoQC has evolved, some arguments for this function have become redundant.
+        The input and output folders are fixed, so these parameters should be removed.
+
+    Args:
+        filename (str):
+            Name of sample data file
+        msdial_path (str):
+            Path for directory storing MSDialConsoleApp.exe
+        parameter_file (str):
+            Path for parameters.txt file, stored in /methods directory
+        input_folder (str):
+            Input folder – this is always ../data/instrument_id_run_id/data
+        output_folder (str):
+            Output folder – this is always ../data/instrument_id_run_id/results
+
+    Returns:
+        File path for MS-DIAL result file (*.msdial)
     """
 
     # Navigate to directory containing MS-DIAL
@@ -249,7 +346,19 @@ def run_msdial_processing(filename, msdial_path, parameter_file, input_folder, o
 def peak_list_to_dataframe(sample_peak_list, df_features):
 
     """
-    Returns DataFrame with m/z, RT, and intensity info for each internal standard in a given sample
+    Filters duplicates and poor annotations from MS-DIAL peak table and creates DataFrame storing
+    m/z, RT, and intensity data for each internal standard (or targeted metabolite) in the sample.
+
+    TODO: Describe duplicate handling in more detail in this docstring.
+
+    Args:
+        sample_peak_list (str):
+            File path for MS-DIAL peak table, an .msdial file located in /data/instrument_id_run_id/results
+        df_features (DataFrame):
+            An m/z - RT table derived from internal standard (or biological standard) MSP library in database
+
+    Returns:
+        DataFrame with m/z, RT, and intensity data for each internal standard / targeted metabolite in the sample.
     """
 
     # Convert .msdial file into a DataFrame
@@ -361,7 +470,59 @@ def peak_list_to_dataframe(sample_peak_list, df_features):
 def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio_standard):
 
     """
-    Algorithm that performs QC checks on sample data
+    Performs quality control on sample data based on user-defined criteria in Settings > QC Configurations.
+
+    The following quality control parameters are used to determine QC pass, warning, or fail:
+        1. Intensity dropouts cutoff:
+            How many internal standards are missing in the sample?
+        2. RT shift from library value cutoff:
+            How many retention times are shifted from the expected value for the chromatography method?
+        3. RT shift from in-run average cutoff:
+            How many retention times are shifted from their average RT during the run?
+        4. m/z shift from library value cutoff:
+            How many precursor masses are shifted from the expected value for the internal standard?
+
+    This function returns a DataFrame with a single record in the following format:
+
+    | Sample     | Delta m/z | Delta RT | In-run delta RT | Warnings  | Fails |
+    | ---------- | --------- | -------- | --------------- | --------- | ----- |
+    | SAMPLE_001 | 0.000001  | 0.05     | 0.00001         | Delta RT  | None  |
+
+    Confusingly, a sample has an overall QC result, as well as QC warnings and fails for each internal standard.
+    This makes it easier to determine what caused the overall QC result.
+
+    See a screenshot of the sample information card in the Overview page of the website for context.
+
+    While the thresholds for QC pass and fail are explicit, allowing the user to determine thresholds for QC warnings
+    was deemed too cumbersome. Instead, an overall QC result of "Warning" happens if any of the following are true:
+        1. The number of intensity dropouts is 75% or more than the defined cutoff
+        2. The QC result is not a "Fail" and 50% or more internal standards have a QC Warning
+
+    For each internal standard, a note is added to the "Warning" or "Fail" column of qc_dataframe based on the user's
+    defined criteria in Settings > QC Configurations. If the internal standard is not marked as a "Fail", then
+    "Warnings" for individual internal standards could be marked if:
+        1. The delta RT is greater than 66% of the "RT shift from library value" cutoff
+        2. The In-run delta RT is greater than 80% of the "RT shift from in-run average value" cutoff
+        3. The delta m/z is greater than 80% of the "RT shift from library value" cutoff
+
+    TODO: Define and implement quality control for biological standards.
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (Job ID)
+        polarity (str):
+            Polarity, either "Pos or "Neg"
+        df_peak_list (DataFrame):
+            Filtered peak table, from peak_list_to_dataframe()
+        df_features (DataFrame):
+            An m/z - RT table derived from internal standard (or biological standard) MSP library in database
+        is_bio_standard (bool):
+            Whether sample is a biological standard or not
+
+    Returns:
+        (DataFrame, str): Tuple containing QC results table and QC result (either "Pass", "Fail", or "Warning").
     """
 
     # Handles sample QC checks
@@ -532,7 +693,28 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
 def convert_to_dict(sample_id, df_peak_list, qc_dataframe):
 
     """
-    Converts DataFrames to dictionary records, with features as columns and relevant data in rows
+    Converts DataFrames to dictionary records, with features as columns and samples as rows,
+    which are then cast to string format for database storage.
+
+    See parse_internal_standard_data() in the DatabaseFunctions module for more information.
+
+    Format:
+
+    | Name       | iSTD 1 | iSTD 2 | iSTD 3 | iSTD 4 | ... |
+    | ---------- | ------ | ------ | ------ | ------ | ... |
+    | SAMPLE_001 | 1.207  | 1.934  | 3.953  | 8.132  | ... |
+
+    Args:
+        sample_id (str):
+            Sample ID
+        df_peak_list (DataFrame):
+            Filtered MS-DIAL peak table result
+        qc_dataframe (DataFrame):
+            Table of various QC results
+
+    Returns:
+        (str, str, str, str): Tuple containing dictionary records of m/z, RT, intensity, and
+        QC data, respectively, cast as strings for database storage.
     """
 
     # m/z, RT, intensity
@@ -579,11 +761,33 @@ def convert_to_dict(sample_id, df_peak_list, qc_dataframe):
 def process_data_file(path, filename, extension, instrument_id, run_id):
 
     """
-    1. Convert data file to mzML format using MSConvert
-    2. Process data file using MS-DIAL and user-defined parameter configuration
-    3. Load data into pandas DataFrame and execute AutoQC algorithm
-    4. Write QC results to "sample_qc_results" or "bio_qc_results" table accordingly
-    5. Write results to SQLite database
+    Processes data file upon sample acquisition completion.
+
+    For more details, please visit the Documentation page on the website.
+
+    Performs the following functions:
+        1. Convert data file to mzML format using MSConvert
+        2. Process data file using MS-DIAL and user-defined parameter configuration
+        3. Load peak table into DataFrame and filter out poor annotations
+        4. Perform quality control checks based on user-defined criteria
+        5. Notify user of QC warnings or fails via Slack or email
+        6. Write QC results to instrument database
+        7. If Google Drive sync is enabled, upload results as CSV files
+
+    Args:
+        path (str):
+            Data acquisition path
+        filename (str):
+            Name of sample data file
+        extension (str):
+            Data file extension, derived from instrument vendor
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+
+    Returns:
+        None
     """
 
     id = instrument_id.replace(" ", "_") + "_" + run_id
@@ -761,7 +965,13 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
 def subprocess_is_running(pid):
 
     """
-    Check if subprocess is still running
+    Returns True if subprocess is still running, and False if not.
+
+    Args:
+        pid (int): Subprocess ID
+
+    Returns:
+        bool: True if subprocess is still running, False if not
     """
 
     if pid is None:
@@ -781,7 +991,13 @@ def subprocess_is_running(pid):
 def kill_subprocess(pid):
 
     """
-    Kill subprocess using process ID (pid)
+    Kills subprocess.
+
+    Args:
+        pid (int): Subprocess ID
+
+    Returns:
+        None
     """
 
     try:
