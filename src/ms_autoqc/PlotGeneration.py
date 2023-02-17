@@ -19,11 +19,61 @@ bootstrap_colors = {
 def get_qc_results(instrument_id, run_id, status="Complete", biological_standard=None, biological_standards_only=False, for_benchmark_plot=False):
 
     """
-    Loads and parses QC results for samples and biological standards from either CSV
-    files (for active instrument runs) or the SQLite database (for completed runs)
+    Loads and parses QC results (for samples and biological standards) into Plotly graphs.
 
-    Input: instrument run ID and status
-    Output: tuple of multiple tables encoded as JSON strings
+    This function will return whatever tables it can in a tuple, and fill None for the tables that throw errors in parsing.
+    This is so that an error in retrieving one table will not prevent retrieving other tables.
+
+    Depending on whether Google Drive sync is enabled, this function will load data from either CSV files
+    (for active instrument runs) or the local instrument database (for completed runs).
+
+    Regardless of whether Google Drive sync is enabled, the instrument computer (on which the run was started) will
+    always load data from its local SQLite database.
+
+    Args:
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (Job ID)
+        status (str):
+            QC job status, either "Active" or "Complete"
+        biological_standard (str, default None):
+            If specified, returns QC results for given biological standard associated with job
+        biological_standards_only (bool, default False):
+            If specified, returns QC results for biological standards only
+        for_benchmark_plot (bool, default False):
+            If specified, returns QC results specifically for biological standard benchmark plot
+
+    Returns:
+        tuple: Tuple containing tables of various sample data in JSON "records" format. Order is as follows:
+            1. df_rt_pos: Retention times for internal standards in positive mode
+            2. df_rt_neg: Retention times for internal standards in negative mode
+            3. df_intensity_pos: Intensities for internal standards in positive mode
+            4. df_intensity_neg: Intensities for internal standards in negative mode
+            5. df_mz_pos: Precursor masses for internal standards in positive mode
+            6. df_mz_neg: Precursor masses for internal standards in negative mode
+            7. df_sequence: Acquisition sequence table
+            8. df_metadata: Sample metadata table
+            9. df_bio_rt_pos: Retention times for targeted features in biological standard sample in positive mode
+            10. df_bio_rt_neg: Retention times for targeted features in biological standard sample in negative mode
+            11. df_bio_intensity_pos: Intensities for targeted features in biological standard sample in positive mode
+            12. df_bio_intensity_neg: Intensities for targeted features in biological standard sample in negative mode
+            13. df_bio_mz_pos: Precursor masses for targeted features in biological standard sample in positive mode
+            14. df_bio_mz_neg: Precursor masses for targeted features in biological standard sample in negative mode
+            15. resources: Metadata for instrument run
+            16. df_samples: Table containing sample names, polarities, autosampler positions, and QC results
+            17. pos_internal_standards: List of positive mode internal standards
+            18. neg_internal_standards: List of negative mode internal standards
+            19. df_delta_rt_pos: Delta RT's for internal standards in positive mode
+            20. df_delta_rt_neg: Delta RT's for internal standards in negative mode
+            21. df_in_run_delta_rt_pos: In-run delta RT's for internal standards in positive mode
+            22. df_in_run_delta_rt_neg: In-run delta RT's for internal standards in negative mode
+            23. df_delta_mz_pos: Delta m/z's for internal standards in positive mode
+            24. df_delta_mz_neg: Delta m/z's for internal standards in negative mode
+            25. df_warnings_pos: QC warnings for internal standards in positive mode
+            26. df_warnings_neg: QC warnings for internal standards in negative mode
+            27. df_fails_pos: QC fails for internal standards in positive mode
+            28. df_fails_neg: QC fails for internal standards in negative mode
     """
 
     # Get run information / metadata
@@ -284,10 +334,38 @@ def generate_sample_metadata_dataframe(sample, df_rt, df_mz, df_intensity, df_de
     df_delta_mz, df_warnings, df_fails, df_sequence, df_metadata):
 
     """
-    Aggregates and returns 3 DataFrames for a selected sample:
-    1. QC result and causes
-    2. Sequence and metadata information
-    3. Internal standard m/z, RT, intensity, delta RT, and in-run delta RT
+    Aggregates tables of relevant data from the acquisition sequence, metadata file, and QC results for a selected sample.
+
+    Returns two DataFrames by aggregating the following information:
+        1. Acquisition sequence and sample metadata information
+        2. Internal standard m/z, RT, intensity, delta m/z, delta RT, in-run delta RT, warnings, and fails
+
+    Args:
+        sample (str):
+            Sample ID
+        df_rt (DataFrame):
+            Retention times for internal standards (columns) across samples (rows)
+        df_mz (DataFrame):
+            Precursor masses for internal standards (columns) across samples (rows)
+        df_intensity (DataFrame):
+            Intensities for internal standards (columns) across samples (rows)
+        df_delta_rt (DataFrame):
+            Delta RT's from library values for internal standards (columns) across samples (rows)
+        df_in_run_delta_rt (DataFrame):
+            Delta RT's from in-run values for internal standards (columns) across samples (rows)
+        df_delta_mz (DataFrame):
+            Delta m/z's from library values for internal standards (columns) across samples (rows)
+        df_warnings (DataFrame):
+            QC warnings for internal standards (columns) across samples (rows)
+        df_fails (DataFrame):
+            QC fails for internal standards (columns) across samples (rows)
+        df_sequence (DataFrame):
+            Acquisition sequence table
+        df_metadata (DataFrame):
+            Sample metadata table
+
+    Returns:
+        Tuple containing two DataFrames, the first storing internal standard data and the second storing sample metadata.
     """
 
     df_sample_istd = pd.DataFrame()
@@ -371,9 +449,30 @@ def generate_sample_metadata_dataframe(sample, df_rt, df_mz, df_intensity, df_de
 def generate_bio_standard_dataframe(clicked_sample, instrument_id, run_id, df_rt, df_mz, df_intensity):
 
     """
+    Aggregates data for a selected biological standard.
+
+    TODO: More metrics could be added to sample information cards for biological standards here.
+
     Aggregates and returns 2 DataFrames for a selected sample:
-    1. QC result and causes
-    2. Targeted metabolite m/z, RT, intensity, delta RT, and percent change
+        1. QC result and causes
+        2. Targeted metabolite m/z, RT, intensity, delta RT, and percent change
+
+    Args:
+        clicked_sample (str):
+            Sample ID
+        instrument_id (str):
+            Instrument ID
+        run_id (str):
+            Instrument run ID (job ID)
+        df_rt (DataFrame):
+            Retention times of targeted metabolites in the biological standard
+        df_mz (DataFrame):
+            Precursor masses of targeted metabolites in the biological standard
+        df_intensity:
+            Intensities of targeted metabolites in the biological standard
+
+    Returns:
+        Tuple containing two DataFrames, the first storing targeted metabolites data and the second storing sample metadata.
     """
 
     metabolites = df_mz.columns.tolist()
@@ -403,7 +502,22 @@ def generate_bio_standard_dataframe(clicked_sample, instrument_id, run_id, df_rt
 def load_istd_rt_plot(dataframe, samples, internal_standard, retention_times):
 
     """
-    Returns scatter plot figure of retention time vs. sample for internal standards
+    Returns line plot figure of retention times (for a selected internal standard) across samples.
+
+    Documentation on Plotly line plots: https://plotly.com/python-api-reference/generated/plotly.express.line.html
+
+    Args:
+        dataframe (DataFrame):
+            Table of retention times for internal standards (columns) across samples (rows)
+        samples (list):
+            Samples to query from the DataFrame
+        internal_standard (str):
+            The selected internal standard
+        retention_times (dict):
+            Dictionary with key-value pairs of type { internal_standard: retention_time }
+
+    Returns:
+        plotly.express.line object: Plotly line plot of retention times (for the selected internal standard) across samples.
     """
 
     df_filtered_by_samples = dataframe.loc[dataframe["Sample"].isin(samples)]
@@ -413,21 +527,22 @@ def load_istd_rt_plot(dataframe, samples, internal_standard, retention_times):
     y_max = retention_times[internal_standard] + 0.1
 
     fig = px.line(df_filtered_by_samples,
-                  title="Retention Time vs. Samples – " + internal_standard,
-                  x=samples,
-                  y=internal_standard,
-                  height=600,
-                  markers=True,
-                  hover_name=samples,
-                  labels={"variable": "Internal Standard",
-                          "index": "Sample",
-                          "value": "Retention Time"},
-                  log_x=False)
-    fig.update_layout(transition_duration=500,
-                     clickmode="event",
-                     showlegend=False,
-                     legend_title_text="Internal Standards",
-                     margin=dict(t=75, b=75, l=0, r=0))
+        title="Retention Time vs. Samples – " + internal_standard,
+        x=samples,
+        y=internal_standard,
+        height=600,
+        markers=True,
+        hover_name=samples,
+        labels={"variable": "Internal Standard",
+              "index": "Sample",
+              "value": "Retention Time"},
+        log_x=False)
+    fig.update_layout(
+        transition_duration=500,
+        clickmode="event",
+        showlegend=False,
+        legend_title_text="Internal Standards",
+        margin=dict(t=75, b=75, l=0, r=0))
     fig.update_xaxes(showticklabels=False, title="Sample")
     fig.update_yaxes(title="Retention Time (min)", range=[y_min, y_max])
     fig.add_hline(y=retention_times[internal_standard], line_width=2, line_dash="dash")
@@ -439,7 +554,22 @@ def load_istd_rt_plot(dataframe, samples, internal_standard, retention_times):
 def load_istd_intensity_plot(dataframe, samples, internal_standard, treatments):
 
     """
-    Returns bar plot figure of intensity vs. sample for internal standards
+    Returns bar plot figure of peak intensities (for a selected internal standard) across samples.
+
+    Documentation on Plotly bar plots: https://plotly.com/python-api-reference/generated/plotly.express.bar.html
+
+    Args:
+        dataframe (DataFrame):
+            Table of intensities for internal standards (columns) across samples (rows)
+        samples (list):
+            Samples to query from the DataFrame
+        internal_standard (str):
+            The selected internal standard
+        treatments (DataFrame):
+            DataFrame with sample treatments (from the metadata file) mapped to sample ID's
+
+    Returns:
+        plotly.express.bar object: Plotly bar plot of intensities (for the selected internal standard) across samples.
     """
 
     df_filtered_by_samples = dataframe.loc[dataframe["Sample"].isin(samples)]
@@ -455,18 +585,19 @@ def load_istd_intensity_plot(dataframe, samples, internal_standard, treatments):
         df_filtered_by_samples["Treatment"] = " "
 
     fig = px.bar(df_filtered_by_samples,
-                 title="Intensity vs. Samples – " + internal_standard,
-                 x="Sample",
-                 y=internal_standard,
-                 text="Sample",
-                 color="Treatment",
-                 height=600)
-    fig.update_layout(showlegend=False,
-                      transition_duration=500,
-                      clickmode="event",
-                      xaxis=dict(rangeslider=dict(visible=True), autorange=True),
-                      legend=dict(font=dict(size=10)),
-                      margin=dict(t=75, b=75, l=0, r=0))
+        title="Intensity vs. Samples – " + internal_standard,
+        x="Sample",
+        y=internal_standard,
+        text="Sample",
+        color="Treatment",
+        height=600)
+    fig.update_layout(
+        showlegend=False,
+        transition_duration=500,
+        clickmode="event",
+        xaxis=dict(rangeslider=dict(visible=True), autorange=True),
+        legend=dict(font=dict(size=10)),
+        margin=dict(t=75, b=75, l=0, r=0))
     fig.update_xaxes(showticklabels=False, title="Sample")
     fig.update_yaxes(title="Intensity")
     fig.update_traces(textposition="outside", hovertemplate="Sample: %{x}<br>Intensity: %{y:.2e}<br>")
@@ -477,28 +608,42 @@ def load_istd_intensity_plot(dataframe, samples, internal_standard, treatments):
 def load_istd_delta_mz_plot(dataframe, samples, internal_standard):
 
     """
-    Returns scatter plot figure of delta m/z vs. sample for internal standards
+    Returns line plot figure of delta m/z (for a selected internal standard) across samples.
+
+    Documentation on Plotly line plots: https://plotly.com/python-api-reference/generated/plotly.express.line.html
+
+    Args:
+        dataframe (DataFrame):
+            Table of delta m/z's for internal standards (columns) across samples (rows)
+        samples (list):
+            Samples to query from the DataFrame
+        internal_standard (str):
+            The selected internal standard
+
+    Returns:
+        plotly.express.line object: Plotly line plot of delta m/z (for the selected internal standard) across samples.
     """
 
     # Get delta m/z results for selected samples
     df_filtered_by_samples = dataframe.loc[dataframe["Sample"].isin(samples)]
 
     fig = px.line(df_filtered_by_samples,
-                  title="Delta m/z vs. Samples – " + internal_standard,
-                  x=samples,
-                  y=internal_standard,
-                  height=600,
-                  markers=True,
-                  hover_name=samples,
-                  labels={"variable": "Internal Standard",
-                          "index": "Sample",
-                          "value": "Delta m/z"},
-                  log_x=False)
-    fig.update_layout(transition_duration=500,
-                      clickmode="event",
-                      showlegend=False,
-                      legend_title_text="Internal Standards",
-                      margin=dict(t=75, b=75, l=0, r=0))
+        title="Delta m/z vs. Samples – " + internal_standard,
+        x=samples,
+        y=internal_standard,
+        height=600,
+        markers=True,
+        hover_name=samples,
+        labels={"variable": "Internal Standard",
+              "index": "Sample",
+              "value": "Delta m/z"},
+        log_x=False)
+    fig.update_layout(
+        transition_duration=500,
+        clickmode="event",
+        showlegend=False,
+        legend_title_text="Internal Standards",
+        margin=dict(t=75, b=75, l=0, r=0))
     fig.update_xaxes(showticklabels=False, title="Sample")
     fig.update_yaxes(title="delta m/z", range=[-0.01, 0.01])
     fig.update_traces(hovertemplate="Sample: %{x} <br>Delta m/z: %{y}<br>")
@@ -509,7 +654,27 @@ def load_istd_delta_mz_plot(dataframe, samples, internal_standard):
 def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity):
 
     """
-    Returns scatter plot figure of m/z vs. retention time for urine features
+    Returns scatter plot figure of precursor m/z vs. retention time for targeted features in the biological standard.
+
+    To further clarify:
+        x-axis: retention times
+        y-axis: precursor masses
+        colorscale: percent change in intensity for each feature compared to the average intensity across all runs
+
+    Documentation on Plotly scatter plots: https://plotly.com/python-api-reference/generated/plotly.express.scatter.html
+
+    Args:
+        run_id (str):
+            Run ID to query the biological standard from
+        df_rt (DataFrame):
+            Table of retention times for targeted features (columns) across instrument runs (rows)
+        df_mz (DataFrame):
+            Table of precursor masses for targeted features (columns) across instrument runs (rows)
+        df_intensity (DataFrame):
+            Table of intensities for targeted features (columns) across instrument runs (rows)
+
+    Returns:
+        plotly.express.scatter object: m/z - RT scatter plot for targeted metabolites in the biological standard
     """
 
     # Get metabolites
@@ -554,20 +719,21 @@ def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity):
     diverging_colorscale.reverse()
 
     fig = px.scatter(bio_df,
-                     title="Biological Standard – Targeted Metabolites",
-                     x="Retention time (min)",
-                     y="Precursor m/z",
-                     height=600,
-                     hover_name="Metabolite name",
-                     color="% Change",
-                     color_continuous_scale=diverging_colorscale,
-                     labels=labels,
-                     log_x=False,
-                     range_color=[-100, 100])
-    fig.update_layout(showlegend=False,
-                      transition_duration=500,
-                      clickmode="event",
-                      margin=dict(t=75, b=75, l=0, r=0))
+        title="Biological Standard – Targeted Metabolites",
+        x="Retention time (min)",
+        y="Precursor m/z",
+        height=600,
+        hover_name="Metabolite name",
+        color="% Change",
+        color_continuous_scale=diverging_colorscale,
+        labels=labels,
+        log_x=False,
+        range_color=[-100, 100])
+    fig.update_layout(
+        showlegend=False,
+        transition_duration=500,
+        clickmode="event",
+        margin=dict(t=75, b=75, l=0, r=0))
     fig.update_xaxes(title="Retention time (min)")
     fig.update_yaxes(title="Precursor m/z")
     fig.update_traces(marker={"size": 30})
@@ -578,7 +744,18 @@ def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity):
 def load_bio_benchmark_plot(dataframe, metabolite_name):
 
     """
-    Returns bar plot figure of intensity vs. study for biological standard features
+    Returns bar plot figure of intensities for a targeted metabolite in a biological standard across instrument runs.
+
+    Documentation on Plotly bar plots: https://plotly.com/python-api-reference/generated/plotly.express.bar.html
+
+    Args:
+        dataframe (DataFrame):
+            Table of intensities for targeted metabolites (columns) across instrument runs (rows)
+        metabolite_name (str):
+            The targeted metabolite to query from the DataFrame
+
+    Returns:
+        plotly.express.bar object: Plotly bar plot of intensities (for the selected targeted metabolite) across instrument runs.
     """
 
     # Get list of runs
@@ -595,17 +772,19 @@ def load_bio_benchmark_plot(dataframe, metabolite_name):
     else:
         intensities_text = []
 
-    fig = px.bar(x=instrument_runs,
-                 y=intensities,
-                 text=intensities_text,
-                 height=600)
-    fig.update_layout(title="Biological Standard Benchmark",
-                      showlegend=False,
-                      transition_duration=500,
-                      clickmode="event",
-                      xaxis=dict(rangeslider=dict(visible=True), autorange=True),
-                      legend=dict(font=dict(size=10)),
-                      margin=dict(t=75, b=75, l=0, r=0))
+    fig = px.bar(
+        x=instrument_runs,
+        y=intensities,
+        text=intensities_text,
+        height=600)
+    fig.update_layout(
+        title="Biological Standard Benchmark",
+        showlegend=False,
+        transition_duration=500,
+        clickmode="event",
+        xaxis=dict(rangeslider=dict(visible=True), autorange=True),
+        legend=dict(font=dict(size=10)),
+        margin=dict(t=75, b=75, l=0, r=0))
     fig.update_xaxes(title="Study")
     fig.update_yaxes(title="Intensity")
     fig.update_traces(textposition="outside",
@@ -617,7 +796,24 @@ def load_bio_benchmark_plot(dataframe, metabolite_name):
 def get_internal_standard_index(previous, next, max):
 
     """
-    Button functionality for seeking through internal standards
+    Button functionality for seeking through internal standards.
+
+    Uses n_clicks from the previous and next buttons to generate an index, which is used to index a list of internal
+    standards in the populate_istd_rt_plot(), populate_istd_intensity_plot(), and populate_istd_mz_plot() callback
+    functions of the DashWebApp module.
+
+    This function relies on the previous button's n_clicks to be reset to None on every click.
+
+    Args:
+        previous (int):
+            n_clicks for the "previous" button (None, unless previous button is clicked)
+        next (int):
+            n_clicks for the "next" button
+        max (int):
+            Number of internal standards (maximum index for list of internal standards)
+
+    Returns:
+        Integer index for a list of internal standards.
     """
 
     if previous is not None:
