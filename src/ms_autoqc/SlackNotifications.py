@@ -6,7 +6,15 @@ from slack_sdk.errors import SlackApiError
 def send_message(message):
 
     """
-    Posts a message to the Slack channel registered for notifications in Settings > General
+    Posts a message to the Slack channel registered for notifications in Settings > General.
+
+    For details on the Slack API, see: https://slack.dev/python-slack-sdk/
+
+    Args:
+        message (str): Message to send to the Slack channel
+
+    Returns:
+        Response object on success, or Error object on failure
     """
 
     # SSL
