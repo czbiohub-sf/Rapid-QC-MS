@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.2.335">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>MS-AutoQC - FAQ</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1.6em;
+  vertical-align: middle;
+}
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./logo.png" rel="icon" type="image/png">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark.css" rel="prefetch" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark.min.css" rel="prefetch" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">MS-AutoQC</span>
+    </a>
+  </div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="./index.html">
+ <span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./overview.html">
+ <span class="menu-text">Overview</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./installation.html">
+ <span class="menu-text">Installation</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./getting-started.html">
+ <span class="menu-text">Getting Started</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./user-guide.html">
+ <span class="menu-text">User Guide</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./design.html">
+ <span class="menu-text">System Design</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./documentation.html">
+ <span class="menu-text">Documentation</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link active" href="./faq.html" aria-current="page">
+ <span class="menu-text">FAQ</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/czbiohub/MS-AutoQC"><i class="bi bi-github" role="img" aria-label="GitHub">
+</i> 
+ <span class="menu-text"></span></a>
+  </li>  
+</ul>
+              <div class="quarto-toggle-container">
+                  <a href="" class="quarto-color-scheme-toggle nav-link" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+              </div>
+              <div id="quarto-search" class="" title="Search"></div>
+          </div> <!-- /navcollapse -->
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#general" id="toc-general" class="nav-link active" data-scroll-target="#general">General</a></li>
+  <li><a href="#installation" id="toc-installation" class="nav-link" data-scroll-target="#installation">Installation</a>
+  <ul class="collapse">
+  <li><a href="#what-is-the-recommended-way-to-install-ms-autoqc" id="toc-what-is-the-recommended-way-to-install-ms-autoqc" class="nav-link" data-scroll-target="#what-is-the-recommended-way-to-install-ms-autoqc">What is the recommended way to install MS-AutoQC?</a></li>
+  <li><a href="#how-can-i-install-ms-autoqc-manually" id="toc-how-can-i-install-ms-autoqc-manually" class="nav-link" data-scroll-target="#how-can-i-install-ms-autoqc-manually">How can I install MS-AutoQC manually?</a></li>
+  <li><a href="#how-can-i-uninstall-ms-autoqc" id="toc-how-can-i-uninstall-ms-autoqc" class="nav-link" data-scroll-target="#how-can-i-uninstall-ms-autoqc">How can I uninstall MS-AutoQC?</a></li>
+  <li><a href="#is-my-workspace-deleted-if-i-uninstall-or-re-install-ms-autoqc" id="toc-is-my-workspace-deleted-if-i-uninstall-or-re-install-ms-autoqc" class="nav-link" data-scroll-target="#is-my-workspace-deleted-if-i-uninstall-or-re-install-ms-autoqc">Is my workspace deleted if I uninstall or re-install MS-AutoQC?</a></li>
+  </ul></li>
+  <li><a href="#setup" id="toc-setup" class="nav-link" data-scroll-target="#setup">Setup</a>
+  <ul class="collapse">
+  <li><a href="#why-isnt-msconvert-being-detected-by-ms-autoqc" id="toc-why-isnt-msconvert-being-detected-by-ms-autoqc" class="nav-link" data-scroll-target="#why-isnt-msconvert-being-detected-by-ms-autoqc">Why isn’t MSConvert being detected by MS-AutoQC?</a></li>
+  <li><a href="#why-isnt-ms-dial-being-detected-by-ms-autoqc" id="toc-why-isnt-ms-dial-being-detected-by-ms-autoqc" class="nav-link" data-scroll-target="#why-isnt-ms-dial-being-detected-by-ms-autoqc">Why isn’t MS-DIAL being detected by MS-AutoQC?</a></li>
+  </ul></li>
+  <li><a href="#usage" id="toc-usage" class="nav-link" data-scroll-target="#usage">Usage</a>
+  <ul class="collapse">
+  <li><a href="#something-went-wrong.-how-do-i-reset-the-app" id="toc-something-went-wrong.-how-do-i-reset-the-app" class="nav-link" data-scroll-target="#something-went-wrong.-how-do-i-reset-the-app">Something went wrong. How do I “reset” the app?</a></li>
+  <li><a href="#what-happens-if-i-refresh-close-the-app-during-an-active-instrument-run" id="toc-what-happens-if-i-refresh-close-the-app-during-an-active-instrument-run" class="nav-link" data-scroll-target="#what-happens-if-i-refresh-close-the-app-during-an-active-instrument-run">What happens if I refresh / close the app during an active instrument run?</a></li>
+  <li><a href="#what-happens-if-i-restart-ms_autoqc-from-the-command-prompt-during-an-active-instrument-run" id="toc-what-happens-if-i-restart-ms_autoqc-from-the-command-prompt-during-an-active-instrument-run" class="nav-link" data-scroll-target="#what-happens-if-i-restart-ms_autoqc-from-the-command-prompt-during-an-active-instrument-run">What happens if I restart <code>ms_autoqc</code> from the Command Prompt during an active instrument run?</a>
+  <ul class="collapse">
+  <li><a href="#restart-ms-autoqc" id="toc-restart-ms-autoqc" class="nav-link" data-scroll-target="#restart-ms-autoqc">1. Restart MS-AutoQC</a></li>
+  <li><a href="#select-the-instrument-run-from-the-table" id="toc-select-the-instrument-run-from-the-table" class="nav-link" data-scroll-target="#select-the-instrument-run-from-the-table">2. Select the instrument run from the table</a></li>
+  </ul></li>
+  <li><a href="#how-can-i-delete-a-job-and-start-over" id="toc-how-can-i-delete-a-job-and-start-over" class="nav-link" data-scroll-target="#how-can-i-delete-a-job-and-start-over">How can I delete a job and start over?</a></li>
+  </ul></li>
+  <li><a href="#development" id="toc-development" class="nav-link" data-scroll-target="#development">Development</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">FAQ</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<p>This section provides a list of frequently asked questions concerning usage, installation, and development of MS-AutoQC.</p>
+<p>If you don’t find an answer to your question, please feel free to <a href="mailto:brian.defelice@czbiohub.org">contact us</a> or <a href="https://github.com/czbiohub/MS-AutoQC/issues">submit an issue on GitHub</a>.</p>
+<section id="general" class="level1">
+<h1>General</h1>
+</section>
+<section id="installation" class="level1">
+<h1>Installation</h1>
+<section id="what-is-the-recommended-way-to-install-ms-autoqc" class="level2">
+<h2 class="anchored" data-anchor-id="what-is-the-recommended-way-to-install-ms-autoqc">What is the recommended way to install MS-AutoQC?</h2>
+<p>Using <code>pip</code>, Python’s built-in package installer. Check out the <a href="./installation.html">installation guide</a> to see how.</p>
+</section>
+<section id="how-can-i-install-ms-autoqc-manually" class="level2">
+<h2 class="anchored" data-anchor-id="how-can-i-install-ms-autoqc-manually">How can I install MS-AutoQC manually?</h2>
+<p>While it is recommended that you use <code>pip</code>, here is a short guide on how to install MS-AutoQC manually.</p>
+<ol type="1">
+<li>Download <a href="https://github.com/czbiohub/MS-AutoQC/releases">MS-AutoQC v1.0.0</a> from GitHub.</li>
+<li>Extract the ZIP file to a folder of your choice.</li>
+<li>Open a terminal window and enter:</li>
+</ol>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>cd <span class="op">&lt;</span>path<span class="op">-</span>to<span class="op">-</span>folder<span class="op">&gt;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>py <span class="op">-</span>m pip install .</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Once that’s done, you should be able to launch MS-AutoQC by simply entering <code>ms_autoqc</code> in your terminal.</p>
+</section>
+<section id="how-can-i-uninstall-ms-autoqc" class="level2">
+<h2 class="anchored" data-anchor-id="how-can-i-uninstall-ms-autoqc">How can I uninstall MS-AutoQC?</h2>
+<p>To uninstall MS-AutoQC, simply open a terminal window and type:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>py <span class="op">-</span>m pip uninstall ms<span class="op">-</span>autoqc</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>You will be prompted to confirm by entering <code>Y</code>, and then the package will be uninstalled.</p>
+</section>
+<section id="is-my-workspace-deleted-if-i-uninstall-or-re-install-ms-autoqc" class="level2">
+<h2 class="anchored" data-anchor-id="is-my-workspace-deleted-if-i-uninstall-or-re-install-ms-autoqc">Is my workspace deleted if I uninstall or re-install MS-AutoQC?</h2>
+<p>Uninstalling MS-AutoQC does <strong>NOT</strong> delete workspace data such as QC results and settings for your instrument. These must be removed manually.</p>
+<p>To delete all workspace data, you can type:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>rmdir <span class="op">/</span>s C:\Users\<span class="op">&lt;</span>YOUR<span class="op">-</span>USERNAME<span class="op">-</span>HERE<span class="op">&gt;</span>\AppData\Local\Programs\python\<span class="op">&lt;</span>PYTHON<span class="op">-</span>VERSION<span class="op">&gt;</span>\lib\site<span class="op">-</span>packages\ms_autoqc</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><strong>Note:</strong> The <code>&lt;PYTHON-VERSION&gt;</code> will be denoted as <code>python39</code> if you have Python 3.9, or <code>python310</code> if you have Python 3.10, for example.</p>
+<p>If you installed MS-AutoQC in a virtual environment, then the relevant command is:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>rmdir <span class="op">/</span>s <span class="op">&lt;</span>path<span class="op">-</span>to<span class="op">-</span>venv<span class="op">-</span>folder<span class="op">&gt;</span>\lib\site<span class="op">-</span>packages\ms_autoqc</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Or, if you feel safer to navigate to the folder and delete it yourself, simply paste the above directory into your File Explorer and delete the folders.</p>
+</section>
+</section>
+<section id="setup" class="level1">
+<h1>Setup</h1>
+<section id="why-isnt-msconvert-being-detected-by-ms-autoqc" class="level2">
+<h2 class="anchored" data-anchor-id="why-isnt-msconvert-being-detected-by-ms-autoqc">Why isn’t MSConvert being detected by MS-AutoQC?</h2>
+<p>If MSConvert is not being detected, try each of the following and see if it solves the problem:</p>
+<ul>
+<li>Refresh the page in the browser</li>
+<li>Restart the computer</li>
+<li>Reinstall MSConvert</li>
+<li>Reinstall .NET Framework</li>
+</ul>
+</section>
+<section id="why-isnt-ms-dial-being-detected-by-ms-autoqc" class="level2">
+<h2 class="anchored" data-anchor-id="why-isnt-ms-dial-being-detected-by-ms-autoqc">Why isn’t MS-DIAL being detected by MS-AutoQC?</h2>
+<p>If MS-DIAL isn’t being located, you might have provided MS-AutoQC the wrong folder.</p>
+<ul>
+<li><p>Check to make sure that the directory you have provided in Settings &gt; MS-DIAL Configurations isn’t a folder <em>containing</em> the MS-DIAL folder.</p></li>
+<li><p>Once you have saved a new MS-DIAL directory, refresh the page in your browser and try again.</p></li>
+</ul>
+<p>If this doesn’t solve the problem, check to make sure <code>MSDialConsoleApp.exe</code> exists in your MS-DIAL folder.</p>
+<ul>
+<li>If it doesn’t, you may have a newer version of MS-DIAL. Go to the <a href="http://prime.psc.riken.jp/compms/msdial/main.html">MS-DIAL website</a> and download any one of the v4 releases.</li>
+</ul>
+<p>If all else fails, try to rename your folder to something with no spaces such as <code>MS-DIAL</code>.</p>
+</section>
+</section>
+<section id="usage" class="level1">
+<h1>Usage</h1>
+<section id="something-went-wrong.-how-do-i-reset-the-app" class="level2">
+<h2 class="anchored" data-anchor-id="something-went-wrong.-how-do-i-reset-the-app">Something went wrong. How do I “reset” the app?</h2>
+<p>As a general rule of thumb, if the UI freezes or produces a bug, try refreshing the page in your browser.</p>
+<p>If that doesn’t work, try restarting the app by 1) closing the Command Prompt window and 2) launching a new instance using <code>py -m start_autoqc</code>.</p>
+</section>
+<section id="what-happens-if-i-refresh-close-the-app-during-an-active-instrument-run" class="level2">
+<h2 class="anchored" data-anchor-id="what-happens-if-i-refresh-close-the-app-during-an-active-instrument-run">What happens if I refresh / close the app during an active instrument run?</h2>
+<p>Nothing! The acquisition listener process runs in the background, so it will not be interrupted.</p>
+</section>
+<section id="what-happens-if-i-restart-ms_autoqc-from-the-command-prompt-during-an-active-instrument-run" class="level2">
+<h2 class="anchored" data-anchor-id="what-happens-if-i-restart-ms_autoqc-from-the-command-prompt-during-an-active-instrument-run">What happens if I restart <code>ms_autoqc</code> from the Command Prompt during an active instrument run?</h2>
+<p>If the MS-AutoQC process was interrupted during an instrument run, perform the following steps:</p>
+<section id="restart-ms-autoqc" class="level3">
+<h3 class="anchored" data-anchor-id="restart-ms-autoqc">1. Restart MS-AutoQC</h3>
+<p>Do this by entering <code>ms_autoqc</code> in a Command Prompt window.</p>
+</section>
+<section id="select-the-instrument-run-from-the-table" class="level3">
+<h3 class="anchored" data-anchor-id="select-the-instrument-run-from-the-table">2. Select the instrument run from the table</h3>
+<p>MS-AutoQC will check to see if the run is active. If the run is active, then it will check to see if the listener process is still running, and restart it as needed.</p>
+</section>
+</section>
+<section id="how-can-i-delete-a-job-and-start-over" class="level2">
+<h2 class="anchored" data-anchor-id="how-can-i-delete-a-job-and-start-over">How can I delete a job and start over?</h2>
+<p>Follow the steps below:</p>
+<ol type="1">
+<li>Select the instrument run from the table</li>
+<li>Click the “Delete Job” button</li>
+<li>Confirm and wait for the alert to disappear</li>
+<li>Refresh the page</li>
+</ol>
+<p>When you refresh the page, the instrument run should no longer appear on the dashboard.py</p>
+</section>
+</section>
+<section id="development" class="level1">
+<h1>Development</h1>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const disableStylesheet = (stylesheets) => {
+    for (let i=0; i < stylesheets.length; i++) {
+      const stylesheet = stylesheets[i];
+      stylesheet.rel = 'prefetch';
+    }
+  }
+  const enableStylesheet = (stylesheets) => {
+    for (let i=0; i < stylesheets.length; i++) {
+      const stylesheet = stylesheets[i];
+      stylesheet.rel = 'stylesheet';
+    }
+  }
+  const manageTransitions = (selector, allowTransitions) => {
+    const els = window.document.querySelectorAll(selector);
+    for (let i=0; i < els.length; i++) {
+      const el = els[i];
+      if (allowTransitions) {
+        el.classList.remove('notransition');
+      } else {
+        el.classList.add('notransition');
+      }
+    }
+  }
+  const toggleColorMode = (alternate) => {
+    // Switch the stylesheets
+    const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
+    manageTransitions('#quarto-margin-sidebar .nav-link', false);
+    if (alternate) {
+      enableStylesheet(alternateStylesheets);
+      for (const sheetNode of alternateStylesheets) {
+        if (sheetNode.id === "quarto-bootstrap") {
+          toggleBodyColorMode(sheetNode);
+        }
+      }
+    } else {
+      disableStylesheet(alternateStylesheets);
+      toggleBodyColorPrimary();
+    }
+    manageTransitions('#quarto-margin-sidebar .nav-link', true);
+    // Switch the toggles
+    const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
+    for (let i=0; i < toggles.length; i++) {
+      const toggle = toggles[i];
+      if (toggle) {
+        if (alternate) {
+          toggle.classList.add("alternate");     
+        } else {
+          toggle.classList.remove("alternate");
+        }
+      }
+    }
+    // Hack to workaround the fact that safari doesn't
+    // properly recolor the scrollbar when toggling (#1455)
+    if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
+      manageTransitions("body", false);
+      window.scrollTo(0, 1);
+      setTimeout(() => {
+        window.scrollTo(0, 0);
+        manageTransitions("body", true);
+      }, 40);  
+    }
+  }
+  const isFileUrl = () => { 
+    return window.location.protocol === 'file:';
+  }
+  const hasAlternateSentinel = () => {  
+    let styleSentinel = getColorSchemeSentinel();
+    if (styleSentinel !== null) {
+      return styleSentinel === "alternate";
+    } else {
+      return false;
+    }
+  }
+  const setStyleSentinel = (alternate) => {
+    const value = alternate ? "alternate" : "default";
+    if (!isFileUrl()) {
+      window.localStorage.setItem("quarto-color-scheme", value);
+    } else {
+      localAlternateSentinel = value;
+    }
+  }
+  const getColorSchemeSentinel = () => {
+    if (!isFileUrl()) {
+      const storageValue = window.localStorage.getItem("quarto-color-scheme");
+      return storageValue != null ? storageValue : localAlternateSentinel;
+    } else {
+      return localAlternateSentinel;
+    }
+  }
+  let localAlternateSentinel = 'default';
+  // Dark / light mode switch
+  window.quartoToggleColorScheme = () => {
+    // Read the current dark / light value 
+    let toAlternate = !hasAlternateSentinel();
+    toggleColorMode(toAlternate);
+    setStyleSentinel(toAlternate);
+  };
+  // Ensure there is a toggle, if there isn't float one in the top right
+  if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
+    const a = window.document.createElement('a');
+    a.classList.add('top-right');
+    a.classList.add('quarto-color-scheme-toggle');
+    a.href = "";
+    a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
+    const i = window.document.createElement("i");
+    i.classList.add('bi');
+    a.appendChild(i);
+    window.document.body.appendChild(a);
+  }
+  // Switch to dark mode if need be
+  if (hasAlternateSentinel()) {
+    toggleColorMode(true);
+  } else {
+    toggleColorMode(false);
+  }
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://www.czbiohub.org/mass-spec/">
+    </a>
+  </li>  
+    <li class="nav-item">
+ © 2023 Chan Zuckerberg Biohub
+  </li>  
+</ul>
+    </div>   
+  </div>
+</footer>
+
+
+
+</body></html>
