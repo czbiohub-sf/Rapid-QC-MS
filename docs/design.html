@@ -441,7 +441,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    </span>
 <span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">True</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>The loop waits 3 minutes, then computes the file’s MD5 checksum again. If the checksums match, the loop breaks and <code>qc.process_data_file()</code> is called. If not, the loop repeats.</p>
+<p>The loop waits 3 minutes, then computes the file’s MD5 checksum again. If the checksums match, MS-AutoQC then checks whether the next sample has begun acquiring (unless, of course, it is the last sample in the sequence).</p>
+<p>If checksums match and the next sample in the sequence has begun acquiring, the loop breaks and <code>qc.process_data_file()</code> is called. If either requirement is not filled, the loop repeats and waits again.</p>
 <p><strong><code>DataAcquisitionEventHandler</code> class in <code>AcquisitionListener.py</code>:</strong></p>
 <div class="code-with-filename">
 <div class="code-with-filename-file">
@@ -652,7 +653,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li><strong>m/z shift from library value cutoff:</strong> the minimum m/z shift from the expected library value to constitute a QC fail</li>
 </ol>
 <p>The <code>qc_sample()</code> function returns two objects: the QC result (pass, warning, or fail), and a DataFrame containing QC results, or the results of the four checks detailed above.</p>
-<p>Note: This function is long, comprehensive, and subject to change. If you’re interested in the implementation, you can check it out in <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py">AutoQCProcessing.py</a> on GitHub.</p>
+<p>Note: This function is long, comprehensive, and subject to change. If you’re interested in the implementation, check out the <a href="./modules/AutoQCProcessing.html#qc_sample">documentation</a>.</p>
 <p>Finally, the peak list DataFrame and QC result DataFrame are converted to JSON string format, and written to the relevant table (<code>sample_qc_results</code> or <code>bio_qc_results</code>) in the relevant instrument database using <code>db.write_qc_results()</code>:</p>
 <div class="code-with-filename">
 <div class="code-with-filename-file">
