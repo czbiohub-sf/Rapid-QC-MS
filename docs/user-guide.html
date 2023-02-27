@@ -202,18 +202,41 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#workspace-configuration-1" id="toc-workspace-configuration-1" class="nav-link active" data-scroll-target="#workspace-configuration-1">Workspace configuration</a>
+  <ul class="collapse">
+  <li><a href="#incorporating-metadata-for-samples" id="toc-incorporating-metadata-for-samples" class="nav-link" data-scroll-target="#incorporating-metadata-for-samples">Incorporating metadata for samples</a></li>
+  <li><a href="#setting-up-chromatography-methods" id="toc-setting-up-chromatography-methods" class="nav-link" data-scroll-target="#setting-up-chromatography-methods">Setting up chromatography methods</a>
+  <ul class="collapse">
+  <li><a href="#a.-add-a-chromatography-method" id="toc-a.-add-a-chromatography-method" class="nav-link" data-scroll-target="#a.-add-a-chromatography-method">3a. Add a chromatography method</a></li>
+  <li><a href="#b.-select-the-chromatography-and-polarity-to-modify" id="toc-b.-select-the-chromatography-and-polarity-to-modify" class="nav-link" data-scroll-target="#b.-select-the-chromatography-and-polarity-to-modify">3b. Select the chromatography and polarity to modify</a></li>
+  <li><a href="#c.-add-an-internal-standard-library" id="toc-c.-add-an-internal-standard-library" class="nav-link" data-scroll-target="#c.-add-an-internal-standard-library">3c. Add an internal standard library</a></li>
+  </ul></li>
+  <li><a href="#setting-up-biological-standards" id="toc-setting-up-biological-standards" class="nav-link" data-scroll-target="#setting-up-biological-standards">Setting up biological standards</a></li>
+  <li><a href="#configuring-qc-parameters" id="toc-configuring-qc-parameters" class="nav-link" data-scroll-target="#configuring-qc-parameters">Configuring QC parameters</a></li>
+  <li><a href="#configuring-ms-dial-processing-parameters" id="toc-configuring-ms-dial-processing-parameters" class="nav-link" data-scroll-target="#configuring-ms-dial-processing-parameters">Configuring MS-DIAL processing parameters</a></li>
+  </ul></li>
+  <li><a href="#google-drive-sync-1" id="toc-google-drive-sync-1" class="nav-link" data-scroll-target="#google-drive-sync-1">Google Drive sync</a>
+  <ul class="collapse">
   <li><a href="#setting-up-google-drive-sync" id="toc-setting-up-google-drive-sync" class="nav-link" data-scroll-target="#setting-up-google-drive-sync">Setting up Google Drive sync</a>
   <ul class="collapse">
+  <li><a href="#instructions" id="toc-instructions" class="nav-link" data-scroll-target="#instructions">Instructions</a></li>
   <li><a href="#create-a-project-in-the-google-cloud-console" id="toc-create-a-project-in-the-google-cloud-console" class="nav-link" data-scroll-target="#create-a-project-in-the-google-cloud-console">1. Create a project in the Google Cloud Console</a></li>
   <li><a href="#configure-the-oauth-consent-screen" id="toc-configure-the-oauth-consent-screen" class="nav-link" data-scroll-target="#configure-the-oauth-consent-screen">2. Configure the OAuth consent screen</a></li>
   <li><a href="#generate-the-oauth-client-id" id="toc-generate-the-oauth-client-id" class="nav-link" data-scroll-target="#generate-the-oauth-client-id">3. Generate the OAuth Client ID</a></li>
   </ul></li>
+  <li><a href="#adding-instruments-to-workspace" id="toc-adding-instruments-to-workspace" class="nav-link" data-scroll-target="#adding-instruments-to-workspace">Adding instruments to workspace</a></li>
+  <li><a href="#granting-revoking-workspace-access" id="toc-granting-revoking-workspace-access" class="nav-link" data-scroll-target="#granting-revoking-workspace-access">Granting / revoking workspace access</a></li>
+  <li><a href="#signing-in-to-workspace-from-external-devices" id="toc-signing-in-to-workspace-from-external-devices" class="nav-link" data-scroll-target="#signing-in-to-workspace-from-external-devices">Signing in to workspace from external devices</a></li>
+  </ul></li>
+  <li><a href="#qc-notifications-1" id="toc-qc-notifications-1" class="nav-link" data-scroll-target="#qc-notifications-1">QC notifications</a>
+  <ul class="collapse">
   <li><a href="#setting-up-slack-notifications" id="toc-setting-up-slack-notifications" class="nav-link" data-scroll-target="#setting-up-slack-notifications">Setting up Slack notifications</a>
   <ul class="collapse">
   <li><a href="#create-your-slack-bot" id="toc-create-your-slack-bot" class="nav-link" data-scroll-target="#create-your-slack-bot">1. Create your Slack bot</a></li>
   <li><a href="#generate-an-oauth-token" id="toc-generate-an-oauth-token" class="nav-link" data-scroll-target="#generate-an-oauth-token">2. Generate an OAuth token</a></li>
   <li><a href="#give-token-to-ms-autoqc" id="toc-give-token-to-ms-autoqc" class="nav-link" data-scroll-target="#give-token-to-ms-autoqc">3. Give token to MS-AutoQC</a></li>
+  </ul></li>
+  <li><a href="#setting-up-email-notifications" id="toc-setting-up-email-notifications" class="nav-link" data-scroll-target="#setting-up-email-notifications">Setting up email notifications</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -238,21 +261,355 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 </header>
 
-<section id="overview" class="level2">
-<h2 class="anchored" data-anchor-id="overview">Overview</h2>
-<p>This page offers brief tutorials for usage and configuration of various MS-AutoQC features. Be sure to use the navigation guide on the right (or Ctrl+F) to find what you’re looking for.</p>
+<p>This page offers brief tutorials for usage and configuration of various MS-AutoQC features. Be sure to use the navigation guide below – or simply <code>Ctrl + F</code> – to find what you’re looking for.</p>
+<section id="workspace-configuration" class="level4">
+<h4 class="anchored" data-anchor-id="workspace-configuration">Workspace configuration</h4>
+<ul>
+<li><a href="#incorporating-metadata-for-samples">Incorporating metadata for samples</a></li>
+<li><a href="#setting-up-chromatography-methods">Setting up chromatography methods</a></li>
+<li><a href="#setting-up-biological-standards">Setting up biological standards</a></li>
+<li><a href="#configuring-qc-parameters">Configuring QC parameters</a></li>
+<li><a href="#configuring-ms-dial-processing-parameters">Configuring MS-DIAL processing parameters</a></li>
+</ul>
 </section>
+<section id="dashboard-usage" class="level4">
+<h4 class="anchored" data-anchor-id="dashboard-usage">Dashboard usage</h4>
+<ul>
+<li><a href="./overview.html#new-qc-job-setup">Setting up new QC jobs</a></li>
+<li><a href="./overview.html#retention-time-across-samples">Retention time across samples plot</a></li>
+<li><a href="./overview.html#intensity-across-samples">Intensity across samples plot</a></li>
+<li><a href="./overview.html#delta-mz-across-samples">Delta m/z across samples plot</a></li>
+<li><a href="./overview.html#system-suitability-benchmarks">Targeted feature m/z across RT plot</a></li>
+<li><a href="./overview.html#system-suitability-benchmarks">Targeted feature intensity across instrument runs plot</a></li>
+</ul>
+</section>
+<section id="google-drive-sync" class="level4">
+<h4 class="anchored" data-anchor-id="google-drive-sync">Google Drive sync</h4>
+<ul>
+<li><a href="#setting-up-google-drive-sync">Setting up Google Drive sync</a></li>
+<li><a href="#adding-instruments-to-workspace">Adding instruments to workspace</a></li>
+<li><a href="#granting--revoking-workspace-access">Granting / revoking workspace access</a></li>
+<li><a href="#signing-in-to-workspace-from-external-devices">Signing in to workspace from external devices</a></li>
+</ul>
+</section>
+<section id="qc-notifications" class="level4">
+<h4 class="anchored" data-anchor-id="qc-notifications">QC notifications</h4>
+<ul>
+<li><a href="#setting-up-slack-notifications">Setting up Slack notifications</a></li>
+<li><a href="#setting-up-email-notifications">Setting up email notifications</a></li>
+</ul>
+</section>
+<section id="workspace-configuration-1" class="level1">
+<h1>Workspace configuration</h1>
+<section id="incorporating-metadata-for-samples" class="level2">
+<h2 class="anchored" data-anchor-id="incorporating-metadata-for-samples">Incorporating metadata for samples</h2>
+<p>To map metadata to samples, you can create a metadata table in CSV format and fill the following columns (where applicable):</p>
+<ul>
+<li>Filename</li>
+<li>Name from collaborator</li>
+<li>Sample Name</li>
+<li>Species</li>
+<li>Matrix</li>
+<li>Growth-Harvest Conditions</li>
+<li>Treatment</li>
+</ul>
+<p>Here is an example metadata table:</p>
+<table class="table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 9%">
+<col style="width: 10%">
+<col style="width: 9%">
+<col style="width: 18%">
+<col style="width: 9%">
+<col style="width: 9%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Filename</th>
+<th>Name from collaborator</th>
+<th>Sample Name</th>
+<th>Species</th>
+<th>Matrix</th>
+<th>Growth-Harvest Conditions</th>
+<th>Treatment</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Sample_001</td>
+<td>A_1</td>
+<td>EMGO001_A_1</td>
+<td>Human HEK293T</td>
+<td>Whole cell</td>
+<td>Flash Frozen</td>
+<td>BHB</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Sample_002</td>
+<td>A_2</td>
+<td>EMGO001_A_2</td>
+<td>Human HEK293T</td>
+<td>Whole cell</td>
+<td>Flash Frozen</td>
+<td>Butyrate</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Sample_003</td>
+<td>A_3</td>
+<td>EMGO001_A_3</td>
+<td>Human HEK293T</td>
+<td>Whole cell</td>
+<td>Flash Frozen</td>
+<td>No treatment</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Including a metadata table in a QC job allows metadata to be viewed in sample information cards. It also allows the intensity across samples plot to be filtered by treatments.</p>
+<p><img src="https://user-images.githubusercontent.com/7220175/221339340-34fdd2a3-359c-4279-8391-723b6c68910b.png" class="img-fluid"></p>
+</section>
+<section id="setting-up-chromatography-methods" class="level2">
+<h2 class="anchored" data-anchor-id="setting-up-chromatography-methods">Setting up chromatography methods</h2>
+<p>The workflow for configuring chromatography methods is simple:</p>
+<ol type="a">
+<li>Add a chromatography method</li>
+<li>Select the chromatography and polarity to modify</li>
+<li>Add an internal standard library</li>
+<li><em>Optional: Set a different MS-DIAL processing configuration</em></li>
+</ol>
+<section id="a.-add-a-chromatography-method" class="level3">
+<h3 class="anchored" data-anchor-id="a.-add-a-chromatography-method">3a. Add a chromatography method</h3>
+<p>Navigate to <strong>Settings &gt; Chromatography Methods.</strong> In the <strong>Manage chromatography methods</strong> section at the top, add a new chromatography method by giving it a name and clicking <strong>Add method</strong>.</p>
+<p><img src="https://user-images.githubusercontent.com/7220175/201778888-2d17d60c-618e-4182-a96a-9eb13d231326.png" class="img-fluid"></p>
+<p>If successful, you should see your new method in the <strong>Chromatography Methods</strong> table.</p>
+</section>
+<section id="b.-select-the-chromatography-and-polarity-to-modify" class="level3">
+<h3 class="anchored" data-anchor-id="b.-select-the-chromatography-and-polarity-to-modify">3b. Select the chromatography and polarity to modify</h3>
+<p>Internal standards must be configured for both positive and negative mode for each chromatography method.</p>
+<p>Let’s start by selecting the chromatography method you created, and then selecting <strong>Positive Mode</strong> for the polarity.</p>
+<blockquote class="blockquote">
+<p><img src="https://user-images.githubusercontent.com/7220175/221443668-df68b7f2-ce14-4325-9203-2de7197953e7.png" class="img-fluid"></p>
+</blockquote>
+</section>
+<section id="c.-add-an-internal-standard-library" class="level3">
+<h3 class="anchored" data-anchor-id="c.-add-an-internal-standard-library">3c. Add an internal standard library</h3>
+<p>Now, we can specify our internal standard library. MS-AutoQC accepts identification libraries in either MSP or CSV format.</p>
+<p>It is important to note that MS-DIAL can only perform MS2 spectral matching using MSP libraries. If you use a CSV library, identification will be performed via m/z and RT matches.</p>
+<p>Here is an example internal standard library in CSV format:</p>
+<table class="table">
+<thead>
+<tr class="header">
+<th>Common Name</th>
+<th>MS1 m/z</th>
+<th>RT (min)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1_Methionine_d8</td>
+<td>158.1085398</td>
+<td>7.479</td>
+</tr>
+<tr class="even">
+<td>1_1_Methylnicotinamide_d3</td>
+<td>141.0975946</td>
+<td>6.217</td>
+</tr>
+<tr class="odd">
+<td>1_Creatinine_d3</td>
+<td>117.0850186</td>
+<td>4.908</td>
+</tr>
+<tr class="even">
+<td>…</td>
+<td>…</td>
+<td>…</td>
+</tr>
+<tr class="odd">
+<td>1_Lysine d8</td>
+<td>155.1630181</td>
+<td>9.578</td>
+</tr>
+<tr class="even">
+<td>1_Phenylalanine d8</td>
+<td>174.136469</td>
+<td>6.92</td>
+</tr>
+<tr class="odd">
+<td>1_Hippuric acid d5</td>
+<td>185.0969033</td>
+<td>3.011</td>
+</tr>
+</tbody>
+</table>
+<p>And here is one internal standard from a library in MSP format:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>NAME: <span class="dv">1</span><span class="er">_HippuricAcid_d5</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>SCANNUMBER: <span class="dv">1229</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>RETENTIONTIME: <span class="fl">3.011485</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>PRECURSORMZ: <span class="fl">185.0967</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>PRECURSORTYPE: [M<span class="op">+</span>H]<span class="op">+</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>IONMODE: Positive</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>INTENSITY: <span class="fl">2.157809E+07</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>ISOTOPE: M <span class="op">+</span> <span class="dv">0</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>INCHIKEY:</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>SMILES:</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>FORMULA:</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>Num Peaks: <span class="dv">33</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="fl">51.02318</span>    <span class="dv">5550</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="fl">56.94302</span>    <span class="dv">2599</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="fl">57.93503</span>    <span class="dv">32786</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>...</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="fl">171.3111</span>    <span class="dv">3202</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="fl">181.08981</span>   <span class="dv">2837</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="fl">185.09656</span>   <span class="dv">4996</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Click the <strong>Browse Files</strong> button to browse for your MSP or CSV file, then click the <strong>Add MSP to <chromatography> Positive Mode</chromatography></strong> button.</p>
+<p><img src="https://user-images.githubusercontent.com/7220175/201782255-797d9dcf-23fe-45c1-a9ab-bdd090387494.png" class="img-fluid"></p>
+<p>After a few seconds, your screen should look something like this.</p>
+<p><img src="https://user-images.githubusercontent.com/7220175/201782345-11c3608d-ce21-4461-971b-0f082b41676a.png" class="img-fluid"></p>
+<p>You can confirm that the library was successfully added by scrolling up to the <strong>Chromatography Methods</strong> table and seeing the updated number of Pos (+) Standards.</p>
+<p>That’s it! Now, you can select Negative Mode from the polarity dropdown and add your negative mode internal standards.</p>
+</section>
+</section>
+<section id="setting-up-biological-standards" class="level2">
+<h2 class="anchored" data-anchor-id="setting-up-biological-standards">Setting up biological standards</h2>
+<p>Biological standards are used to benchmark instrument performance based on the intensity of targeted features in the biological standard samples.</p>
+<p>You can configure MS-AutoQC to detect and process biological standards accordingly using the following guide:</p>
+<ol type="1">
+<li>Navigate to <strong>Settings &gt; Chromatography Methods</strong>.</li>
+<li><strong>Create a biological standard:</strong> this requires providing a name and sequence identifier.</li>
+<li><strong>Select the chromatography method to edit:</strong> you can add libraries for different chromatography methods and polarities.</li>
+<li><strong>Add an MSP library:</strong> this MSP library will be used for the biological standard / chromatography combination you select.</li>
+</ol>
+<p>The <strong>sequence identifier</strong> is simply the text string that identifies biological standards in your acquisition sequences. For example, if “bac_sup” is the identifier for a biological standard, then any sample with “bac_sup” in its filename will be processed as a biological standard.</p>
+<blockquote class="blockquote">
+<p><img src="https://user-images.githubusercontent.com/7220175/221483946-3d07c628-d7d1-42ed-af7e-4571086451e2.png" class="img-fluid"></p>
+</blockquote>
+<p>Targeted feature libraries must be in MSP format. Here is an example of one targeted feature in an MSP library.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>NAME: Hippuric acid d5</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>SCANNUMBER: <span class="dv">1229</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>RETENTIONTIME: <span class="fl">3.011485</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>PRECURSORMZ: <span class="fl">185.0967</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>PRECURSORTYPE: [M<span class="op">+</span>H]<span class="op">+</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>IONMODE: Positive</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>INTENSITY: <span class="fl">2.157809E+07</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>ISOTOPE: M <span class="op">+</span> <span class="dv">0</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>INCHIKEY:</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>SMILES:</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>FORMULA:</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>Num Peaks: <span class="dv">33</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="fl">51.02318</span>    <span class="dv">5550</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="fl">56.94302</span>    <span class="dv">2599</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="fl">57.93503</span>    <span class="dv">32786</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>...</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="fl">171.3111</span>    <span class="dv">3202</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="fl">181.08981</span>   <span class="dv">2837</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="fl">185.09656</span>   <span class="dv">4996</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>You can also specify different processing configurations for biological standards by using the <strong>MS-DIAL processing configuration</strong> dropdown. These configurations can be created and saved in <strong>Settings &gt; MS-DIAL Configurations.</strong></p>
+</section>
+<section id="configuring-qc-parameters" class="level2">
+<h2 class="anchored" data-anchor-id="configuring-qc-parameters">Configuring QC parameters</h2>
+<p>Navigate to <strong>Settings &gt; QC Configurations</strong> to define your QC criteria. Briefly, these are:</p>
+<ol type="1">
+<li><strong>Intensity dropouts cutoff:</strong> the minimum number of missing internal standards in a sample to constitute a QC fail</li>
+<li><strong>RT shift from library value cutoff:</strong> the minimum retention time shift from the expected library value to constitute a QC fail</li>
+<li><strong>RT shift from in-run average cutoff:</strong> the minimum retention time shift from the average RT during the course of the run to constitute a QC fail</li>
+<li><strong>m/z shift from library value cutoff:</strong> the minimum m/z shift from the expected library value to constitute a QC fail</li>
+</ol>
+<p><img src="https://user-images.githubusercontent.com/7220175/221378930-c5474cd6-544d-4ef7-97f0-836b554f1211.png" class="img-fluid"></p>
+<p>MS-AutoQC stores individual parameters in <strong>configurations</strong>, so that you can configure a specific configuration to fit each chromatography method. Every installation comes preloaded with a “Default” configuration containing recommended parameters.</p>
+<blockquote class="blockquote">
+<p><img src="https://user-images.githubusercontent.com/7220175/209615183-383f3c9b-2d45-49f8-bfde-6f021dc3456e.png" class="img-fluid"></p>
+</blockquote>
+<p>You can specify these parameters however you’d like, and enable / disable them as needed. To revert a configuration back to the default recommended settings, simply click the <strong>Reset default settings</strong> button.</p>
+<p>Once you’re done, don’t forget to click <strong>Save changes</strong>!</p>
+</section>
+<section id="configuring-ms-dial-processing-parameters" class="level2">
+<h2 class="anchored" data-anchor-id="configuring-ms-dial-processing-parameters">Configuring MS-DIAL processing parameters</h2>
+<p><a href="http://prime.psc.riken.jp/compms/msdial/main.html">MS-DIAL</a> is the processing software used to quantify internal standards in samples and targeted features in biological standards.</p>
+<p>MS-AutoQC stores a set of MS-DIAL parameters in <strong>configurations</strong>, so that you can configure a specific configuration to fit each chromatography method. Every installation comes preloaded with a “Default” configuration containing recommended parameters.</p>
+<blockquote class="blockquote">
+<p><img src="https://user-images.githubusercontent.com/7220175/209615180-18c6b4ef-e510-4a4b-9b00-520a7f06c08d.png" class="img-fluid"></p>
+</blockquote>
+<p>You can create a new configuration using the <strong>Add new MS-DIAL configuration</strong> text field. Then, select it from the dropdown to edit its parameters. Once you’re done, the MS-DIAL configuration can be applied to chromatography methods and biological standards.</p>
+<p>A wide range of parameters are available for modification to fit the user’s needs:</p>
+<ul>
+<li>Retention time begin</li>
+<li>Retention time end</li>
+<li>Mass range begin</li>
+<li>Mass range end</li>
+<li>MS1 centroid tolerance</li>
+<li>MS2 centroid tolerance</li>
+<li>Smoothing method</li>
+<li>Smoothing level</li>
+<li>Mass slice width</li>
+<li>Minimum peak width: Peak width threshold</li>
+<li>Minimum peak height: Peak height threshold</li>
+<li>Post-identification retention time tolerance</li>
+<li>Post-identification accurate MS1 tolerance</li>
+<li>Post-identification similarity score cutoff</li>
+<li>Alignment retention time tolerance</li>
+<li>Alignment MS1 tolerance</li>
+<li>Alignment retention time factor</li>
+<li>Alignment MS1 factor</li>
+<li>Peak count filter</li>
+<li>QC at least filter</li>
+</ul>
+<p>For more details on MS-DIAL parameters, see the documentation <a href="https://mtbinfo-team.github.io/mtbinfo.github.io/MS-DIAL/tutorial#section-2-3">here</a>.</p>
+<p><img src="https://user-images.githubusercontent.com/7220175/221496078-92f23760-6382-40a1-bc28-7c9098dd84b1.png" class="img-fluid"></p>
+<p>Once you’re done editing, don’t forget to click <strong>Save changes</strong>! You can now apply this processing configuration to your chromatography methods and biological standards.</p>
+</section>
+</section>
+<section id="google-drive-sync-1" class="level1">
+<h1>Google Drive sync</h1>
 <section id="setting-up-google-drive-sync" class="level2">
 <h2 class="anchored" data-anchor-id="setting-up-google-drive-sync">Setting up Google Drive sync</h2>
 <p>To allow access to your workspace from any device, you must first create a project in the Google Cloud Console and generate an OAuth Client ID for your installation of MS-AutoQC.</p>
+<section id="instructions" class="level3">
+<h3 class="anchored" data-anchor-id="instructions">Instructions</h3>
+<p>Follow the steps below, or read on for a more detailed guide with screenshots.</p>
+<ol type="1">
+<li>Go to the <a href="https://console.cloud.google.com/">Google Cloud Console</a> and create your own project.</li>
+<li>Search for “Google Drive API”, select the entry, and click <strong>Enable</strong>.</li>
+<li>Search for “Gmail API”, select the entry, and click <strong>Enable</strong>.</li>
+<li>Select “Credentials” from the left menu, click <strong>Create Credentials</strong>, and select <strong>OAuth client ID</strong>.</li>
+<li>Click <strong>Configure consent screen</strong> and follow the instructions.</li>
+<li>For <strong>Add or Remove Scopes,</strong> manually enter the following:</li>
+</ol>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>https:<span class="op">//</span>www.googleapis.com<span class="op">/</span>auth<span class="op">/</span>drive</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>https:<span class="op">//</span>www.googleapis.com<span class="op">/</span>auth<span class="op">/</span>gmail.send</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>https:<span class="op">//</span>www.googleapis.com<span class="op">/</span>auth<span class="op">/</span>userinfo.email</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ol start="7" type="1">
+<li>Select “Application type” to be <strong>Desktop application</strong>.</li>
+<li>For name, enter <strong>MS-AutoQC</strong>.</li>
+<li>Click <strong>Create</strong>.</li>
+</ol>
+<p>Once you’re done, a dialog window will appear, providing your client ID and client secret.</p>
+<blockquote class="blockquote">
+<p><img src="https://user-images.githubusercontent.com/7220175/217111496-32c84253-6abb-4178-a108-20f2a84ef387.png" class="img-fluid"></p>
+</blockquote>
+<p>That’s it – you’re all set! Copy these and save them somewhere accessible. If you’re here from the quickstart guide, <a href="./quickstart.html#optional-sync-with-google-drive">click here</a> to head back and use these credentials to <strong>set up</strong> or <strong>sign in</strong> to your workspace.</p>
 <p><strong>These actions only need to be performed once.</strong> Upon completion, any shared user will be able to use the Client ID and Client Secret to sign in to your workspace.</p>
+</section>
 <section id="create-a-project-in-the-google-cloud-console" class="level3">
 <h3 class="anchored" data-anchor-id="create-a-project-in-the-google-cloud-console">1. Create a project in the Google Cloud Console</h3>
+<p>In case the above steps are too difficult to follow, below is a detailed walkthrough of the process with screenshots.</p>
 <p>Navigate to the <a href="https://console.cloud.google.com/">Google Cloud Console</a>. The landing page should look something like this:</p>
+<blockquote class="blockquote">
 <p><img src="https://user-images.githubusercontent.com/7220175/217104786-794fa8dc-074f-4f4d-bf65-51abada3d95d.png" class="img-fluid"></p>
+</blockquote>
 <p>Choose <strong>Create or select a project</strong>, then click <strong>New Project</strong>.</p>
 <p>Name the project <strong>MS-AutoQC</strong> and click <strong>Create</strong>.</p>
+<blockquote class="blockquote">
 <p><img src="https://user-images.githubusercontent.com/7220175/217105229-07910f9b-c56f-4fe9-ac96-08ac2077604b.png" class="img-fluid"></p>
+</blockquote>
+<p>From the sidebar, navigate to <strong>Enabled APIs and services</strong> and click <strong>Enable APIs and Services</strong>.</p>
+<p>Search for “Google Drive API”, select it, and click the <strong>Enable</strong> button.</p>
+<p>Next, search for “Gmail API”, select it, and click the <strong>Enable</strong> button.</p>
 </section>
 <section id="configure-the-oauth-consent-screen" class="level3">
 <h3 class="anchored" data-anchor-id="configure-the-oauth-consent-screen">2. Configure the OAuth consent screen</h3>
@@ -265,23 +622,71 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </ul>
 <p>Once you’re done, click <strong>Save and Continue.</strong></p>
 <p>On the next screen, select <strong>Add or Remove Scopes</strong>. Scroll down to the <strong>Manually add scopes</strong> section and paste in the following:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>https:<span class="op">//</span>www.googleapis.com<span class="op">/</span>auth<span class="op">/</span>drive</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>https:<span class="op">//</span>www.googleapis.com<span class="op">/</span>auth<span class="op">/</span>gmail.send</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>https:<span class="op">//</span>www.googleapis.com<span class="op">/</span>auth<span class="op">/</span>userinfo.email</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>https:<span class="op">//</span>www.googleapis.com<span class="op">/</span>auth<span class="op">/</span>drive</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>https:<span class="op">//</span>www.googleapis.com<span class="op">/</span>auth<span class="op">/</span>gmail.send</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>https:<span class="op">//</span>www.googleapis.com<span class="op">/</span>auth<span class="op">/</span>userinfo.email</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<blockquote class="blockquote">
 <p><img src="https://user-images.githubusercontent.com/7220175/217109624-c9e48c72-5175-44df-90a9-2a2ce3aefa66.png" class="img-fluid"></p>
+</blockquote>
 <p>Click <strong>Add to Table</strong>. Then click <strong>Update</strong>. Then click <strong>Save and Continue</strong>.</p>
 </section>
 <section id="generate-the-oauth-client-id" class="level3">
 <h3 class="anchored" data-anchor-id="generate-the-oauth-client-id">3. Generate the OAuth Client ID</h3>
 <p>From the sidebar, navigate to <strong><a href="https://console.cloud.google.com/apis/credentials">APIs &amp; Services &gt; Credentials</a></strong>.</p>
 <p>Click the <strong>Create Credentials</strong> button and select <strong>OAuth client ID</strong>.</p>
+<blockquote class="blockquote">
 <p><img src="https://user-images.githubusercontent.com/7220175/217107214-e1e950c1-7131-4c95-ae07-e3d06e0cbae8.png" class="img-fluid"></p>
+</blockquote>
 <p>For application type, choose <strong>Desktop application</strong>. Name the application <strong>MS-AutoQC</strong>.</p>
 <p>Once you’re done, click <strong>Create</strong>. A dialog window will appear, providing your client ID and client secret.</p>
+<blockquote class="blockquote">
 <p><img src="https://user-images.githubusercontent.com/7220175/217111496-32c84253-6abb-4178-a108-20f2a84ef387.png" class="img-fluid"></p>
+</blockquote>
 <p>That’s it – you’re all set! Copy these and save them somewhere accessible. If you’re here from the Quickstart guide, <a href="./quickstart.html#optional-sync-with-google-drive">click here</a> to head back and use these credentials to <strong>set up</strong> or <strong>sign in</strong> to your workspace.</p>
 </section>
 </section>
+<section id="adding-instruments-to-workspace" class="level2">
+<h2 class="anchored" data-anchor-id="adding-instruments-to-workspace">Adding instruments to workspace</h2>
+<p>To add an instrument to an existing MS-AutoQC workspace, perform the following steps:</p>
+<ol type="1">
+<li>Install MS-AutoQC on your instrument computer</li>
+<li>Launch the app by entering <code>ms_autoqc</code> in a terminal window</li>
+<li>Select the <strong>I’m setting up MS-AutoQC on a new instrument</strong> tab</li>
+<li>Give your instrument a name and specify the vendor</li>
+<li>Enter your client ID and client secret, then click <strong>Sign in to Google Drive</strong></li>
+<li>Complete the authentication flow</li>
+<li>Once you’re done, MS-AutoQC will alert you that your workspace was found</li>
+<li>Click <strong>Complete setup</strong> and you’re all set!</li>
+</ol>
+<p><img src="https://user-images.githubusercontent.com/7220175/221498964-de960a23-ee82-4ee0-942b-f026d790d153.png" class="img-fluid"></p>
+<p><strong>Important:</strong> Currently, it is not possible to add an instrument to an existing workspace after setup. If you want to add your instrument to an existing workspace, it must be done during setup immediately after a fresh install.</p>
+</section>
+<section id="granting-revoking-workspace-access" class="level2">
+<h2 class="anchored" data-anchor-id="granting-revoking-workspace-access">Granting / revoking workspace access</h2>
+<p>You can grant and revoke access to your MS-AutoQC workspace from <strong>Settings &gt; General</strong>.</p>
+<p>Under <strong>Manage workspace access,</strong> add the email addresses for Google accounts you’d like to share your workspace with.</p>
+<blockquote class="blockquote">
+<p><img src="https://user-images.githubusercontent.com/7220175/209615187-08b15542-3dd4-44b6-8094-e3b183f81d60.png" class="img-fluid"></p>
+</blockquote>
+</section>
+<section id="signing-in-to-workspace-from-external-devices" class="level2">
+<h2 class="anchored" data-anchor-id="signing-in-to-workspace-from-external-devices">Signing in to workspace from external devices</h2>
+<p>You can use your generated client ID and client secret to log in to your workspace from any device.</p>
+<ol type="1">
+<li>Install MS-AutoQC on your device</li>
+<li>Launch the app by entering <code>ms_autoqc</code> in a terminal window</li>
+<li>Select the <strong>I’m signing in to an existing MS-AutoQC workspace</strong> tab</li>
+<li>Enter your client ID and client secret, then click <strong>Sign in to Google Drive</strong></li>
+<li>Complete the authentication flow</li>
+<li>Click <strong>Sign in to MS-AutoQC workspace</strong> and you’re all set!</li>
+</ol>
+<p><strong>Important:</strong> Do NOT check the <em>I’m signing in from an instrument computer</em> checkbox – it is intended for signing in to the workspace after reinstalls on the instrument computer.</p>
+<p><img src="https://user-images.githubusercontent.com/7220175/221499159-a3d867ba-e477-4b06-8289-3fb5dd44843e.png" class="img-fluid"></p>
+<p><strong>Important note:</strong> To allow your team members to sign in to the workspace using their Google account, you must first <a href="#granting--revoking-workspace-access">grant them access in Settings &gt; General</a>.</p>
+</section>
+</section>
+<section id="qc-notifications-1" class="level1">
+<h1>QC notifications</h1>
 <section id="setting-up-slack-notifications" class="level2">
 <h2 class="anchored" data-anchor-id="setting-up-slack-notifications">Setting up Slack notifications</h2>
 <p>To set up Slack notifications, you must create your own Slack bot, generate an OAuth token for it, and give that token to MS-AutoQC in Settings &gt; General.</p>
@@ -290,23 +695,38 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h3 class="anchored" data-anchor-id="create-your-slack-bot">1. Create your Slack bot</h3>
 <p>Navigate to the <a href="https://api.slack.com/apps">Slack API console</a> and click the <strong>Create New App</strong> button.</p>
 <p>Choose to create your app <strong>From Scratch</strong>. Fill in the App Name and your Slack workspace, then click <strong>Create App</strong>.</p>
+<blockquote class="blockquote">
 <p><img src="https://user-images.githubusercontent.com/7220175/217332096-0e07f90c-a7a5-4b74-9602-0ff9706ca577.png" class="img-fluid"></p>
+</blockquote>
 </section>
 <section id="generate-an-oauth-token" class="level3">
 <h3 class="anchored" data-anchor-id="generate-an-oauth-token">2. Generate an OAuth token</h3>
 <p>From the sidebar, navigate to <strong>Features &gt; OAuth &amp; Permissions</strong>.</p>
 <p>Scroll down to the <strong>Scopes</strong> section. For <strong>Bot Token Scopes</strong>, add the following OAuth scopes:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>chat:write</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>chat:write.public</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>incoming<span class="op">-</span>webhook</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>chat:write</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>chat:write.public</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>incoming<span class="op">-</span>webhook</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<blockquote class="blockquote">
 <p><img src="https://user-images.githubusercontent.com/7220175/217333810-f02cc17a-cb5f-43a8-b4d5-49f3b735e383.png" class="img-fluid"></p>
+</blockquote>
 <p>Now, scroll back up to the <strong>OAuth Tokens for Your Workspace</strong> section and click <strong>Install to Workspace</strong>. Once that’s done, you will have generated your Bot User OAuth Token!</p>
 </section>
 <section id="give-token-to-ms-autoqc" class="level3">
 <h3 class="anchored" data-anchor-id="give-token-to-ms-autoqc">3. Give token to MS-AutoQC</h3>
 <p>In MS-AutoQC, navigate to <strong>Settings &gt; General</strong> and paste the token you generated in the Slack API client credentials field. Click <strong>Save bot token</strong>.</p>
 <p>Now, enter the name of the channel you’d like MS-AutoQC to post messages to. Once you’re done, toggle <strong>Enable notifications</strong> and you’re all set.</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/209615187-08b15542-3dd4-44b6-8094-e3b183f81d60.png" class="img-fluid"></p>
+<blockquote class="blockquote">
+<p><img src="https://user-images.githubusercontent.com/7220175/221497926-03688b21-685f-4bab-9764-c5796c27bf11.png" class="img-fluid"></p>
+</blockquote>
+</section>
+</section>
+<section id="setting-up-email-notifications" class="level2">
+<h2 class="anchored" data-anchor-id="setting-up-email-notifications">Setting up email notifications</h2>
+<p>To set up email notifications, you must first <a href="#setting-up-google-drive-sync">enable Google Drive sync</a>.</p>
+<p>Once that’s done, all you have to do is navigate to <strong>Settings &gt; General</strong> and register email addresses for notifications!</p>
+<blockquote class="blockquote">
+<p><img src="https://user-images.githubusercontent.com/7220175/221497523-1f829884-169f-41bc-8ba9-224f5b258fe2.png" class="img-fluid"></p>
+</blockquote>
 
 
 </section>

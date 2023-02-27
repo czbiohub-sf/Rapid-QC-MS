@@ -202,16 +202,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#important-note" id="toc-important-note" class="nav-link active" data-scroll-target="#important-note">Important note</a></li>
-  <li><a href="#new-instrument-setup" id="toc-new-instrument-setup" class="nav-link" data-scroll-target="#new-instrument-setup">New instrument setup</a>
-  <ul class="collapse">
-  <li><a href="#navigation" id="toc-navigation" class="nav-link" data-scroll-target="#navigation">Navigation</a></li>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
   <li><a href="#start-ms-autoqc" id="toc-start-ms-autoqc" class="nav-link" data-scroll-target="#start-ms-autoqc">1. Start MS-AutoQC</a></li>
-  <li><a href="#create-a-new-workspace" id="toc-create-a-new-workspace" class="nav-link" data-scroll-target="#create-a-new-workspace">2. Create a new workspace</a>
-  <ul class="collapse">
-  <li><a href="#optional-sync-with-google-drive" id="toc-optional-sync-with-google-drive" class="nav-link" data-scroll-target="#optional-sync-with-google-drive">Optional: Sync with Google Drive</a></li>
-  </ul></li>
-  <li><a href="#configure-internal-standards" id="toc-configure-internal-standards" class="nav-link" data-scroll-target="#configure-internal-standards">3. Configure internal standards</a>
+  <li><a href="#create-a-new-workspace" id="toc-create-a-new-workspace" class="nav-link" data-scroll-target="#create-a-new-workspace">2. Create a new workspace</a></li>
+  <li><a href="#configure-internal-standard-libraries" id="toc-configure-internal-standard-libraries" class="nav-link" data-scroll-target="#configure-internal-standard-libraries">3. Configure internal standard libraries</a>
   <ul class="collapse">
   <li><a href="#a.-add-a-chromatography-method" id="toc-a.-add-a-chromatography-method" class="nav-link" data-scroll-target="#a.-add-a-chromatography-method">3a. Add a chromatography method</a></li>
   <li><a href="#b.-select-the-chromatography-and-polarity-to-modify" id="toc-b.-select-the-chromatography-and-polarity-to-modify" class="nav-link" data-scroll-target="#b.-select-the-chromatography-and-polarity-to-modify">3b. Select the chromatography and polarity to modify</a></li>
@@ -220,11 +214,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   <li><a href="#configure-qc-parameters" id="toc-configure-qc-parameters" class="nav-link" data-scroll-target="#configure-qc-parameters">4. Configure QC parameters</a></li>
   <li><a href="#specify-ms-dial-location" id="toc-specify-ms-dial-location" class="nav-link" data-scroll-target="#specify-ms-dial-location">5. Specify MS-DIAL location</a></li>
   <li><a href="#setup-a-new-qc-job" id="toc-setup-a-new-qc-job" class="nav-link" data-scroll-target="#setup-a-new-qc-job">6. Setup a new QC job</a></li>
-  <li><a href="#optional-configure-biological-standards" id="toc-optional-configure-biological-standards" class="nav-link" data-scroll-target="#optional-configure-biological-standards">7. <em>Optional: Configure biological standards</em></a></li>
-  <li><a href="#optional-configure-ms-dial-processing-parameters" id="toc-optional-configure-ms-dial-processing-parameters" class="nav-link" data-scroll-target="#optional-configure-ms-dial-processing-parameters">8. <em>Optional: Configure MS-DIAL processing parameters</em></a></li>
-  <li><a href="#optional-configure-google-drive-sync" id="toc-optional-configure-google-drive-sync" class="nav-link" data-scroll-target="#optional-configure-google-drive-sync">9. <em>Optional: Configure Google Drive sync</em></a></li>
-  <li><a href="#optional-configure-slackemail-notifications" id="toc-optional-configure-slackemail-notifications" class="nav-link" data-scroll-target="#optional-configure-slackemail-notifications">10. <em>Optional: Configure Slack/email notifications</em></a></li>
-  </ul></li>
+  <li><a href="#next-steps" id="toc-next-steps" class="nav-link" data-scroll-target="#next-steps">Next steps</a></li>
   </ul>
 </nav>
     </div>
@@ -248,27 +238,20 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 </header>
 
-<p>In this section, you can learn how to set up and configure MS-AutoQC for your mass spectrometry instrument.</p>
-<section id="important-note" class="level1">
-<h1>Important note</h1>
-<p><strong>This section does NOT show you how to install MS-AutoQC!</strong></p>
-<p>If you haven’t already, please follow the steps in the <a href="./installation.html">installation guide</a> before you start configuring methods and parameters.</p>
-</section>
-<section id="new-instrument-setup" class="level1">
-<h1>New instrument setup</h1>
-<p>If you are setting up MS-AutoQC for the first time – or setting up MS-AutoQC on a new LC-MS instrument PC – please follow the steps in this section to properly configure your chromatography methods and AutoQC parameters.</p>
+<p>If you are setting up MS-AutoQC for the first time – or setting up MS-AutoQC on a new instrument PC – please follow the steps in this section to properly configure your chromatography methods and QC parameters.</p>
+<p><strong>Important note: This section does NOT show you how to install MS-AutoQC!</strong> If you haven’t already, please follow the steps in the <a href="./installation.html">installation guide</a> before you start configuring methods and parameters.</p>
+<section id="overview" class="level2">
+<h2 class="anchored" data-anchor-id="overview">Overview</h2>
 <p>This section will walk you through configuring the bare necessities to set up MS-AutoQC jobs for your instrument runs.</p>
-<p>When you’re ready, you can visit the <a href="./user-guide.html">User Guide</a> to configure additional settings such as Google Drive sync, Slack/email notifications, biological standards, and MS-DIAL processing parameters.</p>
-<section id="navigation" class="level2">
-<h2 class="anchored" data-anchor-id="navigation">Navigation</h2>
 <ol type="1">
-<li><a href="#1-start-ms-autoqc">Start MS-AutoQC</a></li>
-<li><a href="#2-create-a-new-workspace">Create a new workspace</a></li>
-<li><a href="#3-configure-internal-standards">Configure internal standards</a></li>
-<li><a href="#4-configure-autoqc-parameters">Configure AutoQC parameters</a></li>
-<li><a href="#5-specify-msdial-location">Specify MS-DIAL location</a></li>
-<li><a href="#6-setup-a-new-run">Setup a new run</a></li>
+<li><a href="#start-ms-autoqc">Start MS-AutoQC</a></li>
+<li><a href="#create-a-new-workspace">Create a new workspace</a></li>
+<li><a href="#configure-internal-standard-libraries">Configure internal standard libraries</a></li>
+<li><a href="#configure-qc-parameters">Configure QC parameters</a></li>
+<li><a href="#specify-ms-dial-location">Specify MS-DIAL location</a></li>
+<li><a href="#setup-a-new-qc-job">Set up a new QC job</a></li>
 </ol>
+<p>When you’re ready, you can visit the <a href="./user-guide.html">user guide</a> to configure additional settings such as Google Drive sync, Slack/email notifications, biological standards, and MS-DIAL processing parameters.</p>
 </section>
 <section id="start-ms-autoqc" class="level2">
 <h2 class="anchored" data-anchor-id="start-ms-autoqc">1. Start MS-AutoQC</h2>
@@ -278,33 +261,26 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="create-a-new-workspace" class="level2">
 <h2 class="anchored" data-anchor-id="create-a-new-workspace">2. Create a new workspace</h2>
 <p>If you followed the steps in the <a href="https://github.com/czbiohub/MS-AutoQC/wiki/Installation">installation guide</a> correctly, you will be greeted by the following welcome screen:</p>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="https://user-images.githubusercontent.com/7220175/201739007-859db808-0d4b-4f94-85f1-f7deaf632e1c.png" class="img-fluid figure-img"></p>
-<p></p><figcaption class="figure-caption">Welcome screen</figcaption><p></p>
-</figure>
-</div>
+<p><img src="https://user-images.githubusercontent.com/7220175/201739007-859db808-0d4b-4f94-85f1-f7deaf632e1c.png" class="img-fluid"></p>
 <p>Please select <strong>I’m setting up MS-AutoQC on a new instrument.</strong> Then, you will be prompted to give your instrument a unique name and select your instrument’s vendor.</p>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="https://user-images.githubusercontent.com/7220175/201740090-7b2c00f4-cec4-4f59-9f7a-da48d88b1344.png" class="img-fluid figure-img"></p>
-<p></p><figcaption class="figure-caption">I’m setting up MS-AutoQC on a new instrument</figcaption><p></p>
-</figure>
-</div>
-<section id="optional-sync-with-google-drive" class="level3">
-<h3 class="anchored" data-anchor-id="optional-sync-with-google-drive">Optional: Sync with Google Drive</h3>
-<p>TBD</p>
+<p><img src="https://user-images.githubusercontent.com/7220175/201740090-7b2c00f4-cec4-4f59-9f7a-da48d88b1344.png" class="img-fluid"></p>
+<blockquote class="blockquote">
+<h3 id="optional-sync-with-google-drive" class="anchored">Optional: Sync with Google Drive</h3>
+<p>If you opt to set up Google Drive sync, you’ll be able to share your workspace with your team and access QC results from any device.</p>
+<p><strong>This step is optional and NOT required.</strong> If you decide you want to set up sync later, you can do so via <strong>Settings &gt; General.</strong> If you’d like to set it up now, do the following:</p>
+<ol type="1">
+<li><a href="./user-guide.html#setting-up-google-drive-sync">Generate your client credentials</a> using the Google API Console</li>
+<li>Provide MS-AutoQC with your client ID and client secret</li>
+<li>Click “Sign in to Google Drive” and authenticate with your Google account</li>
+<li>Close the tab that says “The authentication flow has completed” and you’re all set.</li>
+</ol>
+<p><img src="https://user-images.githubusercontent.com/7220175/221443376-a563c6b7-9608-4d2f-86a2-281e9c41ddc1.png" class="img-fluid"></p>
+</blockquote>
 <p>Once you’re done, click <strong>Complete setup</strong> to create your workspace. After your workspace loads, it should look something like this:</p>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="https://user-images.githubusercontent.com/7220175/201771245-963d25d3-4d28-43ca-9276-9e9992372066.png" class="img-fluid figure-img"></p>
-<p></p><figcaption class="figure-caption">Blank workspace</figcaption><p></p>
-</figure>
-</div>
+<p><img src="https://user-images.githubusercontent.com/7220175/201771245-963d25d3-4d28-43ca-9276-9e9992372066.png" class="img-fluid"></p>
 </section>
-</section>
-<section id="configure-internal-standards" class="level2">
-<h2 class="anchored" data-anchor-id="configure-internal-standards">3. Configure internal standards</h2>
+<section id="configure-internal-standard-libraries" class="level2">
+<h2 class="anchored" data-anchor-id="configure-internal-standard-libraries">3. Configure internal standard libraries</h2>
 <p>Now that the workspace has been created, you’re ready to start configuring your chromatography methods and corresponding internal standards. The workflow for adding internal standards is simple:</p>
 <ol type="a">
 <li>Add a chromatography method</li>
@@ -314,17 +290,19 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </ol>
 <section id="a.-add-a-chromatography-method" class="level3">
 <h3 class="anchored" data-anchor-id="a.-add-a-chromatography-method">3a. Add a chromatography method</h3>
-<p>Navigate to <strong>Settings (in the top right corner) &gt; Internal Standards.</strong> Once you’re there, it should look something like this:</p>
+<p>Navigate to <strong>Settings (in the top right corner) &gt; Chromatography Methods.</strong> Once you’re there, it should look something like this:</p>
 <p><img src="https://user-images.githubusercontent.com/7220175/201776872-a2ea8bf7-fac9-453a-a7a2-f0dcf2596e5a.png" class="img-fluid"></p>
 <p>In the <strong>Manage chromatography methods</strong> section at the top, add a new chromatography method by giving it a name and clicking <strong>Add method</strong>.</p>
 <p><img src="https://user-images.githubusercontent.com/7220175/201778888-2d17d60c-618e-4182-a96a-9eb13d231326.png" class="img-fluid"></p>
-<p>If successful, you should see your new method in the <strong>Chromatography methods</strong> table.</p>
+<p>If successful, you should see your new method in the <strong>Chromatography Methods</strong> table.</p>
 </section>
 <section id="b.-select-the-chromatography-and-polarity-to-modify" class="level3">
 <h3 class="anchored" data-anchor-id="b.-select-the-chromatography-and-polarity-to-modify">3b. Select the chromatography and polarity to modify</h3>
 <p>Internal standards must be configured for both positive and negative mode for each chromatography method.</p>
 <p>Let’s start by selecting the chromatography method you created, and then selecting <strong>Positive Mode</strong> for the polarity.</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/201782171-c7090fa6-3123-4a7c-adee-0252ce1a3c99.png" class="img-fluid"></p>
+<blockquote class="blockquote">
+<p><img src="https://user-images.githubusercontent.com/7220175/221443668-df68b7f2-ce14-4325-9203-2de7197953e7.png" class="img-fluid"></p>
+</blockquote>
 </section>
 <section id="c.-add-an-internal-standard-library" class="level3">
 <h3 class="anchored" data-anchor-id="c.-add-an-internal-standard-library">3c. Add an internal standard library</h3>
@@ -399,35 +377,45 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="fl">185.09656</span>   <span class="dv">4996</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Click the <strong>Browse Files</strong> button to browse for your MSP or CSV file, then click the <strong>Add MSP to <chromatography> Positive Mode</chromatography></strong> button.</p>
 <p><img src="https://user-images.githubusercontent.com/7220175/201782255-797d9dcf-23fe-45c1-a9ab-bdd090387494.png" class="img-fluid"></p>
-<p>That’s it! Now, you can select Negative Mode from the polarity dropdown and add your negative mode internal standards. Once you’re done, your screen should look something like this:</p>
+<p>After a few seconds, your screen should look something like this.</p>
 <p><img src="https://user-images.githubusercontent.com/7220175/201782345-11c3608d-ce21-4461-971b-0f082b41676a.png" class="img-fluid"></p>
+<p>You can confirm that the library was successfully added by scrolling up to the Chromatography Methods table and seeing the updated number of Pos (+) Standards.</p>
+<p>That’s it! Now, you can select Negative Mode from the polarity dropdown and add your negative mode internal standards.</p>
 </section>
 </section>
 <section id="configure-qc-parameters" class="level2">
 <h2 class="anchored" data-anchor-id="configure-qc-parameters">4. Configure QC parameters</h2>
-<p>Once you have configured your chromatography methods, you can then navigate to <strong>Settings &gt; QC Configurations</strong> to define your QC criteria.</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/201806318-e2ca414a-9940-421c-803c-d7112c1fb1d4.png" class="img-fluid"></p>
+<p>Once you have configured your chromatography methods, you can then navigate to <strong>Settings &gt; QC Configurations</strong> to define your QC criteria. Briefly, these are:</p>
+<ol type="1">
+<li><strong>Intensity dropouts cutoff:</strong> the minimum number of missing internal standards in a sample to constitute a QC fail</li>
+<li><strong>RT shift from library value cutoff:</strong> the minimum retention time shift from the expected library value to constitute a QC fail</li>
+<li><strong>RT shift from in-run average cutoff:</strong> the minimum retention time shift from the average RT during the course of the run to constitute a QC fail</li>
+<li><strong>m/z shift from library value cutoff:</strong> the minimum m/z shift from the expected library value to constitute a QC fail</li>
+</ol>
+<p><img src="https://user-images.githubusercontent.com/7220175/221378930-c5474cd6-544d-4ef7-97f0-836b554f1211.png" class="img-fluid"></p>
 <p>MS-AutoQC stores individual parameters in configurations, so that you can configure a specific configuration to fit each chromatography method.</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/201807660-b260a6db-5b01-4f78-80fb-7c7710e987b5.png" class="img-fluid"></p>
+<blockquote class="blockquote">
+<p><img src="https://user-images.githubusercontent.com/7220175/209615183-383f3c9b-2d45-49f8-bfde-6f021dc3456e.png" class="img-fluid"></p>
+</blockquote>
 <p>You can specify these parameters however you’d like, and enable / disable them as needed. To revert a configuration back to the default recommended settings, simply click the <strong>Reset default settings</strong> button.</p>
 <p>Once you’re done, don’t forget to click <strong>Save changes</strong>!</p>
 </section>
 <section id="specify-ms-dial-location" class="level2">
 <h2 class="anchored" data-anchor-id="specify-ms-dial-location">5. Specify MS-DIAL location</h2>
-<p>The last thing to do is to specify the location of your MS-DIAL v4 download.</p>
-<p>To do this, navigate to <strong>Settings &gt; MS-DIAL Configurations</strong> and browse (or enter) the folder path into the <strong>MS-DIAL download location</strong> field.</p>
-<p>For example, if the downloaded MS-DIAL files are located in <code>C:\Users\eliaslab\Documents\MSDIAL</code>, then enter this into the text field and click <strong>Save Changes</strong>.</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/201808621-84f8ae3c-3aa8-4619-b1b5-54826c64a918.png" class="img-fluid"></p>
+<p>The last thing to do is to specify the location of your MS-DIAL download.</p>
+<p>To do this, navigate to <strong>Settings &gt; MS-DIAL Configurations</strong>. Then browse (or enter) the folder path containing your MS-DIAL files into the <strong>MS-DIAL download location</strong> text field.</p>
+<p>When you’re done, click <strong>Save Changes</strong>.</p>
+<p><img src="https://user-images.githubusercontent.com/7220175/221443980-1f441179-6bd9-43a5-8ad2-375f176960b5.png" class="img-fluid"></p>
+<p>Be careful not to enter a folder <em>containing</em> the MS-DIAL folder! The MS-DIAL folder you provide should contain an application called <code>MsdialConsoleApp.exe</code> (among many other files).</p>
 </section>
 <section id="setup-a-new-qc-job" class="level2">
 <h2 class="anchored" data-anchor-id="setup-a-new-qc-job">6. Setup a new QC job</h2>
-<p>Setting up a new QC job was designed to be as fast and easy as possible. To get MS-AutoQC monitoring an active instrument run (or QC’ing a completed batch), the user simply needs to enter a few fields of information:</p>
+<p>Setting up a new QC job was designed to be as fast and easy as possible. To get MS-AutoQC monitoring an active instrument run (or processing a completed batch), the user simply needs to enter a few fields of information:</p>
 <ol type="1">
-<li>Run ID</li>
+<li>Instrument run ID (the name of the job)</li>
 <li>Chromatography method</li>
-<li><em>Optional: Biological standard(s)</em></li>
+<li>Preferred QC configuration</li>
 <li>Acquisition sequence file</li>
-<li><em>Optional: sample metadata</em></li>
 <li>Data acquisition path</li>
 </ol>
 <p><img src="https://user-images.githubusercontent.com/7220175/201810821-5c17d974-6e58-4e34-97cd-473dd6890fb5.png" class="img-fluid"></p>
@@ -441,21 +429,25 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </ol>
 <p>Once it has validated these fields, the blue button will become enabled and you’re all set to begin.</p>
 <p><img src="https://user-images.githubusercontent.com/7220175/201812308-743bbf4b-339c-4af2-a2c1-754730292107.png" class="img-fluid"></p>
+<p>That’s it! MS-AutoQC will take it from here.</p>
+<p><img src="https://user-images.githubusercontent.com/7220175/221376479-4b12af91-d448-4760-af63-57339506b94c.gif" class="img-fluid"></p>
 </section>
-<section id="optional-configure-biological-standards" class="level2">
-<h2 class="anchored" data-anchor-id="optional-configure-biological-standards">7. <em>Optional: Configure biological standards</em></h2>
-</section>
-<section id="optional-configure-ms-dial-processing-parameters" class="level2">
-<h2 class="anchored" data-anchor-id="optional-configure-ms-dial-processing-parameters">8. <em>Optional: Configure MS-DIAL processing parameters</em></h2>
-</section>
-<section id="optional-configure-google-drive-sync" class="level2">
-<h2 class="anchored" data-anchor-id="optional-configure-google-drive-sync">9. <em>Optional: Configure Google Drive sync</em></h2>
-</section>
-<section id="optional-configure-slackemail-notifications" class="level2">
-<h2 class="anchored" data-anchor-id="optional-configure-slackemail-notifications">10. <em>Optional: Configure Slack/email notifications</em></h2>
+<section id="next-steps" class="level2">
+<h2 class="anchored" data-anchor-id="next-steps">Next steps</h2>
+<p>Once you feel comfortable configuring the bare necessities for MS-AutoQC, you can read the following sections in the <a href="./user-guide.html">user guide</a> to customize your workspace for maximum efficiency:</p>
+<ul>
+<li><a href="./user-guide.html#incorporating-metadata-for-samples">Incorporate sample metadata</a></li>
+<li><a href="./user-guide.html#setting-up-biological-standards">Set up biological standards</a></li>
+<li><a href="./user-guide.html#configuring-ms-dial-processing-parameters">Configure MS-DIAL processing parameters</a></li>
+<li><a href="./user-guide.html#setting-up-google-drive-sync">Enable Google Drive sync</a></li>
+<li><a href="./user-guide.html#adding-instruments-to-workspace">Add instruments to workspace</a> (sync required)</li>
+<li><a href="./user-guide.html#granting--revoking-workspace-access">Grant / revoke workspace access</a> (sync required)</li>
+<li><a href="./user-guide.html#signing-in-to-workspace-from-external-devices">Sign in to workspace from external devices</a> (sync required)</li>
+<li><a href="./user-guide.html#setting-up-email-notifications">Register for email notifications</a> (sync required)</li>
+<li><a href="./user-guide.html#setting-up-slack-notifications">Register for Slack notifications</a></li>
+</ul>
 
 
-</section>
 </section>
 
 </main> <!-- /main -->

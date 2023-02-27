@@ -253,7 +253,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>While, to our knowledge, installation of the following software packages on data acquisition computers comes <em>at no risk</em>, it is possible for a wary user to install MS-AutoQC on a separate computer.</p>
 <p>Because MS-AutoQC only needs access to the data acquisition path (i.e.&nbsp;the folder where your MS data is being collected), you can install all of the packages on a different computer. The only requirement is that <strong>the instrument computer must be mounted as a network drive on the MS-AutoQC installation computer.</strong></p>
 <p>If you don’t have any experience with mapping a network drive in Windows, consult your IT department or check out <a href="https://support.microsoft.com/en-us/windows/map-a-network-drive-in-windows-29ce55d1-34e3-a7e2-4801-131475f9557d#ID0EBD=Windows_10">this tutorial on Microsoft Support</a>.</p>
-<p>We have not tested this functionality ourselves. If you plan to test this out, please <a href="https://github.com/czbiohub/MS-AutoQC/discussions">let us know how it goes</a>!</p>
+<p><strong><em>We have not tested this functionality ourselves.</em></strong> If you plan to test this out, please <a href="https://github.com/czbiohub/MS-AutoQC/discussions">let us know how it goes</a>!</p>
 </section>
 <section id="install-python" class="level1">
 <h1>1. Install Python</h1>
@@ -270,14 +270,14 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </section>
 <section id="option-2-install-manually" class="level2">
 <h2 class="anchored" data-anchor-id="option-2-install-manually">Option 2: Install manually</h2>
-<p>If you prefer not to use pip –&nbsp;or, if your LC-MS instrument computer does not have an internet connection – you can manually download and install MS-AutoQC by following the steps below.</p>
+<p>If you prefer not to use Python’s package manager – or if your LC-MS instrument computer does not have an internet connection – you can manually download and install MS-AutoQC by following the steps below.</p>
 <ol type="1">
 <li>Download <a href="https://github.com/czbiohub/MS-AutoQC/releases">MS-AutoQC v1.0.0</a> from GitHub.</li>
 <li>Extract the ZIP file to a folder of your choice.</li>
 <li>Open a terminal window and enter:</li>
 </ol>
-<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>cd <span class="op">&lt;</span>path<span class="op">-</span>to<span class="op">-</span>folder<span class="op">&gt;</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>py <span class="op">-</span>m pip install .</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>cd <span class="op">&lt;</span>path<span class="op">-</span>to<span class="op">-</span>folder<span class="op">&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>py <span class="op">-</span>m pip install .</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>That’s it! MS-AutoQC and its dependencies will be installed automatically.</p>
 </section>
 <section id="option-3-install-in-a-virtual-environment" class="level2">
@@ -285,17 +285,17 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>If you would like to protect the integrity of other Python packages or versions installed on your instrument computer, you can opt to install MS-AutoQC in a virtual environment.</p>
 <p><a href="https://docs.python.org/3/library/venv.html#how-venvs-work">Click here</a> to learn how virtual environments work.</p>
 <p>Choose a folder that you would like to store the virtual environment in – denoted by <code>&lt;path-to-venv-folder</code> below – and then enter the following commands in a terminal window:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>py <span class="op">-</span>m venv <span class="op">&lt;</span>path<span class="op">-</span>to<span class="op">-</span>venv<span class="op">-</span>folder<span class="op">&gt;</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>path<span class="op">-</span>to<span class="op">-</span>venv<span class="op">-</span>folder<span class="op">&gt;</span>\Scripts\activate</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>py <span class="op">-</span>m pip install ms<span class="op">-</span>autoqc</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>py <span class="op">-</span>m venv <span class="op">&lt;</span>path<span class="op">-</span>to<span class="op">-</span>venv<span class="op">-</span>folder<span class="op">&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>path<span class="op">-</span>to<span class="op">-</span>venv<span class="op">-</span>folder<span class="op">&gt;</span>\Scripts\activate</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>py <span class="op">-</span>m pip install ms<span class="op">-</span>autoqc</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>That’s it! MS-AutoQC and its dependencies will be installed in your virtual environment.</p>
 <p><strong>Note:</strong> Every time you launch MS-AutoQC, you will need to activate your virtual environment first. To do this, just type:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>path<span class="op">-</span>to<span class="op">-</span>venv<span class="op">-</span>folder<span class="op">&gt;</span>\Scripts\activate</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>path<span class="op">-</span>to<span class="op">-</span>venv<span class="op">-</span>folder<span class="op">&gt;</span>\Scripts\activate</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="start-ms-autoqc" class="level2">
 <h2 class="anchored" data-anchor-id="start-ms-autoqc">Start MS-AutoQC</h2>
 <p>To launch MS-AutoQC, simply open a terminal window and type:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>ms_autoqc</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>ms_autoqc</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>If you see the screen below, then MS-AutoQC was installed properly!</p>
 <p><img src="https://user-images.githubusercontent.com/7220175/200963700-16445386-73a6-4a03-bd35-b19593351ed4.png" class="img-fluid"></p>
 <p>If you run into any problems with installing or opening the app, please visit the <a href="./faq.html#installation">FAQ</a> on installing MS-AutoQC.</p>
@@ -309,10 +309,12 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="download-ms-dial" class="level1">
 <h1>3. Download MS-DIAL</h1>
 <p>You can <a href="http://prime.psc.riken.jp/compms/msdial/main.html">download the latest version of MS-DIAL 4</a> (which is v4.9.2 at the time of this writing). Once the download has completed, extract the ZIP file into a directory of your choice.</p>
+<p><strong>Remember this directory path! You will need to provide it to MS-AutoQC later.</strong></p>
 </section>
 <section id="install-.net-framework" class="level1">
 <h1>4. Install .NET Framework</h1>
 <p>Versions 4.7.2 (or newer) of the .NET Framework is required to install MSConvert. You <a href="https://dotnet.microsoft.com/en-us/download/dotnet-framework/thank-you/net472-web-installer">download and install the .NET Framework</a> from the official Microsoft website.</p>
+<p>Once the installation is complete, don’t forget to restart your computer if needed.</p>
 </section>
 <section id="install-msconvert" class="level1">
 <h1>5. Install MSConvert</h1>
@@ -320,7 +322,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </section>
 <section id="celebrate" class="level1">
 <h1>6. Celebrate!</h1>
-<p>If you’ve reached this point, you’re one giant step closer to using MS-AutoQC for your LC-MS instrument runs! When you’re ready, please visit the <a href="./quickstart.html">Quickstart guide</a> to learn how to configure and use your MS-AutoQC workspace.</p>
+<p>That’s it! If you’ve reached this point, you’re one giant step closer to using MS-AutoQC for your LC-MS instrument runs.</p>
+<p>When you’re ready, visit the <a href="./quickstart.html">quickstart guide</a> to learn how to configure your MS-AutoQC workspace and set up your first QC job.</p>
 
 
 </section>

@@ -223,7 +223,6 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   <li><a href="#the-user-is-notified-of-qc-fails-and-warnings" id="toc-the-user-is-notified-of-qc-fails-and-warnings" class="nav-link" data-scroll-target="#the-user-is-notified-of-qc-fails-and-warnings">7. The user is notified of QC fails and warnings</a></li>
   <li><a href="#the-dashboard-is-refreshed-with-qc-results" id="toc-the-dashboard-is-refreshed-with-qc-results" class="nav-link" data-scroll-target="#the-dashboard-is-refreshed-with-qc-results">8. The dashboard is refreshed with QC results</a></li>
   </ul></li>
-  <li><a href="#google-drive-sync" id="toc-google-drive-sync" class="nav-link" data-scroll-target="#google-drive-sync">Google Drive sync</a></li>
   </ul>
 </nav>
     </div>
@@ -647,10 +646,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <p>This DataFrame is passed to the <code>qc_sample()</code> function, which performs user-enabled QC checks based on user-defined criteria in Settings &gt; QC Configurations. For MS-AutoQC v1.0, there are four checks performed:</p>
 <ol type="1">
-<li><strong>Intensity dropouts cutoff:</strong> how many internal standards are missing in the sample?</li>
-<li><strong>RT shift from library value cutoff:</strong> how many retention times are shifted from the expected value for the chromatography method?</li>
-<li><strong>RT shift from in-run average cutoff:</strong> how many retention times are shifted from their average RT during the run?</li>
-<li><strong>m/z shift from library value cutoff:</strong> how many precursor masses are shifted from the expected value for the internal standard?</li>
+<li><strong>Intensity dropouts cutoff:</strong> the minimum number of missing internal standards in a sample to constitute a QC fail</li>
+<li><strong>RT shift from library value cutoff:</strong> the minimum retention time shift from the expected library value to constitute a QC fail</li>
+<li><strong>RT shift from in-run average cutoff:</strong> the minimum retention time shift from the average RT during the course of the run to constitute a QC fail</li>
+<li><strong>m/z shift from library value cutoff:</strong> the minimum m/z shift from the expected library value to constitute a QC fail</li>
 </ol>
 <p>The <code>qc_sample()</code> function returns two objects: the QC result (pass, warning, or fail), and a DataFrame containing QC results, or the results of the four checks detailed above.</p>
 <p>Note: This function is long, comprehensive, and subject to change. If you’re interested in the implementation, you can check it out in <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py">AutoQCProcessing.py</a> on GitHub.</p>
@@ -800,12 +799,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def%20get_completed_samples_count"><code>get_completed_samples_count()</code></a></li>
 <li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DashWebApp.py#:~:text=def%20load_data"><code>load_data()</code></a></li>
 </ul>
-</section>
-</section>
-<section id="google-drive-sync" class="level1">
-<h1>Google Drive sync</h1>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->
