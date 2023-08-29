@@ -60,12 +60,12 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
             6. df_mz_neg: Precursor masses for internal standards in negative mode
             7. df_sequence: Acquisition sequence table
             8. df_metadata: Sample metadata table
-            9. df_bio_rt_pos: Retention times for targeted features in biological standard sample in positive mode
-            10. df_bio_rt_neg: Retention times for targeted features in biological standard sample in negative mode
-            11. df_bio_intensity_pos: Intensities for targeted features in biological standard sample in positive mode
-            12. df_bio_intensity_neg: Intensities for targeted features in biological standard sample in negative mode
-            13. df_bio_mz_pos: Precursor masses for targeted features in biological standard sample in positive mode
-            14. df_bio_mz_neg: Precursor masses for targeted features in biological standard sample in negative mode
+            9. df_bio_rt_pos (dict): Retention times for targeted features in biological standard sample in positive mode
+            10. df_bio_rt_neg (dict): Retention times for targeted features in biological standard sample in negative mode
+            11. df_bio_intensity_pos (dict): Intensities for targeted features in biological standard sample in positive mode
+            12. df_bio_intensity_neg (dict): Intensities for targeted features in biological standard sample in negative mode
+            13. df_bio_mz_pos (dict): Precursor masses for targeted features in biological standard sample in positive mode
+            14. df_bio_mz_neg (dict): Precursor masses for targeted features in biological standard sample in negative mode
             15. resources: Metadata for instrument run
             16. df_samples: Table containing sample names, polarities, autosampler positions, and QC results
             17. pos_internal_standards: List of positive mode internal standards
