@@ -2579,26 +2579,6 @@ def apply_sample_filter_to_plots(filter, polarity, samples, metadata):
     3. Filter by treatments / classes
     4. Filter by pools
     5. Filter by blanks
-
-    DEBUG:DashWebApp:{
-        'filter': 'samples', 
-        'polarity': 'Pos', 
-        'samples': '[
-            {"Sample":"VIAH002H_Urine_1_Pos_QE2_HILIC_003","Position":"R:F9","QC":"Pass","Polarity":"Pos"},
-            {"Sample":"VIAH002H_Urine_1_Neg_QE2_HILIC_004","Position":"R:F9","QC":"Pass","Polarity":"Neg"},
-            {"Sample":"VIAH002H_Fake_Pos_M5_QE2_HILIC_014","Position":"G:B5","QC":"Pass","Polarity":"Pos"},
-            {"Sample":"VIAH002H_Fake_Neg_M5_QE2_HILIC_015","Position":"G:B5","QC":"Pass","Polarity":"Neg"},
-            {"Sample":"VIAH002H_BK_1_Pos_QE2_HILIC_006","Position":"R:A1","QC":"Fail","Polarity":"Pos"},
-            {"Sample":"VIAH002H_BK_1_Neg_QE2_HILIC_007","Position":"R:A1","QC":"Fail","Polarity":"Neg"},
-            {"Sample":"VIAH002H_Pos_M1_QE2_HILIC_008","Position":"G:B1","QC":"Fail","Polarity":"Pos"},
-            {"Sample":"VIAH002H_Neg_M1_QE2_HILIC_009","Position":"G:B1","QC":"Fail","Polarity":"Neg"},
-            {"Sample":"VIAH002H_Pos_M2_QE2_HILIC_010","Position":"G:B2","QC":"Fail","Polarity":"Pos"},
-            {"Sample":"VIAH002H_Neg_M2_QE2_HILIC_011","Position":"G:B2","QC":"Fail","Polarity":"Neg"},
-            {"Sample":"VIAH002H_Pos_Inf5_QE2_HILIC_012","Position":"G:A5","QC":"Fail","Polarity":"Pos"},
-            {"Sample":"VIAH002H_Neg_Inf5_QE2_HILIC_013","Position":"G:A5","QC":"Fail","Polarity":"Neg"}
-        ]', 
-        'metadata': None}
-
     
     """
     log.debug("apply_sample_filter_to_plots locals()")
@@ -2899,16 +2879,13 @@ def populate_biological_standards_dropdown(resources):
     """
     Retrieves list of biological standards included in run
     """
-    log.debug("populate_biological_standards_dropdown: ")
-    log.debug(locals())
-    #log.debug(ast.literal_eval(json.loads(resources))["biological_standards"])
-
-    identifiers = db.get_biological_standard_identifiers()
-    log.debug("identifiers type")
-    bio_stnd_list = list(identifiers.values())
-    log.debug(bio_stnd_list)
-
-    return bio_stnd_list, bio_stnd_list[0]
+    if resources is not None:
+        #returns a list even if there is only one value
+        biostnds = json.loads(resources)["biological_standards"]
+        return biostnds, biostnds[0]
+    else:
+        biostnds = [""]
+        return biostnds, biostnds[0]
 
 
 @app.callback(Output("bio-standard-mz-rt-plot", "figure"),
@@ -2933,19 +2910,7 @@ def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, in
     """
     log.debug("populate_bio_standard_mz_rt_plot input variables: ")
     log.debug(locals())
-    """
-    DEBUG:DashWebApp:{
-        'polarity': 'Pos', 
-        'rt_pos': None, 
-        'rt_neg': None, 
-        'intensity_pos': None, 
-        'intensity_neg': None, 
-        'mz_pos': None, 
-        'mz_neg': None, 
-        'resources': None, 
-        'click_data': None, 
-        'selected_bio_standard': ['Urine', 'Fake']}
-    """
+
     if rt_pos is None and rt_neg is None:
         if mz_pos is None and mz_neg is None:
             return {}, None, None, {"display": "none"}
