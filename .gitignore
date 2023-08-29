@@ -151,3 +151,4 @@ src/ms_autoqc/data/methods/
 src/ms_autoqc/data/
 src/ms_autoqc/auth/
 dist/
+src/ms_autoqc/.vscode/settings.json

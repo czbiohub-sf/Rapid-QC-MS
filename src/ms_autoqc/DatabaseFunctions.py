@@ -16,6 +16,12 @@ import google.auth as google_auth
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+import logging
+
+# setup logging
+log = logging.getLogger('DatabaseFunctions')
+log.debug("Test log.debug from DatabaseFunctions")
+
 # Set ms_autoqc/src as the working directory
 src_folder = os.path.dirname(os.path.realpath(__file__))
 os.chdir(src_folder)
@@ -23,6 +29,7 @@ os.chdir(src_folder)
 # Initialize directories
 root_directory = os.getcwd()
 data_directory = os.path.join(root_directory, "data")
+print("data_directory: " + data_directory)
 methods_directory = os.path.join(data_directory, "methods")
 auth_directory = os.path.join(root_directory, "auth")
 
@@ -128,6 +135,7 @@ def create_databases(instrument_id, new_instrument=False):
 
     # Create tables for instrument database
     instrument_database = get_database_file(instrument_id=instrument_id, sqlite_conn=True)
+    print("instrument_database: " + instrument_database)
     qc_db_engine = sa.create_engine(instrument_database)
     qc_db_metadata = sa.MetaData()
 
@@ -3162,6 +3170,8 @@ def parse_biological_standard_data(instrument_id, run_id, result_type, polarity,
     Returns:
         JSON-ified DataFrame of targeted features for a biological standard (columns) vs. instrument runs (rows).
     """
+    log.debug("parse_biological_standard_data input variables")
+    log.debug(locals())
 
     # Get relevant QC results table from database
     if load_from == "database":
@@ -3192,6 +3202,8 @@ def parse_biological_standard_data(instrument_id, run_id, result_type, polarity,
     df_results = pd.DataFrame(results)
     df_results["Name"] = run_ids
 
+    log.debug("parse_biological_standard_data -> df_results:")
+    log.debug(df_results.head())
     # Return DataFrame as JSON string
     if as_json:
         return df_results.to_json(orient="records")
@@ -3387,6 +3399,8 @@ def get_qc_results(instrument_id, sample_list, is_bio_standard=False):
     Returns:
         DataFrame of QC results for a given sample list.
     """
+    log.debug("get_qc_results input variables")
+    log.debug(locals())
 
     if len(sample_list) == 0:
         return pd.DataFrame()
@@ -3395,12 +3409,17 @@ def get_qc_results(instrument_id, sample_list, is_bio_standard=False):
     engine = sa.create_engine(database)
 
     sample_list = str(sample_list).replace("[", "(").replace("]", ")")
-
+    
+    log.debug("sample_list: " + sample_list)
     if is_bio_standard:
         query = "SELECT sample_id, qc_result FROM bio_qc_results WHERE sample_id in " + sample_list
+        log.debug("biostandard database query is: " + query)
     else:
         query = "SELECT sample_id, qc_result FROM sample_qc_results WHERE sample_id in " + sample_list
-
+        log.debug("sample database query is: " + query)
+        
+    log.debug("get_qc_results returns pd.read_sql(query, engine), which looks like:")
+    log.debug(pd.read_sql(query, engine))
     return pd.read_sql(query, engine)
 
 

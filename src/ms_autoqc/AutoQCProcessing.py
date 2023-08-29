@@ -6,6 +6,15 @@ import pandas as pd
 import numpy as np
 import ms_autoqc.DatabaseFunctions as db
 import ms_autoqc.SlackNotifications as slack_bot
+import logging, datetime
+
+
+logfile = "{}".format(datetime.datetime.now().isoformat().split('.')[0] + r" autoqc.log")
+
+logging.basicConfig(filename="autoqc.log", filemode='a', level=logging.DEBUG)
+
+log = logging.getLogger('autoqc')
+log.debug("Test log.debug")
 
 pd.options.mode.chained_assignment = None
 
@@ -468,6 +477,12 @@ def peak_list_to_dataframe(sample_peak_list, df_features):
 
 
 def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio_standard):
+    log.debug("instrument_id:" + str(instrument_id))
+    log.debug("run_id:" + str(run_id))
+    log.debug("polarity:" + str(polarity))
+    log.debug("df_peak_list:" + str(df_peak_list))
+    log.debug("df_features:" + str(df_features))
+    log.debug("is_bio_standard:" + str(is_bio_standard))
 
     """
     Performs quality control on sample data based on user-defined criteria in Settings > QC Configurations.
@@ -524,7 +539,7 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
     Returns:
         (DataFrame, str): Tuple containing QC results table and QC result (either "Pass", "Fail", or "Warning").
     """
-
+    log.debug("Entered: " + qc_sample.__name__)
     # Handles sample QC checks
     if not is_bio_standard:
 
@@ -716,7 +731,7 @@ def convert_to_dict(sample_id, df_peak_list, qc_dataframe):
         (str, str, str, str): Tuple containing dictionary records of m/z, RT, intensity, and
         QC data, respectively, cast as strings for database storage.
     """
-
+    log.debug("Entered: " + convert_to_dict.__name__)
     # m/z, RT, intensity
     df_mz = df_peak_list[["Name", "Precursor m/z"]]
     df_rt = df_peak_list[["Name", "RT (min)"]]
@@ -760,6 +775,7 @@ def convert_to_dict(sample_id, df_peak_list, qc_dataframe):
 
 def process_data_file(path, filename, extension, instrument_id, run_id):
 
+
     """
     Processes data file upon sample acquisition completion.
 
@@ -789,7 +805,7 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
     Returns:
         None
     """
-
+    log.debug("Entered: " + process_data_file.__name__)
     id = instrument_id.replace(" ", "_") + "_" + run_id
 
     # Create the necessary directories
@@ -810,13 +826,17 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
 
     df_samples = db.get_samples_in_run(instrument_id, run_id, sample_type="Sample")
     df_biological_standards = db.get_samples_in_run(instrument_id, run_id, sample_type="Biological Standard")
-
+    log.debug("df_biological_standards: ", df_biological_standards)
+    
+    log.debug("filename: " + str(filename))
     # Retrieve MS-DIAL parameters, internal standards, and targeted features from database
     if filename in df_biological_standards["sample_id"].astype(str).tolist():
+        log.debug("process_data_file (biostnd): " + filename)
 
         # Get biological standard type
         biological_standard = df_biological_standards.loc[
             df_biological_standards["sample_id"] == filename]
+        log.debug("after 1st bio_standard assign: " + str(biological_standard))
 
         # Get polarity
         try:
@@ -827,9 +847,11 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
             polarity = "Pos"
 
         biological_standard = biological_standard["biological_standard"].astype(str).values[0]
+        log.debug("after 2nd bio_standard assign: " + str(biological_standard))
 
         # Get parameters and features for that biological standard type
         msdial_parameters = db.get_parameter_file_path(chromatography, polarity, biological_standard)
+        log.debug("df_features input. Biological_standard: " + biological_standard + ". Chromatography: " + chromatography + ". polarity: " + polarity)
         df_features = db.get_targeted_features(biological_standard, chromatography, polarity)
         is_bio_standard = True
 
@@ -963,7 +985,6 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
 
 
 def subprocess_is_running(pid):
-
     """
     Returns True if subprocess is still running, and False if not.
 
@@ -973,7 +994,7 @@ def subprocess_is_running(pid):
     Returns:
         bool: True if subprocess is still running, False if not
     """
-
+    log.debug("Entered: " + subprocess_is_running.__name__)
     if pid is None:
         return False
 
@@ -999,7 +1020,7 @@ def kill_subprocess(pid):
     Returns:
         None
     """
-
+    log.debug("Entered: " + kill_subprocess.__name__)
     try:
         return psutil.Process(pid).kill()
     except Exception as error:
