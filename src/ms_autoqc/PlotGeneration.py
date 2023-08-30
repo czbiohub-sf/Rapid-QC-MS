@@ -7,7 +7,7 @@ import ms_autoqc.DatabaseFunctions as db
 import logging
 
 # setup logging
-log = logging.getLogger('PlotGeneration')
+log = logging.getLogger(__name__)
 log.debug("Test log.debug from PlotGeneration")
 
 # Bootstrap color dictionary

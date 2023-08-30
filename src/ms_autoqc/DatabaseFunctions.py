@@ -19,7 +19,7 @@ from googleapiclient.errors import HttpError
 import logging
 
 # setup logging
-log = logging.getLogger('DatabaseFunctions')
+log = logging.getLogger(__name__)
 log.debug("Test log.debug from DatabaseFunctions")
 
 # Set ms_autoqc/src as the working directory

@@ -6,14 +6,13 @@ import pandas as pd
 import numpy as np
 import ms_autoqc.DatabaseFunctions as db
 import ms_autoqc.SlackNotifications as slack_bot
-import logging, datetime
+import logging
 
 
-logfile = "{}".format(datetime.datetime.now().isoformat().split('.')[0] + r" autoqc.log")
 
-logging.basicConfig(filename="autoqc.log", filemode='a', level=logging.DEBUG)
 
-log = logging.getLogger('autoqc')
+
+log = logging.getLogger(__name__)
 log.debug("Test log.debug")
 
 pd.options.mode.chained_assignment = None

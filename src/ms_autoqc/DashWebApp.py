@@ -17,12 +17,17 @@ import ms_autoqc.DatabaseFunctions as db
 import ms_autoqc.AutoQCProcessing as qc
 import ms_autoqc.SlackNotifications as bot
 
-
 import logging
+import logging.config
+import datetime
+
 
 # setup logging
-log = logging.getLogger('DashWebApp')
+logging.basicConfig(filename="auto_qc.log", filemode='a', level=logging.DEBUG)
+#logging.config.dictConfig('logging.conf')
+log = logging.getLogger(__name__)
 log.debug("Test log.debug from DashWebApp")
+
 
 # Set ms_autoqc/src as the working directory
 src_folder = os.path.dirname(os.path.realpath(__file__))
