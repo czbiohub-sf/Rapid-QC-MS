@@ -2861,13 +2861,13 @@ def get_samples_in_run(instrument_id, run_id, sample_type="Both"):
         run_id (str):
             Instrument run ID (job ID)
         sample_type (str):
-            Sample type, either "Sample" or "Biological Standard" or "Both"
+            Sample type, either "Specimen" or "Biological Standard" or "Both"
 
     Returns:
         DataFrame of sample tables for a given instrument run.
     """
 
-    if sample_type == "Sample":
+    if sample_type == "Specimen":
         df = get_table(instrument_id, "sample_qc_results")
 
     elif sample_type == "Biological Standard":
@@ -2896,7 +2896,7 @@ def get_samples_from_csv(instrument_id, run_id, sample_type="Both"):
         run_id (str):
             Instrument run ID (job ID)
         sample_type (str):
-            Sample type, either "Sample" or "Biological Standard" or "Both"
+            Sample type, either "Specimen" or "Biological Standard" or "Both"
 
     Returns:
         DataFrame of samples for a given instrument run.
@@ -2908,7 +2908,7 @@ def get_samples_from_csv(instrument_id, run_id, sample_type="Both"):
     samples_csv = os.path.join(csv_directory, "samples.csv")
     bio_standards_csv = os.path.join(csv_directory, "bio_standards.csv")
 
-    if sample_type == "Sample":
+    if sample_type == "Specimen":
         df = pd.read_csv(samples_csv, index_col=False)
 
     elif sample_type == "Biological Standard":
@@ -3102,9 +3102,9 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, l
 
     # Get relevant QC results table from database
     if load_from == "database" or load_from == "processing":
-        df_samples = get_samples_in_run(instrument_id, run_id, "Sample")
+        df_samples = get_samples_in_run(instrument_id, run_id, "Specimen")
     elif load_from == "csv":
-        df_samples = get_samples_from_csv(instrument_id, run_id, "Sample")
+        df_samples = get_samples_from_csv(instrument_id, run_id, "Specimen")
 
     # Filter by polarity
     df_samples = df_samples.loc[df_samples["polarity"] == polarity]
@@ -3120,7 +3120,9 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, l
     results = [ast.literal_eval(result) if result != "None" and result != "nan" else {} for result in results]
     df_results = pd.DataFrame(results)
     df_results.drop(columns=["Name"], inplace=True)
-    df_results["Sample"] = sample_ids
+    df_results["Specimen"] = sample_ids
+
+    log.debug("parse_internal_standard_data, df_results: ", df_results)
 
     # Return DataFrame as JSON string
     if as_json:
@@ -3244,9 +3246,9 @@ def parse_internal_standard_qc_data(instrument_id, run_id, polarity, result_type
 
     # Get relevant QC results table from database
     if load_from == "database" or load_from == "processing":
-        df_samples = get_samples_in_run(instrument_id, run_id, "Sample")
+        df_samples = get_samples_in_run(instrument_id, run_id, "Specimen")
     elif load_from == "csv":
-        df_samples = get_samples_from_csv(instrument_id, run_id, "Sample")
+        df_samples = get_samples_from_csv(instrument_id, run_id, "Specimen")
 
     # Filter by polarity
     df_samples = df_samples.loc[df_samples["polarity"] == polarity]
@@ -3269,7 +3271,7 @@ def parse_internal_standard_qc_data(instrument_id, run_id, polarity, result_type
     results = [ast.literal_eval(result)[type_index] for result in results]
     df_results = pd.DataFrame(results)
     df_results.drop(columns=["Name"], inplace=True)
-    df_results["Sample"] = sample_ids
+    df_results["Specimen"] = sample_ids
 
     # Return DataFrame as JSON string
     if as_json:
@@ -3973,7 +3975,7 @@ def upload_qc_results(instrument_id, run_id):
     df_run = get_instrument_run(instrument_id, run_id)
     df_run.to_csv(run_csv_path, index=False)
 
-    df_samples = get_samples_in_run(instrument_id=instrument_id, run_id=run_id, sample_type="Sample")
+    df_samples = get_samples_in_run(instrument_id=instrument_id, run_id=run_id, sample_type="Specimen")
     if len(df_samples) > 0:
         df_samples.to_csv(samples_csv_path, index=False)
 

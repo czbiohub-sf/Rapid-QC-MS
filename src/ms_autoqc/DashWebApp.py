@@ -17,16 +17,14 @@ import ms_autoqc.DatabaseFunctions as db
 import ms_autoqc.AutoQCProcessing as qc
 import ms_autoqc.SlackNotifications as bot
 
+
 import logging
-import logging.config
-import datetime
 
 
-# setup logging
-logging.basicConfig(filename="auto_qc.log", filemode='a', level=logging.DEBUG)
-#logging.config.dictConfig('logging.conf')
-log = logging.getLogger(__name__)
+#Can't use __name__ here because I think Flask eats the logs then
+log = logging.getLogger("DashWebApp")
 log.debug("Test log.debug from DashWebApp")
+print(__name__)
 
 
 # Set ms_autoqc/src as the working directory
@@ -131,7 +129,7 @@ def serve_layout():
                                         "border": "1px solid " + bootstrap_colors["blue"]
                                         }],
                                     style_cell_conditional=[
-                                        {"if": {"column_id": "Run ID"},
+                                        {"if": {"column_id": "Job ID"},
                                             "width": "40%"},
                                         {"if": {"column_id": "Chromatography"},
                                             "width": "35%"},
@@ -223,7 +221,7 @@ def serve_layout():
                                             value="all",
                                             options=[
                                                 {"label": "All", "value": "all"},
-                                                {"label": "Samples", "value": "samples"},
+                                                {"label": "Specimens", "value": "specimens"},
                                                 {"label": "Pools", "value": "pools"},
                                                 {"label": "Blanks", "value": "blanks"}],
                                         ),
@@ -266,7 +264,7 @@ def serve_layout():
                                         }
                                     ],
                                     style_cell_conditional=[
-                                        {"if": {"column_id": "Sample"},
+                                        {"if": {"column_id": "Specimen"},
                                         "width": "60%"},
                                         {"if": {"column_id": "Position"},
                                         "width": "20%"},
@@ -313,7 +311,7 @@ def serve_layout():
                                         dcc.Dropdown(
                                             id="rt-plot-sample-dropdown",
                                             options=[],
-                                            placeholder="Select samples...",
+                                            placeholder="Select specimens...",
                                             style={"text-align": "left",
                                                    "height": "1.5",
                                                    "width": "100%",
@@ -415,6 +413,11 @@ def serve_layout():
                                         # Dropdown for selecting a biological standard to view
                                         dcc.Dropdown(id="bio-standards-plot-dropdown",
                                             options=[], placeholder="Select biological standard...",
+                                            style={"text-align": "left", "height": "1.5", "font-size": "1rem",
+                                                "width": "100%", "display": "inline-block"}),
+                                        
+                                        dcc.Dropdown(id="bio-standards-plot-dropdown-compare-target",
+                                            options=[], placeholder="Select target...",
                                             style={"text-align": "left", "height": "1.5", "font-size": "1rem",
                                                 "width": "100%", "display": "inline-block"}),
 
@@ -599,12 +602,12 @@ def serve_layout():
                             dbc.ModalHeader(dbc.ModalTitle(id="setup-new-run-modal-title", children="New QC Job"), close_button=True),
                             dbc.ModalBody(id="setup-new-run-modal-body", className="modal-styles-2", children=[
 
-                                # Text field for entering your run ID
+                                # Text field for entering your job ID
                                 html.Div([
-                                    dbc.Label("Instrument run ID"),
-                                    dbc.Input(id="instrument-run-id", placeholder="Give your instrument run a unique name", type="text"),
+                                    dbc.Label("Job ID"),
+                                    dbc.Input(id="instrument-run-id", placeholder="Give your job a unique ID", type="text"),
                                     dbc.FormFeedback("Looks good!", type="valid"),
-                                    dbc.FormFeedback("Please enter a unique ID for this run.", type="invalid"),
+                                    dbc.FormFeedback("Please enter a unique ID for this job.", type="invalid"),
                                 ]),
 
                                 html.Br(),
@@ -1116,7 +1119,7 @@ def serve_layout():
                                     ]),
 
                                     # AutoQC parameters
-                                    dbc.Tab(label="QC configurations", className="modal-styles", children=[
+                                    dbc.Tab(label="IS configurations", className="modal-styles", children=[
 
                                         html.Br(),
 
@@ -1124,25 +1127,25 @@ def serve_layout():
                                         dbc.Alert(id="qc-config-addition-alert", is_open=False, duration=5000),
                                         dbc.Alert(id="qc-config-removal-alert", is_open=False, duration=5000),
 
-                                        dbc.Label("Manage QC configurations", style={"font-weight": "bold"}),
+                                        dbc.Label("Manage IS configurations", style={"font-weight": "bold"}),
                                         html.Br(),
 
                                         html.Div([
-                                            dbc.Label("Add new QC configuration"),
+                                            dbc.Label("Add new IS configuration"),
                                             dbc.InputGroup([
-                                                dbc.Input(id="add-qc-configuration-text-field",
+                                                dbc.Input(id="add-is-configuration-text-field",
                                                           placeholder="Name of configuration to add"),
                                                 dbc.Button("Add new config", color="primary", outline=True,
-                                                           id="add-qc-configuration-button", n_clicks=0),
+                                                           id="add-is-configuration-button", n_clicks=0),
                                             ]),
-                                            dbc.FormText("Give your custom QC configuration a unique name"),
+                                            dbc.FormText("Give your custom IS configuration a unique name"),
                                         ]),
 
                                         html.Br(),
 
                                         # Select configuration
                                         html.Div(children=[
-                                            dbc.Label("Select QC configuration to edit"),
+                                            dbc.Label("Select IS configuration to edit"),
                                             dbc.InputGroup([
                                                 dbc.Select(id="qc-configs-dropdown",
                                                            placeholder="No configuration selected"),
@@ -1155,7 +1158,7 @@ def serve_layout():
 
                                         html.Br(),
 
-                                        dbc.Label("Edit QC configuration parameters", style={"font-weight": "bold"}),
+                                        dbc.Label("Edit IS configuration parameters", style={"font-weight": "bold"}),
                                         html.Br(),
 
                                         html.Div([
@@ -1289,37 +1292,39 @@ def serve_layout():
                                             ])
                                         ]), html.Br(),
 
-                                        # Data collection parameters
-                                        dbc.Label("Data collection parameters", style={"font-weight": "bold"}),
-                                        html.Br(),
+                                        # # Data collection parameters
+                                        # """
+                                        # dbc.Label("Data collection parameters", style={"font-weight": "bold"}),
+                                        # html.Br(),
 
-                                        html.Div(className="parent-container", children=[
-                                            # Retention time begin
-                                            html.Div(className="child-container", children=[
-                                                dbc.Label("Retention time begin"),
-                                                dbc.Input(id="retention-time-begin", placeholder="0"),
-                                            ]),
-                                            # Retention time end
-                                            html.Div(className="child-container", children=[
-                                                dbc.Label("Retention time end"),
-                                                dbc.Input(id="retention-time-end", placeholder="100"),
-                                                html.Br(),
-                                            ]),
-                                        ]),
+                                        # html.Div(className="parent-container", children=[
+                                        #     # Retention time begin
+                                        #     html.Div(className="child-container", children=[
+                                        #         dbc.Label("Retention time begin"),
+                                        #         dbc.Input(id="retention-time-begin", placeholder="0"),
+                                        #     ]),
+                                        #     # Retention time end
+                                        #     html.Div(className="child-container", children=[
+                                        #         dbc.Label("Retention time end"),
+                                        #         dbc.Input(id="retention-time-end", placeholder="100"),
+                                        #         html.Br(),
+                                        #     ]),
+                                        # ]),
 
-                                        html.Div(className="parent-container", children=[
-                                            # Mass range begin
-                                            html.Div(className="child-container", children=[
-                                                dbc.Label("Mass range begin"),
-                                                dbc.Input(id="mass-range-begin", placeholder="0"),
-                                            ]),
-                                            # Mass range end
-                                            html.Div(className="child-container", children=[
-                                                dbc.Label("Mass range end"),
-                                                dbc.Input(id="mass-range-end", placeholder="2000"),
-                                                html.Br(),
-                                            ]),
-                                        ]),
+                                        # html.Div(className="parent-container", children=[
+                                        #     # Mass range begin
+                                        #     html.Div(className="child-container", children=[
+                                        #         dbc.Label("Mass range begin"),
+                                        #         dbc.Input(id="mass-range-begin", placeholder="0"),
+                                        #     ]),
+                                        #     # Mass range end
+                                        #     html.Div(className="child-container", children=[
+                                        #         dbc.Label("Mass range end"),
+                                        #         dbc.Input(id="mass-range-end", placeholder="2000"),
+                                        #         html.Br(),
+                                        #     ]),
+                                        # ]),
+                                        # """, #no idea why there needs to be a comma here
 
                                         # Centroid parameters
                                         dbc.Label("Centroid parameters", style={"font-weight": "bold"}),
@@ -1411,56 +1416,56 @@ def serve_layout():
                                         ]),
                                         html.Br(),
 
-                                        # Alignment parameters
-                                        dbc.Label("Alignment parameters", style={"font-weight": "bold"}),
-                                        html.Br(),
+                                        # # Alignment parameters
+                                        # dbc.Label("Alignment parameters", style={"font-weight": "bold"}),
+                                        # html.Br(),
 
-                                        html.Div(className="parent-container", children=[
-                                            # Retention time tolerance
-                                            html.Div(className="child-container", children=[
-                                                dbc.Label("Alignment retention time tolerance"),
-                                                dbc.Input(id="alignment-rt-tolerance", placeholder="0.05"),
-                                            ]),
-                                            # Accurate mass tolerance
-                                            html.Div(className="child-container", children=[
-                                                dbc.Label("Alignment MS1 tolerance"),
-                                                dbc.Input(id="alignment-mz-tolerance", placeholder="0.008"),
-                                                html.Br(),
-                                            ]),
-                                        ]),
-                                        html.Br(),
+                                        # html.Div(className="parent-container", children=[
+                                        #     # Retention time tolerance
+                                        #     html.Div(className="child-container", children=[
+                                        #         dbc.Label("Alignment retention time tolerance"),
+                                        #         dbc.Input(id="alignment-rt-tolerance", placeholder="0.05"),
+                                        #     ]),
+                                        #     # Accurate mass tolerance
+                                        #     html.Div(className="child-container", children=[
+                                        #         dbc.Label("Alignment MS1 tolerance"),
+                                        #         dbc.Input(id="alignment-mz-tolerance", placeholder="0.008"),
+                                        #         html.Br(),
+                                        #     ]),
+                                        # ]),
+                                        # html.Br(),
 
-                                        html.Div(className="parent-container", children=[
-                                            # Retention time factor
-                                            html.Div(className="child-container", children=[
-                                                dbc.Label("Alignment retention time factor"),
-                                                dbc.Input(id="alignment-rt-factor", placeholder="0.5"),
-                                            ]),
-                                            # Accurate mass factor
-                                            html.Div(className="child-container", children=[
-                                                dbc.Label("Alignment MS1 factor"),
-                                                dbc.Input(id="alignment-mz-factor", placeholder="0.5"),
-                                                html.Br(),
-                                            ]),
-                                        ]),
-                                        html.Br(),
+                                        # html.Div(className="parent-container", children=[
+                                        #     # Retention time factor
+                                        #     html.Div(className="child-container", children=[
+                                        #         dbc.Label("Alignment retention time factor"),
+                                        #         dbc.Input(id="alignment-rt-factor", placeholder="0.5"),
+                                        #     ]),
+                                        #     # Accurate mass factor
+                                        #     html.Div(className="child-container", children=[
+                                        #         dbc.Label("Alignment MS1 factor"),
+                                        #         dbc.Input(id="alignment-mz-factor", placeholder="0.5"),
+                                        #         html.Br(),
+                                        #     ]),
+                                        # ]),
+                                        # html.Br(),
 
-                                        html.Div(className="parent-container", children=[
-                                            # Peak count filter
-                                            html.Div(className="child-container", children=[
-                                                dbc.Label("Peak count filter"),
-                                                dbc.Input(id="peak-count-filter", placeholder="0"),
-                                            ]),
-                                            # QC at least filter
-                                            html.Div(className="child-container", children=[
-                                                dbc.Label("QC at least filter"),
-                                                dbc.Select(id="qc-at-least-filter-dropdown", options=[
-                                                    {"label": "True", "value": "True"},
-                                                    {"label": "False", "value": "False"},
-                                                ], placeholder="True"),
-                                                html.Br(),
-                                            ]),
-                                        ]),
+                                        # html.Div(className="parent-container", children=[
+                                        #     # Peak count filter
+                                        #     html.Div(className="child-container", children=[
+                                        #         dbc.Label("Peak count filter"),
+                                        #         dbc.Input(id="peak-count-filter", placeholder="0"),
+                                        #     ]),
+                                        #     # QC at least filter
+                                        #     html.Div(className="child-container", children=[
+                                        #         dbc.Label("QC at least filter"),
+                                        #         dbc.Select(id="qc-at-least-filter-dropdown", options=[
+                                        #             {"label": "True", "value": "True"},
+                                        #             {"label": "False", "value": "False"},
+                                        #         ], placeholder="True"),
+                                        #         html.Br(),
+                                        #     ]),
+                                        # ]),
 
                                         html.Br(), html.Br(), html.Br(), html.Br(), html.Br(),
                                         html.Br(), html.Br(), html.Br(), html.Br(), html.Br(),
@@ -1521,7 +1526,7 @@ def serve_layout():
             dcc.Store(id="bio-mz-pos"),
             dcc.Store(id="bio-mz-neg"),
             dcc.Store(id="study-resources"),
-            dcc.Store(id="samples"),
+            dcc.Store(id="specimens"),
             dcc.Store(id="pos-internal-standards"),
             dcc.Store(id="neg-internal-standards"),
             dcc.Store(id="instruments"),
@@ -2338,13 +2343,13 @@ def populate_instrument_runs_table(instrument_id, refresh, resources, sync_updat
         df_instrument_runs = db.get_instrument_runs(instrument_id)
 
         if len(df_instrument_runs) == 0:
-            empty_table = [{"Run ID": "N/A", "Chromatography": "N/A", "Status": "N/A"}]
+            empty_table = [{"Job ID": "N/A", "Chromatography": "N/A", "Status": "N/A"}]
             return empty_table, {"display": "block"}, {"display": "none"}
 
         # DataFrame refactoring
         df_instrument_runs = df_instrument_runs[["run_id", "chromatography", "status"]]
         df_instrument_runs = df_instrument_runs.rename(
-            columns={"run_id": "Run ID",
+            columns={"run_id": "Job ID",
                      "chromatography": "Chromatography",
                      "status": "Status"})
         df_instrument_runs = df_instrument_runs[::-1]
@@ -2372,7 +2377,7 @@ def open_loading_modal(active_cell, table_data, load_finished):
     trigger = ctx.triggered_id
 
     if active_cell:
-        run_id = table_data[active_cell["row"]]["Run ID"]
+        run_id = table_data[active_cell["row"]]["Job ID"]
 
         title = html.Div([
             html.Div(children=[dbc.Spinner(color="primary"), " Loading QC results for " + run_id])])
@@ -2404,7 +2409,7 @@ def open_loading_modal(active_cell, table_data, load_finished):
               Output("bio-mz-pos", "data"),
               Output("bio-mz-neg", "data"),
               Output("study-resources", "data"),
-              Output("samples", "data"),
+              Output("specimens", "data"),
               Output("pos-internal-standards", "data"),
               Output("neg-internal-standards", "data"),
               Output("istd-delta-rt-pos", "data"),
@@ -2435,7 +2440,7 @@ def load_data(refresh, active_cell, table_data, resources, instrument_id):
     if active_cell:
 
         # Get run ID and status
-        run_id = table_data[active_cell["row"]]["Run ID"]
+        run_id = table_data[active_cell["row"]]["Job ID"]
         status = table_data[active_cell["row"]]["Status"]
 
         # Ensure that refresh does not trigger data parsing if no new samples processed
@@ -2494,7 +2499,7 @@ def signal_load_finished(load_finished):
 
 
 @app.callback(Output("sample-table", "data"),
-              Input("samples", "data"), prevent_initial_call=True)
+              Input("specimens", "data"), prevent_initial_call=True)
 def populate_sample_tables(samples):
 
     """
@@ -2503,7 +2508,7 @@ def populate_sample_tables(samples):
 
     if samples is not None:
         df_samples = pd.DataFrame(json.loads(samples))
-        df_samples = df_samples[["Sample", "Position", "QC"]]
+        df_samples = df_samples[["Specimen", "Position", "QC"]]
         return df_samples.to_dict("records")
     else:
         return None
@@ -2518,7 +2523,7 @@ def populate_sample_tables(samples):
               Output("intensity-plot-sample-dropdown", "options"),
               Input("polarity-options", "value"),
               State("sample-table", "data"),
-              Input("samples", "data"),
+              Input("specimens", "data"),
               State("bio-intensity-pos", "data"),
               State("bio-intensity-neg", "data"),
               State("pos-internal-standards", "data"),
@@ -2546,8 +2551,8 @@ def update_dropdowns_on_polarity_change(polarity, table_data, samples, bio_inten
             else:
                 bio_dropdown = []
 
-            df_samples = df_samples.loc[df_samples["Sample"].str.contains("Neg")]
-            sample_dropdown = df_samples["Sample"].tolist()
+            df_samples = df_samples.loc[df_samples["Specimen"].str.contains("Neg")]
+            sample_dropdown = df_samples["Specimen"].tolist()
 
         elif polarity == "Pos":
             istd_dropdown = json.loads(pos_internal_standards)
@@ -2559,8 +2564,8 @@ def update_dropdowns_on_polarity_change(polarity, table_data, samples, bio_inten
             else:
                 bio_dropdown = []
 
-            df_samples = df_samples.loc[(df_samples["Sample"].str.contains("Pos"))]
-            sample_dropdown = df_samples["Sample"].tolist()
+            df_samples = df_samples.loc[(df_samples["Specimen"].str.contains("Pos"))]
+            sample_dropdown = df_samples["Specimen"].tolist()
 
         return istd_dropdown, istd_dropdown, istd_dropdown, bio_dropdown, sample_dropdown, sample_dropdown, sample_dropdown
 
@@ -2573,7 +2578,7 @@ def update_dropdowns_on_polarity_change(polarity, table_data, samples, bio_inten
               Output("intensity-plot-sample-dropdown", "value"),
               Input("sample-filtering-options", "value"),
               Input("polarity-options", "value"),
-              Input("samples", "data"),
+              Input("specimens", "data"),
               State("metadata", "data"), prevent_initial_call=True)
 def apply_sample_filter_to_plots(filter, polarity, samples, metadata):
 
@@ -2593,7 +2598,7 @@ def apply_sample_filter_to_plots(filter, polarity, samples, metadata):
     if samples is not None:
         df_samples = pd.DataFrame(json.loads(samples))
         df_samples = df_samples.loc[df_samples["Polarity"].str.contains(polarity)]
-        sample_list = df_samples["Sample"].tolist()
+        sample_list = df_samples["Specimen"].tolist()
     else:
         raise PreventUpdate
 
@@ -2603,7 +2608,7 @@ def apply_sample_filter_to_plots(filter, polarity, samples, metadata):
             return [], [], []
 
         # Return samples only
-        elif filter == "samples":
+        elif filter == "specimens":
             df_metadata = pd.read_json(metadata, orient="split")
             df_metadata = df_metadata.loc[df_metadata["Filename"].isin(sample_list)]
             samples_only = df_metadata["Filename"].tolist()
@@ -2633,7 +2638,7 @@ def apply_sample_filter_to_plots(filter, polarity, samples, metadata):
               Input("rt-plot-sample-dropdown", "value"),
               Input("istd-rt-pos", "data"),
               Input("istd-rt-neg", "data"),
-              State("samples", "data"),
+              State("specimens", "data"),
               State("study-resources", "data"),
               State("pos-internal-standards", "data"),
               State("neg-internal-standards", "data"),
@@ -2663,7 +2668,7 @@ def populate_istd_rt_plot(polarity, internal_standard, selected_samples, rt_pos,
 
     # Get samples
     df_samples = pd.DataFrame(json.loads(samples))
-    samples = df_samples.loc[df_samples["Polarity"] == polarity]["Sample"].astype(str).tolist()
+    samples = df_samples.loc[df_samples["Polarity"] == polarity]["Specimen"].astype(str).tolist()
 
     # Filter out biological standards
     identifiers = db.get_biological_standard_identifiers()
@@ -2716,7 +2721,7 @@ def populate_istd_rt_plot(polarity, internal_standard, selected_samples, rt_pos,
               Input("intensity-plot-sample-dropdown", "value"),
               Input("istd-intensity-pos", "data"),
               Input("istd-intensity-neg", "data"),
-              State("samples", "data"),
+              State("specimens", "data"),
               State("metadata", "data"),
               State("pos-internal-standards", "data"),
               State("neg-internal-standards", "data"),
@@ -2748,7 +2753,7 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
 
     # Get samples
     df_samples = pd.DataFrame(json.loads(samples))
-    samples = df_samples.loc[df_samples["Polarity"] == polarity]["Sample"].astype(str).tolist()
+    samples = df_samples.loc[df_samples["Polarity"] == polarity]["Specimen"].astype(str).tolist()
 
     identifiers = db.get_biological_standard_identifiers()
     for identifier in identifiers:
@@ -2808,7 +2813,7 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
               Input("mz-plot-sample-dropdown", "value"),
               Input("istd-delta-mz-pos", "data"),
               Input("istd-delta-mz-neg", "data"),
-              State("samples", "data"),
+              State("specimens", "data"),
               State("pos-internal-standards", "data"),
               State("neg-internal-standards", "data"),
               State("study-resources", "data"),
@@ -2838,7 +2843,7 @@ def populate_istd_mz_plot(polarity, internal_standard, selected_samples, delta_m
 
     # Get samples (and filter out biological standards)
     df_samples = pd.DataFrame(json.loads(samples))
-    samples = df_samples.loc[df_samples["Polarity"] == polarity]["Sample"].astype(str).tolist()
+    samples = df_samples.loc[df_samples["Polarity"] == polarity]["Specimen"].astype(str).tolist()
 
     identifiers = db.get_biological_standard_identifiers()
     for identifier in identifiers:
@@ -4066,9 +4071,9 @@ def show_alert_on_parameter_reset(parameters_reset):
 
 
 @app.callback(Output("qc-config-added", "data"),
-              Output("add-qc-configuration-text-field", "value"),
-              Input("add-qc-configuration-button", "n_clicks"),
-              State("add-qc-configuration-text-field", "value"), prevent_initial_call=True)
+              Output("add-is-configuration-text-field", "value"),
+              Input("add-is-configuration-button", "n_clicks"),
+              State("add-is-configuration-text-field", "value"), prevent_initial_call=True)
 def add_qc_configuration(button_click, qc_config_id):
 
     """
@@ -4273,6 +4278,10 @@ def get_biological_standards(on_page_load, on_standard_added, on_standard_remove
 
     """
     Populates dropdown and table of biological standards
+
+    As added by the user in the Settings > Biological Standards menu and
+    refined during job creation.
+
     """
 
     if db.is_valid():
@@ -5091,14 +5100,14 @@ def update_progress_bar_during_active_instrument_run(active_cell, table_data, re
     if active_cell:
 
         # Get run ID
-        run_id = table_data[active_cell["row"]]["Run ID"]
+        run_id = table_data[active_cell["row"]]["Job ID"]
         status = table_data[active_cell["row"]]["Status"]
 
         # Construct values for progress bar
         completed, total = db.get_completed_samples_count(instrument_id, run_id, status)
         percent_complete = db.get_run_progress(instrument_id, run_id, status)
         progress_label = str(percent_complete) + "%"
-        header_text = run_id + " – " + str(completed) + " out of " + str(total) + " samples processed"
+        header_text = run_id + " – " + str(completed) + " out of " + str(total) + " specimens processed"
 
         if status == "Complete":
             refresh_interval_disabled = True

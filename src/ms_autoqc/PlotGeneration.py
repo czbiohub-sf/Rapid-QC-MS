@@ -7,6 +7,7 @@ import ms_autoqc.DatabaseFunctions as db
 import logging
 
 # setup logging
+print(__name__)
 log = logging.getLogger(__name__)
 log.debug("Test log.debug from PlotGeneration")
 
@@ -328,7 +329,7 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
         df_samples = df_samples[["sample_id", "position", "qc_result", "polarity"]]
         df_samples = df_samples.rename(
             columns={
-                "sample_id": "Sample",
+                "sample_id": "Specimen",
                 "position": "Position",
                 "qc_result": "QC",
                 "polarity": "Polarity"})
@@ -341,14 +342,16 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
 
     # Get internal standards from data
     if df_rt_pos is not None:
+        log.debug("df_rt_pos is: ", df_rt_pos)
         pos_internal_standards = pd.read_json(df_rt_pos, orient="records").columns.tolist()
-        pos_internal_standards.remove("Sample")
+        log.debug("pos_internal_standards is: ", pos_internal_standards)
+        pos_internal_standards.remove("Specimen")
     else:
         pos_internal_standards = []
 
     if df_rt_neg is not None:
         neg_internal_standards = pd.read_json(df_rt_neg, orient="records").columns.tolist()
-        neg_internal_standards.remove("Sample")
+        neg_internal_standards.remove("Specimen")
     else:
         neg_internal_standards = []
 
@@ -402,53 +405,53 @@ def generate_sample_metadata_dataframe(sample, df_rt, df_mz, df_intensity, df_de
     # Index the selected sample, then make sure all columns in all dataframes are in the same order
     columns = df_rt.columns.tolist()
     internal_standards = df_rt.columns.tolist()
-    internal_standards.remove("Sample")
+    internal_standards.remove("Specimen")
     df_sample_istd["Internal Standard"] = internal_standards
 
     # Precursor m/z
-    df_mz = df_mz.loc[df_mz["Sample"] == sample][columns]
-    df_mz.drop(columns=["Sample"], inplace=True)
+    df_mz = df_mz.loc[df_mz["Specimen"] == sample][columns]
+    df_mz.drop(columns=["Specimen"], inplace=True)
     df_sample_istd["m/z"] = df_mz.iloc[0].astype(float).values.tolist()
 
     # Retention times
-    df_rt = df_rt.loc[df_rt["Sample"] == sample][columns]
-    df_rt.drop(columns=["Sample"], inplace=True)
+    df_rt = df_rt.loc[df_rt["Specimen"] == sample][columns]
+    df_rt.drop(columns=["Specimen"], inplace=True)
     df_sample_istd["RT"] = df_rt.iloc[0].astype(float).round(2).values.tolist()
 
     # Intensities
-    df_intensity = df_intensity.loc[df_intensity["Sample"] == sample][columns]
-    df_intensity.drop(columns=["Sample"], inplace=True)
+    df_intensity = df_intensity.loc[df_intensity["Specimen"] == sample][columns]
+    df_intensity.drop(columns=["Specimen"], inplace=True)
     intensities = df_intensity.iloc[0].fillna(0).values.tolist()
     df_sample_istd["Intensity"] = ["{:.2e}".format(x) for x in intensities]
 
     # Delta m/z
     df_delta_mz.replace(" ", np.nan, inplace=True)
-    df_delta_mz = df_delta_mz.loc[df_delta_mz["Sample"] == sample][columns]
-    df_delta_mz.drop(columns=["Sample"], inplace=True)
+    df_delta_mz = df_delta_mz.loc[df_delta_mz["Specimen"] == sample][columns]
+    df_delta_mz.drop(columns=["Specimen"], inplace=True)
     df_sample_istd["Delta m/z"] = df_delta_mz.iloc[0].astype(float).round(6).values.tolist()
 
     # Delta RT
     df_delta_rt.replace(" ", np.nan, inplace=True)
-    df_delta_rt = df_delta_rt.loc[df_delta_rt["Sample"] == sample][columns]
-    df_delta_rt.drop(columns=["Sample"], inplace=True)
+    df_delta_rt = df_delta_rt.loc[df_delta_rt["Specimen"] == sample][columns]
+    df_delta_rt.drop(columns=["Specimen"], inplace=True)
     df_sample_istd["Delta RT"] = df_delta_rt.iloc[0].astype(float).round(3).values.tolist()
 
     # In-run delta RT
     df_in_run_delta_rt.replace(" ", np.nan, inplace=True)
-    df_in_run_delta_rt = df_in_run_delta_rt.loc[df_in_run_delta_rt["Sample"] == sample][columns]
-    df_in_run_delta_rt.drop(columns=["Sample"], inplace=True)
+    df_in_run_delta_rt = df_in_run_delta_rt.loc[df_in_run_delta_rt["Specimen"] == sample][columns]
+    df_in_run_delta_rt.drop(columns=["Specimen"], inplace=True)
     df_sample_istd["In-Run Delta RT"] = df_in_run_delta_rt.iloc[0].astype(float).round(3).values.tolist()
 
     # Warnings
     df_warnings.replace(" ", np.nan, inplace=True)
-    df_warnings = df_warnings.loc[df_warnings["Sample"] == sample][columns]
-    df_warnings.drop(columns=["Sample"], inplace=True)
+    df_warnings = df_warnings.loc[df_warnings["Specimen"] == sample][columns]
+    df_warnings.drop(columns=["Specimen"], inplace=True)
     df_sample_istd["Warnings"] = df_warnings.iloc[0].astype(str).values.tolist()
 
     # Fails
     df_fails.replace(" ", np.nan, inplace=True)
-    df_fails = df_fails.loc[df_fails["Sample"] == sample][columns]
-    df_fails.drop(columns=["Sample"], inplace=True)
+    df_fails = df_fails.loc[df_fails["Specimen"] == sample][columns]
+    df_fails.drop(columns=["Specimen"], inplace=True)
     df_sample_istd["Fails"] = df_fails.iloc[0].astype(str).values.tolist()
 
     if len(df_sequence) > 0:
@@ -468,7 +471,7 @@ def generate_sample_metadata_dataframe(sample, df_rt, df_mz, df_intensity, df_de
 
     df_sample_info = df_sample_info.append(df_sample_info.iloc[0])
     df_sample_info.iloc[0] = df_sample_info.columns.tolist()
-    df_sample_info = df_sample_info.rename(index={0: "Sample Information"})
+    df_sample_info = df_sample_info.rename(index={0: "Specimen Information"})
     df_sample_info = df_sample_info.transpose()
 
     return df_sample_istd, df_sample_info
@@ -516,14 +519,14 @@ def generate_bio_standard_dataframe(clicked_sample, instrument_id, run_id, df_rt
     df_sample_features["Intensity"] = ["{:.2e}".format(x) for x in intensities]
 
     df_sample_info = pd.DataFrame()
-    df_sample_info["Sample ID"] = [clicked_sample]
+    df_sample_info["Specimen ID"] = [clicked_sample]
     qc_result = db.get_qc_results(
         instrument_id=instrument_id, sample_list=[clicked_sample], is_bio_standard=True)["qc_result"].values[0]
     df_sample_info["QC Result"] = [qc_result]
 
     df_sample_info = df_sample_info.append(df_sample_info.iloc[0])
     df_sample_info.iloc[0] = df_sample_info.columns.tolist()
-    df_sample_info = df_sample_info.rename(index={0: "Sample Information"})
+    df_sample_info = df_sample_info.rename(index={0: "Specimen Information"})
     df_sample_info = df_sample_info.transpose()
 
     return df_sample_features, df_sample_info
@@ -550,21 +553,21 @@ def load_istd_rt_plot(dataframe, samples, internal_standard, retention_times):
         plotly.express.line object: Plotly line plot of retention times (for the selected internal standard) across samples.
     """
 
-    df_filtered_by_samples = dataframe.loc[dataframe["Sample"].isin(samples)]
+    df_filtered_by_samples = dataframe.loc[dataframe["Specimen"].isin(samples)]
     df_filtered_by_samples[internal_standard] = df_filtered_by_samples[internal_standard].astype(float).round(3)
 
     y_min = retention_times[internal_standard] - 0.1
     y_max = retention_times[internal_standard] + 0.1
 
     fig = px.line(df_filtered_by_samples,
-        title="Retention Time vs. Samples – " + internal_standard,
+        title="Retention Time vs. Specimens – " + internal_standard,
         x=samples,
         y=internal_standard,
         height=600,
         markers=True,
         hover_name=samples,
         labels={"variable": "Internal Standard",
-              "index": "Sample",
+              "index": "Specimen",
               "value": "Retention Time"},
         log_x=False)
     fig.update_layout(
@@ -573,7 +576,7 @@ def load_istd_rt_plot(dataframe, samples, internal_standard, retention_times):
         showlegend=False,
         legend_title_text="Internal Standards",
         margin=dict(t=75, b=75, l=0, r=0))
-    fig.update_xaxes(showticklabels=False, title="Sample")
+    fig.update_xaxes(showticklabels=False, title="Specimen")
     fig.update_yaxes(title="Retention Time (min)", range=[y_min, y_max])
     fig.add_hline(y=retention_times[internal_standard], line_width=2, line_dash="dash")
     fig.update_traces(hovertemplate="Sample: %{x} <br>Retention Time: %{y} min<br>")
@@ -602,12 +605,12 @@ def load_istd_intensity_plot(dataframe, samples, internal_standard, treatments):
         plotly.express.bar object: Plotly bar plot of intensities (for the selected internal standard) across samples.
     """
 
-    df_filtered_by_samples = dataframe.loc[dataframe["Sample"].isin(samples)]
+    df_filtered_by_samples = dataframe.loc[dataframe["Specimen"].isin(samples)]
 
     if len(treatments) > 0:
         # Map treatments to sample names
         df_mapped = pd.DataFrame()
-        df_mapped["Sample"] = df_filtered_by_samples["Sample"]
+        df_mapped["Specimen"] = df_filtered_by_samples["Specimen"]
         df_mapped["Treatment"] = df_mapped.replace(
             treatments.set_index("Filename")["Treatment"])
         df_filtered_by_samples["Treatment"] = df_mapped["Treatment"].astype(str)
@@ -615,10 +618,10 @@ def load_istd_intensity_plot(dataframe, samples, internal_standard, treatments):
         df_filtered_by_samples["Treatment"] = " "
 
     fig = px.bar(df_filtered_by_samples,
-        title="Intensity vs. Samples – " + internal_standard,
-        x="Sample",
+        title="Intensity vs. Specimens – " + internal_standard,
+        x="Specimen",
         y=internal_standard,
-        text="Sample",
+        text="Specimen",
         color="Treatment",
         height=600)
     fig.update_layout(
@@ -628,7 +631,7 @@ def load_istd_intensity_plot(dataframe, samples, internal_standard, treatments):
         xaxis=dict(rangeslider=dict(visible=True), autorange=True),
         legend=dict(font=dict(size=10)),
         margin=dict(t=75, b=75, l=0, r=0))
-    fig.update_xaxes(showticklabels=False, title="Sample")
+    fig.update_xaxes(showticklabels=False, title="Specimen")
     fig.update_yaxes(title="Intensity")
     fig.update_traces(textposition="outside", hovertemplate="Sample: %{x}<br>Intensity: %{y:.2e}<br>")
 
@@ -655,17 +658,17 @@ def load_istd_delta_mz_plot(dataframe, samples, internal_standard):
     """
 
     # Get delta m/z results for selected samples
-    df_filtered_by_samples = dataframe.loc[dataframe["Sample"].isin(samples)]
+    df_filtered_by_samples = dataframe.loc[dataframe["Specimen"].isin(samples)]
 
     fig = px.line(df_filtered_by_samples,
-        title="Delta m/z vs. Samples – " + internal_standard,
+        title="Delta m/z vs. Specimens – " + internal_standard,
         x=samples,
         y=internal_standard,
         height=600,
         markers=True,
         hover_name=samples,
         labels={"variable": "Internal Standard",
-              "index": "Sample",
+              "index": "Specimen",
               "value": "Delta m/z"},
         log_x=False)
     fig.update_layout(
@@ -674,7 +677,7 @@ def load_istd_delta_mz_plot(dataframe, samples, internal_standard):
         showlegend=False,
         legend_title_text="Internal Standards",
         margin=dict(t=75, b=75, l=0, r=0))
-    fig.update_xaxes(showticklabels=False, title="Sample")
+    fig.update_xaxes(showticklabels=False, title="Specimen")
     fig.update_yaxes(title="delta m/z", range=[-0.01, 0.01])
     fig.update_traces(hovertemplate="Sample: %{x} <br>Delta m/z: %{y}<br>")
 
@@ -706,7 +709,8 @@ def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity):
     Returns:
         plotly.express.scatter object: m/z - RT scatter plot for targeted metabolites in the biological standard
     """
-
+    log.debug("load_bio_feature_plot locals()")
+    log.debug(locals())
     # Get metabolites
     metabolites = df_mz.columns.tolist()
     del metabolites[0]
@@ -787,7 +791,8 @@ def load_bio_benchmark_plot(dataframe, metabolite_name):
     Returns:
         plotly.express.bar object: Plotly bar plot of intensities (for the selected targeted metabolite) across instrument runs.
     """
-
+    log.debug("load_bio_benchmark_plot locals()")
+    log.debug(locals())
     # Get list of runs
     instrument_runs = dataframe["Name"].astype(str).tolist()
 

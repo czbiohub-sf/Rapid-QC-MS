@@ -5,7 +5,7 @@ def main():
     """
     Opens web browser and starts Flask server for Dash app
     """
-
+    logging.basicConfig(filename="auto_qc.log", level=logging.DEBUG)
     # Opens localhost:8050 in Google Chrome
     if sys.platform == "win32":
         chrome_path = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
