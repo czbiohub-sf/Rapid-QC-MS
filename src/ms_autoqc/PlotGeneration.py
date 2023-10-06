@@ -7,7 +7,6 @@ import ms_autoqc.DatabaseFunctions as db
 import logging
 
 # setup logging
-print(__name__)
 log = logging.getLogger(__name__)
 log.debug("Test log.debug from PlotGeneration")
 
@@ -342,9 +341,7 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
 
     # Get internal standards from data
     if df_rt_pos is not None:
-        log.debug("df_rt_pos is: ", df_rt_pos)
         pos_internal_standards = pd.read_json(df_rt_pos, orient="records").columns.tolist()
-        log.debug("pos_internal_standards is: ", pos_internal_standards)
         pos_internal_standards.remove("Specimen")
     else:
         pos_internal_standards = []
@@ -683,8 +680,7 @@ def load_istd_delta_mz_plot(dataframe, samples, internal_standard):
 
     return fig
 
-
-def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity):
+def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity, target_biostnd):
 
     """
     Returns scatter plot figure of precursor m/z vs. retention time for targeted features in the biological standard.
@@ -724,21 +720,29 @@ def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity):
 
     # Get percent change of feature intensities (only for runs previous to this one)
     df_intensity = df_intensity.fillna(0)
+    if target_biostnd == "All Previous":
+        try:
+            index_of_run = df_intensity.loc[df_intensity["Name"] == run_id].index.tolist()[0]
+            df_intensity = df_intensity[0:index_of_run + 1]
+        finally:
+            feature_intensity_from_study = df_intensity.loc[df_intensity["Name"] == run_id][metabolites].iloc[0].astype(float).values
 
-    try:
-        index_of_run = df_intensity.loc[df_intensity["Name"] == run_id].index.tolist()[0]
-        df_intensity = df_intensity[0:index_of_run + 1]
-    finally:
-        feature_intensity_from_study = df_intensity.loc[df_intensity["Name"] == run_id][metabolites].iloc[0].astype(float).values
-
-    if len(df_intensity) > 1:
-        average_intensity_in_studies = df_intensity.loc[df_intensity["Name"] != run_id][metabolites].astype(float).mean().values
-        bio_df["% Change"] = ((feature_intensity_from_study - average_intensity_in_studies) / average_intensity_in_studies) * 100
-        bio_df.replace(np.inf, 100, inplace=True)
-        bio_df.replace(-np.inf, -100, inplace=True)
+        if len(df_intensity) > 1:
+            average_intensity_in_studies = df_intensity.loc[df_intensity["Name"] != run_id][metabolites].astype(float).mean().values
+            bio_df["% Change"] = ((feature_intensity_from_study - average_intensity_in_studies) / average_intensity_in_studies) * 100
+            bio_df.replace(np.inf, 100, inplace=True)
+            bio_df.replace(-np.inf, -100, inplace=True)
+        else:
+            bio_df["% Change"] = 0
     else:
-        bio_df["% Change"] = 0
-
+        feature_intensity_from_study = df_intensity.loc[df_intensity["Name"] == run_id][metabolites].iloc[0].astype(float).values
+        if len(df_intensity) > 1:
+            target_intensity = df_intensity.loc[df_intensity["Name"] == target_biostnd][metabolites].astype(float).mean().values
+            bio_df["% Change"] = ((feature_intensity_from_study - target_intensity) / target_intensity) * 100
+            bio_df.replace(np.inf, 100, inplace=True)
+            bio_df.replace(-np.inf, -100, inplace=True)
+        else:
+            bio_df["% Change"] = 0
     # Plot readiness
     bio_df["Retention time (min)"] = bio_df["Retention time (min)"].round(2)
     bio_df["% Change"] = bio_df["% Change"].round(1).fillna(0)
@@ -775,7 +779,7 @@ def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity):
     return fig
 
 
-def load_bio_benchmark_plot(dataframe, metabolite_name):
+def load_bio_benchmark_plot(dataframe, metabolite_name, return_runids=False):
 
     """
     Returns bar plot figure of intensities for a targeted metabolite in a biological standard across instrument runs.
@@ -825,8 +829,10 @@ def load_bio_benchmark_plot(dataframe, metabolite_name):
     fig.update_traces(textposition="outside",
                       hovertemplate=f"{metabolite_name}" + "<br>Study: %{x} <br>Intensity: %{text}<br>")
 
-    return fig
-
+    if return_runids is False:
+        return fig
+    else:
+        return instrument_runs
 
 def get_internal_standard_index(previous, next, max):
 

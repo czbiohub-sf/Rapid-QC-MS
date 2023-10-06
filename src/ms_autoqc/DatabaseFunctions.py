@@ -3122,8 +3122,6 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, l
     df_results.drop(columns=["Name"], inplace=True)
     df_results["Specimen"] = sample_ids
 
-    log.debug("parse_internal_standard_data, df_results: ", df_results)
-
     # Return DataFrame as JSON string
     if as_json:
         return df_results.to_json(orient="records")
@@ -3131,7 +3129,7 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, l
         return df_results
 
 
-def parse_biological_standard_data(instrument_id, run_id, result_type, polarity, biological_standard, load_from, as_json=True):
+def parse_biological_standard_data(instrument_id, run_id, result_type, polarity, biological_standard, load_from, as_json=True, preserve_names=False):
 
     """
     Parses biological standard data into JSON-ified DataFrame of targeted features (as columns) vs. instrument runs (as rows).
@@ -3202,7 +3200,10 @@ def parse_biological_standard_data(instrument_id, run_id, result_type, polarity,
     results = df_samples[result_type].fillna('{}').tolist()
     results = [ast.literal_eval(result) if result != "None" and result != "nan" else {} for result in results]
     df_results = pd.DataFrame(results)
-    df_results["Name"] = run_ids
+
+    #doesn't currently (20231005) do anything if True
+    if preserve_names is False:
+        df_results["Name"] = run_ids
 
     log.debug("parse_biological_standard_data -> df_results:")
     log.debug(df_results.head())
@@ -3381,7 +3382,6 @@ def delete_user_from_workspace(email_address):
 
     else:
         return "Error"
-
 
 def get_qc_results(instrument_id, sample_list, is_bio_standard=False):
 

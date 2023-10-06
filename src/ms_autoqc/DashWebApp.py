@@ -24,7 +24,6 @@ import logging
 #Can't use __name__ here because I think Flask eats the logs then
 log = logging.getLogger("DashWebApp")
 log.debug("Test log.debug from DashWebApp")
-print(__name__)
 
 
 # Set ms_autoqc/src as the working directory
@@ -351,7 +350,7 @@ def serve_layout():
                                         dcc.Dropdown(
                                             id="intensity-plot-sample-dropdown",
                                             options=[],
-                                            placeholder="Select samples...",
+                                            placeholder="Select specimens...",
                                             style={"text-align": "left",
                                                    "height": "1.5",
                                                    "width": "100%",
@@ -392,7 +391,7 @@ def serve_layout():
                                         dcc.Dropdown(
                                             id="mz-plot-sample-dropdown",
                                             options=[],
-                                            placeholder="Select samples...",
+                                            placeholder="Select specimens...",
                                             style={"text-align": "left",
                                                    "height": "1.5",
                                                    "width": "100%",
@@ -2528,9 +2527,10 @@ def populate_sample_tables(samples):
               State("bio-intensity-neg", "data"),
               State("pos-internal-standards", "data"),
               State("neg-internal-standards", "data"),
-              Input("bio-standards-plot-dropdown", "value"))
+              Input("bio-standards-plot-dropdown", "value"),
+              Input("bio-standards-plot-dropdown-compare-target", "value"))
 def update_dropdowns_on_polarity_change(polarity, table_data, samples, bio_intensity_pos, bio_intensity_neg,
-    pos_internal_standards, neg_internal_standards, selected_bio_standard):
+    pos_internal_standards, neg_internal_standards, selected_bio_standard, biostandard_sample_ids):
 
     """
     Updates dropdown lists with correct items for user-selected polarity
@@ -2566,6 +2566,8 @@ def update_dropdowns_on_polarity_change(polarity, table_data, samples, bio_inten
 
             df_samples = df_samples.loc[(df_samples["Specimen"].str.contains("Pos"))]
             sample_dropdown = df_samples["Specimen"].tolist()
+        log.debug("update_dropdowns_on_polarity_change return variables: ")
+        log.debug("{} {} {} {} {} {} {}".format(istd_dropdown, istd_dropdown, istd_dropdown, bio_dropdown, sample_dropdown, sample_dropdown, sample_dropdown))
 
         return istd_dropdown, istd_dropdown, istd_dropdown, bio_dropdown, sample_dropdown, sample_dropdown, sample_dropdown
 
@@ -2883,19 +2885,72 @@ def populate_istd_mz_plot(polarity, internal_standard, selected_samples, delta_m
 
 @app.callback(Output("bio-standards-plot-dropdown", "options"),
               Output("bio-standards-plot-dropdown", "value"),
-              Input("study-resources", "data"), prevent_initial_call=True)
+              Input("study-resources", "data"),
+              prevent_initial_call=True)
 def populate_biological_standards_dropdown(resources):
 
     """
     Retrieves list of biological standards included in run
     """
+    log.debug("populate_biological_standards_dropdown input variables: ")
+    log.debug(locals())
+
     if resources is not None:
-        #returns a list even if there is only one value
-        biostnds = json.loads(resources)["biological_standards"]
+        resources = json.loads(resources)
+        biostnds = resources["biological_standards"]
+        
+        log.debug("populate_biological_standards_dropdown returns variables: ")
+        log.debug("{} {}".format(biostnds, biostnds[0]))
         return biostnds, biostnds[0]
     else:
         biostnds = [""]
         return biostnds, biostnds[0]
+    
+@app.callback(Output("bio-standards-plot-dropdown-compare-target", "options"),
+              Output("bio-standards-plot-dropdown-compare-target", "value"),
+              Input("study-resources", "data"),
+              Input("polarity-options", "value"),
+              Input("bio-intensity-pos", "data"),
+              Input("bio-intensity-neg", "data"),
+              Input("bio-standards-plot-dropdown", "value"),
+              prevent_initial_call=True)
+def populate_biological_standards_compare_dropdown(resources, polarity, intensity_pos, intensity_neg, selected_bio_standard):
+
+    """
+    Retrieves list of biological standards included in run
+    """
+    log.debug("populate_biological_standards_compare_dropdown input variables: ")
+    log.debug(locals())
+
+    if resources is not None:
+        resources = json.loads(resources)
+        biostnds = resources["biological_standards"]
+        instrument_runs = [""]
+        df_bio_intensity = None
+
+        if selected_bio_standard == '':
+            selected_bio_standard = biostnds[0]
+        
+        # Get intensity data
+        if polarity == "Pos":
+            if intensity_pos is not None:
+                df_bio_intensity = pd.DataFrame(json.loads(intensity_pos[selected_bio_standard]))
+
+        elif polarity == "Neg":
+            if intensity_neg is not None:
+                df_bio_intensity = pd.DataFrame(json.loads(intensity_neg[selected_bio_standard]))
+
+        if df_bio_intensity is not None:
+            instrument_runs = df_bio_intensity["Name"].astype(str).tolist()
+
+        instrument_runs.insert(0, "All Previous")
+        
+        log.debug("populate_biological_standards_compare_dropdown returns variables: ")
+        log.debug("{} {}".format(instrument_runs, instrument_runs[0]))
+        return instrument_runs, instrument_runs[0]
+    else:
+        instrument_runs = ["All Previous"] 
+        return instrument_runs, instrument_runs[0]
 
 
 @app.callback(Output("bio-standard-mz-rt-plot", "figure"),
@@ -2911,9 +2966,10 @@ def populate_biological_standards_dropdown(resources):
               State("bio-mz-neg", "data"),
               State("study-resources", "data"),
               Input("bio-standard-mz-rt-plot", "clickData"),
-              Input("bio-standards-plot-dropdown", "value"), prevent_initial_call=True)
+              Input("bio-standards-plot-dropdown", "value"), 
+              Input("bio-standards-plot-dropdown-compare-target", "value"), prevent_initial_call=True)
 def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, intensity_neg, mz_pos, mz_neg,
-    resources, click_data, selected_bio_standard):
+    resources, click_data, selected_bio_standard, target_biostnd):
 
     """
     Populates biological standard m/z vs. RT plot
@@ -2961,10 +3017,11 @@ def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, in
 
     try:
         # Biological standard metabolites – m/z vs. retention time
-        return load_bio_feature_plot(run_id=run_id, df_rt=df_bio_rt, df_mz=df_bio_mz, df_intensity=df_bio_intensity), \
-               selected_feature, None, {"display": "block"}
+        return load_bio_feature_plot(run_id=run_id, df_rt=df_bio_rt, df_mz=df_bio_mz, df_intensity=df_bio_intensity, target_biostnd=target_biostnd), \
+            selected_feature, None, {"display": "block"}
     except Exception as error:
         print("Error in loading biological standard m/z-RT plot:", error)
+        print(traceback.format_exc())
         return {}, None, None, {"display": "none"}
 
 
