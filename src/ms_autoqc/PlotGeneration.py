@@ -22,7 +22,7 @@ bootstrap_colors = {
     "yellow-low-opacity": "rgba(255, 193, 7, 0.4)"
 }
 
-def get_qc_results(instrument_id, run_id, status="Complete", biological_standard=None, biological_standards_only=False, for_benchmark_plot=False):
+def get_qc_results(instrument_id, run_id, status="Complete", biological_standard=None, biological_standards_only=False, for_benchmark_plot=False, preserve_names=True):
 
     """
     Loads and parses QC results (for samples and biological standards) into Plotly graphs.
@@ -81,7 +81,7 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
             27. df_fails_pos: QC fails for internal standards in positive mode
             28. df_fails_neg: QC fails for internal standards in negative mode
     """
-
+    log.debug("get_qc_results local variables: {}".format(locals()))
     # Get run information / metadata
     if db.get_device_identity() != instrument_id and db.sync_is_enabled():
         if status == "Complete":
@@ -125,6 +125,8 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
         "biological_standards": biological_standards
     }
 
+    log.debug("get_qc_results resources: {}".format(resources))
+
     # Parse m/z, RT, and intensity data for biological standards into DataFrames
     if biological_standards is not None:
 
@@ -148,7 +150,7 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
             log.debug("in for bio_stnd in biological_standard ")
             try:
                 df_bio_mz_pos[bio_stnd] = db.parse_biological_standard_data(instrument_id=instrument_id, run_id=run_id,
-                    result_type="precursor_mz", polarity="Pos", biological_standard=bio_stnd, load_from=load_from)
+                    result_type="precursor_mz", polarity="Pos", biological_standard=bio_stnd, load_from=load_from, preserve_names=preserve_names)
                 log.debug("df_bio_mz_pos type is: ")
                 log.debug(type(df_bio_mz_pos))
                 log.debug(df_bio_mz_pos)
@@ -158,35 +160,35 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
 
             try:
                 df_bio_rt_pos[bio_stnd] = db.parse_biological_standard_data(instrument_id=instrument_id, run_id=run_id,
-                    result_type="retention_time", polarity="Pos", biological_standard=bio_stnd, load_from=load_from)
+                    result_type="retention_time", polarity="Pos", biological_standard=bio_stnd, load_from=load_from, preserve_names=preserve_names)
             except Exception as error:
                 print("Error loading positive (–) mode biological standard precursor m/z data:", error)
                 df_bio_rt_pos = None
 
             try:
                 df_bio_intensity_pos[bio_stnd] = db.parse_biological_standard_data(instrument_id=instrument_id, run_id=run_id,
-                    result_type="intensity", polarity="Pos", biological_standard=bio_stnd, load_from=load_from)
+                    result_type="intensity", polarity="Pos", biological_standard=bio_stnd, load_from=load_from, preserve_names=preserve_names)
             except Exception as error:
                 print("Error loading positive (–) mode biological standard retention time data:", error)
                 df_bio_intensity_pos = None
 
             try:
                 df_bio_mz_neg[bio_stnd] = db.parse_biological_standard_data(instrument_id=instrument_id, run_id=run_id,
-                    result_type="precursor_mz", polarity="Neg", biological_standard=bio_stnd, load_from=load_from)
+                    result_type="precursor_mz", polarity="Neg", biological_standard=bio_stnd, load_from=load_from, preserve_names=preserve_names)
             except Exception as error:
                 print("Error loading negative (–) mode biological standard precursor m/z data:", error)
                 df_bio_mz_neg = None
 
             try:
                 df_bio_rt_neg[bio_stnd] = db.parse_biological_standard_data(instrument_id=instrument_id, run_id=run_id,
-                    result_type="retention_time", polarity="Neg", biological_standard=bio_stnd, load_from=load_from)
+                    result_type="retention_time", polarity="Neg", biological_standard=bio_stnd, load_from=load_from, preserve_names=preserve_names)
             except Exception as error:
                 print("Error loading positive (–) mode biological standard retention time data:", error)
                 df_bio_rt_neg = None
 
             try:
                 df_bio_intensity_neg[bio_stnd] = db.parse_biological_standard_data(instrument_id=instrument_id, run_id=run_id,
-                    result_type="intensity", polarity="Neg", biological_standard=bio_stnd, load_from=load_from)
+                    result_type="intensity", polarity="Neg", biological_standard=bio_stnd, load_from=load_from, preserve_names=preserve_names)
             except Exception as error:
                 print("Error loading negative (–) mode biological standard intensity data:", error)
                 df_bio_intensity_neg = None
@@ -507,6 +509,7 @@ def generate_bio_standard_dataframe(clicked_sample, instrument_id, run_id, df_rt
 
     metabolites = df_mz.columns.tolist()
     metabolites.remove("Name")
+    metabolites.remove("run_id")
 
     df_sample_features = pd.DataFrame()
     df_sample_features["Metabolite name"] = metabolites
@@ -680,7 +683,7 @@ def load_istd_delta_mz_plot(dataframe, samples, internal_standard):
 
     return fig
 
-def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity, target_biostnd):
+def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity, target_biostnd, return_runids=False):
 
     """
     Returns scatter plot figure of precursor m/z vs. retention time for targeted features in the biological standard.
@@ -709,33 +712,35 @@ def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity, target_biostnd):
     log.debug(locals())
     # Get metabolites
     metabolites = df_mz.columns.tolist()
-    del metabolites[0]
+    sample_names = df_mz["Name"].astype(str).tolist()
+
+    del metabolites[0:2]
 
     # Construct new DataFrame
     bio_df = pd.DataFrame()
     bio_df["Metabolite name"] = metabolites
-    bio_df["Precursor m/z"] = df_mz.loc[df_mz["Name"] == run_id][metabolites].iloc[0].astype(float).values
-    bio_df["Retention time (min)"] =  df_rt.loc[df_rt["Name"] == run_id][metabolites].iloc[0].astype(float).values
-    bio_df["Intensity"] =  df_intensity.loc[df_intensity["Name"] == run_id][metabolites].iloc[0].astype(float).values
+    bio_df["Precursor m/z"] = df_mz.loc[df_mz["run_id"] == run_id][metabolites].iloc[0].astype(float).values
+    bio_df["Retention time (min)"] =  df_rt.loc[df_rt["run_id"] == run_id][metabolites].iloc[0].astype(float).values
+    bio_df["Intensity"] =  df_intensity.loc[df_intensity["run_id"] == run_id][metabolites].iloc[0].astype(float).values
 
     # Get percent change of feature intensities (only for runs previous to this one)
     df_intensity = df_intensity.fillna(0)
     if target_biostnd == "All Previous":
         try:
-            index_of_run = df_intensity.loc[df_intensity["Name"] == run_id].index.tolist()[0]
+            index_of_run = df_intensity.loc[df_intensity["run_id"] == run_id].index.tolist()[0]
             df_intensity = df_intensity[0:index_of_run + 1]
         finally:
-            feature_intensity_from_study = df_intensity.loc[df_intensity["Name"] == run_id][metabolites].iloc[0].astype(float).values
+            feature_intensity_from_study = df_intensity.loc[df_intensity["run_id"] == run_id][metabolites].iloc[0].astype(float).values
 
         if len(df_intensity) > 1:
-            average_intensity_in_studies = df_intensity.loc[df_intensity["Name"] != run_id][metabolites].astype(float).mean().values
+            average_intensity_in_studies = df_intensity.loc[df_intensity["run_id"] != run_id][metabolites].astype(float).mean().values
             bio_df["% Change"] = ((feature_intensity_from_study - average_intensity_in_studies) / average_intensity_in_studies) * 100
             bio_df.replace(np.inf, 100, inplace=True)
             bio_df.replace(-np.inf, -100, inplace=True)
         else:
             bio_df["% Change"] = 0
     else:
-        feature_intensity_from_study = df_intensity.loc[df_intensity["Name"] == run_id][metabolites].iloc[0].astype(float).values
+        feature_intensity_from_study = df_intensity.loc[df_intensity["run_id"] == run_id][metabolites].iloc[0].astype(float).values
         if len(df_intensity) > 1:
             target_intensity = df_intensity.loc[df_intensity["Name"] == target_biostnd][metabolites].astype(float).mean().values
             bio_df["% Change"] = ((feature_intensity_from_study - target_intensity) / target_intensity) * 100
@@ -769,14 +774,17 @@ def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity, target_biostnd):
         range_color=[-100, 100])
     fig.update_layout(
         showlegend=False,
-        transition_duration=500,
+        transition_duration=1,
         clickmode="event",
         margin=dict(t=75, b=75, l=0, r=0))
     fig.update_xaxes(title="Retention time (min)")
     fig.update_yaxes(title="Precursor m/z")
     fig.update_traces(marker={"size": 30})
 
-    return fig
+    if return_runids is False:
+        return fig
+    else:
+        return sample_names
 
 
 def load_bio_benchmark_plot(dataframe, metabolite_name, return_runids=False):
@@ -798,7 +806,7 @@ def load_bio_benchmark_plot(dataframe, metabolite_name, return_runids=False):
     log.debug("load_bio_benchmark_plot locals()")
     log.debug(locals())
     # Get list of runs
-    instrument_runs = dataframe["Name"].astype(str).tolist()
+    instrument_runs = dataframe["run_id"].astype(str).tolist()
 
     # Get targeted metabolite intensities for each run
     intensities = dataframe[metabolite_name].values.tolist()

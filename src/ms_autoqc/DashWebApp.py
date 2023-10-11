@@ -419,6 +419,11 @@ def serve_layout():
                                             options=[], placeholder="Select target...",
                                             style={"text-align": "left", "height": "1.5", "font-size": "1rem",
                                                 "width": "100%", "display": "inline-block"}),
+                                        
+                                        dcc.Dropdown(id="bio-standards-plot-dropdown-pool-target",
+                                            options=[], placeholder="Pick target job for pool compares...",
+                                            style={"text-align": "left", "height": "1.5", "font-size": "1rem",
+                                                "width": "100%", "display": "inline-block"}),
 
                                         dcc.Graph(id="bio-standard-mz-rt-plot")
                                     ]),
@@ -2480,7 +2485,7 @@ def load_data(refresh, active_cell, table_data, resources, instrument_id):
 
         # If new sample, route raw data -> parsed data -> user session cache -> plots
         log.debug("result of get_qc_results function call")
-        log.debug(get_qc_results(instrument_id, run_id, status) + (True,))
+        log.debug("{}".format(get_qc_results(instrument_id, run_id, status)))
         return get_qc_results(instrument_id, run_id, status) + (True,)
 
     else:
@@ -2995,7 +3000,7 @@ def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, in
     # Toggle a different biological standard
     if selected_bio_standard is not None:
         rt_pos, rt_neg, intensity_pos, intensity_neg, mz_pos, mz_neg = get_qc_results(instrument_id=instrument_id,
-            run_id=run_id, status=status, biological_standard=selected_bio_standard, biological_standards_only=True)
+            run_id=run_id, status=status, biological_standard=selected_bio_standard, biological_standards_only=True, preserve_names=True)
 
     # Get biological standard m/z, RT, and intensity data
     if polarity == "Pos":
@@ -3070,7 +3075,7 @@ def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_p
 
     # Get clicked or selected feature from biological standard m/z-RT plot
     if not selected_feature:
-        selected_feature = df_bio_intensity.columns[1]
+        selected_feature = df_bio_intensity.columns[2]
 
     try:
         # Generate biological standard metabolite intensity vs. instrument run plot

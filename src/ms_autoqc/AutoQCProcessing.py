@@ -12,7 +12,7 @@ import logging
 
 
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("AutoQCProcessing")
 log.debug("Test log.debug")
 
 pd.options.mode.chained_assignment = None
@@ -580,7 +580,7 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
         if df_run_retention_times is not None:
             # Calculate in-run RT average for each internal standard
             for internal_standard in df_run_retention_times.columns:
-                if internal_standard == "Sample":
+                if internal_standard == "Specimen":
                     continue
                 in_run_average = df_run_retention_times[internal_standard].dropna().astype(float).mean()
                 df_compare.loc[df_compare["Name"] == internal_standard, "In-run RT average"] = in_run_average
@@ -823,7 +823,7 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
     df_run = db.get_instrument_run(instrument_id, run_id)
     chromatography = df_run["chromatography"].astype(str).values[0]
 
-    df_samples = db.get_samples_in_run(instrument_id, run_id, sample_type="Sample")
+    df_samples = db.get_samples_in_run(instrument_id, run_id, sample_type="Specimen")
     df_biological_standards = db.get_samples_in_run(instrument_id, run_id, sample_type="Biological Standard")
     log.debug("df_biological_standards: ", df_biological_standards)
     

@@ -2866,7 +2866,8 @@ def get_samples_in_run(instrument_id, run_id, sample_type="Both"):
     Returns:
         DataFrame of sample tables for a given instrument run.
     """
-
+    log.debug("get_samples_in_run local variables")
+    log.debug(locals())
     if sample_type == "Specimen":
         df = get_table(instrument_id, "sample_qc_results")
 
@@ -2878,7 +2879,7 @@ def get_samples_in_run(instrument_id, run_id, sample_type="Both"):
         df_bio_standards = get_table(instrument_id, "bio_qc_results")
         df_bio_standards.drop(columns=["biological_standard"], inplace=True)
         df = df_bio_standards.append(df_samples, ignore_index=True)
-
+    #log.debug("get_samples_in_run returns: {}".format(df.loc[df['run_id'] == run_id))
     return df.loc[df["run_id"] == run_id]
 
 
@@ -3099,13 +3100,12 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, l
     Returns:
         DataFrame of samples (rows) vs. internal standards (columns) as JSON string.
     """
-
+    log.debug("parse_internal_standard_data locals: {}".format(locals()))
     # Get relevant QC results table from database
     if load_from == "database" or load_from == "processing":
         df_samples = get_samples_in_run(instrument_id, run_id, "Specimen")
     elif load_from == "csv":
         df_samples = get_samples_from_csv(instrument_id, run_id, "Specimen")
-
     # Filter by polarity
     df_samples = df_samples.loc[df_samples["polarity"] == polarity]
     sample_ids = df_samples["sample_id"].astype(str).tolist()
@@ -3121,7 +3121,7 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, l
     df_results = pd.DataFrame(results)
     df_results.drop(columns=["Name"], inplace=True)
     df_results["Specimen"] = sample_ids
-
+    log.debug("parse_intetrnal_standard_data returns df_results: {}".format(df_results))
     # Return DataFrame as JSON string
     if as_json:
         return df_results.to_json(orient="records")
@@ -3200,8 +3200,8 @@ def parse_biological_standard_data(instrument_id, run_id, result_type, polarity,
     results = df_samples[result_type].fillna('{}').tolist()
     results = [ast.literal_eval(result) if result != "None" and result != "nan" else {} for result in results]
     df_results = pd.DataFrame(results)
-
-    #doesn't currently (20231005) do anything if True
+    df_results.insert(1, "run_id", run_ids)
+    
     if preserve_names is False:
         df_results["Name"] = run_ids
 
