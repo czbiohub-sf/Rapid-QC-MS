@@ -2950,8 +2950,7 @@ def populate_biological_standards_dropdown(resources):
 def populate_biological_standards_compare_dropdowns(resources, polarity, intensity_pos, intensity_neg, selected_bio_standard, runselector):
     log.debug("populate_biological_standards_compare_dropdowns input variables: ")
     log.debug(locals())
-    print("populating")
-    print(runselector)
+
     if resources is not None:
         resources = json.loads(resources)
         biostnds = resources["biological_standards"]
