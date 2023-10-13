@@ -683,7 +683,7 @@ def load_istd_delta_mz_plot(dataframe, samples, internal_standard):
 
     return fig
 
-def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity, target_biostnd, return_runids=False):
+def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity, target_biostnd, source_biostnd, return_runids=False):
 
     """
     Returns scatter plot figure of precursor m/z vs. retention time for targeted features in the biological standard.
@@ -715,17 +715,17 @@ def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity, target_biostnd, re
     sample_names = df_mz["Name"].astype(str).tolist()
 
     del metabolites[0:2]
-
-    # Construct new DataFrame
     bio_df = pd.DataFrame()
     bio_df["Metabolite name"] = metabolites
     bio_df["Precursor m/z"] = df_mz.loc[df_mz["run_id"] == run_id][metabolites].iloc[0].astype(float).values
     bio_df["Retention time (min)"] =  df_rt.loc[df_rt["run_id"] == run_id][metabolites].iloc[0].astype(float).values
     bio_df["Intensity"] =  df_intensity.loc[df_intensity["run_id"] == run_id][metabolites].iloc[0].astype(float).values
+    if target_biostnd == "All previous":
+    # Construct new DataFrame
 
-    # Get percent change of feature intensities (only for runs previous to this one)
-    df_intensity = df_intensity.fillna(0)
-    if target_biostnd == "All Previous":
+        # Get percent change of feature intensities (only for runs previous to this one)
+        df_intensity = df_intensity.fillna(0)
+
         try:
             index_of_run = df_intensity.loc[df_intensity["run_id"] == run_id].index.tolist()[0]
             df_intensity = df_intensity[0:index_of_run + 1]
@@ -734,20 +734,31 @@ def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity, target_biostnd, re
 
         if len(df_intensity) > 1:
             average_intensity_in_studies = df_intensity.loc[df_intensity["run_id"] != run_id][metabolites].astype(float).mean().values
+            print(average_intensity_in_studies)
+            print(feature_intensity_from_study)
             bio_df["% Change"] = ((feature_intensity_from_study - average_intensity_in_studies) / average_intensity_in_studies) * 100
             bio_df.replace(np.inf, 100, inplace=True)
             bio_df.replace(-np.inf, -100, inplace=True)
         else:
             bio_df["% Change"] = 0
-    else:
-        feature_intensity_from_study = df_intensity.loc[df_intensity["run_id"] == run_id][metabolites].iloc[0].astype(float).values
+    elif source_biostnd is not None and target_biostnd is not None:
+        bio_df["Precursor m/z"] = df_mz.loc[df_mz["Name"] == source_biostnd][metabolites].iloc[0].astype(float).values
+        bio_df["Retention time (min)"] =  df_rt.loc[df_rt["Name"] == source_biostnd][metabolites].iloc[0].astype(float).values
+        bio_df["Intensity"] =  df_intensity.loc[df_intensity["Name"] == source_biostnd][metabolites].iloc[0].astype(float).values
+        df_intensity = df_intensity.fillna(0)
+        feature_intensity_from_study = df_intensity.loc[df_intensity["Name"] == source_biostnd][metabolites].iloc[0].astype(float).values
+
         if len(df_intensity) > 1:
-            target_intensity = df_intensity.loc[df_intensity["Name"] == target_biostnd][metabolites].astype(float).mean().values
+            target_intensity = df_intensity.loc[df_intensity["Name"] == target_biostnd][metabolites].iloc[0].astype(float).values
+            print(feature_intensity_from_study)
+            print(target_intensity)
             bio_df["% Change"] = ((feature_intensity_from_study - target_intensity) / target_intensity) * 100
             bio_df.replace(np.inf, 100, inplace=True)
             bio_df.replace(-np.inf, -100, inplace=True)
         else:
             bio_df["% Change"] = 0
+    else:
+        bio_df["% Change"] = 0
     # Plot readiness
     bio_df["Retention time (min)"] = bio_df["Retention time (min)"].round(2)
     bio_df["% Change"] = bio_df["% Change"].round(1).fillna(0)
