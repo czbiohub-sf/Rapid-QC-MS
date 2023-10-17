@@ -1,5 +1,6 @@
 import io, sys, subprocess, psutil, time, traceback
 import base64, webbrowser, json, ast
+from copy import deepcopy
 
 import pandas as pd
 import sqlalchemy as sa
@@ -9,14 +10,26 @@ import dash_bootstrap_components as dbc
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
 
+
+
 from ms_autoqc.PlotGeneration import *
 from ms_autoqc.AcquisitionListener import *
 import ms_autoqc.DatabaseFunctions as db
 import ms_autoqc.AutoQCProcessing as qc
 import ms_autoqc.SlackNotifications as bot
 
+
+import logging
+
+
+#Can't use __name__ here because I think Flask eats the logs then
+log = logging.getLogger("DashWebApp")
+log.debug("Test log.debug from DashWebApp")
+
+
 # Set ms_autoqc/src as the working directory
 src_folder = os.path.dirname(os.path.realpath(__file__))
+print("DashWebApp: src_folder: " + src_folder)
 os.chdir(src_folder)
 
 # Initialize directories
@@ -116,7 +129,7 @@ def serve_layout():
                                         "border": "1px solid " + bootstrap_colors["blue"]
                                         }],
                                     style_cell_conditional=[
-                                        {"if": {"column_id": "Run ID"},
+                                        {"if": {"column_id": "Job ID"},
                                             "width": "40%"},
                                         {"if": {"column_id": "Chromatography"},
                                             "width": "35%"},
@@ -208,7 +221,7 @@ def serve_layout():
                                             value="all",
                                             options=[
                                                 {"label": "All", "value": "all"},
-                                                {"label": "Samples", "value": "samples"},
+                                                {"label": "Specimens", "value": "specimens"},
                                                 {"label": "Pools", "value": "pools"},
                                                 {"label": "Blanks", "value": "blanks"}],
                                         ),
@@ -251,7 +264,7 @@ def serve_layout():
                                         }
                                     ],
                                     style_cell_conditional=[
-                                        {"if": {"column_id": "Sample"},
+                                        {"if": {"column_id": "Specimen"},
                                         "width": "60%"},
                                         {"if": {"column_id": "Position"},
                                         "width": "20%"},
@@ -298,7 +311,7 @@ def serve_layout():
                                         dcc.Dropdown(
                                             id="rt-plot-sample-dropdown",
                                             options=[],
-                                            placeholder="Select samples...",
+                                            placeholder="Select specimens...",
                                             style={"text-align": "left",
                                                    "height": "1.5",
                                                    "width": "100%",
@@ -338,7 +351,7 @@ def serve_layout():
                                         dcc.Dropdown(
                                             id="intensity-plot-sample-dropdown",
                                             options=[],
-                                            placeholder="Select samples...",
+                                            placeholder="Select specimens...",
                                             style={"text-align": "left",
                                                    "height": "1.5",
                                                    "width": "100%",
@@ -379,7 +392,7 @@ def serve_layout():
                                         dcc.Dropdown(
                                             id="mz-plot-sample-dropdown",
                                             options=[],
-                                            placeholder="Select samples...",
+                                            placeholder="Select specimens...",
                                             style={"text-align": "left",
                                                    "height": "1.5",
                                                    "width": "100%",
@@ -400,6 +413,23 @@ def serve_layout():
                                         # Dropdown for selecting a biological standard to view
                                         dcc.Dropdown(id="bio-standards-plot-dropdown",
                                             options=[], placeholder="Select biological standard...",
+                                            style={"text-align": "left", "height": "1.5", "font-size": "1rem",
+                                                "width": "100%", "display": "inline-block"}),
+                                        html.Div(className="child-container", children=[
+                                            dcc.Dropdown(id="bio-standards-plot-dropdown-compare-target",
+                                                options=[], placeholder="Select target...",
+                                                style={"text-align": "left", "height": "1.5", "font-size": "1rem",
+                                                    "width": "100%", "display": "inline-block"})
+                                        ]),
+
+                                        html.Div(className="child-container", children=[
+                                            dcc.Dropdown(id="bio-standards-plot-dropdown-compare-source",
+                                                options=[], placeholder="Select target...",
+                                                style={"text-align": "left", "height": "1.5", "font-size": "1rem",
+                                                    "width": "100%", "display": "inline-block"})
+                                        ]),
+                                        dcc.Dropdown(id="bio-standards-plot-dropdown-jobid",
+                                            options=[], placeholder="Pick target job for pool compares...",
                                             style={"text-align": "left", "height": "1.5", "font-size": "1rem",
                                                 "width": "100%", "display": "inline-block"}),
 
@@ -584,12 +614,12 @@ def serve_layout():
                             dbc.ModalHeader(dbc.ModalTitle(id="setup-new-run-modal-title", children="New QC Job"), close_button=True),
                             dbc.ModalBody(id="setup-new-run-modal-body", className="modal-styles-2", children=[
 
-                                # Text field for entering your run ID
+                                # Text field for entering your job ID
                                 html.Div([
-                                    dbc.Label("Instrument run ID"),
-                                    dbc.Input(id="instrument-run-id", placeholder="Give your instrument run a unique name", type="text"),
+                                    dbc.Label("Job ID"),
+                                    dbc.Input(id="instrument-run-id", placeholder="Give your job a unique ID", type="text"),
                                     dbc.FormFeedback("Looks good!", type="valid"),
-                                    dbc.FormFeedback("Please enter a unique ID for this run.", type="invalid"),
+                                    dbc.FormFeedback("Please enter a unique ID for this job.", type="invalid"),
                                 ]),
 
                                 html.Br(),
@@ -1101,7 +1131,7 @@ def serve_layout():
                                     ]),
 
                                     # AutoQC parameters
-                                    dbc.Tab(label="QC configurations", className="modal-styles", children=[
+                                    dbc.Tab(label="IS configurations", className="modal-styles", children=[
 
                                         html.Br(),
 
@@ -1109,25 +1139,25 @@ def serve_layout():
                                         dbc.Alert(id="qc-config-addition-alert", is_open=False, duration=5000),
                                         dbc.Alert(id="qc-config-removal-alert", is_open=False, duration=5000),
 
-                                        dbc.Label("Manage QC configurations", style={"font-weight": "bold"}),
+                                        dbc.Label("Manage IS configurations", style={"font-weight": "bold"}),
                                         html.Br(),
 
                                         html.Div([
-                                            dbc.Label("Add new QC configuration"),
+                                            dbc.Label("Add new IS configuration"),
                                             dbc.InputGroup([
-                                                dbc.Input(id="add-qc-configuration-text-field",
+                                                dbc.Input(id="add-is-configuration-text-field",
                                                           placeholder="Name of configuration to add"),
                                                 dbc.Button("Add new config", color="primary", outline=True,
-                                                           id="add-qc-configuration-button", n_clicks=0),
+                                                           id="add-is-configuration-button", n_clicks=0),
                                             ]),
-                                            dbc.FormText("Give your custom QC configuration a unique name"),
+                                            dbc.FormText("Give your custom IS configuration a unique name"),
                                         ]),
 
                                         html.Br(),
 
                                         # Select configuration
                                         html.Div(children=[
-                                            dbc.Label("Select QC configuration to edit"),
+                                            dbc.Label("Select IS configuration to edit"),
                                             dbc.InputGroup([
                                                 dbc.Select(id="qc-configs-dropdown",
                                                            placeholder="No configuration selected"),
@@ -1140,7 +1170,7 @@ def serve_layout():
 
                                         html.Br(),
 
-                                        dbc.Label("Edit QC configuration parameters", style={"font-weight": "bold"}),
+                                        dbc.Label("Edit IS configuration parameters", style={"font-weight": "bold"}),
                                         html.Br(),
 
                                         html.Div([
@@ -1274,37 +1304,39 @@ def serve_layout():
                                             ])
                                         ]), html.Br(),
 
-                                        # Data collection parameters
-                                        dbc.Label("Data collection parameters", style={"font-weight": "bold"}),
-                                        html.Br(),
+                                        # # Data collection parameters
+                                        # """
+                                        # dbc.Label("Data collection parameters", style={"font-weight": "bold"}),
+                                        # html.Br(),
 
-                                        html.Div(className="parent-container", children=[
-                                            # Retention time begin
-                                            html.Div(className="child-container", children=[
-                                                dbc.Label("Retention time begin"),
-                                                dbc.Input(id="retention-time-begin", placeholder="0"),
-                                            ]),
-                                            # Retention time end
-                                            html.Div(className="child-container", children=[
-                                                dbc.Label("Retention time end"),
-                                                dbc.Input(id="retention-time-end", placeholder="100"),
-                                                html.Br(),
-                                            ]),
-                                        ]),
+                                        # html.Div(className="parent-container", children=[
+                                        #     # Retention time begin
+                                        #     html.Div(className="child-container", children=[
+                                        #         dbc.Label("Retention time begin"),
+                                        #         dbc.Input(id="retention-time-begin", placeholder="0"),
+                                        #     ]),
+                                        #     # Retention time end
+                                        #     html.Div(className="child-container", children=[
+                                        #         dbc.Label("Retention time end"),
+                                        #         dbc.Input(id="retention-time-end", placeholder="100"),
+                                        #         html.Br(),
+                                        #     ]),
+                                        # ]),
 
-                                        html.Div(className="parent-container", children=[
-                                            # Mass range begin
-                                            html.Div(className="child-container", children=[
-                                                dbc.Label("Mass range begin"),
-                                                dbc.Input(id="mass-range-begin", placeholder="0"),
-                                            ]),
-                                            # Mass range end
-                                            html.Div(className="child-container", children=[
-                                                dbc.Label("Mass range end"),
-                                                dbc.Input(id="mass-range-end", placeholder="2000"),
-                                                html.Br(),
-                                            ]),
-                                        ]),
+                                        # html.Div(className="parent-container", children=[
+                                        #     # Mass range begin
+                                        #     html.Div(className="child-container", children=[
+                                        #         dbc.Label("Mass range begin"),
+                                        #         dbc.Input(id="mass-range-begin", placeholder="0"),
+                                        #     ]),
+                                        #     # Mass range end
+                                        #     html.Div(className="child-container", children=[
+                                        #         dbc.Label("Mass range end"),
+                                        #         dbc.Input(id="mass-range-end", placeholder="2000"),
+                                        #         html.Br(),
+                                        #     ]),
+                                        # ]),
+                                        # """, #no idea why there needs to be a comma here
 
                                         # Centroid parameters
                                         dbc.Label("Centroid parameters", style={"font-weight": "bold"}),
@@ -1396,56 +1428,56 @@ def serve_layout():
                                         ]),
                                         html.Br(),
 
-                                        # Alignment parameters
-                                        dbc.Label("Alignment parameters", style={"font-weight": "bold"}),
-                                        html.Br(),
+                                        # # Alignment parameters
+                                        # dbc.Label("Alignment parameters", style={"font-weight": "bold"}),
+                                        # html.Br(),
 
-                                        html.Div(className="parent-container", children=[
-                                            # Retention time tolerance
-                                            html.Div(className="child-container", children=[
-                                                dbc.Label("Alignment retention time tolerance"),
-                                                dbc.Input(id="alignment-rt-tolerance", placeholder="0.05"),
-                                            ]),
-                                            # Accurate mass tolerance
-                                            html.Div(className="child-container", children=[
-                                                dbc.Label("Alignment MS1 tolerance"),
-                                                dbc.Input(id="alignment-mz-tolerance", placeholder="0.008"),
-                                                html.Br(),
-                                            ]),
-                                        ]),
-                                        html.Br(),
+                                        # html.Div(className="parent-container", children=[
+                                        #     # Retention time tolerance
+                                        #     html.Div(className="child-container", children=[
+                                        #         dbc.Label("Alignment retention time tolerance"),
+                                        #         dbc.Input(id="alignment-rt-tolerance", placeholder="0.05"),
+                                        #     ]),
+                                        #     # Accurate mass tolerance
+                                        #     html.Div(className="child-container", children=[
+                                        #         dbc.Label("Alignment MS1 tolerance"),
+                                        #         dbc.Input(id="alignment-mz-tolerance", placeholder="0.008"),
+                                        #         html.Br(),
+                                        #     ]),
+                                        # ]),
+                                        # html.Br(),
 
-                                        html.Div(className="parent-container", children=[
-                                            # Retention time factor
-                                            html.Div(className="child-container", children=[
-                                                dbc.Label("Alignment retention time factor"),
-                                                dbc.Input(id="alignment-rt-factor", placeholder="0.5"),
-                                            ]),
-                                            # Accurate mass factor
-                                            html.Div(className="child-container", children=[
-                                                dbc.Label("Alignment MS1 factor"),
-                                                dbc.Input(id="alignment-mz-factor", placeholder="0.5"),
-                                                html.Br(),
-                                            ]),
-                                        ]),
-                                        html.Br(),
+                                        # html.Div(className="parent-container", children=[
+                                        #     # Retention time factor
+                                        #     html.Div(className="child-container", children=[
+                                        #         dbc.Label("Alignment retention time factor"),
+                                        #         dbc.Input(id="alignment-rt-factor", placeholder="0.5"),
+                                        #     ]),
+                                        #     # Accurate mass factor
+                                        #     html.Div(className="child-container", children=[
+                                        #         dbc.Label("Alignment MS1 factor"),
+                                        #         dbc.Input(id="alignment-mz-factor", placeholder="0.5"),
+                                        #         html.Br(),
+                                        #     ]),
+                                        # ]),
+                                        # html.Br(),
 
-                                        html.Div(className="parent-container", children=[
-                                            # Peak count filter
-                                            html.Div(className="child-container", children=[
-                                                dbc.Label("Peak count filter"),
-                                                dbc.Input(id="peak-count-filter", placeholder="0"),
-                                            ]),
-                                            # QC at least filter
-                                            html.Div(className="child-container", children=[
-                                                dbc.Label("QC at least filter"),
-                                                dbc.Select(id="qc-at-least-filter-dropdown", options=[
-                                                    {"label": "True", "value": "True"},
-                                                    {"label": "False", "value": "False"},
-                                                ], placeholder="True"),
-                                                html.Br(),
-                                            ]),
-                                        ]),
+                                        # html.Div(className="parent-container", children=[
+                                        #     # Peak count filter
+                                        #     html.Div(className="child-container", children=[
+                                        #         dbc.Label("Peak count filter"),
+                                        #         dbc.Input(id="peak-count-filter", placeholder="0"),
+                                        #     ]),
+                                        #     # QC at least filter
+                                        #     html.Div(className="child-container", children=[
+                                        #         dbc.Label("QC at least filter"),
+                                        #         dbc.Select(id="qc-at-least-filter-dropdown", options=[
+                                        #             {"label": "True", "value": "True"},
+                                        #             {"label": "False", "value": "False"},
+                                        #         ], placeholder="True"),
+                                        #         html.Br(),
+                                        #     ]),
+                                        # ]),
 
                                         html.Br(), html.Br(), html.Br(), html.Br(), html.Br(),
                                         html.Br(), html.Br(), html.Br(), html.Br(), html.Br(),
@@ -1506,7 +1538,7 @@ def serve_layout():
             dcc.Store(id="bio-mz-pos"),
             dcc.Store(id="bio-mz-neg"),
             dcc.Store(id="study-resources"),
-            dcc.Store(id="samples"),
+            dcc.Store(id="specimens"),
             dcc.Store(id="pos-internal-standards"),
             dcc.Store(id="neg-internal-standards"),
             dcc.Store(id="instruments"),
@@ -2323,13 +2355,13 @@ def populate_instrument_runs_table(instrument_id, refresh, resources, sync_updat
         df_instrument_runs = db.get_instrument_runs(instrument_id)
 
         if len(df_instrument_runs) == 0:
-            empty_table = [{"Run ID": "N/A", "Chromatography": "N/A", "Status": "N/A"}]
+            empty_table = [{"Job ID": "N/A", "Chromatography": "N/A", "Status": "N/A"}]
             return empty_table, {"display": "block"}, {"display": "none"}
 
         # DataFrame refactoring
         df_instrument_runs = df_instrument_runs[["run_id", "chromatography", "status"]]
         df_instrument_runs = df_instrument_runs.rename(
-            columns={"run_id": "Run ID",
+            columns={"run_id": "Job ID",
                      "chromatography": "Chromatography",
                      "status": "Status"})
         df_instrument_runs = df_instrument_runs[::-1]
@@ -2357,7 +2389,7 @@ def open_loading_modal(active_cell, table_data, load_finished):
     trigger = ctx.triggered_id
 
     if active_cell:
-        run_id = table_data[active_cell["row"]]["Run ID"]
+        run_id = table_data[active_cell["row"]]["Job ID"]
 
         title = html.Div([
             html.Div(children=[dbc.Spinner(color="primary"), " Loading QC results for " + run_id])])
@@ -2389,7 +2421,7 @@ def open_loading_modal(active_cell, table_data, load_finished):
               Output("bio-mz-pos", "data"),
               Output("bio-mz-neg", "data"),
               Output("study-resources", "data"),
-              Output("samples", "data"),
+              Output("specimens", "data"),
               Output("pos-internal-standards", "data"),
               Output("neg-internal-standards", "data"),
               Output("istd-delta-rt-pos", "data"),
@@ -2413,13 +2445,14 @@ def load_data(refresh, active_cell, table_data, resources, instrument_id):
     """
     Updates and stores QC results in dcc.Store objects (user's browser session)
     """
-
+    log.debug("load_data input variables: ")
+    log.debug(locals())
     trigger = ctx.triggered_id
 
     if active_cell:
 
         # Get run ID and status
-        run_id = table_data[active_cell["row"]]["Run ID"]
+        run_id = table_data[active_cell["row"]]["Job ID"]
         status = table_data[active_cell["row"]]["Status"]
 
         # Ensure that refresh does not trigger data parsing if no new samples processed
@@ -2459,6 +2492,8 @@ def load_data(refresh, active_cell, table_data, resources, instrument_id):
                     db.store_pid(instrument_id, run_id, process.pid)
 
         # If new sample, route raw data -> parsed data -> user session cache -> plots
+        log.debug("result of get_qc_results function call")
+        log.debug("{}".format(get_qc_results(instrument_id, run_id, status)))
         return get_qc_results(instrument_id, run_id, status) + (True,)
 
     else:
@@ -2476,7 +2511,7 @@ def signal_load_finished(load_finished):
 
 
 @app.callback(Output("sample-table", "data"),
-              Input("samples", "data"), prevent_initial_call=True)
+              Input("specimens", "data"), prevent_initial_call=True)
 def populate_sample_tables(samples):
 
     """
@@ -2485,7 +2520,7 @@ def populate_sample_tables(samples):
 
     if samples is not None:
         df_samples = pd.DataFrame(json.loads(samples))
-        df_samples = df_samples[["Sample", "Position", "QC"]]
+        df_samples = df_samples[["Specimen", "Position", "QC"]]
         return df_samples.to_dict("records")
     else:
         return None
@@ -2500,17 +2535,22 @@ def populate_sample_tables(samples):
               Output("intensity-plot-sample-dropdown", "options"),
               Input("polarity-options", "value"),
               State("sample-table", "data"),
-              Input("samples", "data"),
+              Input("specimens", "data"),
               State("bio-intensity-pos", "data"),
               State("bio-intensity-neg", "data"),
               State("pos-internal-standards", "data"),
-              State("neg-internal-standards", "data"))
+              State("neg-internal-standards", "data"),
+              Input("bio-standards-plot-dropdown", "value"),
+              Input("bio-standards-plot-dropdown-compare-target", "value"),
+              Input("bio-standards-plot-dropdown-compare-source", "value"))
 def update_dropdowns_on_polarity_change(polarity, table_data, samples, bio_intensity_pos, bio_intensity_neg,
-    pos_internal_standards, neg_internal_standards):
+    pos_internal_standards, neg_internal_standards, selected_bio_standard, biostandard_sample_ids, placeholder):
 
     """
     Updates dropdown lists with correct items for user-selected polarity
     """
+    log.debug("update_dropdowns_on_polarity_change input variables: ")
+    log.debug(locals())
 
     if samples is not None:
         df_samples = pd.DataFrame(json.loads(samples))
@@ -2519,27 +2559,29 @@ def update_dropdowns_on_polarity_change(polarity, table_data, samples, bio_inten
             istd_dropdown = json.loads(neg_internal_standards)
 
             if bio_intensity_neg is not None:
-                df = pd.DataFrame(json.loads(bio_intensity_neg))
-                df.drop(columns=["Name"], inplace=True)
+                df = pd.DataFrame(json.loads(bio_intensity_neg[selected_bio_standard]))
+                df.drop(columns=["Name", "run_id"], inplace=True)
                 bio_dropdown = df.columns.tolist()
             else:
                 bio_dropdown = []
 
-            df_samples = df_samples.loc[df_samples["Sample"].str.contains("Neg")]
-            sample_dropdown = df_samples["Sample"].tolist()
+            df_samples = df_samples.loc[df_samples["Specimen"].str.contains("Neg")]
+            sample_dropdown = df_samples["Specimen"].tolist()
 
         elif polarity == "Pos":
             istd_dropdown = json.loads(pos_internal_standards)
 
             if bio_intensity_pos is not None:
-                df = pd.DataFrame(json.loads(bio_intensity_pos))
-                df.drop(columns=["Name"], inplace=True)
+                df = pd.DataFrame(json.loads(bio_intensity_pos[selected_bio_standard]))
+                df.drop(columns=["Name", "run_id"], inplace=True)
                 bio_dropdown = df.columns.tolist()
             else:
                 bio_dropdown = []
 
-            df_samples = df_samples.loc[(df_samples["Sample"].str.contains("Pos"))]
-            sample_dropdown = df_samples["Sample"].tolist()
+            df_samples = df_samples.loc[(df_samples["Specimen"].str.contains("Pos"))]
+            sample_dropdown = df_samples["Specimen"].tolist()
+        log.debug("update_dropdowns_on_polarity_change return variables: ")
+        log.debug("{} {} {} {} {} {} {}".format(istd_dropdown, istd_dropdown, istd_dropdown, bio_dropdown, sample_dropdown, sample_dropdown, sample_dropdown))
 
         return istd_dropdown, istd_dropdown, istd_dropdown, bio_dropdown, sample_dropdown, sample_dropdown, sample_dropdown
 
@@ -2552,7 +2594,7 @@ def update_dropdowns_on_polarity_change(polarity, table_data, samples, bio_inten
               Output("intensity-plot-sample-dropdown", "value"),
               Input("sample-filtering-options", "value"),
               Input("polarity-options", "value"),
-              Input("samples", "data"),
+              Input("specimens", "data"),
               State("metadata", "data"), prevent_initial_call=True)
 def apply_sample_filter_to_plots(filter, polarity, samples, metadata):
 
@@ -2563,23 +2605,26 @@ def apply_sample_filter_to_plots(filter, polarity, samples, metadata):
     3. Filter by treatments / classes
     4. Filter by pools
     5. Filter by blanks
+    
     """
+    log.debug("apply_sample_filter_to_plots locals()")
+    log.debug(locals())
 
     # Get complete list of samples (including blanks + pools) in polarity
     if samples is not None:
         df_samples = pd.DataFrame(json.loads(samples))
         df_samples = df_samples.loc[df_samples["Polarity"].str.contains(polarity)]
-        sample_list = df_samples["Sample"].tolist()
+        sample_list = df_samples["Specimen"].tolist()
     else:
         raise PreventUpdate
 
-    if filter is not None:
+    if filter is not None and metadata is not None:
         # Return all samples, blanks, and pools
         if filter == "all":
             return [], [], []
 
         # Return samples only
-        elif filter == "samples":
+        elif filter == "specimens":
             df_metadata = pd.read_json(metadata, orient="split")
             df_metadata = df_metadata.loc[df_metadata["Filename"].isin(sample_list)]
             samples_only = df_metadata["Filename"].tolist()
@@ -2609,7 +2654,7 @@ def apply_sample_filter_to_plots(filter, polarity, samples, metadata):
               Input("rt-plot-sample-dropdown", "value"),
               Input("istd-rt-pos", "data"),
               Input("istd-rt-neg", "data"),
-              State("samples", "data"),
+              State("specimens", "data"),
               State("study-resources", "data"),
               State("pos-internal-standards", "data"),
               State("neg-internal-standards", "data"),
@@ -2639,7 +2684,7 @@ def populate_istd_rt_plot(polarity, internal_standard, selected_samples, rt_pos,
 
     # Get samples
     df_samples = pd.DataFrame(json.loads(samples))
-    samples = df_samples.loc[df_samples["Polarity"] == polarity]["Sample"].astype(str).tolist()
+    samples = df_samples.loc[df_samples["Polarity"] == polarity]["Specimen"].astype(str).tolist()
 
     # Filter out biological standards
     identifiers = db.get_biological_standard_identifiers()
@@ -2692,7 +2737,7 @@ def populate_istd_rt_plot(polarity, internal_standard, selected_samples, rt_pos,
               Input("intensity-plot-sample-dropdown", "value"),
               Input("istd-intensity-pos", "data"),
               Input("istd-intensity-neg", "data"),
-              State("samples", "data"),
+              State("specimens", "data"),
               State("metadata", "data"),
               State("pos-internal-standards", "data"),
               State("neg-internal-standards", "data"),
@@ -2704,6 +2749,8 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
     """
     Populates internal standard intensity vs. sample plot
     """
+    log.debug("populate_istd_intensity_plot input variables: ")
+    log.debug(locals())
 
     if intensity_pos is None and intensity_neg is None:
         return {}, None, None, None, {"display": "none"}
@@ -2722,14 +2769,15 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
 
     # Get samples
     df_samples = pd.DataFrame(json.loads(samples))
-    samples = df_samples.loc[df_samples["Polarity"] == polarity]["Sample"].astype(str).tolist()
+    samples = df_samples.loc[df_samples["Polarity"] == polarity]["Specimen"].astype(str).tolist()
 
     identifiers = db.get_biological_standard_identifiers()
     for identifier in identifiers:
         samples = [x for x in samples if identifier not in x]
 
     # Get sample metadata
-    df_metadata = pd.read_json(metadata, orient="split")
+    if metadata is not None:
+        df_metadata = pd.read_json(metadata, orient="split")
 
     # Filter samples and internal standards by polarity
     if polarity == "Pos":
@@ -2781,7 +2829,7 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
               Input("mz-plot-sample-dropdown", "value"),
               Input("istd-delta-mz-pos", "data"),
               Input("istd-delta-mz-neg", "data"),
-              State("samples", "data"),
+              State("specimens", "data"),
               State("pos-internal-standards", "data"),
               State("neg-internal-standards", "data"),
               State("study-resources", "data"),
@@ -2811,7 +2859,7 @@ def populate_istd_mz_plot(polarity, internal_standard, selected_samples, delta_m
 
     # Get samples (and filter out biological standards)
     df_samples = pd.DataFrame(json.loads(samples))
-    samples = df_samples.loc[df_samples["Polarity"] == polarity]["Sample"].astype(str).tolist()
+    samples = df_samples.loc[df_samples["Polarity"] == polarity]["Specimen"].astype(str).tolist()
 
     identifiers = db.get_biological_standard_identifiers()
     for identifier in identifiers:
@@ -2847,20 +2895,92 @@ def populate_istd_mz_plot(polarity, internal_standard, selected_samples, delta_m
     except Exception as error:
         print("Error in loading delta m/z vs. sample plot:", error)
         return {}, None, None, None, {"display": "none"}
+    
+@app.callback(Output("bio-standards-plot-dropdown-jobid", "options"),
+              Output("bio-standards-plot-dropdown-jobid", "value"),
+              Input("instrument-run-table", "data"),
+              prevent_initial_call=True)
+def populate_biological_standards_job_dropdown(run_table):
+    log.debug("populate_biological_standards_job_dropdown: {}".format(locals()))
+    run_id_list = ["All"]
+    if run_table is not None:
+        for row in range(len(run_table)):
+            run_id_list.append(run_table[row]["Job ID"])
+        print(run_id_list)
+        
+        return run_id_list, run_id_list[0]
+    else:
+        run_id_list = [""]
+        return run_id_list, run_id_list[0]
 
 
 @app.callback(Output("bio-standards-plot-dropdown", "options"),
-              Input("study-resources", "data"), prevent_initial_call=True)
+              Output("bio-standards-plot-dropdown", "value"),
+              Input("study-resources", "data"),
+              prevent_initial_call=True)
 def populate_biological_standards_dropdown(resources):
 
     """
     Retrieves list of biological standards included in run
     """
+    log.debug("populate_biological_standards_dropdown input variables: ")
+    log.debug(locals())
 
-    try:
-        return ast.literal_eval(ast.literal_eval(resources)["biological_standards"])
-    except:
-        return []
+    if resources is not None:
+        resources = json.loads(resources)
+        biostnds = resources["biological_standards"]
+        
+        log.debug("populate_biological_standards_dropdown returns variables: ")
+        log.debug("{} {}".format(biostnds, biostnds[0]))
+        return biostnds, biostnds[0]
+    else:
+        biostnds = [""]
+        return biostnds, biostnds[0]
+    
+@app.callback(Output("bio-standards-plot-dropdown-compare-target", "options"),
+              Output("bio-standards-plot-dropdown-compare-target", "value"),
+              Output("bio-standards-plot-dropdown-compare-source", "options"),
+              Output("bio-standards-plot-dropdown-compare-source", "value"),
+              Input("study-resources", "data"),
+              Input("polarity-options", "value"),
+              Input("bio-intensity-pos", "data"),
+              Input("bio-intensity-neg", "data"),
+              Input("bio-standards-plot-dropdown", "value"),
+              Input("bio-standards-plot-dropdown-jobid", "value"), prevent_initial_call=True)
+def populate_biological_standards_compare_dropdowns(resources, polarity, intensity_pos, intensity_neg, selected_bio_standard, runselector):
+    log.debug("populate_biological_standards_compare_dropdowns input variables: ")
+    log.debug(locals())
+
+    if resources is not None:
+        resources = json.loads(resources)
+        biostnds = resources["biological_standards"]
+        instrument_runs = [""]
+        df_bio_intensity = None
+
+        if selected_bio_standard == '':
+            selected_bio_standard = biostnds[0]
+        
+        # Get intensity data
+        if polarity == "Pos":
+            if intensity_pos is not None:
+                df_bio_intensity = pd.DataFrame(json.loads(intensity_pos[selected_bio_standard]))
+
+        elif polarity == "Neg":
+            if intensity_neg is not None:
+                df_bio_intensity = pd.DataFrame(json.loads(intensity_neg[selected_bio_standard]))
+
+        if df_bio_intensity is not None:
+            if runselector != "All":
+                df_bio_intensity = df_bio_intensity.loc[df_bio_intensity["run_id"] == runselector]
+            instrument_runs = df_bio_intensity["Name"].astype(str).tolist()
+        
+        log.debug("populate_biological_standards_compare_dropdown returns variables: ")
+        log.debug("{} {}".format(instrument_runs, instrument_runs[0]))
+
+        return instrument_runs, instrument_runs[0], instrument_runs, instrument_runs[0]
+    else:
+        instrument_runs = [""]
+        return instrument_runs, instrument_runs[0], instrument_runs, instrument_runs[0]
 
 
 @app.callback(Output("bio-standard-mz-rt-plot", "figure"),
@@ -2876,13 +2996,18 @@ def populate_biological_standards_dropdown(resources):
               State("bio-mz-neg", "data"),
               State("study-resources", "data"),
               Input("bio-standard-mz-rt-plot", "clickData"),
-              Input("bio-standards-plot-dropdown", "value"), prevent_initial_call=True)
+              Input("bio-standards-plot-dropdown", "value"), 
+              Input("bio-standards-plot-dropdown-compare-target", "value"),
+              Input("bio-standards-plot-dropdown-compare-source", "value"),
+              Input("bio-standards-plot-dropdown-jobid", "value"), prevent_initial_call=True)
 def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, intensity_neg, mz_pos, mz_neg,
-    resources, click_data, selected_bio_standard):
+    resources, click_data, selected_bio_standard, target_biostnd, source_biostnd, jobid):
 
     """
     Populates biological standard m/z vs. RT plot
     """
+    log.debug("populate_bio_standard_mz_rt_plot input variables: ")
+    log.debug(locals())
 
     if rt_pos is None and rt_neg is None:
         if mz_pos is None and mz_neg is None:
@@ -2902,20 +3027,20 @@ def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, in
     # Toggle a different biological standard
     if selected_bio_standard is not None:
         rt_pos, rt_neg, intensity_pos, intensity_neg, mz_pos, mz_neg = get_qc_results(instrument_id=instrument_id,
-            run_id=run_id, status=status, biological_standard=selected_bio_standard, biological_standards_only=True)
+            run_id=run_id, status=status, biological_standard=selected_bio_standard, biological_standards_only=True, preserve_names=True)
 
     # Get biological standard m/z, RT, and intensity data
     if polarity == "Pos":
         if rt_pos is not None and intensity_pos is not None and mz_pos is not None:
-            df_bio_rt = pd.DataFrame(json.loads(rt_pos))
-            df_bio_intensity = pd.DataFrame(json.loads(intensity_pos))
-            df_bio_mz = pd.DataFrame(json.loads(mz_pos))
+            df_bio_rt = pd.DataFrame(json.loads(rt_pos[selected_bio_standard]))
+            df_bio_intensity = pd.DataFrame(json.loads(intensity_pos[selected_bio_standard]))
+            df_bio_mz = pd.DataFrame(json.loads(mz_pos[selected_bio_standard]))
 
     elif polarity == "Neg":
         if rt_neg is not None and intensity_neg is not None and mz_neg is not None:
-            df_bio_rt = pd.DataFrame(json.loads(rt_neg))
-            df_bio_intensity = pd.DataFrame(json.loads(intensity_neg))
-            df_bio_mz = pd.DataFrame(json.loads(mz_neg))
+            df_bio_rt = pd.DataFrame(json.loads(rt_neg[selected_bio_standard]))
+            df_bio_intensity = pd.DataFrame(json.loads(intensity_neg[selected_bio_standard]))
+            df_bio_mz = pd.DataFrame(json.loads(mz_neg[selected_bio_standard]))
 
     if click_data is not None:
         selected_feature = click_data["points"][0]["hovertext"]
@@ -2924,10 +3049,11 @@ def populate_bio_standard_mz_rt_plot(polarity, rt_pos, rt_neg, intensity_pos, in
 
     try:
         # Biological standard metabolites – m/z vs. retention time
-        return load_bio_feature_plot(run_id=run_id, df_rt=df_bio_rt, df_mz=df_bio_mz, df_intensity=df_bio_intensity), \
-               selected_feature, None, {"display": "block"}
+        return load_bio_feature_plot(run_id=run_id, df_rt=df_bio_rt, df_mz=df_bio_mz, df_intensity=df_bio_intensity, target_biostnd=target_biostnd, source_biostnd=source_biostnd), \
+            selected_feature, None, {"display": "block"}
     except Exception as error:
         print("Error in loading biological standard m/z-RT plot:", error)
+        print(traceback.format_exc())
         return {}, None, None, {"display": "none"}
 
 
@@ -2944,7 +3070,8 @@ def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_p
     """
     Populates biological standard benchmark plot
     """
-
+    log.debug("populate_bio_standard_benchmark_plot")
+    log.debug(locals())
     if intensity_pos is None and intensity_neg is None:
         return {}, {"display": "none"}
 
@@ -2962,20 +3089,20 @@ def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_p
     # Toggle a different biological standard
     if selected_bio_standard is not None:
         intensity_pos, intensity_neg = get_qc_results(instrument_id=instrument_id, run_id=run_id,
-            status=status, drive=drive, biological_standard=selected_bio_standard, for_benchmark_plot=True)
+            status=status, biological_standard=selected_bio_standard, for_benchmark_plot=True)
 
     # Get intensity data
     if polarity == "Pos":
         if intensity_pos is not None:
-            df_bio_intensity = pd.DataFrame(json.loads(intensity_pos))
+            df_bio_intensity = pd.DataFrame(json.loads(intensity_pos[selected_bio_standard]))
 
     elif polarity == "Neg":
         if intensity_neg is not None:
-            df_bio_intensity = pd.DataFrame(json.loads(intensity_neg))
+            df_bio_intensity = pd.DataFrame(json.loads(intensity_neg[selected_bio_standard]))
 
     # Get clicked or selected feature from biological standard m/z-RT plot
     if not selected_feature:
-        selected_feature = df_bio_intensity.columns[1]
+        selected_feature = df_bio_intensity.columns[2]
 
     try:
         # Generate biological standard metabolite intensity vs. instrument run plot
@@ -3034,6 +3161,9 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
     """
     Opens information modal when a sample is clicked from the sample table
     """
+    saved_args = locals()
+    log.debug("toggle_sample_card inputs")
+    log.debug(saved_args)
 
     # Get selected sample from table
     if active_cell:
@@ -3051,6 +3181,8 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
     if mz_click:
         clicked_sample = mz_click["points"][0]["x"]
         clicked_sample = clicked_sample.replace(": Precursor m/z Info", "")
+        
+    log.debug("clicked_sample = " + str(clicked_sample))
 
     # Get instrument ID and run ID
     resources = json.loads(resources)
@@ -3063,21 +3195,28 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
     try:
         df_metadata = pd.read_json(metadata, orient="split")
     except:
+        #otherwise populate with an empty dataframe
         df_metadata = pd.DataFrame()
 
     # Check whether sample is a biological standard or not
     is_bio_standard = False
     identifiers = db.get_biological_standard_identifiers()
-
+    
+    log.debug("identifiers = " + str(identifiers))
+    clicked_sample_identifier = ""
     for identifier in identifiers.keys():
         if identifier in clicked_sample:
+            clicked_sample_identifier = identifiers[identifier]
+            log.debug("clicked_sample_identifier = " + clicked_sample_identifier)
             is_bio_standard = True
             break
-
+    
+    log.debug("is_bio_standard = " + str(is_bio_standard))
     # Get polarity
     polarity = db.get_polarity_for_sample(instrument_id, run_id, clicked_sample, status)
 
     # Generate DataFrames with quantified features and metadata for selected sample
+    # data comes in as a json string from dcc.stores
     if not is_bio_standard:
 
         if polarity == "Pos":
@@ -3106,14 +3245,17 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
     elif is_bio_standard:
 
         if polarity == "Pos":
-            df_rt = pd.DataFrame(json.loads(bio_rt_pos))
-            df_intensity = pd.DataFrame(json.loads(bio_intensity_pos))
-            df_mz = pd.DataFrame(json.loads(bio_mz_pos))
+            df_rt = pd.DataFrame(json.loads(bio_rt_pos[clicked_sample_identifier]))
+            df_intensity = pd.DataFrame(json.loads(bio_intensity_pos[clicked_sample_identifier]))
+            log.debug("bio_mz_pos[clicked_sample_identifier]")
+            log.debug(type(bio_mz_pos[clicked_sample_identifier]))
+            log.debug(bio_mz_pos[clicked_sample_identifier])
+            df_mz = pd.DataFrame(json.loads(bio_mz_pos[clicked_sample_identifier]))
 
         elif polarity == "Neg":
-            df_rt = pd.DataFrame(json.loads(bio_rt_neg))
-            df_intensity = pd.DataFrame(json.loads(bio_intensity_neg))
-            df_mz = pd.DataFrame(json.loads(bio_mz_neg))
+            df_rt = pd.DataFrame(json.loads(bio_rt_neg[clicked_sample_identifier]))
+            df_intensity = pd.DataFrame(json.loads(bio_intensity_neg[clicked_sample_identifier]))
+            df_mz = pd.DataFrame(json.loads(bio_mz_neg[clicked_sample_identifier]))
 
         df_sample_features, df_sample_info = generate_bio_standard_dataframe(clicked_sample, instrument_id, run_id, df_rt, df_mz, df_intensity)
 
@@ -4018,9 +4160,9 @@ def show_alert_on_parameter_reset(parameters_reset):
 
 
 @app.callback(Output("qc-config-added", "data"),
-              Output("add-qc-configuration-text-field", "value"),
-              Input("add-qc-configuration-button", "n_clicks"),
-              State("add-qc-configuration-text-field", "value"), prevent_initial_call=True)
+              Output("add-is-configuration-text-field", "value"),
+              Input("add-is-configuration-button", "n_clicks"),
+              State("add-is-configuration-text-field", "value"), prevent_initial_call=True)
 def add_qc_configuration(button_click, qc_config_id):
 
     """
@@ -4225,6 +4367,10 @@ def get_biological_standards(on_page_load, on_standard_added, on_standard_remove
 
     """
     Populates dropdown and table of biological standards
+
+    As added by the user in the Settings > Biological Standards menu and
+    refined during job creation.
+
     """
 
     if db.is_valid():
@@ -5043,14 +5189,14 @@ def update_progress_bar_during_active_instrument_run(active_cell, table_data, re
     if active_cell:
 
         # Get run ID
-        run_id = table_data[active_cell["row"]]["Run ID"]
+        run_id = table_data[active_cell["row"]]["Job ID"]
         status = table_data[active_cell["row"]]["Status"]
 
         # Construct values for progress bar
         completed, total = db.get_completed_samples_count(instrument_id, run_id, status)
         percent_complete = db.get_run_progress(instrument_id, run_id, status)
         progress_label = str(percent_complete) + "%"
-        header_text = run_id + " – " + str(completed) + " out of " + str(total) + " samples processed"
+        header_text = run_id + " – " + str(completed) + " out of " + str(total) + " specimens processed"
 
         if status == "Complete":
             refresh_interval_disabled = True

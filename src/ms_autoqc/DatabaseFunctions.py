@@ -16,6 +16,12 @@ import google.auth as google_auth
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+import logging
+
+# setup logging
+log = logging.getLogger(__name__)
+log.debug("Test log.debug from DatabaseFunctions")
+
 # Set ms_autoqc/src as the working directory
 src_folder = os.path.dirname(os.path.realpath(__file__))
 os.chdir(src_folder)
@@ -23,6 +29,7 @@ os.chdir(src_folder)
 # Initialize directories
 root_directory = os.getcwd()
 data_directory = os.path.join(root_directory, "data")
+print("data_directory: " + data_directory)
 methods_directory = os.path.join(data_directory, "methods")
 auth_directory = os.path.join(root_directory, "auth")
 
@@ -128,6 +135,7 @@ def create_databases(instrument_id, new_instrument=False):
 
     # Create tables for instrument database
     instrument_database = get_database_file(instrument_id=instrument_id, sqlite_conn=True)
+    print("instrument_database: " + instrument_database)
     qc_db_engine = sa.create_engine(instrument_database)
     qc_db_metadata = sa.MetaData()
 
@@ -2853,13 +2861,14 @@ def get_samples_in_run(instrument_id, run_id, sample_type="Both"):
         run_id (str):
             Instrument run ID (job ID)
         sample_type (str):
-            Sample type, either "Sample" or "Biological Standard" or "Both"
+            Sample type, either "Specimen" or "Biological Standard" or "Both"
 
     Returns:
         DataFrame of sample tables for a given instrument run.
     """
-
-    if sample_type == "Sample":
+    log.debug("get_samples_in_run local variables")
+    log.debug(locals())
+    if sample_type == "Specimen":
         df = get_table(instrument_id, "sample_qc_results")
 
     elif sample_type == "Biological Standard":
@@ -2870,7 +2879,7 @@ def get_samples_in_run(instrument_id, run_id, sample_type="Both"):
         df_bio_standards = get_table(instrument_id, "bio_qc_results")
         df_bio_standards.drop(columns=["biological_standard"], inplace=True)
         df = df_bio_standards.append(df_samples, ignore_index=True)
-
+    #log.debug("get_samples_in_run returns: {}".format(df.loc[df['run_id'] == run_id))
     return df.loc[df["run_id"] == run_id]
 
 
@@ -2888,7 +2897,7 @@ def get_samples_from_csv(instrument_id, run_id, sample_type="Both"):
         run_id (str):
             Instrument run ID (job ID)
         sample_type (str):
-            Sample type, either "Sample" or "Biological Standard" or "Both"
+            Sample type, either "Specimen" or "Biological Standard" or "Both"
 
     Returns:
         DataFrame of samples for a given instrument run.
@@ -2900,7 +2909,7 @@ def get_samples_from_csv(instrument_id, run_id, sample_type="Both"):
     samples_csv = os.path.join(csv_directory, "samples.csv")
     bio_standards_csv = os.path.join(csv_directory, "bio_standards.csv")
 
-    if sample_type == "Sample":
+    if sample_type == "Specimen":
         df = pd.read_csv(samples_csv, index_col=False)
 
     elif sample_type == "Biological Standard":
@@ -3091,13 +3100,12 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, l
     Returns:
         DataFrame of samples (rows) vs. internal standards (columns) as JSON string.
     """
-
+    log.debug("parse_internal_standard_data locals: {}".format(locals()))
     # Get relevant QC results table from database
     if load_from == "database" or load_from == "processing":
-        df_samples = get_samples_in_run(instrument_id, run_id, "Sample")
+        df_samples = get_samples_in_run(instrument_id, run_id, "Specimen")
     elif load_from == "csv":
-        df_samples = get_samples_from_csv(instrument_id, run_id, "Sample")
-
+        df_samples = get_samples_from_csv(instrument_id, run_id, "Specimen")
     # Filter by polarity
     df_samples = df_samples.loc[df_samples["polarity"] == polarity]
     sample_ids = df_samples["sample_id"].astype(str).tolist()
@@ -3112,8 +3120,8 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, l
     results = [ast.literal_eval(result) if result != "None" and result != "nan" else {} for result in results]
     df_results = pd.DataFrame(results)
     df_results.drop(columns=["Name"], inplace=True)
-    df_results["Sample"] = sample_ids
-
+    df_results["Specimen"] = sample_ids
+    log.debug("parse_intetrnal_standard_data returns df_results: {}".format(df_results))
     # Return DataFrame as JSON string
     if as_json:
         return df_results.to_json(orient="records")
@@ -3121,7 +3129,7 @@ def parse_internal_standard_data(instrument_id, run_id, result_type, polarity, l
         return df_results
 
 
-def parse_biological_standard_data(instrument_id, run_id, result_type, polarity, biological_standard, load_from, as_json=True):
+def parse_biological_standard_data(instrument_id, run_id, result_type, polarity, biological_standard, load_from, as_json=True, preserve_names=False):
 
     """
     Parses biological standard data into JSON-ified DataFrame of targeted features (as columns) vs. instrument runs (as rows).
@@ -3162,6 +3170,8 @@ def parse_biological_standard_data(instrument_id, run_id, result_type, polarity,
     Returns:
         JSON-ified DataFrame of targeted features for a biological standard (columns) vs. instrument runs (rows).
     """
+    log.debug("parse_biological_standard_data input variables")
+    log.debug(locals())
 
     # Get relevant QC results table from database
     if load_from == "database":
@@ -3190,8 +3200,13 @@ def parse_biological_standard_data(instrument_id, run_id, result_type, polarity,
     results = df_samples[result_type].fillna('{}').tolist()
     results = [ast.literal_eval(result) if result != "None" and result != "nan" else {} for result in results]
     df_results = pd.DataFrame(results)
-    df_results["Name"] = run_ids
+    df_results.insert(1, "run_id", run_ids)
+    
+    if preserve_names is False:
+        df_results["Name"] = run_ids
 
+    log.debug("parse_biological_standard_data -> df_results:")
+    log.debug(df_results.head())
     # Return DataFrame as JSON string
     if as_json:
         return df_results.to_json(orient="records")
@@ -3232,9 +3247,9 @@ def parse_internal_standard_qc_data(instrument_id, run_id, polarity, result_type
 
     # Get relevant QC results table from database
     if load_from == "database" or load_from == "processing":
-        df_samples = get_samples_in_run(instrument_id, run_id, "Sample")
+        df_samples = get_samples_in_run(instrument_id, run_id, "Specimen")
     elif load_from == "csv":
-        df_samples = get_samples_from_csv(instrument_id, run_id, "Sample")
+        df_samples = get_samples_from_csv(instrument_id, run_id, "Specimen")
 
     # Filter by polarity
     df_samples = df_samples.loc[df_samples["polarity"] == polarity]
@@ -3257,7 +3272,7 @@ def parse_internal_standard_qc_data(instrument_id, run_id, polarity, result_type
     results = [ast.literal_eval(result)[type_index] for result in results]
     df_results = pd.DataFrame(results)
     df_results.drop(columns=["Name"], inplace=True)
-    df_results["Sample"] = sample_ids
+    df_results["Specimen"] = sample_ids
 
     # Return DataFrame as JSON string
     if as_json:
@@ -3368,7 +3383,6 @@ def delete_user_from_workspace(email_address):
     else:
         return "Error"
 
-
 def get_qc_results(instrument_id, sample_list, is_bio_standard=False):
 
     """
@@ -3387,6 +3401,8 @@ def get_qc_results(instrument_id, sample_list, is_bio_standard=False):
     Returns:
         DataFrame of QC results for a given sample list.
     """
+    log.debug("get_qc_results input variables")
+    log.debug(locals())
 
     if len(sample_list) == 0:
         return pd.DataFrame()
@@ -3395,12 +3411,17 @@ def get_qc_results(instrument_id, sample_list, is_bio_standard=False):
     engine = sa.create_engine(database)
 
     sample_list = str(sample_list).replace("[", "(").replace("]", ")")
-
+    
+    log.debug("sample_list: " + sample_list)
     if is_bio_standard:
         query = "SELECT sample_id, qc_result FROM bio_qc_results WHERE sample_id in " + sample_list
+        log.debug("biostandard database query is: " + query)
     else:
         query = "SELECT sample_id, qc_result FROM sample_qc_results WHERE sample_id in " + sample_list
-
+        log.debug("sample database query is: " + query)
+        
+    log.debug("get_qc_results returns pd.read_sql(query, engine), which looks like:")
+    log.debug(pd.read_sql(query, engine))
     return pd.read_sql(query, engine)
 
 
@@ -3954,7 +3975,7 @@ def upload_qc_results(instrument_id, run_id):
     df_run = get_instrument_run(instrument_id, run_id)
     df_run.to_csv(run_csv_path, index=False)
 
-    df_samples = get_samples_in_run(instrument_id=instrument_id, run_id=run_id, sample_type="Sample")
+    df_samples = get_samples_in_run(instrument_id=instrument_id, run_id=run_id, sample_type="Specimen")
     if len(df_samples) > 0:
         df_samples.to_csv(samples_csv_path, index=False)
 
