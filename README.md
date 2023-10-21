@@ -31,7 +31,7 @@ In addition, MS-AutoQC requires Python 3.8+ and various Python packages, includi
 
 These are installed automatically during setup.
 
-**Note:** Installation of Python and various Python packages on MS instrument computers comes at no risk. For extra security and peace of mind, you can opt to install MS-AutoQC in a virtual environment. To learn more, please read the [installation guide](https://czbiohub.github.io/MS-AutoQC/installation.html#2-install-ms-autoqc).
+**Note:** Installation of Python and various Python packages on MS instrument computers comes at no risk. For extra security and peace of mind, you can opt to install MS-AutoQC in a virtual environment. To learn more, please read the [installation guide](https://czbiohub-sf.github.io/MS-AutoQC/installation.html#2-install-ms-autoqc).
 
 # Installation
 Installing MS-AutoQC is easy. Simply open your Terminal or Command Prompt and enter:
@@ -41,7 +41,7 @@ py -m pip install ms-autoqc
 
 Python dependencies are installed automatically, but dependencies such as MSConvert and MS-DIAL will need to be installed manually.
 
-You can also opt to download and install MS-AutoQC manually, or in a virtual environment if you prefer. Check out the [installation guide](https://czbiohub.github.io/MS-AutoQC/installation.html#2-install-ms-autoqc) for more details.
+You can also opt to download and install MS-AutoQC manually, or in a virtual environment if you prefer. Check out the [installation guide](https://czbiohub-sf.github.io/MS-AutoQC/installation.html#2-install-ms-autoqc) for more details.
 
 # Usage
 To start MS-AutoQC, simply enter:
@@ -49,7 +49,7 @@ To start MS-AutoQC, simply enter:
 ms_autoqc
 ```
 
-Check out the [quickstart guide](https://czbiohub.github.io/MS-AutoQC/quickstart.html) to learn how easy setting up new QC jobs is.
+Check out the [quickstart guide](https://czbiohub-sf.github.io/MS-AutoQC/quickstart.html) to learn how easy setting up new QC jobs is.
 
 ![](https://user-images.githubusercontent.com/7220175/221339909-0130118b-b82f-4e30-8319-644f7be4d510.gif)
 
@@ -58,6 +58,6 @@ MS-AutoQC was designed to be a universal, open-source solution for data quality 
 
 **However, MS-AutoQC has only been tested extensively on Thermo Fisher mass spectrometers, Thermo acquisition sequences, and Thermo RAW files.** As such, it is expected that there may be bugs and issues with processing data of other vendor formats.
 
-If you encounter a bug, please report it by [opening an issue on GitHub](https://github.com/czbiohub/MS-AutoQC/issues).
+If you encounter a bug, please report it by [opening an issue on GitHub](https://github.com/czbiohub-sf/MS-AutoQC/issues).
 
 We are open to collaboration! If you would like to help us develop support for Agilent, Bruker, Sciex, or Waters acquisition sequences and data files, please send an email to [brian.defelice@czbiohub.org](mailto:brian.defelice@czbiohub.org).
