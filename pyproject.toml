@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ms-autoqc"
-version = "1.0.1"
+version = "1.0.0"
 description = "Realtime quality control for mass spectrometry data acquisition"
 readme = "README.md"
 authors = [{ name = "Wasim Sandhu", email = "wasim.sandhu@czbiohub.org" }]
