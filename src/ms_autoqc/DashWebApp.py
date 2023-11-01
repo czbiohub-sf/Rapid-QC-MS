@@ -76,7 +76,7 @@ def serve_layout():
                         dbc.Col(html.Img(src=biohub_logo, height="30px")),
                         dbc.Col(dbc.NavbarBrand(id="header", children="MS-AutoQC", className="ms-2")),
                         ], align="center", className="g-0",
-                    ), href="https://biohub.org", style={"textDecoration": "none"},
+                    ), href="https://www.czbiohub.org/", style={"textDecoration": "none"},
                 ),
                 # Settings button
                 dbc.Row([
