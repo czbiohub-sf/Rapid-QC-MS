@@ -63,7 +63,7 @@ app = dash.Dash(__name__, title="MS-AutoQC", suppress_callback_exceptions=True,
 
 def serve_layout():
 
-    biohub_logo = "https://github-production-user-asset-6210df.s3.amazonaws.com/92759728/279716845-982c19bb-5830-4b33-9e1c-c9700754de98.png"
+    biohub_logo = "https://raw.githubusercontent.com/czbiohub-sf/MS-AutoQC/77a5b4908dc331ac94d186b4b85d804543b7df14/docs/CZ-Biohub-Mark-SF-Color-RGB.png"
 
     return html.Div(className="app-layout", children=[
 
