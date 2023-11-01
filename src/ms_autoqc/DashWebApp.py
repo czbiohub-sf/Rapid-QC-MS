@@ -63,7 +63,7 @@ app = dash.Dash(__name__, title="MS-AutoQC", suppress_callback_exceptions=True,
 
 def serve_layout():
 
-    biohub_logo = "https://user-images.githubusercontent.com/7220175/184942387-0acf5deb-d81e-4962-ab27-05b453c7a688.png"
+    biohub_logo = "https://github-production-user-asset-6210df.s3.amazonaws.com/92759728/279716845-982c19bb-5830-4b33-9e1c-c9700754de98.png"
 
     return html.Div(className="app-layout", children=[
 
@@ -81,8 +81,8 @@ def serve_layout():
                 # Settings button
                 dbc.Row([
                     dbc.Nav([
-                        dbc.NavItem(dbc.NavLink("About", href="https://github.com/czbiohub/MS-AutoQC", className="navbar-button", target="_blank")),
-                        dbc.NavItem(dbc.NavLink("Support", href="https://github.com/czbiohub/MS-AutoQC/wiki", className="navbar-button", target="_blank")),
+                        dbc.NavItem(dbc.NavLink("About", href="https://github.com/czbiohub-sf/MS-AutoQC", className="navbar-button", target="_blank")),
+                        dbc.NavItem(dbc.NavLink("Support", href="https://github.com/czbiohub-sf/MS-AutoQC/wiki", className="navbar-button", target="_blank")),
                         dbc.NavItem(dbc.NavLink("Settings", href="#", id="settings-button", className="navbar-button")),
                     ], className="me-auto")
                 ], className="g-0 ms-auto flex-nowrap mt-3 mt-md-0")
