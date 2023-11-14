@@ -468,7 +468,8 @@ def generate_sample_metadata_dataframe(sample, df_rt, df_mz, df_intensity, df_de
             df_sample_info["Growth-Harvest Conditions"] = df_metadata["Growth-Harvest Conditions"].astype(str).values
             df_sample_info["Treatment"] = df_metadata["Treatment"].astype(str).values
 
-    df_sample_info = df_sample_info.append(df_sample_info.iloc[0])
+    df_sample_info = pd.concat([df_sample_info, df_sample_info.iloc[0]])
+    #df_sample_info = df_sample_info.append(df_sample_info.iloc[0])
     df_sample_info.iloc[0] = df_sample_info.columns.tolist()
     df_sample_info = df_sample_info.rename(index={0: "Specimen Information"})
     df_sample_info = df_sample_info.transpose()
@@ -524,7 +525,8 @@ def generate_bio_standard_dataframe(clicked_sample, instrument_id, run_id, df_rt
         instrument_id=instrument_id, sample_list=[clicked_sample], is_bio_standard=True)["qc_result"].values[0]
     df_sample_info["QC Result"] = [qc_result]
 
-    df_sample_info = df_sample_info.append(df_sample_info.iloc[0])
+    df_sample_info = pd.concat([df_sample_info, df_sample_info.iloc[0]])
+    #df_sample_info = df_sample_info.append(df_sample_info.iloc[0])
     df_sample_info.iloc[0] = df_sample_info.columns.tolist()
     df_sample_info = df_sample_info.rename(index={0: "Specimen Information"})
     df_sample_info = df_sample_info.transpose()

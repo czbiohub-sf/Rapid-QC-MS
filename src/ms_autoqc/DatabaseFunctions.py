@@ -2878,7 +2878,7 @@ def get_samples_in_run(instrument_id, run_id, sample_type="Both"):
         df_samples = get_table(instrument_id, "sample_qc_results")
         df_bio_standards = get_table(instrument_id, "bio_qc_results")
         df_bio_standards.drop(columns=["biological_standard"], inplace=True)
-        df = df_bio_standards.append(df_samples, ignore_index=True)
+        df = pd.concat([df_bio_standards, df_samples], ignore_index=True)
     #log.debug("get_samples_in_run returns: {}".format(df.loc[df['run_id'] == run_id))
     return df.loc[df["run_id"] == run_id]
 
@@ -2919,7 +2919,8 @@ def get_samples_from_csv(instrument_id, run_id, sample_type="Both"):
         df_samples = pd.read_csv(samples_csv, index_col=False)
         df_bio_standards = pd.read_csv(bio_standards_csv, index_col=False)
         df_bio_standards.drop(columns=["biological_standard"], inplace=True)
-        df = df_bio_standards.append(df_samples, ignore_index=True)
+        #df = df_bio_standards.append(df_samples, ignore_index=True)
+        df = pd.concat([df_bio_standards, df_samples], ignore_index=True)
 
     df = df.loc[df["run_id"] == run_id]
 
