@@ -437,7 +437,8 @@ def peak_list_to_dataframe(sample_peak_list, df_features):
 
                     # If there's only one annotation without MS2 left, choose as the "correct" annotation
                     if len(df_annotation) == 1:
-                        df = df.append(df_annotation, ignore_index=True)
+                        #df = df.append(df_annotation, ignore_index=True)
+                        df = pd.concat([df, df_annotation])
                         continue
 
             # Append the annotation with the lowest delta RT and delta m/z to the peak list DataFrame
@@ -465,7 +466,8 @@ def peak_list_to_dataframe(sample_peak_list, df_features):
                 df_rectified = df_rectified[:1]
 
             # Append "correct" annotation to peak list DataFrame
-            df = df.append(df_rectified, ignore_index=True)
+            df = pd.concat([df, df_rectified], ignore_index=True)
+            #df = df.append(df_rectified, ignore_index=True)
 
     # DataFrame readiness before return
     try:
@@ -606,7 +608,8 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
                        "Intensity dropout": 1,
                        "Warnings": "",
                        "Fails": ""}
-                qc_dataframe = qc_dataframe.append(row, ignore_index=True)
+                qc_dataframe = pd.concat([qc_dataframe, row], ignore_index=True)
+                #qc_dataframe = qc_dataframe.append(row, ignore_index=True)
 
         # Determine pass / fail based on user criteria
         qc_config = db.get_qc_configuration_parameters(instrument_id=instrument_id, run_id=run_id)
