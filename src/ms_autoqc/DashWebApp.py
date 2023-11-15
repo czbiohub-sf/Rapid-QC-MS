@@ -3190,6 +3190,9 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
     run_id = resources["run_id"]
     status = resources["status"]
 
+    # this is a list with names: eg ["NameUrine", "FakeyMcFakerson"]
+    run_biostnds = resources["biological_standards"]
+
     # Get sequence and metadata
     df_sequence = pd.read_json(sequence, orient="split")
     try:
@@ -3200,12 +3203,14 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
 
     # Check whether sample is a biological standard or not
     is_bio_standard = False
+
+    # this is a dict: eg {'Urine': 'NameUrine', 'Fake': 'FakeyMcFakerson'}
     identifiers = db.get_biological_standard_identifiers()
     
     log.debug("identifiers = " + str(identifiers))
     clicked_sample_identifier = ""
-    for identifier in identifiers.keys():
-        if identifier in clicked_sample:
+    for identifier, identusername in identifiers.items():
+        if identifier in clicked_sample and identusername in run_biostnds:
             clicked_sample_identifier = identifiers[identifier]
             log.debug("clicked_sample_identifier = " + clicked_sample_identifier)
             is_bio_standard = True
