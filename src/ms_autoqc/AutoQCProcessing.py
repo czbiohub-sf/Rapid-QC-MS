@@ -608,6 +608,7 @@ def qc_sample(instrument_id, run_id, polarity, df_peak_list, df_features, is_bio
                        "Intensity dropout": 1,
                        "Warnings": "",
                        "Fails": ""}
+                row = pd.DataFrame.from_records([row])
                 qc_dataframe = pd.concat([qc_dataframe, row], ignore_index=True)
                 #qc_dataframe = qc_dataframe.append(row, ignore_index=True)
 
@@ -858,7 +859,6 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
         is_bio_standard = True
 
     elif filename in df_samples["sample_id"].astype(str).tolist():
-
         # Get polarity
         try:
             polarity = df_samples.loc[df_samples["sample_id"] == filename]["polarity"].astype(str).values[0]
