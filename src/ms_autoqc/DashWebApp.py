@@ -2921,7 +2921,6 @@ def populate_biological_standards_job_dropdown(run_table):
     if run_table is not None:
         for row in range(len(run_table)):
             run_id_list.append(run_table[row]["Job ID"])
-        print(run_id_list)
         
         return run_id_list, run_id_list[0]
     else:
