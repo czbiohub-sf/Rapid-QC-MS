@@ -18,7 +18,7 @@ classifiers = [
 ]
 keywords = ["mass-spectrometry", "mass-spec", "autoqc", "mass-spec-quality-control"]
 dependencies = [
-    "pandas==2.1.1",
+    "pandas==1.4.2",
     "plotly==5.6.0",
     "dash==2.6.1",
     "flask==2.2.4",
