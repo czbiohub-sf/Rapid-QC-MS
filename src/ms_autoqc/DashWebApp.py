@@ -2666,6 +2666,11 @@ def populate_istd_rt_plot(polarity, internal_standard, selected_samples, rt_pos,
     """
     Populates internal standard retention time vs. sample plot
     """
+    if resources is not None:
+        resources = json.loads(resources)
+        run_biostnds = resources["biological_standards"]
+        # Get retention times
+        retention_times = resources["retention_times_dict"]
 
     if rt_pos is None and rt_neg is None:
         return {}, None, None, None, {"display": "none"}
@@ -2688,8 +2693,9 @@ def populate_istd_rt_plot(polarity, internal_standard, selected_samples, rt_pos,
 
     # Filter out biological standards
     identifiers = db.get_biological_standard_identifiers()
-    for identifier in identifiers:
-        samples = [x for x in samples if identifier not in x]
+    for identifier, userident in identifiers.items():
+        if userident in run_biostnds:
+            samples = [x for x in samples if identifier not in x]
 
     # Filter samples and internal standards by polarity
     if polarity == "Pos":
@@ -2699,8 +2705,7 @@ def populate_istd_rt_plot(polarity, internal_standard, selected_samples, rt_pos,
         internal_standards = json.loads(neg_internal_standards)
         df_istd_rt = df_istd_rt_neg
 
-    # Get retention times
-    retention_times = json.loads(resources)["retention_times_dict"]
+
 
     # Set initial dropdown values when none are selected
     if not internal_standard or trigger == "polarity-options":
@@ -2739,11 +2744,12 @@ def populate_istd_rt_plot(polarity, internal_standard, selected_samples, rt_pos,
               Input("istd-intensity-neg", "data"),
               State("specimens", "data"),
               State("metadata", "data"),
+              State("study-resources", "data"),
               State("pos-internal-standards", "data"),
               State("neg-internal-standards", "data"),
               Input("intensity-prev-button", "n_clicks"),
               Input("intensity-next-button", "n_clicks"), prevent_initial_call=True)
-def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, intensity_pos, intensity_neg, samples, metadata,
+def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, intensity_pos, intensity_neg, samples, metadata, resources,
     pos_internal_standards, neg_internal_standards, previous, next):
 
     """
@@ -2751,6 +2757,10 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
     """
     log.debug("populate_istd_intensity_plot input variables: ")
     log.debug(locals())
+
+    if resources is not None:
+        resources = json.loads(resources)
+        run_biostnds = resources["biological_standards"]
 
     if intensity_pos is None and intensity_neg is None:
         return {}, None, None, None, {"display": "none"}
@@ -2772,8 +2782,9 @@ def populate_istd_intensity_plot(polarity, internal_standard, selected_samples, 
     samples = df_samples.loc[df_samples["Polarity"] == polarity]["Specimen"].astype(str).tolist()
 
     identifiers = db.get_biological_standard_identifiers()
-    for identifier in identifiers:
-        samples = [x for x in samples if identifier not in x]
+    for identifier, userident in identifiers.items():
+        if userident in run_biostnds:
+            samples = [x for x in samples if identifier not in x]
 
     # Get sample metadata
     if metadata is not None:
@@ -2841,6 +2852,9 @@ def populate_istd_mz_plot(polarity, internal_standard, selected_samples, delta_m
     """
     Populates internal standard delta m/z vs. sample plot
     """
+    if resources is not None:
+        resources = json.loads(resources)
+        run_biostnds = resources["biological_standards"]
 
     if delta_mz_pos is None and delta_mz_neg is None:
         return {}, None, None, None, {"display": "none"}
@@ -2862,8 +2876,9 @@ def populate_istd_mz_plot(polarity, internal_standard, selected_samples, delta_m
     samples = df_samples.loc[df_samples["Polarity"] == polarity]["Specimen"].astype(str).tolist()
 
     identifiers = db.get_biological_standard_identifiers()
-    for identifier in identifiers:
-        samples = [x for x in samples if identifier not in x]
+    for identifier, userident in identifiers.items():
+        if userident in run_biostnds:
+            samples = [x for x in samples if identifier not in x]
 
     # Filter samples and internal standards by polarity
     if polarity == "Pos":
@@ -2906,7 +2921,6 @@ def populate_biological_standards_job_dropdown(run_table):
     if run_table is not None:
         for row in range(len(run_table)):
             run_id_list.append(run_table[row]["Job ID"])
-        print(run_id_list)
         
         return run_id_list, run_id_list[0]
     else:
@@ -3190,6 +3204,9 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
     run_id = resources["run_id"]
     status = resources["status"]
 
+    # this is a list with names: eg ["NameUrine", "FakeyMcFakerson"]
+    run_biostnds = resources["biological_standards"]
+
     # Get sequence and metadata
     df_sequence = pd.read_json(sequence, orient="split")
     try:
@@ -3200,12 +3217,14 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
 
     # Check whether sample is a biological standard or not
     is_bio_standard = False
+
+    # this is a dict: eg {'Urine': 'NameUrine', 'Fake': 'FakeyMcFakerson'}
     identifiers = db.get_biological_standard_identifiers()
     
     log.debug("identifiers = " + str(identifiers))
     clicked_sample_identifier = ""
-    for identifier in identifiers.keys():
-        if identifier in clicked_sample:
+    for identifier, identusername in identifiers.items():
+        if identifier in clicked_sample and identusername in run_biostnds:
             clicked_sample_identifier = identifiers[identifier]
             log.debug("clicked_sample_identifier = " + clicked_sample_identifier)
             is_bio_standard = True
