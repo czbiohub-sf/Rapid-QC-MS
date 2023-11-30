@@ -7,3 +7,4 @@ pydrive2==1.14.0
 slack_sdk==3.18.1
 sqlalchemy==1.4.32
 watchdog==2.1.9
+flask==2.2.4
