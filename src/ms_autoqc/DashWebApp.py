@@ -1025,7 +1025,7 @@ def serve_layout():
                                                            id="add-bio-standard-button", n_clicks=0),
                                             ]),
                                             dbc.FormText(
-                                                "The sequence identifier is the label that denotes your biological standard in the sequence."),
+                                                "The sequence identifier is a string that gets matched to specimen filenames and is case sensitive."),
                                         ]),
 
                                         html.Br(),
