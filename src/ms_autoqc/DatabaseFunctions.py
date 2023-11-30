@@ -769,7 +769,8 @@ def get_table(database_name, table_name):
         database = get_database_file(database_name, sqlite_conn=True)
 
     engine = sa.create_engine(database)
-    return pd.read_sql("SELECT * FROM " + table_name, engine)
+    query = sa.text("SELECT * FROM :table_name").bindparams(table_name=table_name)
+    return pd.read_sql(query, engine)
 
 
 def generate_client_settings_yaml(client_id, client_secret):
@@ -932,7 +933,8 @@ def get_instrument(instrument_id):
     """
 
     engine = sa.create_engine(settings_database)
-    return pd.read_sql("SELECT * FROM instruments WHERE name = '" + instrument_id + "'", engine)
+    query = sa.text("SELECT * FROM instruments WHERE name = :instrument_id".bindparams(instrument_id=instrument_id))
+    return pd.read_sql(query, engine)
 
 
 def get_filenames_from_sequence(sequence, vendor="Thermo Fisher"):
@@ -1137,7 +1139,7 @@ def get_instrument_run(instrument_id, run_id):
 
     database = get_database_file(instrument_id=instrument_id, sqlite_conn=True)
     engine = sa.create_engine(database)
-    query = "SELECT * FROM runs WHERE run_id = '" + run_id + "'"
+    query = sa.text("SELECT * FROM instruments WHERE run_id = :run_id".bindparams(run_id=run_id))
     df_instrument_run = pd.read_sql(query, engine)
     return df_instrument_run
 
@@ -1266,8 +1268,8 @@ def get_md5(instrument_id, sample_id):
             break
 
     # Get sample from correct table
-    df_sample_qc_results = pd.read_sql(
-        "SELECT * FROM " + table + " WHERE sample_id = '" + sample_id + "'", engine)
+    query = sa.text("SELECT * FROM :table WHERE sample_id = :sample_id".bindparams(table=table, sample_id=sample_id))
+    df_sample_qc_results = pd.read_sql(query, engine)
 
     return df_sample_qc_results["md5"].astype(str).values[0]
 
@@ -2280,7 +2282,8 @@ def get_msp_file_path(chromatography, polarity, bio_standard=None):
 
     if bio_standard is not None:
         # Get selected biological standard
-        query = "SELECT * FROM biological_standards WHERE name = '" + bio_standard + "' AND chromatography='" + chromatography + "'"
+        query = sa.text("SELECT * FROM biological_standards WHERE name = :bio_standard AND chromatography = :chromatography".\
+                        bindparams(bio_standard=bio_standard, chromatography=chromatography))
         df_biological_standards = pd.read_sql(query, engine)
 
         # Get file path of MSP in requested polarity
@@ -2291,7 +2294,8 @@ def get_msp_file_path(chromatography, polarity, bio_standard=None):
 
     else:
         # Get selected chromatography method
-        query = "SELECT * FROM chromatography_methods WHERE method_id='" + chromatography + "'"
+        query = sa.text("SELECT * FROM chromatography_methods WHERE method_id = :chromatography".\
+                        bindparams(chromatography=chromatography))
         df_methods = pd.read_sql(query, engine)
 
         # Get file path of MSP in requested polarity
@@ -2329,10 +2333,11 @@ def get_parameter_file_path(chromatography, polarity, biological_standard=None):
     engine = sa.create_engine(settings_database)
 
     if biological_standard is not None:
-        query = "SELECT * FROM biological_standards WHERE chromatography='" + chromatography + \
-                "' AND name ='" + biological_standard + "'"
+        query = sa.text("SELECT * FROM biological_standards WHERE chromatography = :chromatography AND biological_standards = :bio_standard".\
+                        bindparams(bio_standard=biological_standard, chromatography=chromatography))
     else:
-        query = "SELECT * FROM chromatography_methods WHERE method_id='" + chromatography + "'"
+        query = sa.text("SELECT * FROM chromatography_methods WHERE method_id = :chromatography".\
+                        bindparams(chromatography=chromatography))
 
     df = pd.read_sql(query, engine)
 
@@ -2418,7 +2423,8 @@ def get_internal_standards_dict(chromatography, value_type):
     """
 
     engine = sa.create_engine(settings_database)
-    query = "SELECT * FROM internal_standards " + "WHERE chromatography='" + chromatography + "'"
+    query = sa.text("SELECT * FROM internal_standards WHERE chromatography = :chromatography".\
+                    bindparams(chromatography=chromatography))
     df_internal_standards = pd.read_sql(query, engine)
 
     dict = {}
@@ -2452,10 +2458,8 @@ def get_internal_standards(chromatography, polarity):
         polarity = "Negative Mode"
 
     engine = sa.create_engine(settings_database)
-
-    query = "SELECT * FROM internal_standards " + \
-            "WHERE chromatography='" + chromatography + "' AND polarity='" + polarity + "'"
-
+    query = sa.text("SELECT * FROM internal_standards WHERE chromatography = :chromatography AND polarity = :polarity".\
+                bindparams(chromatography=chromatography, polarity=polarity))
     return pd.read_sql(query, engine)
 
 
@@ -2483,10 +2487,8 @@ def get_targeted_features(biological_standard, chromatography, polarity):
 
     engine = sa.create_engine(settings_database)
 
-    query = "SELECT * FROM targeted_features " + \
-            "WHERE chromatography='" + chromatography + \
-            "' AND polarity='" + polarity + \
-            "' AND biological_standard ='" + biological_standard + "'"
+    query = sa.text("SELECT * FROM targeted_features WHERE chromatography = :chromatography AND polarity = :polarity AND biological_standard = :biostnd".\
+                bindparams(chromatography=chromatography, polarity=polarity, biostnd=biological_standard))
 
     return pd.read_sql(query, engine)
 
@@ -3413,10 +3415,10 @@ def get_qc_results(instrument_id, sample_list, is_bio_standard=False):
     
     log.debug("sample_list: " + sample_list)
     if is_bio_standard:
-        query = "SELECT sample_id, qc_result FROM bio_qc_results WHERE sample_id in " + sample_list
+        query = sa.text("SELECT sample_id, qc_result FROM bio_qc_results WHERE sample_id in :sample_list").bindparams(sample_list=sample_list)
         log.debug("biostandard database query is: " + query)
     else:
-        query = "SELECT sample_id, qc_result FROM sample_qc_results WHERE sample_id in " + sample_list
+        query = sa.text("SELECT sample_id, qc_result FROM sample_qc_results WHERE sample_id in :sample_list").bindparams(sample_list=sample_list)
         log.debug("sample database query is: " + query)
         
     log.debug("get_qc_results returns pd.read_sql(query, engine), which looks like:")
