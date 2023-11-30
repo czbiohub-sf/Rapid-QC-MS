@@ -933,7 +933,7 @@ def get_instrument(instrument_id):
     """
 
     engine = sa.create_engine(settings_database)
-    query = sa.text("SELECT * FROM instruments WHERE name = :instrument_id".bindparams(instrument_id=instrument_id))
+    query = sa.text("SELECT * FROM instruments WHERE name = :instrument_id").bindparams(instrument_id=instrument_id)
     return pd.read_sql(query, engine)
 
 
@@ -1139,7 +1139,7 @@ def get_instrument_run(instrument_id, run_id):
 
     database = get_database_file(instrument_id=instrument_id, sqlite_conn=True)
     engine = sa.create_engine(database)
-    query = sa.text("SELECT * FROM instruments WHERE run_id = :run_id".bindparams(run_id=run_id))
+    query = sa.text("SELECT * FROM instruments WHERE run_id = :run_id").bindparams(run_id=run_id)
     df_instrument_run = pd.read_sql(query, engine)
     return df_instrument_run
 
@@ -1268,7 +1268,7 @@ def get_md5(instrument_id, sample_id):
             break
 
     # Get sample from correct table
-    query = sa.text("SELECT * FROM :table WHERE sample_id = :sample_id".bindparams(table=table, sample_id=sample_id))
+    query = sa.text("SELECT * FROM :table WHERE sample_id = :sample_id").bindparams(table=table, sample_id=sample_id)
     df_sample_qc_results = pd.read_sql(query, engine)
 
     return df_sample_qc_results["md5"].astype(str).values[0]
