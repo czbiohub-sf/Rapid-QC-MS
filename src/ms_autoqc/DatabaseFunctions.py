@@ -1574,7 +1574,6 @@ def add_msp_to_database(msp_file, chromatography, polarity, bio_standard=None):
     Returns:
         None
     """
-
     # Connect to database
     db_metadata, connection = connect_to_database("Settings")
 
@@ -1595,13 +1594,12 @@ def add_msp_to_database(msp_file, chromatography, polarity, bio_standard=None):
 
     msp_file_path = os.path.join(methods_directory, filename)
 
-    with open(msp_file_path, "w") as file:
+    with open(msp_file_path, "w", newline='') as file:
         msp_file.seek(0)
         shutil.copyfileobj(msp_file, file)
 
     # Read MSP file
     with open(msp_file_path, "r") as msp:
-
         list_of_features = []
 
         # Split MSP into list of compounds

@@ -263,7 +263,7 @@ def run_msconvert(path, filename, extension, output_folder):
         return None
 
     # Run MSConvert in a subprocess
-    command = msconvert_exe + output_folder + filename + "." + extension + " -o " + output_folder
+    command = msconvert_exe + '"' + output_folder + filename + "." + extension + '"' + " -o " + '"' + output_folder + '"'
     process = psutil.Popen(command)
     pid = process.pid
 
@@ -315,9 +315,9 @@ def run_msdial_processing(filename, msdial_path, parameter_file, input_folder, o
     os.chdir(msdial_path)
 
     # Run MS-DIAL in a subprocess
-    command = "MsdialConsoleApp.exe lcmsdda -i " + input_folder \
-              + " -o " + output_folder \
-              + " -m " + parameter_file + " -p"
+    command = "MsdialConsoleApp.exe lcmsdda -i " + '"' + input_folder + '"' \
+            + " -o " + '"' + output_folder + '"' \
+            + " -m " + '"' + parameter_file + '"' + " -p"
     process = psutil.Popen(command)
     pid = process.pid
 
