@@ -521,7 +521,7 @@ def serve_layout():
                                                     dbc.InputGroup([
                                                         dbc.Input(id="first-time-instrument-id", type="text",
                                                                   placeholder="Ex: Thermo Q-Exactive HF 1",
-                                                                  pattern="([A-Za-z0-9_ -])"),
+                                                                  pattern="^[A-Za-z0-9_ -]+$"),
                                                         dbc.DropdownMenu(id="first-time-instrument-vendor",
                                                             label="Choose Vendor", color="primary", children=[
                                                                 dbc.DropdownMenuItem("Thermo Fisher", id="thermo-fisher-item"),
@@ -531,7 +531,7 @@ def serve_layout():
                                                                 dbc.DropdownMenuItem("Waters", id="waters-item")
                                                         ]),
                                                     ]),
-                                                    dbc.FormText("Please choose a name (alphanumeric, underscores, dashes) and vendor for this instrument."),
+                                                    dbc.FormText("Enter name (alphanumeric, underscores, dashes, spaces) 4 chars or longer and vendor for this instrument."),
                                                 ]),
 
                                                 html.Br(),
