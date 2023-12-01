@@ -750,8 +750,6 @@ def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity, target_biostnd, so
 
         if len(df_intensity) > 1:
             target_intensity = df_intensity.loc[df_intensity["Name"] == target_biostnd][metabolites].iloc[0].astype(float).values
-            print(feature_intensity_from_study)
-            print(target_intensity)
             bio_df["% Change"] = ((feature_intensity_from_study - target_intensity) / target_intensity) * 100
             bio_df.replace(np.inf, 100, inplace=True)
             bio_df.replace(-np.inf, -100, inplace=True)

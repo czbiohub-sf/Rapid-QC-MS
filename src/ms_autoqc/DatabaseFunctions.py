@@ -767,7 +767,6 @@ def get_table(database_name, table_name):
         database = settings_database
     else:
         database = get_database_file(database_name, sqlite_conn=True)
-    print(table_name)
     engine = sa.create_engine(database)
     return pd.read_sql_table(table_name,engine)
 
