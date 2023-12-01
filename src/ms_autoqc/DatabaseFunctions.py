@@ -4541,9 +4541,7 @@ def get_data_file_type(instrument_id):
     """
 
     engine = sa.create_engine(settings_database)
-    print(instrument_id)
     query = sa.text("SELECT * FROM instruments WHERE name = :instrument_id").bindparams(instrument_id=instrument_id)
-    print(query)
     df_instruments = pd.read_sql(query, engine)
     vendor = df_instruments["vendor"].astype(str).tolist()[0]
 
