@@ -1,4 +1,4 @@
-import io, sys, subprocess, psutil, time, traceback
+import io, sys, subprocess, psutil, time, traceback, re
 import base64, webbrowser, json, ast
 from copy import deepcopy
 
@@ -520,7 +520,8 @@ def serve_layout():
                                                     dbc.Label("Instrument name"),
                                                     dbc.InputGroup([
                                                         dbc.Input(id="first-time-instrument-id", type="text",
-                                                                  placeholder="Ex: Thermo Q-Exactive HF 1"),
+                                                                  placeholder="Ex: Thermo Q-Exactive HF 1",
+                                                                  pattern="([A-Za-z0-9_ -])"),
                                                         dbc.DropdownMenu(id="first-time-instrument-vendor",
                                                             label="Choose Vendor", color="primary", children=[
                                                                 dbc.DropdownMenuItem("Thermo Fisher", id="thermo-fisher-item"),
@@ -530,7 +531,7 @@ def serve_layout():
                                                                 dbc.DropdownMenuItem("Waters", id="waters-item")
                                                         ]),
                                                     ]),
-                                                    dbc.FormText("Please choose a name and vendor for this instrument."),
+                                                    dbc.FormText("Please choose a name (alphanumeric, underscores, dashes) and vendor for this instrument."),
                                                 ]),
 
                                                 html.Br(),
@@ -1806,19 +1807,20 @@ def vendor_dropdown_handling(thermo_fisher_click, agilent_click, bruker_click, s
 
 @app.callback(Output("first-time-complete-setup-button", "disabled"),
               Output("first-time-instrument-id", "valid"),
+              State("first-time-instrument-id", "pattern"),
               Input("first-time-instrument-id", "value"),
               Input("first-time-instrument-vendor", "label"), prevent_initial_call=True)
-def enable_complete_setup_button(instrument_name, instrument_vendor):
+def enable_complete_setup_button(pattern, instrument_name, instrument_vendor):
 
     """
     Enables "Complete setup" button upon form completion in Welcome > Setup New Instrument page
     """
-
+    patt = re.compile(pattern)
     valid = False, True
     invalid = True, False
 
     if instrument_name is not None:
-        if len(instrument_name) > 3 and instrument_vendor != "Choose Vendor":
+        if len(instrument_name) > 3 and instrument_vendor != "Choose Vendor" and patt.match(instrument_name):
             return valid
         else:
             return invalid
