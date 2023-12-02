@@ -3393,7 +3393,7 @@ def get_qc_results(instrument_id, sample_list, is_bio_standard=False):
         instrument_id (str):
             Instrument ID
         sample_list (list):
-            List of samples to query
+            List of samples to query (20231201 Ira: only ever one element?)
         is_bio_standard (bool, default False):
             Whether the list is biological standards (True) or samples (False)
 
@@ -3409,15 +3409,15 @@ def get_qc_results(instrument_id, sample_list, is_bio_standard=False):
     database = get_database_file(instrument_id=instrument_id, sqlite_conn=True)
     engine = sa.create_engine(database)
 
-    sample_list = str(sample_list).replace("[", "(").replace("]", ")")
-    
+    sample_list = str(sample_list[0])
+
     log.debug("sample_list: " + sample_list)
     if is_bio_standard:
-        query = sa.text("SELECT sample_id, qc_result FROM bio_qc_results WHERE sample_id in :sample_list").bindparams(sample_list=sample_list)
-        log.debug("biostandard database query is: " + query)
+        query = sa.text("SELECT sample_id, qc_result FROM bio_qc_results WHERE sample_id = :sample_list").\
+            bindparams(sample_list=sample_list)
     else:
-        query = sa.text("SELECT sample_id, qc_result FROM sample_qc_results WHERE sample_id in :sample_list").bindparams(sample_list=sample_list)
-        log.debug("sample database query is: " + query)
+        query = sa.text("SELECT sample_id, qc_result FROM sample_qc_results WHERE sample_id = :sample_list").\
+            bindparams(sample_list=sample_list)
         
     log.debug("get_qc_results returns pd.read_sql(query, engine), which looks like:")
     log.debug(pd.read_sql(query, engine))
