@@ -19,7 +19,7 @@ Developed at the [Mass Spectrometry Platform of CZ Biohub San Francisco](https:/
 # Requirements
 **MS-AutoQC was designed to run on Windows platforms** because of its dependency on [MSConvert](https://proteowizard.sourceforge.io/tools/msconvert.html) for vendor format data conversion and [MS-DIAL](http://prime.psc.riken.jp/compms/msdial/main.html) for data processing and identification. However, MacOS users can still use MS-AutoQC to monitor / view their instrument run data.
 
-In addition, MS-AutoQC requires Python 3.8+ and various Python packages, including:
+In addition, MS-AutoQC requires Python 3.8, 3.9, or 3.10 and various Python packages, including:
 
 - Pandas
 - SQLAlchemy
