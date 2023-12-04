@@ -39,6 +39,9 @@ Installing MS-AutoQC is easy. Simply open your Terminal or Command Prompt and en
 py -m pip install ms-autoqc
 ```
 
+If you have multiple versions of python on your system, you can specifiy the version you want to use this way
+'''py -3.# -m pip install ms-autoqc```
+
 Python dependencies are installed automatically, but dependencies such as MSConvert and MS-DIAL will need to be installed manually.
 
 You can also opt to download and install MS-AutoQC manually, or in a virtual environment if you prefer. Check out the [installation guide](https://czbiohub-sf.github.io/MS-AutoQC/installation.html#2-install-ms-autoqc) for more details.
