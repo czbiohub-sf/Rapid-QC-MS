@@ -1,11 +1,11 @@
-# MS-AutoQC
+#Rapid QC-MS
 **MS-AutoQC** is an all-in-one solution for automated quality control of liquid chromatography-mass spectrometry (LC-MS) instrument runs, both during and after data acquisition.
 
 ![](https://user-images.githubusercontent.com/7220175/221376479-4b12af91-d448-4760-af63-57339506b94c.gif)
 
 It offers a fast, straightforward approach to ensure collection of high-quality data, allowing for less time investigating raw data and more time conducting experiments.
 
-Developed at the [Mass Spectrometry Platform of CZ Biohub San Francisco](https://www.czbiohub.org/mass-spec/), MS-AutoQC provides a host of key features to streamline untargeted metabolomics research, such as:
+Developed at the [Mass Spectrometry Platform of CZ Biohub San Francisco](https://www.czbiohub.org/mass-spec/),Rapid QC-MS provides a host of key features to streamline untargeted metabolomics research, such as:
 
 - **Automated and user-defined quality control checks** during instrument runs
 - **Realtime updates on QC fails** in the form of Slack or email notifications
@@ -17,9 +17,9 @@ Developed at the [Mass Spectrometry Platform of CZ Biohub San Francisco](https:/
 ![](https://user-images.githubusercontent.com/7220175/221340279-ffde357b-1c84-42ad-b172-62b29faad2e4.png)
 
 # Requirements
-**MS-AutoQC was designed to run on Windows platforms** because of its dependency on [MSConvert](https://proteowizard.sourceforge.io/tools/msconvert.html) for vendor format data conversion and [MS-DIAL](http://prime.psc.riken.jp/compms/msdial/main.html) for data processing and identification. However, MacOS users can still use MS-AutoQC to monitor / view their instrument run data.
+**MS-AutoQC was designed to run on Windows platforms** because of its dependency on [MSConvert](https://proteowizard.sourceforge.io/tools/msconvert.html) for vendor format data conversion and [MS-DIAL](http://prime.psc.riken.jp/compms/msdial/main.html) for data processing and identification. However, MacOS users can still useRapid QC-MS to monitor / view their instrument run data.
 
-In addition, MS-AutoQC requires Python 3.8+ and various Python packages, including:
+In addition,Rapid QC-MS requires Python 3.8+ and various Python packages, including:
 
 - Pandas
 - SQLAlchemy
@@ -31,20 +31,20 @@ In addition, MS-AutoQC requires Python 3.8+ and various Python packages, includi
 
 These are installed automatically during setup.
 
-**Note:** Installation of Python and various Python packages on MS instrument computers comes at no risk. For extra security and peace of mind, you can opt to install MS-AutoQC in a virtual environment. To learn more, please read the [installation guide](https://czbiohub-sf.github.io/MS-AutoQC/installation.html#2-install-ms-autoqc).
+**Note:** Installation of Python and various Python packages on MS instrument computers comes at no risk. For extra security and peace of mind, you can opt to installRapid QC-MS in a virtual environment. To learn more, please read the [installation guide](https://czbiohub-sf.github.io/MS-AutoQC/installation.html#2-install-ms-autoqc).
 
 # Installation
-Installing MS-AutoQC is easy. Simply open your Terminal or Command Prompt and enter:
+InstallingRapid QC-MS is easy. Simply open your Terminal or Command Prompt and enter:
 ```python
-py -m pip install ms-autoqc
+py -m pip installRapid QC-MS
 ```
 
 Python dependencies are installed automatically, but dependencies such as MSConvert and MS-DIAL will need to be installed manually.
 
-You can also opt to download and install MS-AutoQC manually, or in a virtual environment if you prefer. Check out the [installation guide](https://czbiohub-sf.github.io/MS-AutoQC/installation.html#2-install-ms-autoqc) for more details.
+You can also opt to download and installRapid QC-MS manually, or in a virtual environment if you prefer. Check out the [installation guide](https://czbiohub-sf.github.io/MS-AutoQC/installation.html#2-install-ms-autoqc) for more details.
 
 # Usage
-To start MS-AutoQC, simply enter:
+To startRapid QC-MS, simply enter:
 ```python
 ms_autoqc
 ```
@@ -56,7 +56,7 @@ Check out the [quickstart guide](https://czbiohub-sf.github.io/MS-AutoQC/quickst
 # Supported instrument vendors
 MS-AutoQC was designed to be a universal, open-source solution for data quality control. Because MSConvert converts raw acquired data into open mzML format before routing it to the data processing pipeline, the package will work seamlessly with data of all vendor formats.
 
-**However, MS-AutoQC has only been tested extensively on Thermo Fisher mass spectrometers, Thermo acquisition sequences, and Thermo RAW files.** As such, it is expected that there may be bugs and issues with processing data of other vendor formats.
+**However,Rapid QC-MS has only been tested extensively on Thermo Fisher mass spectrometers, Thermo acquisition sequences, and Thermo RAW files.** As such, it is expected that there may be bugs and issues with processing data of other vendor formats.
 
 If you encounter a bug, please report it by [opening an issue on GitHub](https://github.com/czbiohub-sf/MS-AutoQC/issues).
 
