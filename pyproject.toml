@@ -5,11 +5,11 @@ requires      = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ms-autoqc"
+name = "rapid-qc-ms"
 version = "1.0.0"
 description = "Realtime quality control for mass spectrometry data acquisition"
 readme = "README.md"
-authors = [{ name = "Wasim Sandhu", email = "wasim.sandhu@czbiohub.org" }]
+authors = [{ name = "Brian DeFelice", email = "brian.defelice@czbiohub.org" }]
 license = { file = "LICENSE" }
 classifiers = [
     "License :: OSI Approved :: MIT License",
@@ -30,16 +30,16 @@ dependencies = [
     "watchdog==2.1.9",
     'tomli; python_version <= "3.11"',
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.8,<3.12"
 
 [project.optional-dependencies]
 dev = []
 
 [project.urls]
-Homepage = "https://czbiohub-sf.github.io/MS-AutoQC"
+Homepage = "https://czbiohub-sf.github.io/Rapid-QC-MS"
 
 [project.scripts]
-ms_autoqc = "ms_autoqc.__main__:main"
+rapid-qc-ms = "rapid-qc-ms.__main__:main"
 
 [tool.setuptools.package-data]
-"ms_autoqc.assets" = ["*.css", "*.ico"]
+"rapid-qc-ms.assets" = ["*.css", "*.ico"]
