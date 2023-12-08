@@ -1,11 +1,11 @@
-from rapid-qc-ms.DashWebApp import *
+from rapidqcms.DashWebApp import *
 
 def main():
 
     """
     Opens web browser and starts Flask server for Dash app
     """
-    logging.basicConfig(filename="auto_qc.log", level=logging.INFO)
+    logging.basicConfig(filename="rapid-qc-ms.log", level=logging.INFO)
     # Opens localhost:8050 in Google Chrome
     if sys.platform == "win32":
         chrome_path = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"

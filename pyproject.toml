@@ -39,7 +39,7 @@ dev = []
 Homepage = "https://czbiohub-sf.github.io/Rapid-QC-MS"
 
 [project.scripts]
-rapid-qc-ms = "rapid-qc-ms.__main__:main"
+rapidqcms = "rapidqcms.__main__:main"
 
 [tool.setuptools.package-data]
-"rapid-qc-ms.assets" = ["*.css", "*.ico"]
+"rapidqcms.assets" = ["*.css", "*.ico"]

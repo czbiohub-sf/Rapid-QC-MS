@@ -1,5 +1,5 @@
 import ssl
-import rapid-qc-ms.DatabaseFunctions as db
+import rapidqcms.DatabaseFunctions as db
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 

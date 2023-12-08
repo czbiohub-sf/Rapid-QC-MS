@@ -2,7 +2,7 @@ import os, json, ast, traceback, time
 import plotly.express as px
 import pandas as pd
 import numpy as np
-import rapid-qc-ms.DatabaseFunctions as db
+import rapidqcms.DatabaseFunctions as db
 
 import logging
 
