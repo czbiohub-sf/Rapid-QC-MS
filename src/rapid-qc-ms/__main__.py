@@ -1,4 +1,4 @@
-from ms_autoqc.DashWebApp import *
+from rapid-qc-ms.DashWebApp import *
 
 def main():
 

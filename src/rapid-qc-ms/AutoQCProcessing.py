@@ -4,8 +4,8 @@ warnings.simplefilter(action="ignore", category=FutureWarning)
 import os, time, shutil, psutil, traceback
 import pandas as pd
 import numpy as np
-import ms_autoqc.DatabaseFunctions as db
-import ms_autoqc.SlackNotifications as slack_bot
+import rapid-qc-ms.DatabaseFunctions as db
+import rapid-qc-ms.SlackNotifications as slack_bot
 import logging
 
 

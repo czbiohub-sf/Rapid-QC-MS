@@ -12,11 +12,11 @@ from pydrive2.drive import GoogleDrive
 
 
 
-from ms_autoqc.PlotGeneration import *
-from ms_autoqc.AcquisitionListener import *
-import ms_autoqc.DatabaseFunctions as db
-import ms_autoqc.AutoQCProcessing as qc
-import ms_autoqc.SlackNotifications as bot
+from rapid-qc-ms.PlotGeneration import *
+from rapid-qc-ms.AcquisitionListener import *
+import rapid-qc-ms.DatabaseFunctions as db
+import rapid-qc-ms.AutoQCProcessing as qc
+import rapid-qc-ms.SlackNotifications as bot
 
 
 import logging
