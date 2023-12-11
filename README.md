@@ -36,7 +36,7 @@ These are installed automatically during setup.
 # Installation
 Installing Rapid QC-MS is easy. Simply open your Terminal or Command Prompt and enter:
 ```python
-py -m pip install Rapid QC-MS
+py -m pip install rapid-qc-ms
 ```
 
 Python dependencies are installed automatically, but dependencies such as MSConvert and MS-DIAL will need to be installed manually.
@@ -46,7 +46,7 @@ You can also opt to download and install Rapid QC-MS manually, or in a virtual e
 # Usage
 To start Rapid QC-MS, simply enter:
 ```python
-ms_autoqc
+rapidqcms
 ```
 
 Check out the [quickstart guide](https://czbiohub-sf.github.io/Rapid-QC-MS/quickstart.html) to learn how easy setting up new QC jobs is.
