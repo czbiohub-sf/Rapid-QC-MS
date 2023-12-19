@@ -7,8 +7,9 @@ import rapidqcms.DatabaseFunctions as db
 import logging
 
 # setup logging
-log = logging.getLogger(__name__)
-log.debug("Test log.debug from PlotGeneration")
+log = logging.getLogger("PlotGenerationUnique")
+log.info("Test log.info from PlotGeneration")
+log.debug("Test log.debug from plot gen")
 
 # Bootstrap color dictionary
 bootstrap_colors = {
@@ -82,6 +83,8 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
             28. df_fails_neg: QC fails for internal standards in negative mode
     """
     log.debug("get_qc_results local variables: {}".format(locals()))
+    print("get_qc_results locals")
+    print(locals())
     # Get run information / metadata
     if db.get_device_identity() != instrument_id and db.sync_is_enabled():
         if status == "Complete":
@@ -155,43 +158,43 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
                 log.debug(type(df_bio_mz_pos))
                 log.debug(df_bio_mz_pos)
             except Exception as error:
-                print("Error loading positive (–) mode biological standard precursor m/z data:", error)
-                df_bio_mz_pos = None
+                print("Error loading positive (+) mode biological standard precursor m/z data:", error)
+                df_bio_mz_pos[bio_stnd] = None
 
             try:
                 df_bio_rt_pos[bio_stnd] = db.parse_biological_standard_data(instrument_id=instrument_id, run_id=run_id,
                     result_type="retention_time", polarity="Pos", biological_standard=bio_stnd, load_from=load_from, preserve_names=preserve_names)
             except Exception as error:
-                print("Error loading positive (–) mode biological standard precursor m/z data:", error)
-                df_bio_rt_pos = None
+                print("Error loading positive (+) mode biological standard precursor m/z data:", error)
+                df_bio_rt_pos[bio_stnd] = None
 
             try:
                 df_bio_intensity_pos[bio_stnd] = db.parse_biological_standard_data(instrument_id=instrument_id, run_id=run_id,
                     result_type="intensity", polarity="Pos", biological_standard=bio_stnd, load_from=load_from, preserve_names=preserve_names)
             except Exception as error:
-                print("Error loading positive (–) mode biological standard retention time data:", error)
-                df_bio_intensity_pos = None
+                print("Error loading positive (+) mode biological standard retention time data:", error)
+                df_bio_intensity_pos[bio_stnd] = None
 
             try:
                 df_bio_mz_neg[bio_stnd] = db.parse_biological_standard_data(instrument_id=instrument_id, run_id=run_id,
                     result_type="precursor_mz", polarity="Neg", biological_standard=bio_stnd, load_from=load_from, preserve_names=preserve_names)
             except Exception as error:
-                print("Error loading negative (–) mode biological standard precursor m/z data:", error)
-                df_bio_mz_neg = None
+                print("Error loading negative (-) mode biological standard precursor m/z data:", error)
+                df_bio_mz_neg[bio_stnd] = None
 
             try:
                 df_bio_rt_neg[bio_stnd] = db.parse_biological_standard_data(instrument_id=instrument_id, run_id=run_id,
                     result_type="retention_time", polarity="Neg", biological_standard=bio_stnd, load_from=load_from, preserve_names=preserve_names)
             except Exception as error:
-                print("Error loading positive (–) mode biological standard retention time data:", error)
-                df_bio_rt_neg = None
+                print("Error loading positive (+) mode biological standard retention time data:", error)
+                df_bio_rt_neg[bio_stnd] = None
 
             try:
                 df_bio_intensity_neg[bio_stnd] = db.parse_biological_standard_data(instrument_id=instrument_id, run_id=run_id,
                     result_type="intensity", polarity="Neg", biological_standard=bio_stnd, load_from=load_from, preserve_names=preserve_names)
             except Exception as error:
-                print("Error loading negative (–) mode biological standard intensity data:", error)
-                df_bio_intensity_neg = None
+                print("Error loading negative (-) mode biological standard intensity data:", error)
+                df_bio_intensity_neg[bio_stnd] = None
 
     else:
         df_bio_mz_pos = None
@@ -233,21 +236,21 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
         df_mz_neg = db.parse_internal_standard_data(instrument_id=instrument_id,
             run_id=run_id, result_type="precursor_mz", polarity="Neg", load_from=load_from)
     except Exception as error:
-        print("Error loading negative (–) mode precursor m/z data:", error)
+        print("Error loading negative (-) mode precursor m/z data:", error)
         df_mz_neg = None
 
     try:
         df_rt_neg = db.parse_internal_standard_data(instrument_id=instrument_id,
             run_id=run_id, result_type="retention_time", polarity="Neg", load_from=load_from)
     except Exception as error:
-        print("Error loading negative (–) mode retention time data:", error)
+        print("Error loading negative (-) mode retention time data:", error)
         df_rt_neg = None
 
     try:
         df_intensity_neg = db.parse_internal_standard_data(instrument_id=instrument_id,
             run_id=run_id, result_type="intensity", polarity="Neg", load_from=load_from)
     except Exception as error:
-        print("Error loading negative (–) mode intensity data:", error)
+        print("Error loading negative (-) mode intensity data:", error)
         df_intensity_neg = None
 
     try:
@@ -261,7 +264,7 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
         df_delta_rt_neg = db.parse_internal_standard_qc_data(instrument_id=instrument_id,
             run_id=run_id, result_type="Delta RT", polarity="Neg", load_from=load_from)
     except Exception as error:
-        print("Error loading negative (–) mode delta RT data:", error)
+        print("Error loading negative (-) mode delta RT data:", error)
         df_delta_rt_neg = None
 
     try:
@@ -275,7 +278,7 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
         df_in_run_delta_rt_neg = db.parse_internal_standard_qc_data(instrument_id=instrument_id,
             run_id=run_id, result_type="In-run delta RT", polarity="Neg", load_from=load_from)
     except Exception as error:
-        print("Error loading negative (–) mode in-run delta RT data:", error)
+        print("Error loading negative (-) mode in-run delta RT data:", error)
         df_in_run_delta_rt_neg = None
 
     try:
@@ -289,7 +292,7 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
         df_delta_mz_neg = db.parse_internal_standard_qc_data(instrument_id=instrument_id,
             run_id=run_id, result_type="Delta m/z", polarity="Neg", load_from=load_from)
     except Exception as error:
-        print("Error loading negative (–) mode delta m/z data:", error)
+        print("Error loading negative (-) mode delta m/z data:", error)
         df_delta_mz_neg = None
 
     try:
@@ -303,7 +306,7 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
         df_warnings_neg = db.parse_internal_standard_qc_data(instrument_id=instrument_id,
             run_id=run_id, result_type="Warnings", polarity="Neg", load_from=load_from)
     except Exception as error:
-        print("Error loading negative (–) mode QC warnings data:", error)
+        print("Error loading negative (-) mode QC warnings data:", error)
         df_warnings_neg = None
 
     try:
@@ -317,7 +320,7 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
         df_fails_neg = db.parse_internal_standard_qc_data(instrument_id=instrument_id,
             run_id=run_id, result_type="Fails", polarity="Neg", load_from=load_from)
     except Exception as error:
-        print("Error loading negative (+) mode QC fails data:", error)
+        print("Error loading negative (-) mode QC fails data:", error)
         df_fails_neg = None
 
     # Generate DataFrame for sample table
@@ -455,7 +458,7 @@ def generate_sample_metadata_dataframe(sample, df_rt, df_mz, df_intensity, df_de
 
     if len(df_sequence) > 0:
         df_sequence = df_sequence.loc[df_sequence["File Name"].astype(str) == sample]
-        df_sample_info["Sample ID"] = df_sequence["L1 Study"].astype(str).values
+        df_sample_info["Sample ID"] = df_sequence["Sample ID"].astype(str).values
         df_sample_info["Position"] = df_sequence["Position"].astype(str).values
         df_sample_info["Injection Volume"] = df_sequence["Inj Vol"].astype(str).values + " uL"
         df_sample_info["Instrument Method"] = df_sequence["Instrument Method"].astype(str).values
@@ -467,12 +470,6 @@ def generate_sample_metadata_dataframe(sample, df_rt, df_mz, df_intensity, df_de
             df_sample_info["Matrix"] = df_metadata["Matrix"].astype(str).values
             df_sample_info["Growth-Harvest Conditions"] = df_metadata["Growth-Harvest Conditions"].astype(str).values
             df_sample_info["Treatment"] = df_metadata["Treatment"].astype(str).values
-
-    df_sample_info = pd.concat([df_sample_info, df_sample_info.iloc[0]])
-    #df_sample_info = df_sample_info.append(df_sample_info.iloc[0])
-    df_sample_info.iloc[0] = df_sample_info.columns.tolist()
-    df_sample_info = df_sample_info.rename(index={0: "Specimen Information"})
-    df_sample_info = df_sample_info.transpose()
 
     return df_sample_istd, df_sample_info
 
@@ -524,12 +521,7 @@ def generate_bio_standard_dataframe(clicked_sample, instrument_id, run_id, df_rt
     qc_result = db.get_qc_results(
         instrument_id=instrument_id, sample_list=[clicked_sample], is_bio_standard=True)["qc_result"].values[0]
     df_sample_info["QC Result"] = [qc_result]
-
-    df_sample_info = pd.concat([df_sample_info, df_sample_info.iloc[0]])
-    #df_sample_info = df_sample_info.append(df_sample_info.iloc[0])
-    df_sample_info.iloc[0] = df_sample_info.columns.tolist()
-    df_sample_info = df_sample_info.rename(index={0: "Specimen Information"})
-    df_sample_info = df_sample_info.transpose()
+    print(df_sample_info)
 
     return df_sample_features, df_sample_info
 
@@ -771,7 +763,7 @@ def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity, target_biostnd, so
     diverging_colorscale.reverse()
 
     fig = px.scatter(bio_df,
-        title="Biological Standard – Targeted Metabolites",
+        title="Biological Standard - Selected Compounds",
         x="Retention time (min)",
         y="Precursor m/z",
         height=600,
