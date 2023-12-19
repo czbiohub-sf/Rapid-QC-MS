@@ -3171,8 +3171,6 @@ def parse_biological_standard_data(instrument_id, run_id, result_type, polarity,
     """
     log.debug("parse_biological_standard_data input variables")
     log.debug(locals())
-    print("parse bio standard locals")
-    print(locals())
 
     # Get relevant QC results table from database
     if load_from == "database":
@@ -3184,7 +3182,6 @@ def parse_biological_standard_data(instrument_id, run_id, result_type, polarity,
 
     # Filter by biological standard type
     df_samples = df_samples.loc[df_samples["biological_standard"] == biological_standard]
-    print(df_samples)
 
     # Filter by polarity
     df_samples = df_samples.loc[df_samples["polarity"] == polarity]

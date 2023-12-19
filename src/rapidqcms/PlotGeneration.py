@@ -83,8 +83,6 @@ def get_qc_results(instrument_id, run_id, status="Complete", biological_standard
             28. df_fails_neg: QC fails for internal standards in negative mode
     """
     log.debug("get_qc_results local variables: {}".format(locals()))
-    print("get_qc_results locals")
-    print(locals())
     # Get run information / metadata
     if db.get_device_identity() != instrument_id and db.sync_is_enabled():
         if status == "Complete":
@@ -521,7 +519,6 @@ def generate_bio_standard_dataframe(clicked_sample, instrument_id, run_id, df_rt
     qc_result = db.get_qc_results(
         instrument_id=instrument_id, sample_list=[clicked_sample], is_bio_standard=True)["qc_result"].values[0]
     df_sample_info["QC Result"] = [qc_result]
-    print(df_sample_info)
 
     return df_sample_features, df_sample_info
 

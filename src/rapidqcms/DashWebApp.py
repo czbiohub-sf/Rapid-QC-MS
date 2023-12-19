@@ -3177,7 +3177,6 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
     """
     Opens information modal when a sample is clicked from the sample table
     """
-    print("toggle sample cards")
     saved_args = locals()
     log.debug("toggle_sample_card inputs")
     log.debug(saved_args)
@@ -3260,16 +3259,12 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
             df_delta_mz = pd.DataFrame(json.loads(delta_mz_neg))
             df_warnings = pd.DataFrame(json.loads(qc_warnings_neg))
             df_fails = pd.DataFrame(json.loads(qc_fails_neg))
-        print("here")
         df_sample_features, df_sample_info = generate_sample_metadata_dataframe(clicked_sample, df_rt, df_mz, df_intensity,
             df_delta_rt, df_in_run_delta_rt, df_delta_mz, df_warnings, df_fails, df_sequence, df_metadata)
 
     elif is_bio_standard:
 
         if polarity == "Pos":
-            print("Clicked samp ident:", clicked_sample_identifier)
-            print("Bio_mz_pos")
-            print(bio_mz_pos)
             df_rt = pd.DataFrame(json.loads(bio_rt_pos[clicked_sample_identifier]))
             df_intensity = pd.DataFrame(json.loads(bio_intensity_pos[clicked_sample_identifier]))
             log.debug("bio_mz_pos[clicked_sample_identifier]")
@@ -3281,7 +3276,6 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
             df_rt = pd.DataFrame(json.loads(bio_rt_neg[clicked_sample_identifier]))
             df_intensity = pd.DataFrame(json.loads(bio_intensity_neg[clicked_sample_identifier]))
             df_mz = pd.DataFrame(json.loads(bio_mz_neg[clicked_sample_identifier]))
-        print("here here")
         df_sample_features, df_sample_info = generate_bio_standard_dataframe(clicked_sample, instrument_id, run_id, df_rt, df_mz, df_intensity)
     # Create tables from DataFrames
     metadata_table = dbc.Table.from_dataframe(df_sample_info, striped=True, bordered=True, hover=True)
