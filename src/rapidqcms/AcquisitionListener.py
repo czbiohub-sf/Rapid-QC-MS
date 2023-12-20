@@ -148,7 +148,7 @@ class DataAcquisitionEventHandler(FileSystemEventHandler):
             print("Error while watching file:", error)
             sample_acquired = None
 
-        # Route data file to MS-AutoQC pipeline
+        # Route data file to Rapid-QC-MS pipeline
         if sample_acquired:
             print("Data acquisition completed for", filename)
             qc.process_data_file(path, filename, extension, self.instrument_id, self.run_id)
@@ -193,7 +193,7 @@ def start_listener(path, instrument_id, run_id):
 
     print("Run monitoring initiated for", path)
 
-    # Check if MS-AutoQC job type is active monitoring or bulk QC
+    # Check if Rapid-QC-MS job type is active monitoring or bulk QC
     is_completed_run = db.is_completed_run(instrument_id, run_id)
 
     # Retrieve filenames for samples in run

@@ -51,7 +51,7 @@ The functions defined below operate on two database types:
 biological standards, QC configurations, and MS-DIAL configurations
   
 In addition, this file also contains methods for syncing data and settings with Google Drive.
-To get an overview of all functions, please visit the documentation on https://czbiohub.github.io/MS-AutoQC.
+To get an overview of all functions, please visit the documentation on https://czbiohub.github.io/Rapid-QC-MS.
 """
 
 def get_database_file(instrument_id, sqlite_conn=False, zip=False):
@@ -336,7 +336,7 @@ def create_databases(instrument_id, new_instrument=False):
     # Insert tables into database
     settings_db_metadata.create_all(settings_db_engine)
 
-    # Insert default configurations for MS-DIAL and MS-AutoQC
+    # Insert default configurations for MS-DIAL and Rapid-QC-MS
     add_msdial_configuration("Default")
     add_qc_configuration("Default")
 
@@ -575,7 +575,7 @@ def is_instrument_computer():
     this will return True. If the user signed in to their workspace from a non-instrument device, this will return False.
 
     Typically used to organize / hide UI functions for instrument and non-instrument devices
-    that MS-AutoQC is installed on.
+    that Rapid-QC-MS is installed on.
 
     Returns:
         True if device is instrument computer, False if not
@@ -782,9 +782,9 @@ def generate_client_settings_yaml(client_id, client_secret):
 
     Args:
         client_id (str):
-            The Client ID of the MS-AutoQC application, generated and provided by the user
+            The Client ID of the Rapid-QC-MS application, generated and provided by the user
         client_secret (str):
-            The Client Secret of the MS-AutoQC application, generated and provided by the user
+            The Client Secret of the Rapid-QC-MS application, generated and provided by the user
     Returns:
         None
     """
@@ -828,7 +828,7 @@ def insert_google_drive_ids(instrument_id, gdrive_folder_id, instrument_db_file_
     This function is called when a user creates a new instrument in their workspace.
 
     The ID's for the following files / folders in Google Drive are stored in the database:
-    1. MS-AutoQC folder
+    1. Rapid-QC-MS folder
     2. Instrument database zip file
     3. Methods directory zip file
 
@@ -836,7 +836,7 @@ def insert_google_drive_ids(instrument_id, gdrive_folder_id, instrument_db_file_
         instrument_id (str):
             Instrument ID
         gdrive_folder_id (str):
-            Google Drive ID for the MS-AutoQC folder (found in the user's root directory in Drive)
+            Google Drive ID for the Rapid-QC-MS folder (found in the user's root directory in Drive)
         instrument_db_file_id (str):
             Google Drive ID for the instrument database ZIP file
         methods_zip_file_id (str):
@@ -857,7 +857,7 @@ def insert_google_drive_ids(instrument_id, gdrive_folder_id, instrument_db_file_
             .values(drive_id=instrument_db_file_id)
     ))
 
-    # MS-AutoQC folder and Methods folder
+    # Rapid-QC-MS folder and Methods folder
     connection.execute((
         sa.update(workspace_table)
             .where((workspace_table.c.id == 1))
@@ -2519,7 +2519,7 @@ def add_biological_standard(name, identifier):
     Creates new biological standard with name and identifier.
 
     The biological standard identifier is a text substring used to distinguish between sample and biological standard.
-    MS-AutoQC checks filenames in the sequence for this identifier to process samples accordingly.
+    Rapid-QC-MS checks filenames in the sequence for this identifier to process samples accordingly.
 
     Args:
         name (str):
@@ -3283,7 +3283,7 @@ def parse_internal_standard_qc_data(instrument_id, run_id, polarity, result_type
 def get_workspace_users_list():
 
     """
-    Returns a list of users that have access to the MS-AutoQC workspace.
+    Returns a list of users that have access to the Rapid-QC-MS workspace.
     """
 
     return get_table("Settings", "gdrive_users")["email_address"].astype(str).tolist()
@@ -3294,7 +3294,7 @@ def add_user_to_workspace(email_address):
     """
     Gives user access to workspace in Google Drive and stores email address in database.
 
-    Access is granted by sharing the MS-AutoQC folder in Google Drive with the user's Google account.
+    Access is granted by sharing the Rapid-QC-MS folder in Google Drive with the user's Google account.
 
     Args:
         email_address (str): Email address for Google account to grant access to workspace.
@@ -3309,7 +3309,7 @@ def add_user_to_workspace(email_address):
     # Get Google Drive instance
     drive = get_drive_instance()
 
-    # Get ID of MS-AutoQC folder in Google Drive
+    # Get ID of Rapid-QC-MS folder in Google Drive
     gdrive_folder_id = get_drive_folder_id()
 
     if gdrive_folder_id is not None:
@@ -3354,7 +3354,7 @@ def delete_user_from_workspace(email_address):
     # Get Google Drive instance
     drive = get_drive_instance()
 
-    # Get ID of MS-AutoQC folder in Google Drive
+    # Get ID of Rapid-QC-MS folder in Google Drive
     gdrive_folder_id = get_drive_folder_id()
 
     if gdrive_folder_id is not None:
@@ -3894,7 +3894,7 @@ def get_pid(instrument_id, run_id):
 def upload_to_google_drive(file_dict):
 
     """
-    Uploads files to MS-AutoQC folder in Google Drive.
+    Uploads files to Rapid-QC-MS folder in Google Drive.
 
     Args:
         file_dict (dict):
@@ -3907,7 +3907,7 @@ def upload_to_google_drive(file_dict):
     # Get Google Drive instance
     drive = get_drive_instance()
 
-    # Get Google Drive ID for the MS-AutoQC folder
+    # Get Google Drive ID for the Rapid-QC-MS folder
     folder_id = get_drive_folder_id()
 
     # Store Drive ID's of uploaded file(s)
@@ -4081,7 +4081,7 @@ def download_qc_results(instrument_id, run_id):
 def get_drive_folder_id():
 
     """
-    Returns Google Drive ID for the MS-AutoQC folder (found in user's root Drive directory).
+    Returns Google Drive ID for the Rapid-QC-MS folder (found in user's root Drive directory).
     """
 
     return get_table("Settings", "workspace")["gdrive_folder_id"].values[0]
@@ -4118,7 +4118,7 @@ def upload_database(instrument_id, sync_settings=False):
         str: Timestamp upon upload completion.
     """
 
-    # Get Google Drive ID's for the MS-AutoQC folder and database file
+    # Get Google Drive ID's for the Rapid-QC-MS folder and database file
     gdrive_folder_id = get_drive_folder_id()
     instrument_db_file_id = get_database_drive_id(instrument_id)
 
@@ -4177,14 +4177,14 @@ def download_database(instrument_id, sync_settings=False):
     # Get Google Drive instance
     drive = get_drive_instance()
 
-    # Get Google Drive ID's for the MS-AutoQC folder and database file
+    # Get Google Drive ID's for the Rapid-QC-MS folder and database file
     gdrive_folder_id = get_drive_folder_id()
     instrument_db_file_id = get_instrument(instrument_id)["drive_id"].values[0]
 
     # If Google Drive folder is found, look for database next
     if gdrive_folder_id is not None and instrument_db_file_id is not None:
 
-        # Download newly added / modified MSP files in MS-AutoQC > methods
+        # Download newly added / modified MSP files in Rapid-QC-MS > methods
         if sync_settings == True:
             download_methods(skip_check=True)
 
@@ -4579,7 +4579,7 @@ def is_completed_run(instrument_id, run_id):
         else:
             return False
     except:
-        print("Could not get MS-AutoQC job type.")
+        print("Could not get Rapid-QC-MS job type.")
         traceback.print_exc()
         return False
 

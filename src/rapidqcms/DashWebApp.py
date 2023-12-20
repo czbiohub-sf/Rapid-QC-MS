@@ -57,13 +57,13 @@ Dash app layout
 """
 
 # Initialize Dash app
-app = dash.Dash(__name__, title="MS-AutoQC", suppress_callback_exceptions=True,
+app = dash.Dash(__name__, title="Rapid-QC-MS", suppress_callback_exceptions=True,
     external_stylesheets=[local_stylesheet, dbc.themes.BOOTSTRAP, dbc.icons.BOOTSTRAP],
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}])
 
 def serve_layout():
 
-    biohub_logo = "https://raw.githubusercontent.com/czbiohub-sf/MS-AutoQC/77a5b4908dc331ac94d186b4b85d804543b7df14/docs/CZ-Biohub-Mark-SF-Color-RGB.png"
+    biohub_logo = "https://raw.githubusercontent.com/czbiohub-sf/Rapid-QC-MS/77a5b4908dc331ac94d186b4b85d804543b7df14/docs/CZ-Biohub-Mark-SF-Color-RGB.png"
 
     return html.Div(className="app-layout", children=[
 
@@ -74,15 +74,15 @@ def serve_layout():
                 html.A(
                     dbc.Row([
                         dbc.Col(html.Img(src=biohub_logo, height="30px")),
-                        dbc.Col(dbc.NavbarBrand(id="header", children="MS-AutoQC", className="ms-2")),
+                        dbc.Col(dbc.NavbarBrand(id="header", children="Rapid-QC-MS", className="ms-2")),
                         ], align="center", className="g-0",
                     ), href="https://www.czbiohub.org/", style={"textDecoration": "none"},
                 ),
                 # Settings button
                 dbc.Row([
                     dbc.Nav([
-                        dbc.NavItem(dbc.NavLink("About", href="https://github.com/czbiohub-sf/MS-AutoQC", className="navbar-button", target="_blank")),
-                        dbc.NavItem(dbc.NavLink("Support", href="https://github.com/czbiohub-sf/MS-AutoQC/wiki", className="navbar-button", target="_blank")),
+                        dbc.NavItem(dbc.NavLink("About", href="https://github.com/czbiohub-sf/Rapid-QC-MS", className="navbar-button", target="_blank")),
+                        dbc.NavItem(dbc.NavLink("Support", href="https://github.com/czbiohub-sf/Rapid-QC-MS/wiki", className="navbar-button", target="_blank")),
                         dbc.NavItem(dbc.NavLink("Settings", href="#", id="settings-button", className="navbar-button")),
                     ], className="me-auto")
                 ], className="g-0 ms-auto flex-nowrap mt-3 mt-md-0")
@@ -148,7 +148,7 @@ def serve_layout():
                                             dcc.Interval(id="refresh-interval", n_intervals=0, interval=30000, disabled=True),
                                             dbc.Progress(id="active-run-progress-bar", animated=False),
 
-                                            # Buttons for managing MS-AutoQC jobs
+                                            # Buttons for managing Rapid-QC-MS jobs
                                             html.Div(id="job-controller-panel", children=[
                                                 html.Div(className="d-flex justify-content-center btn-toolbar", children=[
                                                     # Button to mark current job as complete
@@ -182,7 +182,7 @@ def serve_layout():
                                         ])
                                 ]),
 
-                                # Button to start new MS-AutoQC job
+                                # Button to start new Rapid-QC-MS job
                                 html.Div(className="d-grid gap-2", children=[
                                     dbc.Button("Setup New QC Job",
                                         id="setup-new-run-button",
@@ -503,7 +503,7 @@ def serve_layout():
                         # Modal for first-time workspace setup
                         dbc.Modal(id="workspace-setup-modal", size="lg", centered=True, scrollable=True,
                                   keyboard=False, backdrop="static", children=[
-                            dbc.ModalHeader(dbc.ModalTitle("Welcome to MS-AutoQC", id="setup-user-modal-title"), close_button=False),
+                            dbc.ModalHeader(dbc.ModalTitle("Welcome to Rapid-QC-MS", id="setup-user-modal-title"), close_button=False),
                             dbc.ModalBody(id="setup-user-modal-body", className="modal-styles-2", children=[
 
                                 html.Div([
@@ -511,8 +511,8 @@ def serve_layout():
                                     html.P("Looks like this is a new installation. What would you like to do today?"),
                                     dbc.Accordion(start_collapsed=True, children=[
 
-                                        # Setting up MS-AutoQC for the first time
-                                        dbc.AccordionItem(title="I'm setting up MS-AutoQC on a new instrument", children=[
+                                        # Setting up Rapid-QC-MS for the first time
+                                        dbc.AccordionItem(title="I'm setting up Rapid-QC-MS on a new instrument", children=[
                                             html.Div(className="modal-styles-3", children=[
 
                                                 # Instrument name text field
@@ -567,12 +567,12 @@ def serve_layout():
                                         ]),
 
                                         # Signing in from another device
-                                        dbc.AccordionItem(title="I'm signing in to an existing MS-AutoQC workspace", children=[
+                                        dbc.AccordionItem(title="I'm signing in to an existing Rapid-QC-MS workspace", children=[
                                             html.Div(className="modal-styles-3", children=[
 
                                                 # Google Drive authentication button
                                                 html.Div([
-                                                    dbc.Label("Sign in to access MS-AutoQC"), html.Br(),
+                                                    dbc.Label("Sign in to access Rapid-QC-MS"), html.Br(),
                                                     dbc.InputGroup([
                                                         dbc.Input(placeholder="Client ID", id="gdrive-client-id-2"),
                                                         dbc.Input(placeholder="Client secret", id="gdrive-client-secret-2"),
@@ -581,7 +581,7 @@ def serve_layout():
                                                     ]),
                                                     dbc.FormText(
                                                         "Please ensure that your Google account has been registered to " +
-                                                        "access your MS-AutoQC workspace by visiting Settings > General."),
+                                                        "access your Rapid-QC-MS workspace by visiting Settings > General."),
                                                     dbc.Popover(id="google-drive-button-2-popover", is_open=False,
                                                                 target="setup-google-drive-button-2", placement="right")
                                                 ]),
@@ -599,7 +599,7 @@ def serve_layout():
                                                 # Workspace sign-in button
                                                 html.Div([
                                                     html.Div([
-                                                        dbc.Button("Sign in to MS-AutoQC workspace", id="first-time-sign-in-button",
+                                                        dbc.Button("Sign in to Rapid-QC-MS workspace", id="first-time-sign-in-button",
                                                             disabled=True, style={"line-height": "1.75"}, color="success"),
                                                     ], className="d-grid gap-2 col-12 mx-auto"),
                                                 ])
@@ -653,7 +653,7 @@ def serve_layout():
 
                                 # Select AutoQC configuration
                                 html.Div(children=[
-                                    dbc.Label("Select MS-AutoQC configuration"),
+                                    dbc.Label("Select Rapid-QC-MS configuration"),
                                     dbc.Select(id="start-run-qc-configs-dropdown",
                                                placeholder="No configuration selected"),
                                 ]),
@@ -742,7 +742,7 @@ def serve_layout():
                         dbc.Modal(id="start-run-monitor-modal", size="md", centered=True, is_open=False, children=[
                             dbc.ModalHeader(dbc.ModalTitle(id="start-run-monitor-modal-title", children="Success!"), close_button=True),
                             dbc.ModalBody(id="start-run-monitor-modal-body", className="modal-styles", children=[
-                                dbc.Alert("MS-AutoQC will start monitoring your run. Please do not restart your computer.", color="success")
+                                dbc.Alert("Rapid-QC-MS will start monitoring your run. Please do not restart your computer.", color="success")
                             ]),
                         ]),
 
@@ -752,7 +752,7 @@ def serve_layout():
                             dbc.ModalBody(id="new-job-error-modal-body", className="modal-styles"),
                         ]),
 
-                        # MS-AutoQC settings
+                        # Rapid-QC-MS settings
                         dbc.Modal(id="settings-modal", fullscreen=True, centered=True, is_open=False, scrollable=True, children=[
                             dbc.ModalHeader(dbc.ModalTitle(children="Settings"), close_button=True),
                             dbc.ModalBody(id="settings-modal-body", className="modal-styles-fullscreen", children=[
@@ -768,13 +768,13 @@ def serve_layout():
                                         dbc.Alert(id="google-drive-sign-in-from-settings-alert", is_open=False,
                                         dismissable=True, color="danger", children=[
                                             html.H4(
-                                                "This Google account already has an MS-AutoQC workspace."),
+                                                "This Google account already has an Rapid-QC-MS workspace."),
                                             html.P(
                                                 "Please sign in with a different Google account to enable cloud "
                                                 "sync for this workspace."),
                                             html.P(
-                                                "Or, if you'd like to add a new instrument to an existing MS-AutoQC "
-                                                "workspace, please reinstall MS-AutoQC on this instrument and enable "
+                                                "Or, if you'd like to add a new instrument to an existing Rapid-QC-MS "
+                                                "workspace, please reinstall Rapid-QC-MS on this instrument and enable "
                                                 "cloud sync during setup.")
                                         ]),
 
@@ -821,11 +821,11 @@ def serve_layout():
                                                 id="add-user-button", n_clicks=0),
                                             dbc.Button("Delete user", color="danger", outline=True,
                                                 id="delete-user-button", n_clicks=0),
-                                            dbc.Popover("This will revoke user access to the MS-AutoQC workspace. "
+                                            dbc.Popover("This will revoke user access to the Rapid-QC-MS workspace. "
                                                 "Are you sure?", target="delete-user-button", trigger="hover", body=True)
                                         ]),
                                         dbc.FormText(
-                                            "Adding new users grants full read-and-write access to this MS-AutoQC workspace."),
+                                            "Adding new users grants full read-and-write access to this Rapid-QC-MS workspace."),
                                         html.Br(), html.Br(),
 
                                         # Table of users with workspace access
@@ -882,7 +882,7 @@ def serve_layout():
                                                 id="add-email-button", n_clicks=0),
                                             dbc.Button("Remove email", color="danger", outline=True,
                                                 id="delete-email-button", n_clicks=0),
-                                            dbc.Popover("This will un-register the email account from MS-AutoQC "
+                                            dbc.Popover("This will un-register the email account from Rapid-QC-MS "
                                                 "notifications. Are you sure?", target="delete-email-button",
                                                 trigger="hover", body=True)
                                         ]),
@@ -1618,7 +1618,7 @@ Dash callbacks
 def sync_with_google_drive(on_page_load):
 
     """
-    For users signed in to MS-AutoQC from an external device, this will download the database on page load
+    For users signed in to Rapid-QC-MS from an external device, this will download the database on page load
     """
 
     # Download database on page load (or refresh) if sync is enabled
@@ -1644,7 +1644,7 @@ def sync_with_google_drive(on_page_load):
 def sync_with_google_drive(instrument_id):
 
     """
-    For users signed in to MS-AutoQC from an external device, this will download the selected instrument database
+    For users signed in to Rapid-QC-MS from an external device, this will download the selected instrument database
     """
 
     # Download database on page load (or refresh) if sync is enabled
@@ -1744,11 +1744,11 @@ def check_first_time_google_drive_authentication(google_drive_is_authenticated):
         gdrive_folder_id = None
         gdrive_methods_zip_id = None
         popover_message = [dbc.PopoverHeader("No existing workspace found."),
-                           dbc.PopoverBody("A new MS-AutoQC workspace will be created.")]
+                           dbc.PopoverBody("A new Rapid-QC-MS workspace will be created.")]
 
         # Check for workspace in Google Drive
         for file in drive.ListFile({"q": "'root' in parents and trashed=false"}).GetList():
-            if file["title"] == "MS-AutoQC":
+            if file["title"] == "Rapid-QC-MS":
                 gdrive_folder_id = file["id"]
                 break
 
@@ -1764,7 +1764,7 @@ def check_first_time_google_drive_authentication(google_drive_is_authenticated):
 
             if gdrive_methods_zip_id is not None:
                 popover_message = [dbc.PopoverHeader("Workspace found!"),
-                    dbc.PopoverBody("This instrument will be added to the existing MS-AutoQC workspace.")]
+                    dbc.PopoverBody("This instrument will be added to the existing Rapid-QC-MS workspace.")]
 
         return "You're signed in!", "success", False, popover_message, True, gdrive_folder_id, gdrive_methods_zip_id
 
@@ -1875,9 +1875,9 @@ def complete_first_time_setup(button_click, instrument_id, instrument_vendor, go
             # Create necessary folders if not found
             if gdrive_folder_id is None:
 
-                # Create MS-AutoQC folder
+                # Create Rapid-QC-MS folder
                 folder_metadata = {
-                    "title": "MS-AutoQC",
+                    "title": "Rapid-QC-MS",
                     "mimeType": "application/vnd.google-apps.folder"
                 }
                 folder = drive.CreateFile(folder_metadata)
@@ -1981,16 +1981,16 @@ def check_workspace_login_google_drive_authentication(google_drive_is_authentica
                            dbc.PopoverBody("Double-check that your Google account has access in " +
                                            "Settings > General, or sign in from a different account.")]
 
-        # Check for MS-AutoQC folder in Google Drive root directory
+        # Check for Rapid-QC-MS folder in Google Drive root directory
         for file in drive.ListFile({"q": "'root' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"}).GetList():
-            if file["title"] == "MS-AutoQC":
+            if file["title"] == "Rapid-QC-MS":
                 gdrive_folder_id = file["id"]
                 break
 
         # If it's not there, check "Shared With Me" and copy it over to root directory
         if gdrive_folder_id is None:
             for file in drive.ListFile({"q": "sharedWithMe and mimeType='application/vnd.google-apps.folder' and trashed=false"}).GetList():
-                if file["title"] == "MS-AutoQC":
+                if file["title"] == "Rapid-QC-MS":
                     gdrive_folder_id = file["id"]
                     break
 
@@ -2087,7 +2087,7 @@ def ui_feedback_for_workspace_login_button(button_click):
 def ui_feedback_for_login_button(button_click, is_instrument_computer, instrument_id):
 
     """
-    Dismisses setup window and signs in to MS-AutoQC workspace
+    Dismisses setup window and signs in to Rapid-QC-MS workspace
     """
 
     if button_click:
@@ -2143,7 +2143,7 @@ def update_google_drive_sync_status_in_settings(google_drive_authenticated, goog
 
     # Authenticated on app startup
     if (trigger == "google-drive-authenticated" or trigger == "settings-modal") and google_drive_authenticated_on_start is not None:
-        form_text = "Cloud sync is enabled! You can now sign in to this MS-AutoQC workspace from any device."
+        form_text = "Cloud sync is enabled! You can now sign in to this Rapid-QC-MS workspace from any device."
         return "success", "Signed in to Google Drive", form_text, False, "Client ID (saved)", "Client secret (saved)"
 
     # Authenticated from "Sign in to Google Drive" button in Settings > General
@@ -2153,16 +2153,16 @@ def update_google_drive_sync_status_in_settings(google_drive_authenticated, goog
         gdrive_folder_id = None
         main_db_file_id = None
 
-        # Check for MS-AutoQC folder in Google Drive root directory
+        # Check for Rapid-QC-MS folder in Google Drive root directory
         for file in drive.ListFile({"q": "'root' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"}).GetList():
-            if file["title"] == "MS-AutoQC":
+            if file["title"] == "Rapid-QC-MS":
                 gdrive_folder_id = file["id"]
                 break
 
         # If it's not there, check "Shared With Me" and copy it over to root directory
         if gdrive_folder_id is None:
             for file in drive.ListFile({"q": "sharedWithMe and mimeType='application/vnd.google-apps.folder' and trashed=false"}).GetList():
-                if file["title"] == "MS-AutoQC":
+                if file["title"] == "Rapid-QC-MS":
                     gdrive_folder_id = file["id"]
                     break
 
@@ -2173,9 +2173,9 @@ def update_google_drive_sync_status_in_settings(google_drive_authenticated, goog
 
         # If no workspace found, all good to create one
         else:
-            # Create MS-AutoQC folder
+            # Create Rapid-QC-MS folder
             folder_metadata = {
-                "title": "MS-AutoQC",
+                "title": "Rapid-QC-MS",
                 "mimeType": "application/vnd.google-apps.folder"
             }
             folder = drive.CreateFile(folder_metadata)
@@ -2183,7 +2183,7 @@ def update_google_drive_sync_status_in_settings(google_drive_authenticated, goog
 
             # Get Google Drive ID of folder
             for file in drive.ListFile({"q": "'root' in parents and trashed=false"}).GetList():
-                if file["title"] == "MS-AutoQC":
+                if file["title"] == "Rapid-QC-MS":
                     gdrive_folder_id = file["id"]
                     break
 
@@ -2226,7 +2226,7 @@ def update_google_drive_sync_status_in_settings(google_drive_authenticated, goog
             # Save user credentials
             db.save_google_drive_credentials()
 
-        form_text = "Cloud sync is enabled! You can now sign in to this MS-AutoQC workspace from any device."
+        form_text = "Cloud sync is enabled! You can now sign in to this Rapid-QC-MS workspace from any device."
         return "success", "Signed in to Google Drive", form_text, False, "Client ID (saved)", "Client secret (saved)"
 
     else:
@@ -2285,7 +2285,7 @@ def ui_alert_on_gdrive_credential_save(credential_save_result):
 def get_instrument_tabs(instruments, check_workspace_setup, sync_update):
 
     """
-    Retrieves all instruments on a user installation of MS-AutoQC
+    Retrieves all instruments on a user installation of Rapid-QC-MS
     """
 
     if db.is_valid():
@@ -3385,7 +3385,7 @@ def close_sync_modal(sync_finished):
 def get_users_with_workspace_access(on_page_load, user_added, user_deleted, sync_update):
 
     """
-    Returns table of users that have access to the MS-AutoQC workspace
+    Returns table of users that have access to the Rapid-QC-MS workspace
     """
 
     # Get users from database
@@ -3414,7 +3414,7 @@ def get_users_with_workspace_access(on_page_load, user_added, user_deleted, sync
 def add_user_to_workspace(button_click, user_email_address, google_drive_is_authenticated):
 
     """
-    Grants user permission to MS-AutoQC workspace in Google Drive
+    Grants user permission to Rapid-QC-MS workspace in Google Drive
     """
 
     if user_email_address in db.get_workspace_users_list():
@@ -3436,7 +3436,7 @@ def add_user_to_workspace(button_click, user_email_address, google_drive_is_auth
 def delete_user_from_workspace(button_click, user_email_address, google_drive_is_authenticated):
 
     """
-    Revokes user permission to MS-AutoQC workspace in Google Drive
+    Revokes user permission to Rapid-QC-MS workspace in Google Drive
     """
 
     if user_email_address not in db.get_workspace_users_list():
@@ -3458,7 +3458,7 @@ def delete_user_from_workspace(button_click, user_email_address, google_drive_is
 def ui_feedback_for_adding_gdrive_user(user_added_result):
 
     """
-    UI alert upon adding a new user to MS-AutoQC workspace
+    UI alert upon adding a new user to Rapid-QC-MS workspace
     """
 
     if user_added_result is not None:
@@ -3477,7 +3477,7 @@ def ui_feedback_for_adding_gdrive_user(user_added_result):
 def ui_feedback_for_deleting_gdrive_user(user_deleted_result):
 
     """
-    UI alert upon deleting a user from the MS-AutoQC workspace
+    UI alert upon deleting a user from the Rapid-QC-MS workspace
     """
 
     if user_deleted_result is not None:
@@ -3570,7 +3570,7 @@ def get_slack_channel(result, sync_update):
 def save_slack_channel(notifications_enabled, slack_channel):
 
     """
-    1. Registers Slack channel for MS-AutoQC notifications
+    1. Registers Slack channel for Rapid-QC-MS notifications
     2. Sends a Slack message to confirm registration
     """
 
@@ -3643,7 +3643,7 @@ def get_emails_registered_for_notifications(on_page_load, email_added, email_del
 def register_email_for_notifications(button_click, user_email_address):
 
     """
-    Registers email address for MS-AutoQC notifications
+    Registers email address for Rapid-QC-MS notifications
     """
 
     if user_email_address in db.get_email_notifications_list():
@@ -3663,7 +3663,7 @@ def register_email_for_notifications(button_click, user_email_address):
 def delete_email_from_notifications(button_click, user_email_address):
 
     """
-    Unsubscribes email address from MS-AutoQC notifications
+    Unsubscribes email address from Rapid-QC-MS notifications
     """
 
     if user_email_address not in db.get_email_notifications_list():
@@ -3689,11 +3689,11 @@ def ui_feedback_for_registering_email(email_added_result):
 
     if email_added_result is not None:
         if email_added_result != "Error" and email_added_result != "Email already exists":
-            return True, email_added_result + " has been registered for MS-AutoQC notifications.", "success"
+            return True, email_added_result + " has been registered for Rapid-QC-MS notifications.", "success"
         elif email_added_result == "Email already exists":
-            return True, "Error: This email is already registered for MS-AutoQC notifications.", "danger"
+            return True, "Error: This email is already registered for Rapid-QC-MS notifications.", "danger"
         else:
-            return True, "Error: Could not register email for MS-AutoQC notifications.", "danger"
+            return True, "Error: Could not register email for Rapid-QC-MS notifications.", "danger"
 
 
 @app.callback(Output("email-deletion-alert", "is_open"),
@@ -3713,7 +3713,7 @@ def ui_feedback_for_deleting_email(email_deleted_result):
             message = "Error: Email cannot be deleted because it isn't registered for notifications."
             return True, message, "danger"
         else:
-            return True, "Error: Could not unsubscribe email from MS-AutoQC notifications.", "danger"
+            return True, "Error: Could not unsubscribe email from Rapid-QC-MS notifications.", "danger"
 
 
 @app.callback(Output("chromatography-methods-table", "children"),
@@ -4727,7 +4727,7 @@ def toggle_new_run_modal(button_clicks, success, instrument_name, browse_folder_
 def populate_options_for_new_run(button_click):
 
     """
-    Populates dropdowns and checklists for Setup New MS-AutoQC Job page
+    Populates dropdowns and checklists for Setup New Rapid-QC-MS Job page
     """
 
     chromatography_methods = []
@@ -4797,7 +4797,7 @@ def capture_uploaded_metadata(contents, filename):
 def update_new_job_button_text(job_type):
 
     """
-    Updates New MS-AutoQC Job form submit button based on job type
+    Updates New Rapid-QC-MS Job form submit button based on job type
     """
 
     if job_type == "active":
@@ -4862,7 +4862,7 @@ def validation_feedback_for_new_run_setup_form(run_id, chromatography, bio_stand
     metadata_valid, metadata_invalid, path_valid, path_invalid, instrument):
 
     """
-    Extensive form validation and feedback for setting up a new MS-AutoQC job
+    Extensive form validation and feedback for setting up a new Rapid-QC-MS job
     """
 
     # Instrument run ID validation
@@ -4944,7 +4944,7 @@ def validation_feedback_for_new_run_setup_form(run_id, chromatography, bio_stand
 def enable_new_autoqc_job_button(run_id_valid, chromatography_valid, qc_config_valid, sequence_valid, path_valid):
 
     """
-    Enables "submit" button for New MS-AutoQC Job form
+    Enables "submit" button for New Rapid-QC-MS Job form
     """
 
     if run_id_valid and chromatography_valid and qc_config_valid and sequence_valid and path_valid and db.pipeline_valid():
@@ -5264,7 +5264,7 @@ def hide_elements_for_non_instrument_devices(instrument_id):
 def confirm_action_on_job(mark_job_as_completed, job_completed, restart_job, job_restarted, delete_job, job_deleted, resources):
 
     """
-    Shows an alert confirming that the user wants to perform an action on the selected MS-AutoQC job
+    Shows an alert confirming that the user wants to perform an action on the selected Rapid-QC-MS job
     """
 
     trigger = ctx.triggered_id
@@ -5305,7 +5305,7 @@ def confirm_action_on_job(mark_job_as_completed, job_completed, restart_job, job
 def perform_action_on_job(confirm_button, modal_title, resources):
 
     """
-    Performs the selected action on the selected MS-AutoQC job
+    Performs the selected action on the selected Rapid-QC-MS job
     """
 
     resources = json.loads(resources)
