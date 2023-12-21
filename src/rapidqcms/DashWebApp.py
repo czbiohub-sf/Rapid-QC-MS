@@ -1305,40 +1305,6 @@ def serve_layout():
                                             ])
                                         ]), html.Br(),
 
-                                        # # Data collection parameters
-                                        # """
-                                        # dbc.Label("Data collection parameters", style={"font-weight": "bold"}),
-                                        # html.Br(),
-
-                                        # html.Div(className="parent-container", children=[
-                                        #     # Retention time begin
-                                        #     html.Div(className="child-container", children=[
-                                        #         dbc.Label("Retention time begin"),
-                                        #         dbc.Input(id="retention-time-begin", placeholder="0"),
-                                        #     ]),
-                                        #     # Retention time end
-                                        #     html.Div(className="child-container", children=[
-                                        #         dbc.Label("Retention time end"),
-                                        #         dbc.Input(id="retention-time-end", placeholder="100"),
-                                        #         html.Br(),
-                                        #     ]),
-                                        # ]),
-
-                                        # html.Div(className="parent-container", children=[
-                                        #     # Mass range begin
-                                        #     html.Div(className="child-container", children=[
-                                        #         dbc.Label("Mass range begin"),
-                                        #         dbc.Input(id="mass-range-begin", placeholder="0"),
-                                        #     ]),
-                                        #     # Mass range end
-                                        #     html.Div(className="child-container", children=[
-                                        #         dbc.Label("Mass range end"),
-                                        #         dbc.Input(id="mass-range-end", placeholder="2000"),
-                                        #         html.Br(),
-                                        #     ]),
-                                        # ]),
-                                        # """, #no idea why there needs to be a comma here
-
                                         # Centroid parameters
                                         dbc.Label("Centroid parameters", style={"font-weight": "bold"}),
                                         html.Br(),
@@ -1428,60 +1394,6 @@ def serve_layout():
                                             dbc.Input(id="post-id-score-cutoff", placeholder="85"),
                                         ]),
                                         html.Br(),
-
-                                        # # Alignment parameters
-                                        # dbc.Label("Alignment parameters", style={"font-weight": "bold"}),
-                                        # html.Br(),
-
-                                        # html.Div(className="parent-container", children=[
-                                        #     # Retention time tolerance
-                                        #     html.Div(className="child-container", children=[
-                                        #         dbc.Label("Alignment retention time tolerance"),
-                                        #         dbc.Input(id="alignment-rt-tolerance", placeholder="0.05"),
-                                        #     ]),
-                                        #     # Accurate mass tolerance
-                                        #     html.Div(className="child-container", children=[
-                                        #         dbc.Label("Alignment MS1 tolerance"),
-                                        #         dbc.Input(id="alignment-mz-tolerance", placeholder="0.008"),
-                                        #         html.Br(),
-                                        #     ]),
-                                        # ]),
-                                        # html.Br(),
-
-                                        # html.Div(className="parent-container", children=[
-                                        #     # Retention time factor
-                                        #     html.Div(className="child-container", children=[
-                                        #         dbc.Label("Alignment retention time factor"),
-                                        #         dbc.Input(id="alignment-rt-factor", placeholder="0.5"),
-                                        #     ]),
-                                        #     # Accurate mass factor
-                                        #     html.Div(className="child-container", children=[
-                                        #         dbc.Label("Alignment MS1 factor"),
-                                        #         dbc.Input(id="alignment-mz-factor", placeholder="0.5"),
-                                        #         html.Br(),
-                                        #     ]),
-                                        # ]),
-                                        # html.Br(),
-
-                                        # html.Div(className="parent-container", children=[
-                                        #     # Peak count filter
-                                        #     html.Div(className="child-container", children=[
-                                        #         dbc.Label("Peak count filter"),
-                                        #         dbc.Input(id="peak-count-filter", placeholder="0"),
-                                        #     ]),
-                                        #     # QC at least filter
-                                        #     html.Div(className="child-container", children=[
-                                        #         dbc.Label("QC at least filter"),
-                                        #         dbc.Select(id="qc-at-least-filter-dropdown", options=[
-                                        #             {"label": "True", "value": "True"},
-                                        #             {"label": "False", "value": "False"},
-                                        #         ], placeholder="True"),
-                                        #         html.Br(),
-                                        #     ]),
-                                        # ]),
-
-                                        html.Br(), html.Br(), html.Br(), html.Br(), html.Br(),
-                                        html.Br(), html.Br(), html.Br(), html.Br(), html.Br(),
 
                                         html.Div([
                                             # UI feedback on saving changes to MS-DIAL parameters
