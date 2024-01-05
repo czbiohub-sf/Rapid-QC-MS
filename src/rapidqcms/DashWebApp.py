@@ -2901,6 +2901,7 @@ def populate_biological_standards_compare_dropdowns(resources, polarity, intensi
             if runselector != "All":
                 df_bio_intensity = df_bio_intensity.loc[df_bio_intensity["run_id"] == runselector]
             instrument_runs = df_bio_intensity["Name"].astype(str).tolist()
+            instrument_runs = list(filter(lambda x: x != "None", instrument_runs))
         
         log.debug("populate_biological_standards_compare_dropdown returns variables: ")
         log.debug("{} {}".format(instrument_runs, instrument_runs[0]))
