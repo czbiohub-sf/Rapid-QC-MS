@@ -803,8 +803,8 @@ def load_bio_benchmark_plot(dataframe, metabolite_name, return_runids=False):
     """
     log.debug("load_bio_benchmark_plot locals()")
     log.debug(locals())
-    # Get list of runs
-    instrument_runs = dataframe["run_id"].astype(str).tolist()
+    # Get list of individual samples run
+    instrument_runs = dataframe["Name"].astype(str).tolist()
 
     # Get targeted metabolite intensities for each run
     intensities = dataframe[metabolite_name].values.tolist()
