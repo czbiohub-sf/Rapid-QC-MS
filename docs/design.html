@@ -2,12 +2,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.2.335">
+<meta name="generator" content="quarto-1.3.450">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>MS-AutoQC - System Design</title>
+<title>Rapid-QC-MS - System Design</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -17,9 +17,10 @@ div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
 ul.task-list{list-style: none;}
 ul.task-list li input[type="checkbox"] {
   width: 0.8em;
-  margin: 0 0.8em 0.2em -1.6em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
@@ -46,43 +47,13 @@ pre.numberSource code > span > a:first-child::before
     -khtml-user-select: none; -moz-user-select: none;
     -ms-user-select: none; user-select: none;
     padding: 0 4px; width: 4em;
-    color: #aaaaaa;
   }
-pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
 div.sourceCode
   {   }
 @media screen {
 pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
-code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-code span.at { color: #7d9029; } /* Attribute */
-code span.bn { color: #40a070; } /* BaseN */
-code span.bu { color: #008000; } /* BuiltIn */
-code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-code span.ch { color: #4070a0; } /* Char */
-code span.cn { color: #880000; } /* Constant */
-code span.co { color: #60a0b0; font-style: italic; } /* Comment */
-code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-code span.dt { color: #902000; } /* DataType */
-code span.dv { color: #40a070; } /* DecVal */
-code span.er { color: #ff0000; font-weight: bold; } /* Error */
-code span.ex { } /* Extension */
-code span.fl { color: #40a070; } /* Float */
-code span.fu { color: #06287e; } /* Function */
-code span.im { color: #008000; font-weight: bold; } /* Import */
-code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-code span.kw { color: #007020; font-weight: bold; } /* Keyword */
-code span.op { color: #666666; } /* Operator */
-code span.ot { color: #007020; } /* Other */
-code span.pp { color: #bc7a00; } /* Preprocessor */
-code span.sc { color: #4070a0; } /* SpecialChar */
-code span.ss { color: #bb6688; } /* SpecialString */
-code span.st { color: #4070a0; } /* String */
-code span.va { color: #19177c; } /* Variable */
-code span.vs { color: #4070a0; } /* VerbatimString */
-code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
 </style>
 
 
@@ -121,7 +92,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     "search-more-matches-text": "more matches in this document",
     "search-clear-button-title": "Clear",
     "search-detached-cancel-button-title": "Cancel",
-    "search-submit-button-title": "Submit"
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
   }
 }</script>
 
@@ -137,58 +109,58 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container">
     <a class="navbar-brand" href="./index.html">
-    <span class="navbar-title">MS-AutoQC</span>
+    <span class="navbar-title">Rapid-QC-MS</span>
     </a>
   </div>
+            <div id="quarto-search" class="" title="Search"></div>
           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
   <span class="navbar-toggler-icon"></span>
 </button>
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link" href="./index.html">
+    <a class="nav-link" href="./index.html" rel="" target="">
  <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./overview.html">
+    <a class="nav-link" href="./overview.html" rel="" target="">
  <span class="menu-text">Overview</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./installation.html">
+    <a class="nav-link" href="./installation.html" rel="" target="">
  <span class="menu-text">Installation</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./quickstart.html">
+    <a class="nav-link" href="./quickstart.html" rel="" target="">
  <span class="menu-text">Quickstart</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./user-guide.html">
+    <a class="nav-link" href="./user-guide.html" rel="" target="">
  <span class="menu-text">User Guide</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link active" href="./design.html" aria-current="page">
+    <a class="nav-link active" href="./design.html" rel="" target="" aria-current="page">
  <span class="menu-text">System Design</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./documentation.html">
+    <a class="nav-link" href="./documentation.html" rel="" target="">
  <span class="menu-text">Documentation</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./faq.html">
+    <a class="nav-link" href="./faq.html" rel="" target="">
  <span class="menu-text">FAQ</span></a>
   </li>  
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/czbiohub-sf/MS-AutoQC"><i class="bi bi-github" role="img" aria-label="GitHub">
+    <a class="nav-link" href="https://github.com/czbiohub/Rapid-QC-MS" rel="" target=""><i class="bi bi-github" role="img" aria-label="GitHub">
 </i> 
  <span class="menu-text"></span></a>
   </li>  
 </ul>
-              <div class="quarto-toggle-container">
-                  <a href="" class="quarto-color-scheme-toggle nav-link" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
-              </div>
-              <div id="quarto-search" class="" title="Search"></div>
+            <div class="quarto-navbar-tools">
+  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+</div>
           </div> <!-- /navcollapse -->
       </div> <!-- /container-fluid -->
     </nav>
@@ -261,11 +233,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h3 class="anchored" data-anchor-id="backend">Backend</h3>
 <p>The backend is organized into five different files:</p>
 <ol type="1">
-<li><strong><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/AcquisitionListener.py">AcquisitionListener</a></strong> defines classes and functions for monitoring data acquisition paths and processing data files.</li>
-<li><strong><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py">DatabaseFunctions</a></strong> provides highly-abstracted API for reading from and writing to databases.</li>
-<li><strong><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py">AutoQCProcessing</a></strong> is a modular pipeline for processing data files, performing QC checks, and writing QC results to the database.</li>
-<li><strong><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/SlackNotifications.py">SlackNotifications</a></strong> defines functions for controlling the Slack bot.</li>
-<li><strong><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/PlotGeneration.py">PlotGeneration</a></strong> parses QC results from the database into the browser cache to generate Plotly graphs.</li>
+<li><strong><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AcquisitionListener.py">AcquisitionListener</a></strong> defines classes and functions for monitoring data acquisition paths and processing data files.</li>
+<li><strong><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py">DatabaseFunctions</a></strong> provides highly-abstracted API for reading from and writing to databases.</li>
+<li><strong><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py">AutoQCProcessing</a></strong> is a modular pipeline for processing data files, performing QC checks, and writing QC results to the database.</li>
+<li><strong><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/SlackNotifications.py">SlackNotifications</a></strong> defines functions for controlling the Slack bot.</li>
+<li><strong><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/PlotGeneration.py">PlotGeneration</a></strong> parses QC results from the database into the browser cache to generate Plotly graphs.</li>
 </ol>
 <p>The complete project structure is as follows:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>MS<span class="op">-</span>AutoQC<span class="op">/</span></span>
@@ -398,10 +370,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <p><strong>Jump to relevant functions:</strong></p>
 <ul>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/DashWebApp.py#:~:text=new_autoqc_job_setup"><code>new_autoqc_job_setup()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,get_msp_file_path"><code>db.get_msp_file_path()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=generate_msdial_parameters_file"><code>db.generate_msdial_parameters_file()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,get_filenames_from_sequence"><code>db.get_filenames_from_sequence()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DashWebApp.py#:~:text=new_autoqc_job_setup"><code>new_autoqc_job_setup()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,get_msp_file_path"><code>db.get_msp_file_path()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=generate_msdial_parameters_file"><code>db.generate_msdial_parameters_file()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,get_filenames_from_sequence"><code>db.get_filenames_from_sequence()</code></a></li>
 </ul>
 </section>
 <section id="ms-autoqc-compares-checksums" class="level3">
@@ -473,18 +445,18 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <p><strong>Jump to relevant functions:</strong></p>
 <ul>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/AcquisitionListener.py#:~:text=def-,on_created"><code>on_created()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/AcquisitionListener.py#:~:text=def-,watch_file"><code>watch_file()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/AcquisitionListener.py#:~:text=def-,get_md5"><code>get_md5()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,get_md5"><code>db.get_md5()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,update_md5_checksum"><code>db.update_md5_checksum()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,process_data_file"><code>qc.process_data_file()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AcquisitionListener.py#:~:text=def-,on_created"><code>on_created()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AcquisitionListener.py#:~:text=def-,watch_file"><code>watch_file()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AcquisitionListener.py#:~:text=def-,get_md5"><code>get_md5()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,get_md5"><code>db.get_md5()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,update_md5_checksum"><code>db.update_md5_checksum()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,process_data_file"><code>qc.process_data_file()</code></a></li>
 </ul>
 <p><sup>1</sup><sub>An MD5 checksum is a 32-character serialized string that represents the contents of a file. If two files have the same MD5 checksum, it is highly likely that they are identical files. Computing this checksum is unlikely to corrupt raw data files, or files of any kind for that matter.</sub></p>
 </section>
 <section id="the-processing-pipeline-is-launched" class="level3">
 <h3 class="anchored" data-anchor-id="the-processing-pipeline-is-launched">3. The processing pipeline is launched</h3>
-<p>The processing pipeline is a wrapper function called <a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/AutoQCProcessing.py#L352"><code>qc.process_data_file()</code></a>, which gets executed when the instrument has finished writing to the data file. It is be described in detail in the upcoming steps.</p>
+<p>The processing pipeline is a wrapper function called <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/AutoQCProcessing.py#L352"><code>qc.process_data_file()</code></a>, which gets executed when the instrument has finished writing to the data file. It is be described in detail in the upcoming steps.</p>
 <p>In preparation, this function retrieves the following information from the database:</p>
 <ul>
 <li>Instrument run ID</li>
@@ -502,17 +474,17 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>For the purpose of untargeted metabolomics, data is currently processed by calling the MS-DIAL via the command line.</p>
 <p><strong>Jump to relevant functions:</strong></p>
 <ul>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,get_instrument_run"><code>db.get_instrument_run()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,get_samples_in_run"><code>db.get_samples_in_run()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=get_parameter_file_path"><code>db.get_parameter_file_path()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=get_targeted_features"><code>db.get_targeted_features()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=get_internal_standards"><code>db.get_internal_standards()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=get_msdial_directory"><code>db.get_msdial_directory()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,run_msconvert"><code>run_msconvert()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,run_msdial_processing"><code>run_msdial_processing()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,peak_list_to_dataframe"><code>peak_list_to_dataframe()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,qc_sample"><code>qc_sample()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,write_qc_results"><code>db.write_qc_results()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,get_instrument_run"><code>db.get_instrument_run()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,get_samples_in_run"><code>db.get_samples_in_run()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=get_parameter_file_path"><code>db.get_parameter_file_path()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=get_targeted_features"><code>db.get_targeted_features()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=get_internal_standards"><code>db.get_internal_standards()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=get_msdial_directory"><code>db.get_msdial_directory()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,run_msconvert"><code>run_msconvert()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,run_msdial_processing"><code>run_msdial_processing()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,peak_list_to_dataframe"><code>peak_list_to_dataframe()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,qc_sample"><code>qc_sample()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,write_qc_results"><code>db.write_qc_results()</code></a></li>
 </ul>
 <p><sup>2</sup><sub>As development continues, implementation of other data processing software tools is as straightforward as making a function call to that tool (and storing user parameters, of course).</sub></p>
 </section>
@@ -571,7 +543,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Return mzML file path to indicate success</span></span>
 <span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> output_folder <span class="op">+</span> filename <span class="op">+</span> <span class="st">".mzml"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p><strong>Jump to relevant functions:</strong> - <a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,run_msconvert"><code>run_msconvert()</code></a></p>
+<p><strong>Jump to relevant functions:</strong> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,run_msconvert"><code>run_msconvert()</code></a></p>
 <p><sup>3</sup><sub>Copying is performed using the native Python function <a href="https://docs.python.org/3/library/shutil.html#shutil.copy2"><code>shutil.copy2()</code></a>, and is unlikely to corrupt the raw data file, or files of any kind.</sub></p>
 </section>
 <section id="ms-dial-processes-the-mzml-file" class="level3">
@@ -692,9 +664,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <p><strong>Jump to relevant functions:</strong></p>
 <ul>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,peak_list_to_dataframe"><code>peak_list_to_dataframe()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,qc_sample"><code>qc_sample()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,write_qc_results"><code>db.write_qc_results()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,peak_list_to_dataframe"><code>peak_list_to_dataframe()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,qc_sample"><code>qc_sample()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,write_qc_results"><code>db.write_qc_results()</code></a></li>
 </ul>
 </section>
 <section id="the-user-is-notified-of-qc-fails-and-warnings" class="level3">
@@ -717,8 +689,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>Currently, this is the simplest component of the pipeline, but posesses a large potential to transform analytical workflows. Future updates will bring more intelligent and informative messages, detailing what went wrong and which component of the LC-MS system may be causing the issue.</p>
 <p><strong>Jump to relevant functions:</strong></p>
 <ul>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/b43ae82a777a7ad8a33d1664a099ab4fd02c7234/src/ms_autoqc/DatabaseFunctions.py#L448:~:text=slack_notifications_are_enabled"><code>db.slack_notifications_are_enabled()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/b43ae82a777a7ad8a33d1664a099ab4fd02c7234/src/ms_autoqc/SlackNotifications.py#L6:~:text=def-,send_message"><code>slack_bot.send_message()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/b43ae82a777a7ad8a33d1664a099ab4fd02c7234/src/ms_autoqc/DatabaseFunctions.py#L448:~:text=slack_notifications_are_enabled"><code>db.slack_notifications_are_enabled()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/b43ae82a777a7ad8a33d1664a099ab4fd02c7234/src/ms_autoqc/SlackNotifications.py#L6:~:text=def-,send_message"><code>slack_bot.send_message()</code></a></li>
 </ul>
 </section>
 <section id="the-dashboard-is-refreshed-with-qc-results" class="level3">
@@ -796,9 +768,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>When a change in the database is detected (via comparing sample counters), all plots in the dashboard are re-populated. The callback continues to check for updates until the end of the instrument run, effectively updating itself in realtime.</p>
 <p><strong>Jump to relevant functions:</strong></p>
 <ul>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#L821:~:text=update_sample_counters_for_run"><code>update_sample_counters_for_run()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def%20get_completed_samples_count"><code>get_completed_samples_count()</code></a></li>
-<li><a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/src/ms_autoqc/DashWebApp.py#:~:text=def%20load_data"><code>load_data()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#L821:~:text=update_sample_counters_for_run"><code>update_sample_counters_for_run()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def%20get_completed_samples_count"><code>get_completed_samples_count()</code></a></li>
+<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DashWebApp.py#:~:text=def%20load_data"><code>load_data()</code></a></li>
 </ul>
 
 
@@ -948,9 +920,23 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     icon: icon
   };
   anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
   const clipboard = new window.ClipboardJS('.code-copy-button', {
-    target: function(trigger) {
-      return trigger.previousElementSibling;
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
     }
   });
   clipboard.on('success', function(e) {
@@ -1015,6 +1001,92 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       return note.innerHTML;
     });
   }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
   const findCites = (el) => {
     const parentEl = el.parentElement;
     if (parentEl) {
@@ -1068,6 +1140,12 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   </li>  
 </ul>
     </div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
   </div>
 </footer>
 

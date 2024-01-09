@@ -2,12 +2,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.2.335">
+<meta name="generator" content="quarto-1.3.450">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>MS-AutoQC</title>
+<title>Rapid-QC-MS</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -17,9 +17,10 @@ div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
 ul.task-list{list-style: none;}
 ul.task-list li input[type="checkbox"] {
   width: 0.8em;
-  margin: 0 0.8em 0.2em -1.6em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
@@ -46,43 +47,13 @@ pre.numberSource code > span > a:first-child::before
     -khtml-user-select: none; -moz-user-select: none;
     -ms-user-select: none; user-select: none;
     padding: 0 4px; width: 4em;
-    color: #aaaaaa;
   }
-pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
 div.sourceCode
   {   }
 @media screen {
 pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
-code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-code span.at { color: #7d9029; } /* Attribute */
-code span.bn { color: #40a070; } /* BaseN */
-code span.bu { color: #008000; } /* BuiltIn */
-code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-code span.ch { color: #4070a0; } /* Char */
-code span.cn { color: #880000; } /* Constant */
-code span.co { color: #60a0b0; font-style: italic; } /* Comment */
-code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-code span.dt { color: #902000; } /* DataType */
-code span.dv { color: #40a070; } /* DecVal */
-code span.er { color: #ff0000; font-weight: bold; } /* Error */
-code span.ex { } /* Extension */
-code span.fl { color: #40a070; } /* Float */
-code span.fu { color: #06287e; } /* Function */
-code span.im { color: #008000; font-weight: bold; } /* Import */
-code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-code span.kw { color: #007020; font-weight: bold; } /* Keyword */
-code span.op { color: #666666; } /* Operator */
-code span.ot { color: #007020; } /* Other */
-code span.pp { color: #bc7a00; } /* Preprocessor */
-code span.sc { color: #4070a0; } /* SpecialChar */
-code span.ss { color: #bb6688; } /* SpecialString */
-code span.st { color: #4070a0; } /* String */
-code span.va { color: #19177c; } /* Variable */
-code span.vs { color: #4070a0; } /* VerbatimString */
-code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
 </style>
 
 
@@ -121,7 +92,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     "search-more-matches-text": "more matches in this document",
     "search-clear-button-title": "Clear",
     "search-detached-cancel-button-title": "Cancel",
-    "search-submit-button-title": "Submit"
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
   }
 }</script>
 
@@ -137,58 +109,58 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container">
     <a class="navbar-brand" href="./index.html">
-    <span class="navbar-title">MS-AutoQC</span>
+    <span class="navbar-title">Rapid-QC-MS</span>
     </a>
   </div>
+            <div id="quarto-search" class="" title="Search"></div>
           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
   <span class="navbar-toggler-icon"></span>
 </button>
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link active" href="./index.html" aria-current="page">
+    <a class="nav-link active" href="./index.html" rel="" target="" aria-current="page">
  <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./overview.html">
+    <a class="nav-link" href="./overview.html" rel="" target="">
  <span class="menu-text">Overview</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./installation.html">
+    <a class="nav-link" href="./installation.html" rel="" target="">
  <span class="menu-text">Installation</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./quickstart.html">
+    <a class="nav-link" href="./quickstart.html" rel="" target="">
  <span class="menu-text">Quickstart</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./user-guide.html">
+    <a class="nav-link" href="./user-guide.html" rel="" target="">
  <span class="menu-text">User Guide</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./design.html">
+    <a class="nav-link" href="./design.html" rel="" target="">
  <span class="menu-text">System Design</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./documentation.html">
+    <a class="nav-link" href="./documentation.html" rel="" target="">
  <span class="menu-text">Documentation</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./faq.html">
+    <a class="nav-link" href="./faq.html" rel="" target="">
  <span class="menu-text">FAQ</span></a>
   </li>  
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/czbiohub-sf/MS-AutoQC"><i class="bi bi-github" role="img" aria-label="GitHub">
+    <a class="nav-link" href="https://github.com/czbiohub/Rapid-QC-MS" rel="" target=""><i class="bi bi-github" role="img" aria-label="GitHub">
 </i> 
  <span class="menu-text"></span></a>
   </li>  
 </ul>
-              <div class="quarto-toggle-container">
-                  <a href="" class="quarto-color-scheme-toggle nav-link" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
-              </div>
-              <div id="quarto-search" class="" title="Search"></div>
+            <div class="quarto-navbar-tools">
+  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+</div>
           </div> <!-- /navcollapse -->
       </div> <!-- /container-fluid -->
     </nav>
@@ -203,9 +175,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
    
   <ul>
   <li><a href="#requirements" id="toc-requirements" class="nav-link active" data-scroll-target="#requirements">Requirements</a></li>
-  <li><a href="#installation" id="toc-installation" class="nav-link" data-scroll-target="#installation">Installation</a></li>
-  <li><a href="#usage" id="toc-usage" class="nav-link" data-scroll-target="#usage">Usage</a></li>
-  <li><a href="#instruments" id="toc-instruments" class="nav-link" data-scroll-target="#instruments">Instruments</a></li>
+  <li><a href="#installation-and-usage" id="toc-installation-and-usage" class="nav-link" data-scroll-target="#installation-and-usage">Installation and usage</a></li>
+  <li><a href="#supported-instrument-vendors" id="toc-supported-instrument-vendors" class="nav-link" data-scroll-target="#supported-instrument-vendors">Supported instrument vendors</a></li>
   </ul>
 </nav>
     </div>
@@ -214,7 +185,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">MS-AutoQC</h1>
+<h1 class="title">Rapid-QC-MS</h1>
 </div>
 
 
@@ -229,21 +200,20 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 </header>
 
-<p><strong>MS-AutoQC</strong> is an all-in-one solution for automated quality control of liquid chromatography-mass spectrometry (LC-MS) instrument runs, both during and after data acquisition.</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/221376479-4b12af91-d448-4760-af63-57339506b94c.gif" class="img-fluid"></p>
+<p><strong>Rapid-QC-MS</strong> is an all-in-one solution for automated quality control of liquid chromatography-mass spectrometry (LC-MS) instrument runs, both during and after data acquisition.</p>
 <p>It offers a fast, straightforward approach to ensure collection of high-quality data, allowing for less time investigating raw data and more time conducting experiments.</p>
-<p>Developed at the <a href="https://www.czbiohub.org/mass-spec/">Mass Spectrometry Platform of CZ Biohub San Francisco</a>, MS-AutoQC provides a host of key features to streamline untargeted metabolomics research, such as:</p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Home/intensity.png" class="img-fluid"> <br></p>
+<p>Developed at the <a href="https://www.czbiohub.org/mass-spec/">Mass Spectrometry Platform of CZ Biohub San Francisco</a>, Rapid-QC-MS provides a host of key features to streamline untargeted metabolomics research, such as:</p>
 <ul>
 <li><strong>Automated and user-defined quality control checks</strong> during instrument runs</li>
 <li><strong>Realtime updates on QC fails</strong> in the form of Slack or email notifications</li>
 <li><strong>Interactive data visualization</strong> of internal standard retention time, <em>m/z</em>, and intensity across samples</li>
 <li><strong>Google Drive cloud sync</strong> and secure, Google-authenticated access to QC results from any device</li>
 </ul>
-<p><img src="https://user-images.githubusercontent.com/7220175/221339311-e7e1f87a-d256-40bd-a201-10bdfff3820f.png" class="img-fluid"> <img src="https://user-images.githubusercontent.com/7220175/221377734-126fa6dc-2876-4fab-8d56-39ee882db7e3.png" class="img-fluid"> <img src="https://user-images.githubusercontent.com/7220175/221340279-ffde357b-1c84-42ad-b172-62b29faad2e4.png" class="img-fluid"></p>
 <section id="requirements" class="level1">
 <h1>Requirements</h1>
-<p><strong>MS-AutoQC was designed to run on Windows platforms</strong> because of its dependency on <a href="https://proteowizard.sourceforge.io/tools/msconvert.html">MSConvert</a> for vendor format data conversion and <a href="http://prime.psc.riken.jp/compms/msdial/main.html">MS-DIAL</a> for data processing and identification. However, MacOS users can still use MS-AutoQC to monitor / view their instrument run data.</p>
-<p>In addition, MS-AutoQC requires Python 3.8+ and various Python packages, including:</p>
+<p><strong>Rapid-QC-MS was designed to run on Windows platforms</strong> because of its dependency on <a href="https://proteowizard.sourceforge.io/tools/msconvert.html">MSConvert</a> for vendor format data conversion and <a href="http://prime.psc.riken.jp/compms/msdial/main.html">MS-DIAL</a> for data processing and identification. However, MacOS users can still use Rapid-QC-MS to monitor / view their instrument run data.</p>
+<p>In addition, Rapid-QC-MS requires Python 3.8+ and various Python packages, including:</p>
 <ul>
 <li>Pandas</li>
 <li>SQLAlchemy</li>
@@ -254,27 +224,22 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li>Slack API</li>
 </ul>
 <p>These are installed automatically during setup.</p>
-<p><strong>Note:</strong> Installation of Python and various Python packages on MS instrument computers comes at no risk. For extra security and peace of mind, you can opt to install MS-AutoQC in a virtual environment. To learn more, please read the <a href="https://czbiohub-sf.github.io/MS-AutoQC/installation.html#2-install-ms-autoqc">installation guide</a>.</p>
+<p><strong>Note:</strong> Installation of Python and various Python packages on MS instrument computers comes at no risk. For extra security and peace of mind, you can opt to install Rapid-QC-MS in a virtual environment. To learn more, please read the <a href="./installation.html">installation guide</a>.</p>
 </section>
-<section id="installation" class="level1">
-<h1>Installation</h1>
-<p>Installing MS-AutoQC is easy. Simply open your Terminal or Command Prompt and enter:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>py <span class="op">-</span>m pip install ms<span class="op">-</span>autoqc</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="installation-and-usage" class="level1">
+<h1>Installation and usage</h1>
+<p>Installing Rapid-QC-MS is easy. Simply open your Terminal or Command Prompt and enter:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>py <span class="op">-</span>m pip install rapidqcms</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Python dependencies are installed automatically, but dependencies such as MSConvert and MS-DIAL will need to be installed manually.</p>
-<p>You can also opt to download and install MS-AutoQC manually, or in a virtual environment if you prefer. Check out the <a href="https://czbiohub-sf.github.io/MS-AutoQC/installation.html#2-install-ms-autoqc">installation guide</a> for more details.</p>
+<p>To start Rapid-QC-MS, simply enter:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>rapidqcms</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>You can also opt to download and install Rapid-QC-MS manually, or in a virtual environment if you prefer. Check out the <a href="./installation.html#2-install-Rapid-QC-MS">installation guide</a> for more details.</p>
 </section>
-<section id="usage" class="level1">
-<h1>Usage</h1>
-<p>To start MS-AutoQC, simply enter:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>ms_autoqc</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Check out the <a href="https://czbiohub-sf.github.io/MS-AutoQC/quickstart.html">quickstart guide</a> to learn how easy setting up new QC jobs is.</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/221339909-0130118b-b82f-4e30-8319-644f7be4d510.gif" class="img-fluid"></p>
-</section>
-<section id="instruments" class="level1">
-<h1>Instruments</h1>
-<p>MS-AutoQC was designed to be a universal, open-source solution for data quality control. Because MSConvert converts raw acquired data into open mzML format before routing it to the data processing pipeline, the package will work seamlessly with data of all vendor formats.</p>
-<p><strong>However, MS-AutoQC has only been tested extensively on Thermo Fisher mass spectrometers, Thermo acquisition sequences, and Thermo RAW files.</strong> As such, it is expected that there may be bugs and issues with processing data of other vendor formats.</p>
-<p>If you encounter a bug, please report it by <a href="https://github.com/czbiohub-sf/MS-AutoQC/issues">opening an issue on GitHub</a>.</p>
+<section id="supported-instrument-vendors" class="level1">
+<h1>Supported instrument vendors</h1>
+<p>Rapid-QC-MS was designed to be a universal, open-source solution for data quality control. Because MSConvert converts raw acquired data into open mzML format before routing it to the data processing pipeline, the package will work seamlessly with data of all vendor formats.</p>
+<p><strong>However, Rapid-QC-MS has only been tested extensively on Thermo Fisher mass spectrometers, Thermo acquisition sequences, and Thermo RAW files.</strong> As such, it is expected that there may be bugs and issues with processing data of other vendor formats.</p>
+<p>If you encounter a bug, please report it by <a href="https://github.com/czbiohub-sf/Rapid-QC-MS/issues">opening an issue on GitHub</a>.</p>
 <p>We are open to collaboration! If you would like to help us develop support for Agilent, Bruker, Sciex, or Waters acquisition sequences and data files, please send an email to <a href="mailto:brian.defelice@czbiohub.org">brian.defelice@czbiohub.org</a>.</p>
 
 
@@ -423,9 +388,23 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     icon: icon
   };
   anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
   const clipboard = new window.ClipboardJS('.code-copy-button', {
-    target: function(trigger) {
-      return trigger.previousElementSibling;
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
     }
   });
   clipboard.on('success', function(e) {
@@ -490,6 +469,92 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       return note.innerHTML;
     });
   }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
   const findCites = (el) => {
     const parentEl = el.parentElement;
     if (parentEl) {
@@ -543,6 +608,12 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   </li>  
 </ul>
     </div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
   </div>
 </footer>
 
