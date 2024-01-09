@@ -4,8 +4,8 @@ warnings.simplefilter(action="ignore", category=FutureWarning)
 import os, time, shutil, psutil, traceback
 import pandas as pd
 import numpy as np
-import ms_autoqc.DatabaseFunctions as db
-import ms_autoqc.SlackNotifications as slack_bot
+import rapidqcms.DatabaseFunctions as db
+import rapidqcms.SlackNotifications as slack_bot
 import logging
 
 
@@ -226,7 +226,7 @@ def run_msconvert(path, filename, extension, output_folder):
     This function runs msconvert.exe in a background process. It checks every second for 30 seconds if the
     mzML file was created, and if it hangs, will terminate the msconvert subprocess and return None.
 
-    TODO: As MS-AutoQC has evolved, some arguments for this function have become redundant.
+    TODO: As Rapid-QC-MS has evolved, some arguments for this function have become redundant.
         The output folder is always fixed, so this parameter should be removed.
 
     Args:
@@ -291,7 +291,7 @@ def run_msdial_processing(filename, msdial_path, parameter_file, input_folder, o
     """
     Processes data file (in mzML format) using the MS-DIAL console app.
 
-    TODO: As MS-AutoQC has evolved, some arguments for this function have become redundant.
+    TODO: As Rapid-QC-MS has evolved, some arguments for this function have become redundant.
         The input and output folders are fixed, so these parameters should be removed.
 
     Args:
@@ -906,7 +906,7 @@ def process_data_file(path, filename, extension, instrument_id, run_id):
             print("Failed to run MS-DIAL.")
             traceback.print_exc()
 
-    # Send peak list to MS-AutoQC algorithm if valid
+    # Send peak list to Rapid-QC-MS algorithm if valid
     if mzml_file is not None and peak_list is not None:
 
         # Convert peak list to DataFrame

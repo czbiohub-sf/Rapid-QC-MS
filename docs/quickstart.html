@@ -2,12 +2,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.2.335">
+<meta name="generator" content="quarto-1.3.450">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>MS-AutoQC - Quickstart</title>
+<title>Rapid-QC-MS - Quickstart</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -17,9 +17,10 @@ div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
 ul.task-list{list-style: none;}
 ul.task-list li input[type="checkbox"] {
   width: 0.8em;
-  margin: 0 0.8em 0.2em -1.6em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
@@ -46,43 +47,13 @@ pre.numberSource code > span > a:first-child::before
     -khtml-user-select: none; -moz-user-select: none;
     -ms-user-select: none; user-select: none;
     padding: 0 4px; width: 4em;
-    color: #aaaaaa;
   }
-pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
 div.sourceCode
   {   }
 @media screen {
 pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
-code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-code span.at { color: #7d9029; } /* Attribute */
-code span.bn { color: #40a070; } /* BaseN */
-code span.bu { color: #008000; } /* BuiltIn */
-code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-code span.ch { color: #4070a0; } /* Char */
-code span.cn { color: #880000; } /* Constant */
-code span.co { color: #60a0b0; font-style: italic; } /* Comment */
-code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-code span.dt { color: #902000; } /* DataType */
-code span.dv { color: #40a070; } /* DecVal */
-code span.er { color: #ff0000; font-weight: bold; } /* Error */
-code span.ex { } /* Extension */
-code span.fl { color: #40a070; } /* Float */
-code span.fu { color: #06287e; } /* Function */
-code span.im { color: #008000; font-weight: bold; } /* Import */
-code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-code span.kw { color: #007020; font-weight: bold; } /* Keyword */
-code span.op { color: #666666; } /* Operator */
-code span.ot { color: #007020; } /* Other */
-code span.pp { color: #bc7a00; } /* Preprocessor */
-code span.sc { color: #4070a0; } /* SpecialChar */
-code span.ss { color: #bb6688; } /* SpecialString */
-code span.st { color: #4070a0; } /* String */
-code span.va { color: #19177c; } /* Variable */
-code span.vs { color: #4070a0; } /* VerbatimString */
-code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
 </style>
 
 
@@ -121,7 +92,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     "search-more-matches-text": "more matches in this document",
     "search-clear-button-title": "Clear",
     "search-detached-cancel-button-title": "Cancel",
-    "search-submit-button-title": "Submit"
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
   }
 }</script>
 
@@ -137,58 +109,58 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container">
     <a class="navbar-brand" href="./index.html">
-    <span class="navbar-title">MS-AutoQC</span>
+    <span class="navbar-title">Rapid-QC-MS</span>
     </a>
   </div>
+            <div id="quarto-search" class="" title="Search"></div>
           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
   <span class="navbar-toggler-icon"></span>
 </button>
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link" href="./index.html">
+    <a class="nav-link" href="./index.html" rel="" target="">
  <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./overview.html">
+    <a class="nav-link" href="./overview.html" rel="" target="">
  <span class="menu-text">Overview</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./installation.html">
+    <a class="nav-link" href="./installation.html" rel="" target="">
  <span class="menu-text">Installation</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link active" href="./quickstart.html" aria-current="page">
+    <a class="nav-link active" href="./quickstart.html" rel="" target="" aria-current="page">
  <span class="menu-text">Quickstart</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./user-guide.html">
+    <a class="nav-link" href="./user-guide.html" rel="" target="">
  <span class="menu-text">User Guide</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./design.html">
+    <a class="nav-link" href="./design.html" rel="" target="">
  <span class="menu-text">System Design</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./documentation.html">
+    <a class="nav-link" href="./documentation.html" rel="" target="">
  <span class="menu-text">Documentation</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./faq.html">
+    <a class="nav-link" href="./faq.html" rel="" target="">
  <span class="menu-text">FAQ</span></a>
   </li>  
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/czbiohub-sf/MS-AutoQC"><i class="bi bi-github" role="img" aria-label="GitHub">
+    <a class="nav-link" href="https://github.com/czbiohub/Rapid-QC-MS" rel="" target=""><i class="bi bi-github" role="img" aria-label="GitHub">
 </i> 
  <span class="menu-text"></span></a>
   </li>  
 </ul>
-              <div class="quarto-toggle-container">
-                  <a href="" class="quarto-color-scheme-toggle nav-link" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
-              </div>
-              <div id="quarto-search" class="" title="Search"></div>
+            <div class="quarto-navbar-tools">
+  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+</div>
           </div> <!-- /navcollapse -->
       </div> <!-- /container-fluid -->
     </nav>
@@ -203,8 +175,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
    
   <ul>
   <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
-  <li><a href="#start-ms-autoqc" id="toc-start-ms-autoqc" class="nav-link" data-scroll-target="#start-ms-autoqc">1. Start MS-AutoQC</a></li>
-  <li><a href="#create-a-new-workspace" id="toc-create-a-new-workspace" class="nav-link" data-scroll-target="#create-a-new-workspace">2. Create a new workspace</a></li>
+  <li><a href="#start-rapid-qc-ms" id="toc-start-rapid-qc-ms" class="nav-link" data-scroll-target="#start-rapid-qc-ms">1. Start Rapid-QC-MS</a></li>
+  <li><a href="#instrument-computer-workspace-setup" id="toc-instrument-computer-workspace-setup" class="nav-link" data-scroll-target="#instrument-computer-workspace-setup">2. Instrument computer workspace setup</a></li>
   <li><a href="#configure-internal-standard-libraries" id="toc-configure-internal-standard-libraries" class="nav-link" data-scroll-target="#configure-internal-standard-libraries">3. Configure internal standard libraries</a>
   <ul class="collapse">
   <li><a href="#a.-add-a-chromatography-method" id="toc-a.-add-a-chromatography-method" class="nav-link" data-scroll-target="#a.-add-a-chromatography-method">3a. Add a chromatography method</a></li>
@@ -238,13 +210,13 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 </header>
 
-<p>If you are setting up MS-AutoQC for the first time – or setting up MS-AutoQC on a new instrument PC – please follow the steps in this section to properly configure your chromatography methods and QC parameters.</p>
-<p><strong>Important note: This section does NOT show you how to install MS-AutoQC!</strong> If you haven’t already, please follow the steps in the <a href="./installation.html">installation guide</a> before you start configuring methods and parameters.</p>
+<p>If you are setting up Rapid-QC-MS for the first time – or setting up Rapid-QC-MS on a new instrument PC – please follow the steps in this section to properly configure your chromatography methods and QC parameters.</p>
+<p><strong>Important note: This section does NOT show you how to install Rapid-QC-MS!</strong> If you haven’t already, please follow the steps in the <a href="./installation.html">installation guide</a> before you start configuring methods and parameters.</p>
 <section id="overview" class="level2">
 <h2 class="anchored" data-anchor-id="overview">Overview</h2>
-<p>This section will walk you through configuring the bare necessities to set up MS-AutoQC jobs for your instrument runs.</p>
+<p>This section will walk you through configuring the bare necessities to set up Rapid-QC-MS jobs for your instrument runs.</p>
 <ol type="1">
-<li><a href="#start-ms-autoqc">Start MS-AutoQC</a></li>
+<li><a href="#start-rapid-qc-ms">Start Rapid-QC-MS</a></li>
 <li><a href="#create-a-new-workspace">Create a new workspace</a></li>
 <li><a href="#configure-internal-standard-libraries">Configure internal standard libraries</a></li>
 <li><a href="#configure-qc-parameters">Configure QC parameters</a></li>
@@ -253,31 +225,32 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </ol>
 <p>When you’re ready, you can visit the <a href="./user-guide.html">user guide</a> to configure additional settings such as Google Drive sync, Slack/email notifications, biological standards, and MS-DIAL processing parameters.</p>
 </section>
-<section id="start-ms-autoqc" class="level2">
-<h2 class="anchored" data-anchor-id="start-ms-autoqc">1. Start MS-AutoQC</h2>
-<p>To launch MS-AutoQC, open a Terminal or Command Prompt window and type:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>ms_autoqc</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="start-rapid-qc-ms" class="level2">
+<h2 class="anchored" data-anchor-id="start-rapid-qc-ms">1. Start Rapid-QC-MS</h2>
+<p>To launch Rapid-QC-MS, open a Terminal or Command Prompt window and type:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode java code-with-copy"><code class="sourceCode java"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> <span class="op">.</span>\<span class="op">&lt;</span>path<span class="op">-</span>to<span class="op">-</span>venv<span class="op">-</span>folder<span class="op">&gt;</span>\Scripts\activate</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">(</span>yourenv<span class="op">)</span> <span class="op">&gt;</span> rapidqcms</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
-<section id="create-a-new-workspace" class="level2">
-<h2 class="anchored" data-anchor-id="create-a-new-workspace">2. Create a new workspace</h2>
-<p>If you followed the steps in the <a href="https://github.com/czbiohub-sf/MS-AutoQC/wiki/Installation">installation guide</a> correctly, you will be greeted by the following welcome screen:</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/201739007-859db808-0d4b-4f94-85f1-f7deaf632e1c.png" class="img-fluid"></p>
-<p>Please select <strong>I’m setting up MS-AutoQC on a new instrument.</strong> Then, you will be prompted to give your instrument a unique name and select your instrument’s vendor.</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/201740090-7b2c00f4-cec4-4f59-9f7a-da48d88b1344.png" class="img-fluid"></p>
+<section id="instrument-computer-workspace-setup" class="level2">
+<h2 class="anchored" data-anchor-id="instrument-computer-workspace-setup">2. Instrument computer workspace setup</h2>
+<p>After following the <a href="https://github.com/czbiohub-sf/Rapid-QC-MS/wiki/Installation">installation guide</a>, you should be greeted by the following welcome screen:</p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/01_welcome_screen.png" class="img-fluid"></p>
+<p>Select <strong>I’m setting up Rapid-QC-MS on a new instrument.</strong> Then, you will be prompted to give your instrument a unique name (at least 4 characters) and select your instrument’s vendor.</p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/02_create_instrument_screen.png" class="img-fluid"></p>
 <blockquote class="blockquote">
 <h3 id="optional-sync-with-google-drive" class="anchored">Optional: Sync with Google Drive</h3>
 <p>If you opt to set up Google Drive sync, you’ll be able to share your workspace with your team and access QC results from any device.</p>
 <p><strong>This step is optional and NOT required.</strong> If you decide you want to set up sync later, you can do so via <strong>Settings &gt; General.</strong> If you’d like to set it up now, do the following:</p>
 <ol type="1">
 <li><a href="./user-guide.html#setting-up-google-drive-sync">Generate your client credentials</a> using the Google API Console</li>
-<li>Provide MS-AutoQC with your client ID and client secret</li>
+<li>Provide Rapid-QC-MS with your client ID and client secret</li>
 <li>Click “Sign in to Google Drive” and authenticate with your Google account</li>
 <li>Close the tab that says “The authentication flow has completed” and you’re all set.</li>
 </ol>
-<p><img src="https://user-images.githubusercontent.com/7220175/221443376-a563c6b7-9608-4d2f-86a2-281e9c41ddc1.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/03_create_with_google.png" class="img-fluid"></p>
 </blockquote>
 <p>Once you’re done, click <strong>Complete setup</strong> to create your workspace. After your workspace loads, it should look something like this:</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/201771245-963d25d3-4d28-43ca-9276-9e9992372066.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/04_after_login.png" class="img-fluid"></p>
 </section>
 <section id="configure-internal-standard-libraries" class="level2">
 <h2 class="anchored" data-anchor-id="configure-internal-standard-libraries">3. Configure internal standard libraries</h2>
@@ -291,9 +264,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="a.-add-a-chromatography-method" class="level3">
 <h3 class="anchored" data-anchor-id="a.-add-a-chromatography-method">3a. Add a chromatography method</h3>
 <p>Navigate to <strong>Settings (in the top right corner) &gt; Chromatography Methods.</strong> Once you’re there, it should look something like this:</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/201776872-a2ea8bf7-fac9-453a-a7a2-f0dcf2596e5a.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Quickstart/blank_chrom_methods.png" class="img-fluid"></p>
 <p>In the <strong>Manage chromatography methods</strong> section at the top, add a new chromatography method by giving it a name and clicking <strong>Add method</strong>.</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/201778888-2d17d60c-618e-4182-a96a-9eb13d231326.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Quickstart/added_method_no_msp.png" class="img-fluid"></p>
 <p>If successful, you should see your new method in the <strong>Chromatography Methods</strong> table.</p>
 </section>
 <section id="b.-select-the-chromatography-and-polarity-to-modify" class="level3">
@@ -301,12 +274,12 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>Internal standards must be configured for both positive and negative mode for each chromatography method.</p>
 <p>Let’s start by selecting the chromatography method you created, and then selecting <strong>Positive Mode</strong> for the polarity.</p>
 <blockquote class="blockquote">
-<p><img src="https://user-images.githubusercontent.com/7220175/221443668-df68b7f2-ce14-4325-9203-2de7197953e7.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Quickstart/zoomed_select_posneg.png" class="img-fluid"></p>
 </blockquote>
 </section>
 <section id="c.-add-an-internal-standard-library" class="level3">
 <h3 class="anchored" data-anchor-id="c.-add-an-internal-standard-library">3c. Add an internal standard library</h3>
-<p>Now, we can specify our internal standard library. MS-AutoQC accepts identification libraries in either MSP or CSV format.</p>
+<p>Now, we can specify our internal standard library. Rapid-QC-MS accepts identification libraries in either MSP or CSV format.</p>
 <p>It is important to note that MS-DIAL can only perform MS2 spectral matching using MSP libraries. If you use a CSV library, identification will be performed via m/z and RT matches.</p>
 <p>Here is an example internal standard library in CSV format:</p>
 <table class="table">
@@ -376,9 +349,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="fl">181.08981</span>   <span class="dv">2837</span></span>
 <span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="fl">185.09656</span>   <span class="dv">4996</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Click the <strong>Browse Files</strong> button to browse for your MSP or CSV file, then click the <strong>Add MSP to <chromatography> Positive Mode</chromatography></strong> button.</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/201782255-797d9dcf-23fe-45c1-a9ab-bdd090387494.png" class="img-fluid"></p>
-<p>After a few seconds, your screen should look something like this.</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/201782345-11c3608d-ce21-4461-971b-0f082b41676a.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Quickstart/add_msp.png" class="img-fluid"></p>
+<p>After a few seconds, your screen should look something like this:</p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Quickstart/success.png" class="img-fluid"></p>
 <p>You can confirm that the library was successfully added by scrolling up to the Chromatography Methods table and seeing the updated number of Pos (+) Standards.</p>
 <p>That’s it! Now, you can select Negative Mode from the polarity dropdown and add your negative mode internal standards.</p>
 </section>
@@ -392,11 +365,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li><strong>RT shift from in-run average cutoff:</strong> the minimum retention time shift from the average RT during the course of the run to constitute a QC fail</li>
 <li><strong>m/z shift from library value cutoff:</strong> the minimum m/z shift from the expected library value to constitute a QC fail</li>
 </ol>
-<p><img src="https://user-images.githubusercontent.com/7220175/221378930-c5474cd6-544d-4ef7-97f0-836b554f1211.png" class="img-fluid"></p>
-<p>MS-AutoQC stores individual parameters in configurations, so that you can configure a specific configuration to fit each chromatography method.</p>
-<blockquote class="blockquote">
-<p><img src="https://user-images.githubusercontent.com/7220175/209615183-383f3c9b-2d45-49f8-bfde-6f021dc3456e.png" class="img-fluid"></p>
-</blockquote>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Quickstart/is_config_default.png" class="img-fluid"></p>
+<p>Rapid-QC-MS stores individual parameters in configurations, so that you can configure a specific configuration to fit each chromatography method.</p>
 <p>You can specify these parameters however you’d like, and enable / disable them as needed. To revert a configuration back to the default recommended settings, simply click the <strong>Reset default settings</strong> button.</p>
 <p>Once you’re done, don’t forget to click <strong>Save changes</strong>!</p>
 </section>
@@ -405,21 +375,21 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>The last thing to do is to specify the location of your MS-DIAL download.</p>
 <p>To do this, navigate to <strong>Settings &gt; MS-DIAL Configurations</strong>. Then browse (or enter) the folder path containing your MS-DIAL files into the <strong>MS-DIAL download location</strong> text field.</p>
 <p>When you’re done, click <strong>Save Changes</strong>.</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/221443980-1f441179-6bd9-43a5-8ad2-375f176960b5.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Quickstart/ms_dial_config.png" class="img-fluid"></p>
 <p>Be careful not to enter a folder <em>containing</em> the MS-DIAL folder! The MS-DIAL folder you provide should contain an application called <code>MsdialConsoleApp.exe</code> (among many other files).</p>
 </section>
 <section id="setup-a-new-qc-job" class="level2">
 <h2 class="anchored" data-anchor-id="setup-a-new-qc-job">6. Setup a new QC job</h2>
-<p>Setting up a new QC job was designed to be as fast and easy as possible. To get MS-AutoQC monitoring an active instrument run (or processing a completed batch), the user simply needs to enter a few fields of information:</p>
+<p>Setting up a new QC job was designed to be as fast and easy as possible. To get Rapid-QC-MS monitoring an active instrument run (or processing a completed batch), the user simply needs to enter a few fields of information:</p>
 <ol type="1">
 <li>Instrument run ID (the name of the job)</li>
 <li>Chromatography method</li>
 <li>Preferred QC configuration</li>
 <li>Acquisition sequence file</li>
-<li>Data acquisition path</li>
+<li>Data acquisition path (easiest to copy/paste this)</li>
 </ol>
-<p><img src="https://user-images.githubusercontent.com/7220175/201810821-5c17d974-6e58-4e34-97cd-473dd6890fb5.png" class="img-fluid"></p>
-<p>MS-AutoQC will intelligently validate that everything is in place for it to start working. It does this by:</p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Quickstart/new_job_setup.png" class="img-fluid"></p>
+<p>Rapid-QC-MS will intelligently validate that everything is in place for it to start working. It does this by:</p>
 <ol type="1">
 <li>Ensuring that the run ID is unique so that data is not corrupted</li>
 <li>Verifying that your chromatography method has valid internal standard libraries</li>
@@ -427,14 +397,13 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li>Verifying that the data acquisition path exists</li>
 <li>Validating biological standard libraries and sample metadata columns</li>
 </ol>
-<p>Once it has validated these fields, the blue button will become enabled and you’re all set to begin.</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/201812308-743bbf4b-339c-4af2-a2c1-754730292107.png" class="img-fluid"></p>
-<p>That’s it! MS-AutoQC will take it from here.</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/221376479-4b12af91-d448-4760-af63-57339506b94c.gif" class="img-fluid"></p>
+<p>Once it has validated these fields, the blue button will become enabled and you’re all set to press start.</p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Quickstart/zoomed_start_job.png" class="img-fluid"></p>
+<p>That’s it! Rapid-QC-MS will take it from here.</p>
 </section>
 <section id="next-steps" class="level2">
 <h2 class="anchored" data-anchor-id="next-steps">Next steps</h2>
-<p>Once you feel comfortable configuring the bare necessities for MS-AutoQC, you can read the following sections in the <a href="./user-guide.html">user guide</a> to customize your workspace for maximum efficiency:</p>
+<p>Once you feel comfortable configuring the bare necessities for Rapid-QC-MS, you can read the following sections in the <a href="./user-guide.html">user guide</a> to customize your workspace for maximum efficiency:</p>
 <ul>
 <li><a href="./user-guide.html#incorporating-metadata-for-samples">Incorporate sample metadata</a></li>
 <li><a href="./user-guide.html#setting-up-biological-standards">Set up biological standards</a></li>
@@ -593,9 +562,23 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     icon: icon
   };
   anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
   const clipboard = new window.ClipboardJS('.code-copy-button', {
-    target: function(trigger) {
-      return trigger.previousElementSibling;
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
     }
   });
   clipboard.on('success', function(e) {
@@ -660,6 +643,92 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       return note.innerHTML;
     });
   }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
   const findCites = (el) => {
     const parentEl = el.parentElement;
     if (parentEl) {
@@ -713,6 +782,12 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   </li>  
 </ul>
     </div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
   </div>
 </footer>
 

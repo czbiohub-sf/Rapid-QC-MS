@@ -2,12 +2,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.2.335">
+<meta name="generator" content="quarto-1.3.450">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>MS-AutoQC - Installation</title>
+<title>Rapid-QC-MS - Installation</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -17,9 +17,10 @@ div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
 ul.task-list{list-style: none;}
 ul.task-list li input[type="checkbox"] {
   width: 0.8em;
-  margin: 0 0.8em 0.2em -1.6em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
@@ -46,43 +47,13 @@ pre.numberSource code > span > a:first-child::before
     -khtml-user-select: none; -moz-user-select: none;
     -ms-user-select: none; user-select: none;
     padding: 0 4px; width: 4em;
-    color: #aaaaaa;
   }
-pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
 div.sourceCode
   {   }
 @media screen {
 pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
-code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-code span.at { color: #7d9029; } /* Attribute */
-code span.bn { color: #40a070; } /* BaseN */
-code span.bu { color: #008000; } /* BuiltIn */
-code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-code span.ch { color: #4070a0; } /* Char */
-code span.cn { color: #880000; } /* Constant */
-code span.co { color: #60a0b0; font-style: italic; } /* Comment */
-code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-code span.dt { color: #902000; } /* DataType */
-code span.dv { color: #40a070; } /* DecVal */
-code span.er { color: #ff0000; font-weight: bold; } /* Error */
-code span.ex { } /* Extension */
-code span.fl { color: #40a070; } /* Float */
-code span.fu { color: #06287e; } /* Function */
-code span.im { color: #008000; font-weight: bold; } /* Import */
-code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-code span.kw { color: #007020; font-weight: bold; } /* Keyword */
-code span.op { color: #666666; } /* Operator */
-code span.ot { color: #007020; } /* Other */
-code span.pp { color: #bc7a00; } /* Preprocessor */
-code span.sc { color: #4070a0; } /* SpecialChar */
-code span.ss { color: #bb6688; } /* SpecialString */
-code span.st { color: #4070a0; } /* String */
-code span.va { color: #19177c; } /* Variable */
-code span.vs { color: #4070a0; } /* VerbatimString */
-code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
 </style>
 
 
@@ -121,7 +92,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     "search-more-matches-text": "more matches in this document",
     "search-clear-button-title": "Clear",
     "search-detached-cancel-button-title": "Cancel",
-    "search-submit-button-title": "Submit"
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
   }
 }</script>
 
@@ -137,58 +109,58 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container">
     <a class="navbar-brand" href="./index.html">
-    <span class="navbar-title">MS-AutoQC</span>
+    <span class="navbar-title">Rapid-QC-MS</span>
     </a>
   </div>
+            <div id="quarto-search" class="" title="Search"></div>
           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
   <span class="navbar-toggler-icon"></span>
 </button>
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link" href="./index.html">
+    <a class="nav-link" href="./index.html" rel="" target="">
  <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./overview.html">
+    <a class="nav-link" href="./overview.html" rel="" target="">
  <span class="menu-text">Overview</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link active" href="./installation.html" aria-current="page">
+    <a class="nav-link active" href="./installation.html" rel="" target="" aria-current="page">
  <span class="menu-text">Installation</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./quickstart.html">
+    <a class="nav-link" href="./quickstart.html" rel="" target="">
  <span class="menu-text">Quickstart</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./user-guide.html">
+    <a class="nav-link" href="./user-guide.html" rel="" target="">
  <span class="menu-text">User Guide</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./design.html">
+    <a class="nav-link" href="./design.html" rel="" target="">
  <span class="menu-text">System Design</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./documentation.html">
+    <a class="nav-link" href="./documentation.html" rel="" target="">
  <span class="menu-text">Documentation</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./faq.html">
+    <a class="nav-link" href="./faq.html" rel="" target="">
  <span class="menu-text">FAQ</span></a>
   </li>  
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/czbiohub-sf/MS-AutoQC"><i class="bi bi-github" role="img" aria-label="GitHub">
+    <a class="nav-link" href="https://github.com/czbiohub/Rapid-QC-MS" rel="" target=""><i class="bi bi-github" role="img" aria-label="GitHub">
 </i> 
  <span class="menu-text"></span></a>
   </li>  
 </ul>
-              <div class="quarto-toggle-container">
-                  <a href="" class="quarto-color-scheme-toggle nav-link" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
-              </div>
-              <div id="quarto-search" class="" title="Search"></div>
+            <div class="quarto-navbar-tools">
+  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+</div>
           </div> <!-- /navcollapse -->
       </div> <!-- /container-fluid -->
     </nav>
@@ -202,20 +174,19 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#important-note" id="toc-important-note" class="nav-link active" data-scroll-target="#important-note">Important note</a></li>
-  <li><a href="#install-python" id="toc-install-python" class="nav-link" data-scroll-target="#install-python">1. Install Python</a></li>
-  <li><a href="#install-ms-autoqc" id="toc-install-ms-autoqc" class="nav-link" data-scroll-target="#install-ms-autoqc">2. Install MS-AutoQC</a>
+  <li><a href="#install-python" id="toc-install-python" class="nav-link active" data-scroll-target="#install-python">1. Install Python</a></li>
+  <li><a href="#install-rapid-qc-ms" id="toc-install-rapid-qc-ms" class="nav-link" data-scroll-target="#install-rapid-qc-ms">2. Install Rapid-QC-MS</a>
   <ul class="collapse">
-  <li><a href="#option-1-install-with-pip-recommended" id="toc-option-1-install-with-pip-recommended" class="nav-link" data-scroll-target="#option-1-install-with-pip-recommended">Option 1: Install with <code>pip</code> (recommended)</a></li>
-  <li><a href="#option-2-install-manually" id="toc-option-2-install-manually" class="nav-link" data-scroll-target="#option-2-install-manually">Option 2: Install manually</a></li>
-  <li><a href="#option-3-install-in-a-virtual-environment" id="toc-option-3-install-in-a-virtual-environment" class="nav-link" data-scroll-target="#option-3-install-in-a-virtual-environment">Option 3: Install in a virtual environment</a></li>
-  <li><a href="#start-ms-autoqc" id="toc-start-ms-autoqc" class="nav-link" data-scroll-target="#start-ms-autoqc">Start MS-AutoQC</a></li>
-  <li><a href="#important-note-1" id="toc-important-note-1" class="nav-link" data-scroll-target="#important-note-1">Important note</a></li>
+  <li><a href="#option-1-install-in-a-virtual-environment-recommended" id="toc-option-1-install-in-a-virtual-environment-recommended" class="nav-link" data-scroll-target="#option-1-install-in-a-virtual-environment-recommended">Option 1: Install in a virtual environment (recommended)</a></li>
+  <li><a href="#option-2-install-directly-with-pip" id="toc-option-2-install-directly-with-pip" class="nav-link" data-scroll-target="#option-2-install-directly-with-pip">Option 2: Install directly with <code>pip</code></a></li>
+  <li><a href="#option-3-install-manually" id="toc-option-3-install-manually" class="nav-link" data-scroll-target="#option-3-install-manually">Option 3: Install manually</a></li>
+  <li><a href="#start-rapid-qc-ms" id="toc-start-rapid-qc-ms" class="nav-link" data-scroll-target="#start-rapid-qc-ms">Start Rapid-QC-MS</a></li>
+  <li><a href="#important-note" id="toc-important-note" class="nav-link" data-scroll-target="#important-note">Important note</a></li>
   </ul></li>
   <li><a href="#download-ms-dial" id="toc-download-ms-dial" class="nav-link" data-scroll-target="#download-ms-dial">3. Download MS-DIAL</a></li>
   <li><a href="#install-.net-framework" id="toc-install-.net-framework" class="nav-link" data-scroll-target="#install-.net-framework">4. Install .NET Framework</a></li>
   <li><a href="#install-msconvert" id="toc-install-msconvert" class="nav-link" data-scroll-target="#install-msconvert">5. Install MSConvert</a></li>
-  <li><a href="#celebrate" id="toc-celebrate" class="nav-link" data-scroll-target="#celebrate">6. Celebrate!</a></li>
+  <li><a href="#setup-rapid-qc-ms" id="toc-setup-rapid-qc-ms" class="nav-link" data-scroll-target="#setup-rapid-qc-ms">6. Setup Rapid-QC-MS</a></li>
   </ul>
 </nav>
     </div>
@@ -239,90 +210,213 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 </header>
 
-<p>Installing MS-AutoQC is relatively easy and straightforward. You’ll need to:</p>
+<p>Installing Rapid-QC-MS is relatively easy and straightforward. You’ll need to:</p>
 <ol type="1">
 <li>Install Python</li>
-<li>Install MS-AutoQC</li>
+<li>Install Rapid-QC-MS</li>
 <li>Download MS-DIAL</li>
 <li>Install .NET Framework</li>
 <li>Install MSConvert</li>
 </ol>
-<p>If you run into trouble or have any questions, please feel free to <a href="https://github.com/czbiohub-sf/MS-AutoQC/issues">open a new issue on GitHub</a>. You can also visit the <a href="./faq.html#installation">Frequently Asked Questions</a> to see if your issue has been documented already.</p>
-<section id="important-note" class="level1">
-<h1>Important note</h1>
-<p>While, to our knowledge, installation of the following software packages on data acquisition computers comes <em>at no risk</em>, it is possible for a wary user to install MS-AutoQC on a separate computer.</p>
-<p>Because MS-AutoQC only needs access to the data acquisition path (i.e.&nbsp;the folder where your MS data is being collected), you can install all of the packages on a different computer. The only requirement is that <strong>the instrument computer must be mounted as a network drive on the MS-AutoQC installation computer.</strong></p>
-<p>If you don’t have any experience with mapping a network drive in Windows, consult your IT department or check out <a href="https://support.microsoft.com/en-us/windows/map-a-network-drive-in-windows-29ce55d1-34e3-a7e2-4801-131475f9557d#ID0EBD=Windows_10">this tutorial on Microsoft Support</a>.</p>
-<p><strong><em>We have not tested this functionality ourselves.</em></strong> If you plan to test this out, please <a href="https://github.com/czbiohub-sf/MS-AutoQC/discussions">let us know how it goes</a>!</p>
-</section>
+<p>If you run into trouble or have any questions, please feel free to <a href="https://github.com/czbiohub-sf/Rapid-QC-MS/issues">open a new issue on GitHub</a>. You can also visit the <a href="./faq.html#installation">Frequently Asked Questions</a> to see if your issue has been documented already.</p>
 <section id="install-python" class="level1">
 <h1>1. Install Python</h1>
-<p>If you don’t have Python installed already, you can <a href="https://www.python.org/downloads/">download and install the latest release of Python 3</a> for Windows or Mac (which is v3.11 at the time of this writing).</p>
+<p>If you don’t have Python installed already, you can <a href="https://www.python.org/downloads/">download and install python 3.8, 3.9, 3.10, or 3.11</a> for Windows or Mac. They are available under “Looking for a specific release?”. The latest compatible version is <a href="https://www.python.org/downloads/release/python-3117/">3.11.7 (direct link, download at bottom of page)</a> as of Dec 7 2023.</p>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Important
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Make sure to check the box to ‘add python to PATH’ before pressing ‘install now’</p>
+</div>
+</div>
 </section>
-<section id="install-ms-autoqc" class="level1">
-<h1>2. Install MS-AutoQC</h1>
-<p>There are several ways to install MS-AutoQC. Please choose what works best for you.</p>
-<section id="option-1-install-with-pip-recommended" class="level2">
-<h2 class="anchored" data-anchor-id="option-1-install-with-pip-recommended">Option 1: Install with <code>pip</code> (recommended)</h2>
-<p>To install MS-AutoQC using <code>pip</code>, simply enter the following command in your terminal:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>py <span class="op">-</span>m pip install ms<span class="op">-</span>autoqc</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>MS-AutoQC and all required dependencies will be installed automatically. This may take a minute or two. (If you’re curious, you can find a list of these dependencies <a href="https://github.com/czbiohub-sf/MS-AutoQC/blob/main/requirements.txt">here</a>.)</p>
+<section id="install-rapid-qc-ms" class="level1">
+<h1>2. Install Rapid-QC-MS</h1>
+<p>There are several ways to install Rapid-QC-MS.</p>
+<section id="option-1-install-in-a-virtual-environment-recommended" class="level2">
+<h2 class="anchored" data-anchor-id="option-1-install-in-a-virtual-environment-recommended">Option 1: Install in a virtual environment (recommended)</h2>
+<p>Choose a location where you would like to store the virtual environment; some choices might be <code>C:\Users\username\venvs\rapidqcms</code> or <code>C:\Users\username\documents\rapidqcms\env</code>. Whatever path is choosen will be denoted by <code>&lt;path-to-venv-folder&gt;</code> below.</p>
+<p>Open a terminal (<a href="https://github.com/microsoft/terminal">Windows Terminal</a>, command prompt, powershell) and enter the following commands, denoted by ‘&gt;’</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>These commands are for a Windows environment. Unix/mac users would replace ‘py’ with ‘python3’.</p>
+</div>
+</div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> py <span class="op">-</span><span class="fl">3.</span><span class="co"># -m venv &lt;path-to-venv-folder&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>where -3.# is the version of python you want to use, eg <code>py -3.11</code>. You can get a list of python versions installed on your system by running <code>&gt; py -0</code>.<br>
+</p>
+<p>Next, activate the virtual environment by entering</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode java code-with-copy"><code class="sourceCode java"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> <span class="op">.</span>\<span class="op">&lt;</span>path<span class="op">-</span>to<span class="op">-</span>venv<span class="op">-</span>folder<span class="op">&gt;</span>\Scripts\activate</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Powershell users may encounter issues activating the virtual environment, depending on their system security settings. Running <code>set-executionpolicy RemoteSigned</code> and\or using <code>Scripts\activate.ps1</code> should solve this problem.</p>
+</div>
+</div>
+<p>You can deactivate the virtual environment by entering ‘deactivate’ at the prompt, or just closing the terminal.</p>
+<p>Next, update the <code>pip</code>, <code>setuptools</code>, and <code>wheel</code> packages, and then install <code>rapid-qc-ms</code>.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode java code-with-copy"><code class="sourceCode java"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="op">(</span>yourenv<span class="op">)</span> <span class="op">&gt;</span> py <span class="op">-</span>m pip install <span class="op">--</span>upgrade pip<span class="op">,</span> setuptools<span class="op">,</span> wheel</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">(</span>yourenv<span class="op">)</span> <span class="op">&gt;</span> py <span class="op">-</span>m pip install rapid<span class="op">-</span>qc<span class="op">-</span>ms</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Rapid-QC-MS and all required python <a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/requirements.txt">dependencies</a> will be installed automatically. This may take a minute or two.</p>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Important
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>You will need to activate your virtual environment each time before launching rapid-qc-ms.</p>
+</div>
+</div>
+<p>Alternatively, you can create a short batch (.bat) file on windows to automate this process for you. Create a new text file and rename it to ‘start RapidQC.bat’ or similar, it may warn you about changing the extension - press yes.</p>
+<p>Open the new .bat file in any text editor of your choice, notepad works fine, and paste the following (hover over the numbers at the right for explanations of each line)</p>
+<div class="sourceCode" id="annotated-cell-4"><pre class="sourceCode r code-annotation-code code-with-copy code-annotated"><code class="sourceCode r"><button class="code-annotation-anchor" data-target-cell="annotated-cell-4" data-target-annotation="1">1</button><span id="annotated-cell-4-1" class="code-annotation-target"><a href="#annotated-cell-4-1" aria-hidden="true" tabindex="-1"></a>call <span class="sc">&lt;</span>path<span class="sc">-</span>to<span class="sc">-</span>venv<span class="sc">-</span>folder<span class="sc">&gt;</span>\Scripts\activate</span>
+<button class="code-annotation-anchor" data-target-cell="annotated-cell-4" data-target-annotation="2">2</button><span id="annotated-cell-4-2" class="code-annotation-target"><a href="#annotated-cell-4-2" aria-hidden="true" tabindex="-1"></a>rapidqcms</span>
+<button class="code-annotation-anchor" data-target-cell="annotated-cell-4" data-target-annotation="3">3</button><span id="annotated-cell-4-3" class="code-annotation-target"><a href="#annotated-cell-4-3" aria-hidden="true" tabindex="-1"></a>cmd <span class="sc">/</span>k</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<dl class="code-annotation-container-hidden code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-4" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-lines="1" data-code-cell="annotated-cell-4" data-code-annotation="1">Call is a batch command that <em>call</em>s another batch or script, in this case the <em>activate</em> script for the python virtual environment. This starts the virtual environment.</span>
+</dd>
+<dt data-target-cell="annotated-cell-4" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-lines="2" data-code-cell="annotated-cell-4" data-code-annotation="2">Rapidqcms is then executed within the virtual environment, and starts the package.</span>
+</dd>
+<dt data-target-cell="annotated-cell-4" data-target-annotation="3">3</dt>
+<dd>
+<span data-code-lines="3" data-code-cell="annotated-cell-4" data-code-annotation="3">Keeps the command prompt window open until closed by the user (useful for capturing errors) Double click on the file to run.</span>
+</dd>
+</dl>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-5-contents" aria-controls="callout-5" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Example Commands
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-5" class="callout-5-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>I’m using windows terminal, your exact prompt may look a little different<br>
+<code>PS C:\Users\user\myvirtualenvs\rapidqcms&gt; py -3.11 -m venv env</code><br>
+will create a new folder named ‘env’ in the rapidqcms folder. We could also run<br>
+<code>PS C:\&gt; py -3.11 -m venv C:\Users\user\myvirtualenvs\rapidqcms\env</code><br>
+then<br>
+<code>PS C:\Users\user\myvirtualenvs\rapidqcms&gt; .\env\Scripts\activate</code><br>
+Activates the virtual environment, notice the (env) to the left of the prompt<br>
+<code>(env) PS C:\Users\user\myvirtualenvs\rapidqcms&gt; py -m pip install --upgrade pip, setuptools, wheel</code><br>
+this will produce some terminal output and may download updates<br>
+<code>(env) PS C:\Users\user\myvirtualenvs\rapidqcms&gt; py -m pip install rapid-qc-ms</code><br>
+this will produce a lot of terminal output and download several packages<br>
+<code>(env) PS C:\Users\user\myvirtualenvs\rapidqcms&gt; rapidqcms</code><br>
+starts the package.<br>
+</p>
+</div>
+</div>
+</div>
 </section>
-<section id="option-2-install-manually" class="level2">
-<h2 class="anchored" data-anchor-id="option-2-install-manually">Option 2: Install manually</h2>
-<p>If you prefer not to use Python’s package manager – or if your LC-MS instrument computer does not have an internet connection – you can manually download and install MS-AutoQC by following the steps below.</p>
+<section id="option-2-install-directly-with-pip" class="level2">
+<h2 class="anchored" data-anchor-id="option-2-install-directly-with-pip">Option 2: Install directly with <code>pip</code></h2>
+<p>If you have no other python software installed on the computer, and don’t plan on installing any in the future, it can be more expedient to install Rapid-QC-MS directly using <code>pip</code>, simply enter the following command in your terminal:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>py <span class="op">-</span>m pip install Rapid<span class="op">-</span>QC<span class="op">-</span>MS</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="option-3-install-manually" class="level2">
+<h2 class="anchored" data-anchor-id="option-3-install-manually">Option 3: Install manually</h2>
+<p>If your LC-MS instrument computer does not have an internet connection – you can manually download and install Rapid-QC-MS locally.</p>
 <ol type="1">
-<li>Download <a href="https://github.com/czbiohub-sf/MS-AutoQC/releases">MS-AutoQC v1.0.0</a> from GitHub.</li>
+<li>Download <a href="https://github.com/czbiohub-sf/Rapid-QC-MS/releases">Rapid-QC-MS v1.0.0</a> from GitHub.</li>
 <li>Extract the ZIP file to a folder of your choice.</li>
+<li>Optionally, you can setup and activate a virtual environment as outlined in step 1 (recommended)</li>
 <li>Open a terminal window and enter:</li>
 </ol>
-<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>cd <span class="op">&lt;</span>path<span class="op">-</span>to<span class="op">-</span>folder<span class="op">&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>py <span class="op">-</span>m pip install .</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>That’s it! MS-AutoQC and its dependencies will be installed automatically.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>cd <span class="op">&lt;</span>path<span class="op">-</span>to<span class="op">-</span>folder<span class="op">&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>py <span class="op">-</span>m pip install .</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
-<section id="option-3-install-in-a-virtual-environment" class="level2">
-<h2 class="anchored" data-anchor-id="option-3-install-in-a-virtual-environment">Option 3: Install in a virtual environment</h2>
-<p>If you would like to protect the integrity of other Python packages or versions installed on your instrument computer, you can opt to install MS-AutoQC in a virtual environment.</p>
-<p>Choose a folder that you would like to store the virtual environment in – denoted by <code>&lt;path-to-venv-folder</code> below – and then enter the following commands in a terminal window:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>py <span class="op">-</span>m venv <span class="op">&lt;</span>path<span class="op">-</span>to<span class="op">-</span>venv<span class="op">-</span>folder<span class="op">&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>path<span class="op">-</span>to<span class="op">-</span>venv<span class="op">-</span>folder<span class="op">&gt;</span>\Scripts\activate</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>py <span class="op">-</span>m pip install ms<span class="op">-</span>autoqc</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>That’s it! MS-AutoQC and its dependencies will be installed in your virtual environment.</p>
-<p><strong>Note:</strong> Every time you launch MS-AutoQC, you will need to activate your virtual environment first. To do this, just type:</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>path<span class="op">-</span>to<span class="op">-</span>venv<span class="op">-</span>folder<span class="op">&gt;</span>\Scripts\activate</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="start-rapid-qc-ms" class="level2">
+<h2 class="anchored" data-anchor-id="start-rapid-qc-ms">Start Rapid-QC-MS</h2>
+<p>To start Rapid-QC-MS, activate your virtual environment (if not already activated)</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode java code-with-copy"><code class="sourceCode java"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> <span class="op">.</span>\<span class="op">&lt;</span>path<span class="op">-</span>to<span class="op">-</span>venv<span class="op">-</span>folder<span class="op">&gt;</span>\Scripts\activate</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>then call the package</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode java code-with-copy"><code class="sourceCode java"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="op">(</span>yourenvname<span class="op">)</span> <span class="op">&gt;</span> rapidqcms</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>If you encounter a path error, you may need to navigate to the installation folder within the python directory, assuming default installation settings:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode java code-with-copy"><code class="sourceCode java"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>C<span class="op">:</span>\Users\username\AppData\Local\Programs\Python\Python311\Lib\site<span class="op">-</span>packages\rapid<span class="op">-</span>qc<span class="op">-</span>ms\src<span class="op">&gt;</span> rapidqcms</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+<p>Your browser may open automatically, if not point your browser to localhost:8050 or 127.0.0.1:8050. If you see the screen below, then Rapid-QC-MS was installed properly!</p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/01_welcome_screen.png" class="img-fluid"></p>
+<p>If you run into any problems with installing or opening the app, check the <a href="./faq.html#installation">FAQ</a> and/or post an <a href="https://github.com/czbiohub-sf/Rapid-QC-MS/issues">issue</a> on github.</p>
 </section>
-<section id="start-ms-autoqc" class="level2">
-<h2 class="anchored" data-anchor-id="start-ms-autoqc">Start MS-AutoQC</h2>
-<p>To launch MS-AutoQC, simply open a terminal window and type:</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>ms_autoqc</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>If you see the screen below, then MS-AutoQC was installed properly!</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/200963700-16445386-73a6-4a03-bd35-b19593351ed4.png" class="img-fluid"></p>
-<p>If you run into any problems with installing or opening the app, please visit the <a href="./faq.html#installation">FAQ</a> on installing MS-AutoQC.</p>
-</section>
-<section id="important-note-1" class="level2">
-<h2 class="anchored" data-anchor-id="important-note-1">Important note</h2>
-<p>At this point, if you are installing MS-AutoQC only to sign in to your workspace and view the QC dashboard, you can move on to the <a href="./quickstart.html">Quickstart guide</a> to learn how to get started using MS-AutoQC.</p>
-<p>If you are installing MS-AutoQC on an instrument computer for the first time, continue with installation of MS-DIAL and MSConvert below.</p>
+<section id="important-note" class="level2">
+<h2 class="anchored" data-anchor-id="important-note">Important note</h2>
+<p>At this point, if you are installing Rapid-QC-MS only to sign in to your workspace and view the QC dashboard, you can move on to the <a href="./quickstart.html">Quickstart guide</a> to learn how to get started using Rapid-QC-MS.</p>
+<p>If you are installing Rapid-QC-MS on an instrument computer for the first time, continue with installation of MS-DIAL and MSConvert below.</p>
 </section>
 </section>
 <section id="download-ms-dial" class="level1">
 <h1>3. Download MS-DIAL</h1>
-<p>You can <a href="http://prime.psc.riken.jp/compms/msdial/main.html">download the latest version of MS-DIAL 4</a> (which is v4.9.2 at the time of this writing). Once the download has completed, extract the ZIP file into a directory of your choice.</p>
-<p><strong>Remember this directory path! You will need to provide it to MS-AutoQC later.</strong></p>
+<p><a href="http://prime.psc.riken.jp/compms/msdial/main.html">Download the latest version of MS-DIAL 4</a> (which is v4.9.2 at the time of this writing). Once the download has completed, extract the ZIP file into a directory of your choice. MS-Dial 5 is not compatible at this time.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Tip
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Note this directory path! You will need to provide it to Rapid-QC-MS later.</p>
+</div>
+</div>
 </section>
 <section id="install-.net-framework" class="level1">
 <h1>4. Install .NET Framework</h1>
-<p>Versions 4.7.2 (or newer) of the .NET Framework is required to install MSConvert. You <a href="https://dotnet.microsoft.com/en-us/download/dotnet-framework/thank-you/net472-web-installer">download and install the .NET Framework</a> from the official Microsoft website.</p>
-<p>Once the installation is complete, don’t forget to restart your computer if needed.</p>
+<p>Versions 4.7.2 (or newer) of the .NET Framework is required to install MSConvert. <a href="https://dotnet.microsoft.com/en-us/download/dotnet-framework/thank-you/net472-web-installer">Download and install the .NET Framework</a> from the official Microsoft website.</p>
+<p>Once the installation is complete, you may need to restart your computer.</p>
 </section>
 <section id="install-msconvert" class="level1">
 <h1>5. Install MSConvert</h1>
-<p>You can <a href="https://proteowizard.sourceforge.io/download.html">download and install MSConvert</a> from the ProteoWizard website. For Platform, select <em>Windows 32-bit installer (able to convert vendor files)</em>.</p>
+<p><a href="https://proteowizard.sourceforge.io/download.html">Download and install MSConvert</a> from the ProteoWizard website. For Platform, select <em>Windows 32-bit installer (able to convert vendor files)</em> or <em>Windows 64-bit installer (able to convert vendor files except T2D)</em>.</p>
 </section>
-<section id="celebrate" class="level1">
-<h1>6. Celebrate!</h1>
-<p>That’s it! If you’ve reached this point, you’re one giant step closer to using MS-AutoQC for your LC-MS instrument runs.</p>
-<p>When you’re ready, visit the <a href="./quickstart.html">quickstart guide</a> to learn how to configure your MS-AutoQC workspace and set up your first QC job.</p>
+<section id="setup-rapid-qc-ms" class="level1">
+<h1>6. Setup Rapid-QC-MS</h1>
+<p>Visit the <a href="./quickstart.html">quickstart guide</a> to learn how to configure your Rapid-QC-MS workspace and set up your first QC job.</p>
 
 
 </section>
@@ -470,9 +564,23 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     icon: icon
   };
   anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
   const clipboard = new window.ClipboardJS('.code-copy-button', {
-    target: function(trigger) {
-      return trigger.previousElementSibling;
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
     }
   });
   clipboard.on('success', function(e) {
@@ -537,6 +645,157 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       return note.innerHTML;
     });
   }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Handle positioning of the toggle
+      window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+      const annoteTargets = window.document.querySelectorAll('.code-annotation-anchor');
+      for (let i=0; i<annoteTargets.length; i++) {
+        const annoteTarget = annoteTargets[i];
+        const targetCell = annoteTarget.getAttribute("data-target-cell");
+        const targetAnnotation = annoteTarget.getAttribute("data-target-annotation");
+        const contentFn = () => {
+          const content = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          if (content) {
+            const tipContent = content.cloneNode(true);
+            tipContent.classList.add("code-annotation-tip-content");
+            return tipContent.outerHTML;
+          }
+        }
+        const config = {
+          allowHTML: true,
+          content: contentFn,
+          onShow: (instance) => {
+            selectCodeLines(instance.reference);
+            instance.reference.classList.add('code-annotation-active');
+            window.tippy.hideAll();
+          },
+          onHide: (instance) => {
+            unselectCodeLines();
+            instance.reference.classList.remove('code-annotation-active');
+          },
+          maxWidth: 300,
+          delay: [50, 0],
+          duration: [200, 0],
+          offset: [5, 10],
+          arrow: true,
+          appendTo: function(el) {
+            return el.parentElement.parentElement.parentElement;
+          },
+          interactive: true,
+          interactiveBorder: 10,
+          theme: 'quarto',
+          placement: 'right',
+          popperOptions: {
+            modifiers: [
+            {
+              name: 'flip',
+              options: {
+                flipVariations: false, // true by default
+                allowedAutoPlacements: ['right'],
+                fallbackPlacements: ['right', 'top', 'top-start', 'top-end'],
+              },
+            },
+            {
+              name: 'preventOverflow',
+              options: {
+                mainAxis: false,
+                altAxis: false
+              }
+            }
+            ]        
+          }      
+        };
+        window.tippy(annoteTarget, config); 
+      }
   const findCites = (el) => {
     const parentEl = el.parentElement;
     if (parentEl) {
@@ -590,6 +849,12 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   </li>  
 </ul>
     </div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
   </div>
 </footer>
 

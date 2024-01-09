@@ -51,7 +51,7 @@ The functions defined below operate on two database types:
 biological standards, QC configurations, and MS-DIAL configurations
   
 In addition, this file also contains methods for syncing data and settings with Google Drive.
-To get an overview of all functions, please visit the documentation on https://czbiohub.github.io/MS-AutoQC.
+To get an overview of all functions, please visit the documentation on https://czbiohub.github.io/Rapid-QC-MS.
 """
 
 def get_database_file(instrument_id, sqlite_conn=False, zip=False):
@@ -336,7 +336,7 @@ def create_databases(instrument_id, new_instrument=False):
     # Insert tables into database
     settings_db_metadata.create_all(settings_db_engine)
 
-    # Insert default configurations for MS-DIAL and MS-AutoQC
+    # Insert default configurations for MS-DIAL and Rapid-QC-MS
     add_msdial_configuration("Default")
     add_qc_configuration("Default")
 
@@ -575,7 +575,7 @@ def is_instrument_computer():
     this will return True. If the user signed in to their workspace from a non-instrument device, this will return False.
 
     Typically used to organize / hide UI functions for instrument and non-instrument devices
-    that MS-AutoQC is installed on.
+    that Rapid-QC-MS is installed on.
 
     Returns:
         True if device is instrument computer, False if not
@@ -767,9 +767,8 @@ def get_table(database_name, table_name):
         database = settings_database
     else:
         database = get_database_file(database_name, sqlite_conn=True)
-
     engine = sa.create_engine(database)
-    return pd.read_sql("SELECT * FROM " + table_name, engine)
+    return pd.read_sql_table(table_name,engine)
 
 
 def generate_client_settings_yaml(client_id, client_secret):
@@ -783,9 +782,9 @@ def generate_client_settings_yaml(client_id, client_secret):
 
     Args:
         client_id (str):
-            The Client ID of the MS-AutoQC application, generated and provided by the user
+            The Client ID of the Rapid-QC-MS application, generated and provided by the user
         client_secret (str):
-            The Client Secret of the MS-AutoQC application, generated and provided by the user
+            The Client Secret of the Rapid-QC-MS application, generated and provided by the user
     Returns:
         None
     """
@@ -829,7 +828,7 @@ def insert_google_drive_ids(instrument_id, gdrive_folder_id, instrument_db_file_
     This function is called when a user creates a new instrument in their workspace.
 
     The ID's for the following files / folders in Google Drive are stored in the database:
-    1. MS-AutoQC folder
+    1. Rapid-QC-MS folder
     2. Instrument database zip file
     3. Methods directory zip file
 
@@ -837,7 +836,7 @@ def insert_google_drive_ids(instrument_id, gdrive_folder_id, instrument_db_file_
         instrument_id (str):
             Instrument ID
         gdrive_folder_id (str):
-            Google Drive ID for the MS-AutoQC folder (found in the user's root directory in Drive)
+            Google Drive ID for the Rapid-QC-MS folder (found in the user's root directory in Drive)
         instrument_db_file_id (str):
             Google Drive ID for the instrument database ZIP file
         methods_zip_file_id (str):
@@ -858,7 +857,7 @@ def insert_google_drive_ids(instrument_id, gdrive_folder_id, instrument_db_file_
             .values(drive_id=instrument_db_file_id)
     ))
 
-    # MS-AutoQC folder and Methods folder
+    # Rapid-QC-MS folder and Methods folder
     connection.execute((
         sa.update(workspace_table)
             .where((workspace_table.c.id == 1))
@@ -932,7 +931,8 @@ def get_instrument(instrument_id):
     """
 
     engine = sa.create_engine(settings_database)
-    return pd.read_sql("SELECT * FROM instruments WHERE name = '" + instrument_id + "'", engine)
+    query = sa.text("SELECT * FROM instruments WHERE name = :instrument_id").bindparams(instrument_id=instrument_id)
+    return pd.read_sql(query, engine)
 
 
 def get_filenames_from_sequence(sequence, vendor="Thermo Fisher"):
@@ -1137,7 +1137,7 @@ def get_instrument_run(instrument_id, run_id):
 
     database = get_database_file(instrument_id=instrument_id, sqlite_conn=True)
     engine = sa.create_engine(database)
-    query = "SELECT * FROM runs WHERE run_id = '" + run_id + "'"
+    query = sa.text("SELECT * FROM runs WHERE run_id = :run_id").bindparams(run_id=run_id)
     df_instrument_run = pd.read_sql(query, engine)
     return df_instrument_run
 
@@ -1266,8 +1266,8 @@ def get_md5(instrument_id, sample_id):
             break
 
     # Get sample from correct table
-    df_sample_qc_results = pd.read_sql(
-        "SELECT * FROM " + table + " WHERE sample_id = '" + sample_id + "'", engine)
+    query = sa.text("SELECT * FROM :table WHERE sample_id = :sample_id").bindparams(table=table, sample_id=sample_id)
+    df_sample_qc_results = pd.read_sql(query, engine)
 
     return df_sample_qc_results["md5"].astype(str).values[0]
 
@@ -2280,7 +2280,8 @@ def get_msp_file_path(chromatography, polarity, bio_standard=None):
 
     if bio_standard is not None:
         # Get selected biological standard
-        query = "SELECT * FROM biological_standards WHERE name = '" + bio_standard + "' AND chromatography='" + chromatography + "'"
+        query = sa.text("SELECT * FROM biological_standards WHERE name = :bio_standard AND chromatography = :chromatography").\
+                        bindparams(bio_standard=bio_standard, chromatography=chromatography)
         df_biological_standards = pd.read_sql(query, engine)
 
         # Get file path of MSP in requested polarity
@@ -2291,7 +2292,8 @@ def get_msp_file_path(chromatography, polarity, bio_standard=None):
 
     else:
         # Get selected chromatography method
-        query = "SELECT * FROM chromatography_methods WHERE method_id='" + chromatography + "'"
+        query = sa.text("SELECT * FROM chromatography_methods WHERE method_id = :chromatography").\
+                        bindparams(chromatography=chromatography)
         df_methods = pd.read_sql(query, engine)
 
         # Get file path of MSP in requested polarity
@@ -2329,10 +2331,11 @@ def get_parameter_file_path(chromatography, polarity, biological_standard=None):
     engine = sa.create_engine(settings_database)
 
     if biological_standard is not None:
-        query = "SELECT * FROM biological_standards WHERE chromatography='" + chromatography + \
-                "' AND name ='" + biological_standard + "'"
+        query = sa.text("SELECT * FROM biological_standards WHERE chromatography = :chromatography AND name = :bio_standard").\
+                        bindparams(bio_standard=biological_standard, chromatography=chromatography)
     else:
-        query = "SELECT * FROM chromatography_methods WHERE method_id='" + chromatography + "'"
+        query = sa.text("SELECT * FROM chromatography_methods WHERE method_id = :chromatography").\
+                        bindparams(chromatography=chromatography)
 
     df = pd.read_sql(query, engine)
 
@@ -2418,7 +2421,8 @@ def get_internal_standards_dict(chromatography, value_type):
     """
 
     engine = sa.create_engine(settings_database)
-    query = "SELECT * FROM internal_standards " + "WHERE chromatography='" + chromatography + "'"
+    query = sa.text("SELECT * FROM internal_standards WHERE chromatography = :chromatography").\
+                    bindparams(chromatography=chromatography)
     df_internal_standards = pd.read_sql(query, engine)
 
     dict = {}
@@ -2452,10 +2456,8 @@ def get_internal_standards(chromatography, polarity):
         polarity = "Negative Mode"
 
     engine = sa.create_engine(settings_database)
-
-    query = "SELECT * FROM internal_standards " + \
-            "WHERE chromatography='" + chromatography + "' AND polarity='" + polarity + "'"
-
+    query = sa.text("SELECT * FROM internal_standards WHERE chromatography = :chromatography AND polarity = :polarity").\
+                bindparams(chromatography=chromatography, polarity=polarity)
     return pd.read_sql(query, engine)
 
 
@@ -2483,10 +2485,8 @@ def get_targeted_features(biological_standard, chromatography, polarity):
 
     engine = sa.create_engine(settings_database)
 
-    query = "SELECT * FROM targeted_features " + \
-            "WHERE chromatography='" + chromatography + \
-            "' AND polarity='" + polarity + \
-            "' AND biological_standard ='" + biological_standard + "'"
+    query = sa.text("SELECT * FROM targeted_features WHERE chromatography = :chromatography AND polarity = :polarity AND biological_standard = :biostnd").\
+                bindparams(chromatography=chromatography, polarity=polarity, biostnd=biological_standard)
 
     return pd.read_sql(query, engine)
 
@@ -2519,7 +2519,7 @@ def add_biological_standard(name, identifier):
     Creates new biological standard with name and identifier.
 
     The biological standard identifier is a text substring used to distinguish between sample and biological standard.
-    MS-AutoQC checks filenames in the sequence for this identifier to process samples accordingly.
+    Rapid-QC-MS checks filenames in the sequence for this identifier to process samples accordingly.
 
     Args:
         name (str):
@@ -3283,7 +3283,7 @@ def parse_internal_standard_qc_data(instrument_id, run_id, polarity, result_type
 def get_workspace_users_list():
 
     """
-    Returns a list of users that have access to the MS-AutoQC workspace.
+    Returns a list of users that have access to the Rapid-QC-MS workspace.
     """
 
     return get_table("Settings", "gdrive_users")["email_address"].astype(str).tolist()
@@ -3294,7 +3294,7 @@ def add_user_to_workspace(email_address):
     """
     Gives user access to workspace in Google Drive and stores email address in database.
 
-    Access is granted by sharing the MS-AutoQC folder in Google Drive with the user's Google account.
+    Access is granted by sharing the Rapid-QC-MS folder in Google Drive with the user's Google account.
 
     Args:
         email_address (str): Email address for Google account to grant access to workspace.
@@ -3309,7 +3309,7 @@ def add_user_to_workspace(email_address):
     # Get Google Drive instance
     drive = get_drive_instance()
 
-    # Get ID of MS-AutoQC folder in Google Drive
+    # Get ID of Rapid-QC-MS folder in Google Drive
     gdrive_folder_id = get_drive_folder_id()
 
     if gdrive_folder_id is not None:
@@ -3354,7 +3354,7 @@ def delete_user_from_workspace(email_address):
     # Get Google Drive instance
     drive = get_drive_instance()
 
-    # Get ID of MS-AutoQC folder in Google Drive
+    # Get ID of Rapid-QC-MS folder in Google Drive
     gdrive_folder_id = get_drive_folder_id()
 
     if gdrive_folder_id is not None:
@@ -3393,7 +3393,7 @@ def get_qc_results(instrument_id, sample_list, is_bio_standard=False):
         instrument_id (str):
             Instrument ID
         sample_list (list):
-            List of samples to query
+            List of samples to query (20231201 Ira: only ever one element?)
         is_bio_standard (bool, default False):
             Whether the list is biological standards (True) or samples (False)
 
@@ -3409,15 +3409,15 @@ def get_qc_results(instrument_id, sample_list, is_bio_standard=False):
     database = get_database_file(instrument_id=instrument_id, sqlite_conn=True)
     engine = sa.create_engine(database)
 
-    sample_list = str(sample_list).replace("[", "(").replace("]", ")")
-    
+    sample_list = str(sample_list[0])
+
     log.debug("sample_list: " + sample_list)
     if is_bio_standard:
-        query = "SELECT sample_id, qc_result FROM bio_qc_results WHERE sample_id in " + sample_list
-        log.debug("biostandard database query is: " + query)
+        query = sa.text("SELECT sample_id, qc_result FROM bio_qc_results WHERE sample_id = :sample_list").\
+            bindparams(sample_list=sample_list)
     else:
-        query = "SELECT sample_id, qc_result FROM sample_qc_results WHERE sample_id in " + sample_list
-        log.debug("sample database query is: " + query)
+        query = sa.text("SELECT sample_id, qc_result FROM sample_qc_results WHERE sample_id = :sample_list").\
+            bindparams(sample_list=sample_list)
         
     log.debug("get_qc_results returns pd.read_sql(query, engine), which looks like:")
     log.debug(pd.read_sql(query, engine))
@@ -3894,7 +3894,7 @@ def get_pid(instrument_id, run_id):
 def upload_to_google_drive(file_dict):
 
     """
-    Uploads files to MS-AutoQC folder in Google Drive.
+    Uploads files to Rapid-QC-MS folder in Google Drive.
 
     Args:
         file_dict (dict):
@@ -3907,7 +3907,7 @@ def upload_to_google_drive(file_dict):
     # Get Google Drive instance
     drive = get_drive_instance()
 
-    # Get Google Drive ID for the MS-AutoQC folder
+    # Get Google Drive ID for the Rapid-QC-MS folder
     folder_id = get_drive_folder_id()
 
     # Store Drive ID's of uploaded file(s)
@@ -4081,7 +4081,7 @@ def download_qc_results(instrument_id, run_id):
 def get_drive_folder_id():
 
     """
-    Returns Google Drive ID for the MS-AutoQC folder (found in user's root Drive directory).
+    Returns Google Drive ID for the Rapid-QC-MS folder (found in user's root Drive directory).
     """
 
     return get_table("Settings", "workspace")["gdrive_folder_id"].values[0]
@@ -4118,7 +4118,7 @@ def upload_database(instrument_id, sync_settings=False):
         str: Timestamp upon upload completion.
     """
 
-    # Get Google Drive ID's for the MS-AutoQC folder and database file
+    # Get Google Drive ID's for the Rapid-QC-MS folder and database file
     gdrive_folder_id = get_drive_folder_id()
     instrument_db_file_id = get_database_drive_id(instrument_id)
 
@@ -4177,14 +4177,14 @@ def download_database(instrument_id, sync_settings=False):
     # Get Google Drive instance
     drive = get_drive_instance()
 
-    # Get Google Drive ID's for the MS-AutoQC folder and database file
+    # Get Google Drive ID's for the Rapid-QC-MS folder and database file
     gdrive_folder_id = get_drive_folder_id()
     instrument_db_file_id = get_instrument(instrument_id)["drive_id"].values[0]
 
     # If Google Drive folder is found, look for database next
     if gdrive_folder_id is not None and instrument_db_file_id is not None:
 
-        # Download newly added / modified MSP files in MS-AutoQC > methods
+        # Download newly added / modified MSP files in Rapid-QC-MS > methods
         if sync_settings == True:
             download_methods(skip_check=True)
 
@@ -4541,7 +4541,8 @@ def get_data_file_type(instrument_id):
     """
 
     engine = sa.create_engine(settings_database)
-    df_instruments = pd.read_sql("SELECT * FROM instruments WHERE name='" + instrument_id + "'", engine)
+    query = sa.text("SELECT * FROM instruments WHERE name = :instrument_id").bindparams(instrument_id=instrument_id)
+    df_instruments = pd.read_sql(query, engine)
     vendor = df_instruments["vendor"].astype(str).tolist()[0]
 
     if vendor == "Thermo Fisher":
@@ -4578,7 +4579,7 @@ def is_completed_run(instrument_id, run_id):
         else:
             return False
     except:
-        print("Could not get MS-AutoQC job type.")
+        print("Could not get Rapid-QC-MS job type.")
         traceback.print_exc()
         return False
 

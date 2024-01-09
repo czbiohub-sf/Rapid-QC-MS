@@ -2,12 +2,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.2.335">
+<meta name="generator" content="quarto-1.3.450">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>MS-AutoQC - User Guide</title>
+<title>Rapid-QC-MS - User Guide</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -17,9 +17,10 @@ div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
 ul.task-list{list-style: none;}
 ul.task-list li input[type="checkbox"] {
   width: 0.8em;
-  margin: 0 0.8em 0.2em -1.6em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
@@ -46,43 +47,13 @@ pre.numberSource code > span > a:first-child::before
     -khtml-user-select: none; -moz-user-select: none;
     -ms-user-select: none; user-select: none;
     padding: 0 4px; width: 4em;
-    color: #aaaaaa;
   }
-pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
 div.sourceCode
   {   }
 @media screen {
 pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
-code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-code span.at { color: #7d9029; } /* Attribute */
-code span.bn { color: #40a070; } /* BaseN */
-code span.bu { color: #008000; } /* BuiltIn */
-code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-code span.ch { color: #4070a0; } /* Char */
-code span.cn { color: #880000; } /* Constant */
-code span.co { color: #60a0b0; font-style: italic; } /* Comment */
-code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-code span.dt { color: #902000; } /* DataType */
-code span.dv { color: #40a070; } /* DecVal */
-code span.er { color: #ff0000; font-weight: bold; } /* Error */
-code span.ex { } /* Extension */
-code span.fl { color: #40a070; } /* Float */
-code span.fu { color: #06287e; } /* Function */
-code span.im { color: #008000; font-weight: bold; } /* Import */
-code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-code span.kw { color: #007020; font-weight: bold; } /* Keyword */
-code span.op { color: #666666; } /* Operator */
-code span.ot { color: #007020; } /* Other */
-code span.pp { color: #bc7a00; } /* Preprocessor */
-code span.sc { color: #4070a0; } /* SpecialChar */
-code span.ss { color: #bb6688; } /* SpecialString */
-code span.st { color: #4070a0; } /* String */
-code span.va { color: #19177c; } /* Variable */
-code span.vs { color: #4070a0; } /* VerbatimString */
-code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
 </style>
 
 
@@ -121,7 +92,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     "search-more-matches-text": "more matches in this document",
     "search-clear-button-title": "Clear",
     "search-detached-cancel-button-title": "Cancel",
-    "search-submit-button-title": "Submit"
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
   }
 }</script>
 
@@ -137,58 +109,58 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container">
     <a class="navbar-brand" href="./index.html">
-    <span class="navbar-title">MS-AutoQC</span>
+    <span class="navbar-title">Rapid-QC-MS</span>
     </a>
   </div>
+            <div id="quarto-search" class="" title="Search"></div>
           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
   <span class="navbar-toggler-icon"></span>
 </button>
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link" href="./index.html">
+    <a class="nav-link" href="./index.html" rel="" target="">
  <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./overview.html">
+    <a class="nav-link" href="./overview.html" rel="" target="">
  <span class="menu-text">Overview</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./installation.html">
+    <a class="nav-link" href="./installation.html" rel="" target="">
  <span class="menu-text">Installation</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./quickstart.html">
+    <a class="nav-link" href="./quickstart.html" rel="" target="">
  <span class="menu-text">Quickstart</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link active" href="./user-guide.html" aria-current="page">
+    <a class="nav-link active" href="./user-guide.html" rel="" target="" aria-current="page">
  <span class="menu-text">User Guide</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./design.html">
+    <a class="nav-link" href="./design.html" rel="" target="">
  <span class="menu-text">System Design</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./documentation.html">
+    <a class="nav-link" href="./documentation.html" rel="" target="">
  <span class="menu-text">Documentation</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./faq.html">
+    <a class="nav-link" href="./faq.html" rel="" target="">
  <span class="menu-text">FAQ</span></a>
   </li>  
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/czbiohub-sf/MS-AutoQC"><i class="bi bi-github" role="img" aria-label="GitHub">
+    <a class="nav-link" href="https://github.com/czbiohub/Rapid-QC-MS" rel="" target=""><i class="bi bi-github" role="img" aria-label="GitHub">
 </i> 
  <span class="menu-text"></span></a>
   </li>  
 </ul>
-              <div class="quarto-toggle-container">
-                  <a href="" class="quarto-color-scheme-toggle nav-link" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
-              </div>
-              <div id="quarto-search" class="" title="Search"></div>
+            <div class="quarto-navbar-tools">
+  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+</div>
           </div> <!-- /navcollapse -->
       </div> <!-- /container-fluid -->
     </nav>
@@ -219,7 +191,6 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   <ul class="collapse">
   <li><a href="#setting-up-google-drive-sync" id="toc-setting-up-google-drive-sync" class="nav-link" data-scroll-target="#setting-up-google-drive-sync">Setting up Google Drive sync</a>
   <ul class="collapse">
-  <li><a href="#instructions" id="toc-instructions" class="nav-link" data-scroll-target="#instructions">Instructions</a></li>
   <li><a href="#create-a-project-in-the-google-cloud-console" id="toc-create-a-project-in-the-google-cloud-console" class="nav-link" data-scroll-target="#create-a-project-in-the-google-cloud-console">1. Create a project in the Google Cloud Console</a></li>
   <li><a href="#configure-the-oauth-consent-screen" id="toc-configure-the-oauth-consent-screen" class="nav-link" data-scroll-target="#configure-the-oauth-consent-screen">2. Configure the OAuth consent screen</a></li>
   <li><a href="#generate-the-oauth-client-id" id="toc-generate-the-oauth-client-id" class="nav-link" data-scroll-target="#generate-the-oauth-client-id">3. Generate the OAuth Client ID</a></li>
@@ -234,7 +205,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   <ul class="collapse">
   <li><a href="#create-your-slack-bot" id="toc-create-your-slack-bot" class="nav-link" data-scroll-target="#create-your-slack-bot">1. Create your Slack bot</a></li>
   <li><a href="#generate-an-oauth-token" id="toc-generate-an-oauth-token" class="nav-link" data-scroll-target="#generate-an-oauth-token">2. Generate an OAuth token</a></li>
-  <li><a href="#give-token-to-ms-autoqc" id="toc-give-token-to-ms-autoqc" class="nav-link" data-scroll-target="#give-token-to-ms-autoqc">3. Give token to MS-AutoQC</a></li>
+  <li><a href="#give-token-to-rapid-qc-ms" id="toc-give-token-to-rapid-qc-ms" class="nav-link" data-scroll-target="#give-token-to-rapid-qc-ms">3. Give token to Rapid-QC-MS</a></li>
   </ul></li>
   <li><a href="#setting-up-email-notifications" id="toc-setting-up-email-notifications" class="nav-link" data-scroll-target="#setting-up-email-notifications">Setting up email notifications</a></li>
   </ul></li>
@@ -261,7 +232,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 </header>
 
-<p>This page offers brief tutorials for usage and configuration of various MS-AutoQC features. Be sure to use the navigation guide below – or simply <code>Ctrl + F</code> – to find what you’re looking for.</p>
+<p>This page offers brief tutorials for usage and configuration of various Rapid-QC-MS features. Be sure to use the navigation guide below – or simply <code>Ctrl + F</code> – to find what you’re looking for.</p>
 <section id="workspace-configuration" class="level4">
 <h4 class="anchored" data-anchor-id="workspace-configuration">Workspace configuration</h4>
 <ul>
@@ -371,7 +342,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 <p>Including a metadata table in a QC job allows metadata to be viewed in sample information cards. It also allows the intensity across samples plot to be filtered by treatments.</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/221339340-34fdd2a3-359c-4279-8391-723b6c68910b.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Overview/sample_card.png" class="img-fluid"></p>
 </section>
 <section id="setting-up-chromatography-methods" class="level2">
 <h2 class="anchored" data-anchor-id="setting-up-chromatography-methods">Setting up chromatography methods</h2>
@@ -385,7 +356,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="a.-add-a-chromatography-method" class="level3">
 <h3 class="anchored" data-anchor-id="a.-add-a-chromatography-method">3a. Add a chromatography method</h3>
 <p>Navigate to <strong>Settings &gt; Chromatography Methods.</strong> In the <strong>Manage chromatography methods</strong> section at the top, add a new chromatography method by giving it a name and clicking <strong>Add method</strong>.</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/201778888-2d17d60c-618e-4182-a96a-9eb13d231326.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Overview/settings_chrom_with_methods.png" class="img-fluid"></p>
 <p>If successful, you should see your new method in the <strong>Chromatography Methods</strong> table.</p>
 </section>
 <section id="b.-select-the-chromatography-and-polarity-to-modify" class="level3">
@@ -393,12 +364,12 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>Internal standards must be configured for both positive and negative mode for each chromatography method.</p>
 <p>Let’s start by selecting the chromatography method you created, and then selecting <strong>Positive Mode</strong> for the polarity.</p>
 <blockquote class="blockquote">
-<p><img src="https://user-images.githubusercontent.com/7220175/221443668-df68b7f2-ce14-4325-9203-2de7197953e7.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Quickstart/zoomed_select_posneg.png" class="img-fluid"></p>
 </blockquote>
 </section>
 <section id="c.-add-an-internal-standard-library" class="level3">
 <h3 class="anchored" data-anchor-id="c.-add-an-internal-standard-library">3c. Add an internal standard library</h3>
-<p>Now, we can specify our internal standard library. MS-AutoQC accepts identification libraries in either MSP or CSV format.</p>
+<p>Now, we can specify our internal standard library. Rapid-QC-MS accepts identification libraries in either MSP or CSV format.</p>
 <p>It is important to note that MS-DIAL can only perform MS2 spectral matching using MSP libraries. If you use a CSV library, identification will be performed via m/z and RT matches.</p>
 <p>Here is an example internal standard library in CSV format:</p>
 <table class="table">
@@ -468,9 +439,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="fl">181.08981</span>   <span class="dv">2837</span></span>
 <span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="fl">185.09656</span>   <span class="dv">4996</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Click the <strong>Browse Files</strong> button to browse for your MSP or CSV file, then click the <strong>Add MSP to <chromatography> Positive Mode</chromatography></strong> button.</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/201782255-797d9dcf-23fe-45c1-a9ab-bdd090387494.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Quickstart/add_msp.png" class="img-fluid"></p>
 <p>After a few seconds, your screen should look something like this.</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/201782345-11c3608d-ce21-4461-971b-0f082b41676a.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Quickstart/success.png" class="img-fluid"></p>
 <p>You can confirm that the library was successfully added by scrolling up to the <strong>Chromatography Methods</strong> table and seeing the updated number of Pos (+) Standards.</p>
 <p>That’s it! Now, you can select Negative Mode from the polarity dropdown and add your negative mode internal standards.</p>
 </section>
@@ -478,7 +449,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="setting-up-biological-standards" class="level2">
 <h2 class="anchored" data-anchor-id="setting-up-biological-standards">Setting up biological standards</h2>
 <p>Biological standards are used to benchmark instrument performance based on the intensity of targeted features in the biological standard samples.</p>
-<p>You can configure MS-AutoQC to detect and process biological standards accordingly using the following guide:</p>
+<p>You can configure Rapid-QC-MS to detect and process biological standards accordingly using the following guide:</p>
 <ol type="1">
 <li>Navigate to <strong>Settings &gt; Chromatography Methods</strong>.</li>
 <li><strong>Create a biological standard:</strong> this requires providing a name and sequence identifier.</li>
@@ -487,7 +458,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </ol>
 <p>The <strong>sequence identifier</strong> is simply the text string that identifies biological standards in your acquisition sequences. For example, if “bac_sup” is the identifier for a biological standard, then any sample with “bac_sup” in its filename will be processed as a biological standard.</p>
 <blockquote class="blockquote">
-<p><img src="https://user-images.githubusercontent.com/7220175/221483946-3d07c628-d7d1-42ed-af7e-4571086451e2.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Overview/settings_bio_stnds.png" class="img-fluid"></p>
 </blockquote>
 <p>Targeted feature libraries must be in MSP format. Here is an example of one targeted feature in an MSP library.</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>NAME: Hippuric acid d5</span>
@@ -520,10 +491,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li><strong>RT shift from in-run average cutoff:</strong> the minimum retention time shift from the average RT during the course of the run to constitute a QC fail</li>
 <li><strong>m/z shift from library value cutoff:</strong> the minimum m/z shift from the expected library value to constitute a QC fail</li>
 </ol>
-<p><img src="https://user-images.githubusercontent.com/7220175/221378930-c5474cd6-544d-4ef7-97f0-836b554f1211.png" class="img-fluid"></p>
-<p>MS-AutoQC stores individual parameters in <strong>configurations</strong>, so that you can configure a specific configuration to fit each chromatography method. Every installation comes preloaded with a “Default” configuration containing recommended parameters.</p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Quickstart/is_config_default.png" class="img-fluid"></p>
+<p>Rapid-QC-MS stores individual parameters in <strong>configurations</strong>, so that you can configure a specific configuration to fit each chromatography method. Every installation comes preloaded with a “Default” configuration containing recommended parameters.</p>
 <blockquote class="blockquote">
-<p><img src="https://user-images.githubusercontent.com/7220175/209615183-383f3c9b-2d45-49f8-bfde-6f021dc3456e.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Overview/settings_is_config.png" class="img-fluid"></p>
 </blockquote>
 <p>You can specify these parameters however you’d like, and enable / disable them as needed. To revert a configuration back to the default recommended settings, simply click the <strong>Reset default settings</strong> button.</p>
 <p>Once you’re done, don’t forget to click <strong>Save changes</strong>!</p>
@@ -531,9 +502,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="configuring-ms-dial-processing-parameters" class="level2">
 <h2 class="anchored" data-anchor-id="configuring-ms-dial-processing-parameters">Configuring MS-DIAL processing parameters</h2>
 <p><a href="http://prime.psc.riken.jp/compms/msdial/main.html">MS-DIAL</a> is the processing software used to quantify internal standards in samples and targeted features in biological standards.</p>
-<p>MS-AutoQC stores a set of MS-DIAL parameters in <strong>configurations</strong>, so that you can configure a specific configuration to fit each chromatography method. Every installation comes preloaded with a “Default” configuration containing recommended parameters.</p>
+<p>Rapid-QC-MS stores a set of MS-DIAL parameters in <strong>configurations</strong>, so that you can configure a specific configuration to fit each chromatography method. Every installation comes preloaded with a “Default” configuration containing recommended parameters.</p>
 <blockquote class="blockquote">
-<p><img src="https://user-images.githubusercontent.com/7220175/209615180-18c6b4ef-e510-4a4b-9b00-520a7f06c08d.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Overview/settings_msdial.png" class="img-fluid"></p>
 </blockquote>
 <p>You can create a new configuration using the <strong>Add new MS-DIAL configuration</strong> text field. Then, select it from the dropdown to edit its parameters. Once you’re done, the MS-DIAL configuration can be applied to chromatography methods and biological standards.</p>
 <p>A wide range of parameters are available for modification to fit the user’s needs:</p>
@@ -559,8 +530,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li>Peak count filter</li>
 <li>QC at least filter</li>
 </ul>
-<p>For more details on MS-DIAL parameters, see the documentation <a href="https://mtbinfo-team.github.io/mtbinfo.github.io/MS-DIAL/tutorial#section-2-3">here</a>.</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/221496078-92f23760-6382-40a1-bc28-7c9098dd84b1.png" class="img-fluid"></p>
+<p>For more details on MS-DIAL parameters, see the documentation <a href="https://systemsomicslab.github.io/mtbinfo.github.io/MS-DIAL/tutorial#section-2-3">here</a>.</p>
 <p>Once you’re done editing, don’t forget to click <strong>Save changes</strong>! You can now apply this processing configuration to your chromatography methods and biological standards.</p>
 </section>
 </section>
@@ -568,63 +538,44 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h1>Google Drive sync</h1>
 <section id="setting-up-google-drive-sync" class="level2">
 <h2 class="anchored" data-anchor-id="setting-up-google-drive-sync">Setting up Google Drive sync</h2>
-<p>To allow access to your workspace from any device, you must first create a project in the Google Cloud Console and generate an OAuth Client ID for your installation of MS-AutoQC.</p>
-<section id="instructions" class="level3">
-<h3 class="anchored" data-anchor-id="instructions">Instructions</h3>
-<p>Follow the steps below, or read on for a more detailed guide with screenshots.</p>
-<ol type="1">
-<li>Go to the <a href="https://console.cloud.google.com/">Google Cloud Console</a> and create your own project.</li>
-<li>Search for “Google Drive API”, select the entry, and click <strong>Enable</strong>.</li>
-<li>Search for “Gmail API”, select the entry, and click <strong>Enable</strong>.</li>
-<li>Select “Credentials” from the left menu, click <strong>Create Credentials</strong>, and select <strong>OAuth client ID</strong>.</li>
-<li>Click <strong>Configure consent screen</strong> and follow the instructions.</li>
-<li>For <strong>Add or Remove Scopes,</strong> manually enter the following:</li>
-</ol>
-<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>https:<span class="op">//</span>www.googleapis.com<span class="op">/</span>auth<span class="op">/</span>drive</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>https:<span class="op">//</span>www.googleapis.com<span class="op">/</span>auth<span class="op">/</span>gmail.send</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>https:<span class="op">//</span>www.googleapis.com<span class="op">/</span>auth<span class="op">/</span>userinfo.email</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<ol start="7" type="1">
-<li>Select “Application type” to be <strong>Desktop application</strong>.</li>
-<li>For name, enter <strong>MS-AutoQC</strong>.</li>
-<li>Click <strong>Create</strong>.</li>
-</ol>
-<p>Once you’re done, a dialog window will appear, providing your client ID and client secret.</p>
-<blockquote class="blockquote">
-<p><img src="https://user-images.githubusercontent.com/7220175/217111496-32c84253-6abb-4178-a108-20f2a84ef387.png" class="img-fluid"></p>
-</blockquote>
-<p>That’s it – you’re all set! Copy these and save them somewhere accessible. If you’re here from the quickstart guide, <a href="./quickstart.html#optional-sync-with-google-drive">click here</a> to head back and use these credentials to <strong>set up</strong> or <strong>sign in</strong> to your workspace.</p>
+<p>To allow access to your workspace from any device, you must first create a project in the Google Cloud Console and generate an OAuth Client ID for your installation of Rapid-QC-MS.</p>
 <p><strong>These actions only need to be performed once.</strong> Upon completion, any shared user will be able to use the Client ID and Client Secret to sign in to your workspace.</p>
-</section>
 <section id="create-a-project-in-the-google-cloud-console" class="level3">
 <h3 class="anchored" data-anchor-id="create-a-project-in-the-google-cloud-console">1. Create a project in the Google Cloud Console</h3>
 <p>In case the above steps are too difficult to follow, below is a detailed walkthrough of the process with screenshots.</p>
 <p>Navigate to the <a href="https://console.cloud.google.com/">Google Cloud Console</a>. The landing page should look something like this:</p>
 <blockquote class="blockquote">
-<p><img src="https://user-images.githubusercontent.com/7220175/217104786-794fa8dc-074f-4f4d-bf65-51abada3d95d.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/google_newproject.png" class="img-fluid"></p>
 </blockquote>
 <p>Choose <strong>Create or select a project</strong>, then click <strong>New Project</strong>.</p>
-<p>Name the project <strong>MS-AutoQC</strong> and click <strong>Create</strong>.</p>
+<p>Name the project whatever you like, ideally something you’ll recogize, and click <strong>Create</strong>. If your google account belongs to an organization, this screen might look a little different but should function the same.</p>
 <blockquote class="blockquote">
-<p><img src="https://user-images.githubusercontent.com/7220175/217105229-07910f9b-c56f-4fe9-ac96-08ac2077604b.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/google_nameandcreate.png" class="img-fluid"></p>
 </blockquote>
 <p>From the sidebar, navigate to <strong>Enabled APIs and services</strong> and click <strong>Enable APIs and Services</strong>.</p>
-<p>Search for “Google Drive API”, select it, and click the <strong>Enable</strong> button.</p>
-<p>Next, search for “Gmail API”, select it, and click the <strong>Enable</strong> button.</p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/google_apis_and_services.png" class="img-fluid"></p>
+<blockquote class="blockquote">
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/google_click_enable.png" class="img-fluid"></p>
+</blockquote>
+<p>Next, search for “Gmail API”, select it, and click the <strong>Enable</strong> button and wait for google to process your request. Once it’s enabled, go back and repeat the process for “Google Drive API”</p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/googleaddapi.gif" class="img-fluid"></p>
+<p>If all went well, both API’s should be visible on the API &amp; Services package</p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/google_after_api_add.png" class="img-fluid"></p>
 </section>
 <section id="configure-the-oauth-consent-screen" class="level3">
 <h3 class="anchored" data-anchor-id="configure-the-oauth-consent-screen">2. Configure the OAuth consent screen</h3>
 <p>From the sidebar, navigate to <strong><a href="https://console.cloud.google.com/apis/credentials/consent">APIs &amp; Services &gt; OAuth consent screen</a></strong>.</p>
 <p>For user type, choose <strong>Internal</strong> and click <strong>Create</strong>. Fill in the following:</p>
 <ul>
-<li>App name: MS-AutoQC</li>
+<li>App name: Rapid-QC-MS</li>
 <li>User support email: [email]</li>
 <li>Developer contact information: [email]</li>
 </ul>
 <p>Once you’re done, click <strong>Save and Continue.</strong></p>
 <p>On the next screen, select <strong>Add or Remove Scopes</strong>. Scroll down to the <strong>Manually add scopes</strong> section and paste in the following:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>https:<span class="op">//</span>www.googleapis.com<span class="op">/</span>auth<span class="op">/</span>drive</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>https:<span class="op">//</span>www.googleapis.com<span class="op">/</span>auth<span class="op">/</span>gmail.send</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>https:<span class="op">//</span>www.googleapis.com<span class="op">/</span>auth<span class="op">/</span>userinfo.email</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>https:<span class="op">//</span>www.googleapis.com<span class="op">/</span>auth<span class="op">/</span>drive</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>https:<span class="op">//</span>www.googleapis.com<span class="op">/</span>auth<span class="op">/</span>gmail.send</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>https:<span class="op">//</span>www.googleapis.com<span class="op">/</span>auth<span class="op">/</span>userinfo.email</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <blockquote class="blockquote">
 <p><img src="https://user-images.githubusercontent.com/7220175/217109624-c9e48c72-5175-44df-90a9-2a2ce3aefa66.png" class="img-fluid"></p>
 </blockquote>
@@ -637,7 +588,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <blockquote class="blockquote">
 <p><img src="https://user-images.githubusercontent.com/7220175/217107214-e1e950c1-7131-4c95-ae07-e3d06e0cbae8.png" class="img-fluid"></p>
 </blockquote>
-<p>For application type, choose <strong>Desktop application</strong>. Name the application <strong>MS-AutoQC</strong>.</p>
+<p>For application type, choose <strong>Desktop application</strong>. Name the application <strong>Rapid-QC-MS</strong>.</p>
 <p>Once you’re done, click <strong>Create</strong>. A dialog window will appear, providing your client ID and client secret.</p>
 <blockquote class="blockquote">
 <p><img src="https://user-images.githubusercontent.com/7220175/217111496-32c84253-6abb-4178-a108-20f2a84ef387.png" class="img-fluid"></p>
@@ -647,15 +598,15 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </section>
 <section id="adding-instruments-to-workspace" class="level2">
 <h2 class="anchored" data-anchor-id="adding-instruments-to-workspace">Adding instruments to workspace</h2>
-<p>To add an instrument to an existing MS-AutoQC workspace, perform the following steps:</p>
+<p>To add an instrument to an existing Rapid-QC-MS workspace, perform the following steps:</p>
 <ol type="1">
-<li>Install MS-AutoQC on your instrument computer</li>
+<li>Install Rapid-QC-MS on your instrument computer</li>
 <li>Launch the app by entering <code>ms_autoqc</code> in a terminal window</li>
-<li>Select the <strong>I’m setting up MS-AutoQC on a new instrument</strong> tab</li>
+<li>Select the <strong>I’m setting up Rapid-QC-MS on a new instrument</strong> tab</li>
 <li>Give your instrument a name and specify the vendor</li>
 <li>Enter your client ID and client secret, then click <strong>Sign in to Google Drive</strong></li>
 <li>Complete the authentication flow</li>
-<li>Once you’re done, MS-AutoQC will alert you that your workspace was found</li>
+<li>Once you’re done, Rapid-QC-MS will alert you that your workspace was found</li>
 <li>Click <strong>Complete setup</strong> and you’re all set!</li>
 </ol>
 <p><img src="https://user-images.githubusercontent.com/7220175/221498964-de960a23-ee82-4ee0-942b-f026d790d153.png" class="img-fluid"></p>
@@ -663,7 +614,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </section>
 <section id="granting-revoking-workspace-access" class="level2">
 <h2 class="anchored" data-anchor-id="granting-revoking-workspace-access">Granting / revoking workspace access</h2>
-<p>You can grant and revoke access to your MS-AutoQC workspace from <strong>Settings &gt; General</strong>.</p>
+<p>You can grant and revoke access to your Rapid-QC-MS workspace from <strong>Settings &gt; General</strong>.</p>
 <p>Under <strong>Manage workspace access,</strong> add the email addresses for Google accounts you’d like to share your workspace with.</p>
 <blockquote class="blockquote">
 <p><img src="https://user-images.githubusercontent.com/7220175/209615187-08b15542-3dd4-44b6-8094-e3b183f81d60.png" class="img-fluid"></p>
@@ -673,12 +624,12 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h2 class="anchored" data-anchor-id="signing-in-to-workspace-from-external-devices">Signing in to workspace from external devices</h2>
 <p>You can use your generated client ID and client secret to log in to your workspace from any device.</p>
 <ol type="1">
-<li>Install MS-AutoQC on your device</li>
+<li>Install Rapid-QC-MS on your device</li>
 <li>Launch the app by entering <code>ms_autoqc</code> in a terminal window</li>
-<li>Select the <strong>I’m signing in to an existing MS-AutoQC workspace</strong> tab</li>
+<li>Select the <strong>I’m signing in to an existing Rapid-QC-MS workspace</strong> tab</li>
 <li>Enter your client ID and client secret, then click <strong>Sign in to Google Drive</strong></li>
 <li>Complete the authentication flow</li>
-<li>Click <strong>Sign in to MS-AutoQC workspace</strong> and you’re all set!</li>
+<li>Click <strong>Sign in to Rapid-QC-MS workspace</strong> and you’re all set!</li>
 </ol>
 <p><strong>Important:</strong> Do NOT check the <em>I’m signing in from an instrument computer</em> checkbox – it is intended for signing in to the workspace after reinstalls on the instrument computer.</p>
 <p><img src="https://user-images.githubusercontent.com/7220175/221499159-a3d867ba-e477-4b06-8289-3fb5dd44843e.png" class="img-fluid"></p>
@@ -689,8 +640,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h1>QC notifications</h1>
 <section id="setting-up-slack-notifications" class="level2">
 <h2 class="anchored" data-anchor-id="setting-up-slack-notifications">Setting up Slack notifications</h2>
-<p>To set up Slack notifications, you must create your own Slack bot, generate an OAuth token for it, and give that token to MS-AutoQC in Settings &gt; General.</p>
-<p><strong>You only need to do this once!</strong> After that, MS-AutoQC will use your token to alert you about QC warnings and QC fails.</p>
+<p>To set up Slack notifications, you must create your own Slack bot, generate an OAuth token for it, and give that token to Rapid-QC-MS in Settings &gt; General.</p>
+<p><strong>You only need to do this once!</strong> After that, Rapid-QC-MS will use your token to alert you about QC warnings and QC fails.</p>
 <section id="create-your-slack-bot" class="level3">
 <h3 class="anchored" data-anchor-id="create-your-slack-bot">1. Create your Slack bot</h3>
 <p>Navigate to the <a href="https://api.slack.com/apps">Slack API console</a> and click the <strong>Create New App</strong> button.</p>
@@ -703,21 +654,22 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h3 class="anchored" data-anchor-id="generate-an-oauth-token">2. Generate an OAuth token</h3>
 <p>From the sidebar, navigate to <strong>Features &gt; OAuth &amp; Permissions</strong>.</p>
 <p>Scroll down to the <strong>Scopes</strong> section. For <strong>Bot Token Scopes</strong>, add the following OAuth scopes:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>chat:write</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>chat:write.public</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>incoming<span class="op">-</span>webhook</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>chat:write</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>chat:write.public</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>incoming<span class="op">-</span>webhook</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <blockquote class="blockquote">
 <p><img src="https://user-images.githubusercontent.com/7220175/217333810-f02cc17a-cb5f-43a8-b4d5-49f3b735e383.png" class="img-fluid"></p>
 </blockquote>
 <p>Now, scroll back up to the <strong>OAuth Tokens for Your Workspace</strong> section and click <strong>Install to Workspace</strong>. Once that’s done, you will have generated your Bot User OAuth Token!</p>
 </section>
-<section id="give-token-to-ms-autoqc" class="level3">
-<h3 class="anchored" data-anchor-id="give-token-to-ms-autoqc">3. Give token to MS-AutoQC</h3>
-<p>In MS-AutoQC, navigate to <strong>Settings &gt; General</strong> and paste the token you generated in the Slack API client credentials field. Click <strong>Save bot token</strong>.</p>
-<p>Now, enter the name of the channel you’d like MS-AutoQC to post messages to. Once you’re done, toggle <strong>Enable notifications</strong> and you’re all set.</p>
+<section id="give-token-to-rapid-qc-ms" class="level3">
+<h3 class="anchored" data-anchor-id="give-token-to-rapid-qc-ms">3. Give token to Rapid-QC-MS</h3>
+<p>In Rapid-QC-MS, navigate to <strong>Settings &gt; General</strong> and paste the token you generated in the Slack API client credentials field. Click <strong>Save bot token</strong>.</p>
+<p>Now, enter the name of the channel you’d like Rapid-QC-MS to post messages to. Once you’re done, toggle <strong>Enable notifications</strong>.</p>
 <blockquote class="blockquote">
 <p><img src="https://user-images.githubusercontent.com/7220175/221497926-03688b21-685f-4bab-9764-c5796c27bf11.png" class="img-fluid"></p>
 </blockquote>
+<p>Lastly, you need to invite the bot to the channel. The easiest way of doing this is to just @botname in the channel and slack will ask if you want to invite it.</p>
 </section>
 </section>
 <section id="setting-up-email-notifications" class="level2">
@@ -875,9 +827,23 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     icon: icon
   };
   anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
   const clipboard = new window.ClipboardJS('.code-copy-button', {
-    target: function(trigger) {
-      return trigger.previousElementSibling;
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
     }
   });
   clipboard.on('success', function(e) {
@@ -942,6 +908,92 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       return note.innerHTML;
     });
   }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
   const findCites = (el) => {
     const parentEl = el.parentElement;
     if (parentEl) {
@@ -995,6 +1047,12 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   </li>  
 </ul>
     </div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
   </div>
 </footer>
 
