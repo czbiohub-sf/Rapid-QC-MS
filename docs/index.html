@@ -200,19 +200,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 </header>
 
-<p><strong>Rapid-QC-MS</strong> is an all-in-one solution for automated quality control of liquid chromatography-mass spectrometry (LC-MS) instrument runs, both during and after data acquisition.</p>
+<p><strong>Rapid-QC-MS</strong> is an all-in-one solution for automated quality control of liquid chromatography-mass spectrometry (LC-MS/MS) analyses, both during and after data acquisition.</p>
 <p>It offers a fast, straightforward approach to ensure collection of high-quality data, allowing for less time investigating raw data and more time conducting experiments.</p>
 <p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Home/intensity.png" class="img-fluid"> <br></p>
-<p>Developed at the <a href="https://www.czbiohub.org/mass-spec/">Mass Spectrometry Platform of CZ Biohub San Francisco</a>, Rapid-QC-MS provides a host of key features to streamline untargeted metabolomics research, such as:</p>
+<p>Developed at the <a href="https://www.czbiohub.org/mass-spec/">Mass Spectrometry Platform of CZ Biohub San Francisco</a>, Rapid-QC-MS provides a host of key features to streamline high-fidelity untargeted LC-MS/MS analysis, such as:</p>
 <ul>
-<li><strong>Automated and user-defined quality control checks</strong> during instrument runs</li>
+<li><strong>Automated and user-defined quality control</strong> during data acquisition</li>
 <li><strong>Realtime updates on QC fails</strong> in the form of Slack or email notifications</li>
-<li><strong>Interactive data visualization</strong> of internal standard retention time, <em>m/z</em>, and intensity across samples</li>
+<li><strong>Interactive data visualization</strong> of biological standards - reference and external control samples - and internal standard metrics - retention time, mass accuracy, and intensity across samples</li>
 <li><strong>Google Drive cloud sync</strong> and secure, Google-authenticated access to QC results from any device</li>
 </ul>
 <section id="requirements" class="level1">
 <h1>Requirements</h1>
-<p><strong>Rapid-QC-MS was designed to run on Windows platforms</strong> because of its dependency on <a href="https://proteowizard.sourceforge.io/tools/msconvert.html">MSConvert</a> for vendor format data conversion and <a href="http://prime.psc.riken.jp/compms/msdial/main.html">MS-DIAL</a> for data processing and identification. However, MacOS users can still use Rapid-QC-MS to monitor / view their instrument run data.</p>
+<p><strong>Rapid-QC-MS was designed to run on Windows platforms</strong> because of its dependency on <a href="https://proteowizard.sourceforge.io/tools/msconvert.html">MSConvert</a> for vendor format data conversion and <a href="http://prime.psc.riken.jp/compms/msdial/main.html">MS-DIAL</a> for data processing. However, MacOS users can still use Rapid-QC-MS to monitor / view their instrument run data.</p>
 <p>In addition, Rapid-QC-MS requires Python 3.8+ and various Python packages, including:</p>
 <ul>
 <li>Pandas</li>

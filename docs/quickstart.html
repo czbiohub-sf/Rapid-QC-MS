@@ -176,14 +176,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul>
   <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
   <li><a href="#start-rapid-qc-ms" id="toc-start-rapid-qc-ms" class="nav-link" data-scroll-target="#start-rapid-qc-ms">1. Start Rapid-QC-MS</a></li>
-  <li><a href="#instrument-computer-workspace-setup" id="toc-instrument-computer-workspace-setup" class="nav-link" data-scroll-target="#instrument-computer-workspace-setup">2. Instrument computer workspace setup</a></li>
+  <li><a href="#setup-instrument-computer-workspace" id="toc-setup-instrument-computer-workspace" class="nav-link" data-scroll-target="#setup-instrument-computer-workspace">2. Setup instrument computer workspace</a></li>
   <li><a href="#configure-internal-standard-libraries" id="toc-configure-internal-standard-libraries" class="nav-link" data-scroll-target="#configure-internal-standard-libraries">3. Configure internal standard libraries</a>
   <ul class="collapse">
   <li><a href="#a.-add-a-chromatography-method" id="toc-a.-add-a-chromatography-method" class="nav-link" data-scroll-target="#a.-add-a-chromatography-method">3a. Add a chromatography method</a></li>
   <li><a href="#b.-select-the-chromatography-and-polarity-to-modify" id="toc-b.-select-the-chromatography-and-polarity-to-modify" class="nav-link" data-scroll-target="#b.-select-the-chromatography-and-polarity-to-modify">3b. Select the chromatography and polarity to modify</a></li>
   <li><a href="#c.-add-an-internal-standard-library" id="toc-c.-add-an-internal-standard-library" class="nav-link" data-scroll-target="#c.-add-an-internal-standard-library">3c. Add an internal standard library</a></li>
   </ul></li>
-  <li><a href="#configure-qc-parameters" id="toc-configure-qc-parameters" class="nav-link" data-scroll-target="#configure-qc-parameters">4. Configure QC parameters</a></li>
+  <li><a href="#configure-is-parameters" id="toc-configure-is-parameters" class="nav-link" data-scroll-target="#configure-is-parameters">4. Configure IS parameters</a></li>
   <li><a href="#specify-ms-dial-location" id="toc-specify-ms-dial-location" class="nav-link" data-scroll-target="#specify-ms-dial-location">5. Specify MS-DIAL location</a></li>
   <li><a href="#setup-a-new-qc-job" id="toc-setup-a-new-qc-job" class="nav-link" data-scroll-target="#setup-a-new-qc-job">6. Setup a new QC job</a></li>
   <li><a href="#next-steps" id="toc-next-steps" class="nav-link" data-scroll-target="#next-steps">Next steps</a></li>
@@ -217,9 +217,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>This section will walk you through configuring the bare necessities to set up Rapid-QC-MS jobs for your instrument runs.</p>
 <ol type="1">
 <li><a href="#start-rapid-qc-ms">Start Rapid-QC-MS</a></li>
-<li><a href="#create-a-new-workspace">Create a new workspace</a></li>
+<li><a href="#setup-instrument-computer-workspace">Setup instrument computer workspace</a></li>
 <li><a href="#configure-internal-standard-libraries">Configure internal standard libraries</a></li>
-<li><a href="#configure-qc-parameters">Configure QC parameters</a></li>
+<li><a href="#configure-is-parameters">Configure IS parameters</a></li>
 <li><a href="#specify-ms-dial-location">Specify MS-DIAL location</a></li>
 <li><a href="#setup-a-new-qc-job">Set up a new QC job</a></li>
 </ol>
@@ -231,9 +231,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="sourceCode" id="cb1"><pre class="sourceCode java code-with-copy"><code class="sourceCode java"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> <span class="op">.</span>\<span class="op">&lt;</span>path<span class="op">-</span>to<span class="op">-</span>venv<span class="op">-</span>folder<span class="op">&gt;</span>\Scripts\activate</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">(</span>yourenv<span class="op">)</span> <span class="op">&gt;</span> rapidqcms</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
-<section id="instrument-computer-workspace-setup" class="level2">
-<h2 class="anchored" data-anchor-id="instrument-computer-workspace-setup">2. Instrument computer workspace setup</h2>
-<p>After following the <a href="https://github.com/czbiohub-sf/Rapid-QC-MS/wiki/Installation">installation guide</a>, you should be greeted by the following welcome screen:</p>
+<section id="setup-instrument-computer-workspace" class="level2">
+<h2 class="anchored" data-anchor-id="setup-instrument-computer-workspace">2. Setup instrument computer workspace</h2>
+<p>After following the <a href="https://czbiohub-sf.github.io/Rapid-QC-MS/installation.html">installation guide</a>, you should be greeted by the following welcome screen:</p>
 <p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/01_welcome_screen.png" class="img-fluid"></p>
 <p>Select <strong>I’m setting up Rapid-QC-MS on a new instrument.</strong> Then, you will be prompted to give your instrument a unique name (at least 4 characters) and select your instrument’s vendor.</p>
 <p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/02_create_instrument_screen.png" class="img-fluid"></p>
@@ -271,7 +271,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="b.-select-the-chromatography-and-polarity-to-modify" class="level3">
 <h3 class="anchored" data-anchor-id="b.-select-the-chromatography-and-polarity-to-modify">3b. Select the chromatography and polarity to modify</h3>
-<p>Internal standards must be configured for both positive and negative mode for each chromatography method.</p>
+<p>Internal standards are configured separately in positive and negative mode within each chromatography method.</p>
 <p>Let’s start by selecting the chromatography method you created, and then selecting <strong>Positive Mode</strong> for the polarity.</p>
 <blockquote class="blockquote">
 <p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Quickstart/zoomed_select_posneg.png" class="img-fluid"></p>
@@ -280,13 +280,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="c.-add-an-internal-standard-library" class="level3">
 <h3 class="anchored" data-anchor-id="c.-add-an-internal-standard-library">3c. Add an internal standard library</h3>
 <p>Now, we can specify our internal standard library. Rapid-QC-MS accepts identification libraries in either MSP or CSV format.</p>
-<p>It is important to note that MS-DIAL can only perform MS2 spectral matching using MSP libraries. If you use a CSV library, identification will be performed via m/z and RT matches.</p>
+<p>It is important to note that MS-DIAL can only perform MS2 spectral matching using MSP libraries. If you use a CSV library, identification will be performed via <em>m/z</em> and RT matches.</p>
 <p>Here is an example internal standard library in CSV format:</p>
 <table class="table">
 <thead>
 <tr class="header">
 <th>Common Name</th>
-<th>MS1 m/z</th>
+<th>MS1 <em>m/z</em></th>
 <th>RT (min)</th>
 </tr>
 </thead>
@@ -356,14 +356,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>That’s it! Now, you can select Negative Mode from the polarity dropdown and add your negative mode internal standards.</p>
 </section>
 </section>
-<section id="configure-qc-parameters" class="level2">
-<h2 class="anchored" data-anchor-id="configure-qc-parameters">4. Configure QC parameters</h2>
-<p>Once you have configured your chromatography methods, you can then navigate to <strong>Settings &gt; QC Configurations</strong> to define your QC criteria. Briefly, these are:</p>
+<section id="configure-is-parameters" class="level2">
+<h2 class="anchored" data-anchor-id="configure-is-parameters">4. Configure IS parameters</h2>
+<p>Once you have configured your chromatography methods, you can then navigate to <strong>Settings &gt; IS Configurations</strong> to define your QC criteria. Briefly, these are:</p>
 <ol type="1">
 <li><strong>Intensity dropouts cutoff:</strong> the minimum number of missing internal standards in a sample to constitute a QC fail</li>
 <li><strong>RT shift from library value cutoff:</strong> the minimum retention time shift from the expected library value to constitute a QC fail</li>
 <li><strong>RT shift from in-run average cutoff:</strong> the minimum retention time shift from the average RT during the course of the run to constitute a QC fail</li>
-<li><strong>m/z shift from library value cutoff:</strong> the minimum m/z shift from the expected library value to constitute a QC fail</li>
+<li><strong><em>m/z</em> shift from library value cutoff:</strong> the minimum <em>m/z</em> shift from the expected library value to constitute a QC fail</li>
 </ol>
 <p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Quickstart/is_config_default.png" class="img-fluid"></p>
 <p>Rapid-QC-MS stores individual parameters in configurations, so that you can configure a specific configuration to fit each chromatography method.</p>
@@ -382,9 +382,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="setup-a-new-qc-job">6. Setup a new QC job</h2>
 <p>Setting up a new QC job was designed to be as fast and easy as possible. To get Rapid-QC-MS monitoring an active instrument run (or processing a completed batch), the user simply needs to enter a few fields of information:</p>
 <ol type="1">
-<li>Instrument run ID (the name of the job)</li>
+<li>Job ID (the unique name of this analysis)</li>
 <li>Chromatography method</li>
-<li>Preferred QC configuration</li>
+<li>Rapid-QC-MS configuration (select the IS configuration you desire)</li>
 <li>Acquisition sequence file</li>
 <li>Data acquisition path (easiest to copy/paste this)</li>
 </ol>
