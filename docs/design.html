@@ -186,12 +186,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </ul></li>
   <li><a href="#processing-workflow" id="toc-processing-workflow" class="nav-link" data-scroll-target="#processing-workflow">Processing workflow</a>
   <ul class="collapse">
-  <li><a href="#ms-autoqc-starts-listening-to-the-data-acquisition-path" id="toc-ms-autoqc-starts-listening-to-the-data-acquisition-path" class="nav-link" data-scroll-target="#ms-autoqc-starts-listening-to-the-data-acquisition-path">1. MS-AutoQC starts listening to the data acquisition path</a></li>
-  <li><a href="#ms-autoqc-compares-checksums" id="toc-ms-autoqc-compares-checksums" class="nav-link" data-scroll-target="#ms-autoqc-compares-checksums">2. MS-AutoQC compares checksums</a></li>
+  <li><a href="#rapid-qc-ms-starts-listening-to-the-data-acquisition-path" id="toc-rapid-qc-ms-starts-listening-to-the-data-acquisition-path" class="nav-link" data-scroll-target="#rapid-qc-ms-starts-listening-to-the-data-acquisition-path">1. Rapid-QC-MS starts listening to the data acquisition path</a></li>
+  <li><a href="#rapid-qc-ms-compares-checksums" id="toc-rapid-qc-ms-compares-checksums" class="nav-link" data-scroll-target="#rapid-qc-ms-compares-checksums">2. Rapid-QC-MS compares checksums</a></li>
   <li><a href="#the-processing-pipeline-is-launched" id="toc-the-processing-pipeline-is-launched" class="nav-link" data-scroll-target="#the-processing-pipeline-is-launched">3. The processing pipeline is launched</a></li>
   <li><a href="#msconvert-converts-the-raw-data-to-mzml-format" id="toc-msconvert-converts-the-raw-data-to-mzml-format" class="nav-link" data-scroll-target="#msconvert-converts-the-raw-data-to-mzml-format">4. MSConvert converts the raw data to mzML format</a></li>
   <li><a href="#ms-dial-processes-the-mzml-file" id="toc-ms-dial-processes-the-mzml-file" class="nav-link" data-scroll-target="#ms-dial-processes-the-mzml-file">5. MS-DIAL processes the mzML file</a></li>
-  <li><a href="#ms-autoqc-performs-quality-control-checks" id="toc-ms-autoqc-performs-quality-control-checks" class="nav-link" data-scroll-target="#ms-autoqc-performs-quality-control-checks">6. MS-AutoQC performs quality control checks</a></li>
+  <li><a href="#rapid-qc-ms-performs-quality-control-checks" id="toc-rapid-qc-ms-performs-quality-control-checks" class="nav-link" data-scroll-target="#rapid-qc-ms-performs-quality-control-checks">6. Rapid-QC-MS performs quality control checks</a></li>
   <li><a href="#the-user-is-notified-of-qc-fails-and-warnings" id="toc-the-user-is-notified-of-qc-fails-and-warnings" class="nav-link" data-scroll-target="#the-user-is-notified-of-qc-fails-and-warnings">7. The user is notified of QC fails and warnings</a></li>
   <li><a href="#the-dashboard-is-refreshed-with-qc-results" id="toc-the-dashboard-is-refreshed-with-qc-results" class="nav-link" data-scroll-target="#the-dashboard-is-refreshed-with-qc-results">8. The dashboard is refreshed with QC results</a></li>
   </ul></li>
@@ -218,12 +218,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 </header>
 
-<p>This section details the backend data infrastructure and data processing pipeline packaged into MS-AutoQC, as well as some of the structure and logic of the Dash callbacks that serve the frontend app interface.</p>
-<p>If you have any questions, concerns, or suggestions about the design of MS-AutoQC, please don’t hesitate to <a href="mailto:brian.defelice@czbiohub.org">contact us</a>!</p>
+<p>This section details the backend data infrastructure and data processing pipeline packaged into Rapid-QC-MS, as well as some of the structure and logic of the Dash callbacks that serve the frontend app interface.</p>
+<p>If you have any questions, concerns, or suggestions about the design of Rapid-QC-MS, please don’t hesitate to <a href="mailto:brian.defelice@czbiohub.org">contact us</a>!</p>
 <section id="design-pattern" class="level1">
 <h1>Design pattern</h1>
-<p>MS-AutoQC was designed with flexibility and scalability in mind. The project follows the MVC (Model-View-Controller) design pattern. The separation of concerns allows multiple developers to manage and make changes to the frontend and backend easily.</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/209756420-b65f8002-5b11-4b87-85da-99d576e96214.png" class="img-fluid"></p>
+<p>Rapid-QC-MS was designed with flexibility and scalability in mind. The project follows the MVC (Model-View-Controller) design pattern. The separation of concerns allows multiple developers to manage and make changes to the frontend and backend easily.</p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/systemdesign/designpattern.png" class="img-fluid"></p>
 <section id="frontend" class="level3">
 <h3 class="anchored" data-anchor-id="frontend">Frontend</h3>
 <p>The frontend consists of a Dash app, which launches on startup and can be used from the browser. <a href="https://plotly.com/dash/">Dash</a> is a powerful, open-source Python framework (built atop React, Plotly, and Flask) for building web applications.</p>
@@ -233,14 +233,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h3 class="anchored" data-anchor-id="backend">Backend</h3>
 <p>The backend is organized into five different files:</p>
 <ol type="1">
-<li><strong><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AcquisitionListener.py">AcquisitionListener</a></strong> defines classes and functions for monitoring data acquisition paths and processing data files.</li>
-<li><strong><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py">DatabaseFunctions</a></strong> provides highly-abstracted API for reading from and writing to databases.</li>
-<li><strong><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py">AutoQCProcessing</a></strong> is a modular pipeline for processing data files, performing QC checks, and writing QC results to the database.</li>
-<li><strong><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/SlackNotifications.py">SlackNotifications</a></strong> defines functions for controlling the Slack bot.</li>
-<li><strong><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/PlotGeneration.py">PlotGeneration</a></strong> parses QC results from the database into the browser cache to generate Plotly graphs.</li>
+<li><strong><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/AcquisitionListener.py">AcquisitionListener</a></strong> defines classes and functions for monitoring data acquisition paths and processing data files.</li>
+<li><strong><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/DatabaseFunctions.py">DatabaseFunctions</a></strong> provides highly-abstracted API for reading from and writing to databases.</li>
+<li><strong><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/AutoQCProcessing.py">AutoQCProcessing</a></strong> is a modular pipeline for processing data files, performing QC checks, and writing QC results to the database.</li>
+<li><strong><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/SlackNotifications.py">SlackNotifications</a></strong> defines functions for controlling the Slack bot.</li>
+<li><strong><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/PlotGeneration.py">PlotGeneration</a></strong> parses QC results from the database into the browser cache to generate Plotly graphs.</li>
 </ol>
 <p>The complete project structure is as follows:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>MS<span class="op">-</span>AutoQC<span class="op">/</span></span>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>Rapid<span class="op">-</span>QC<span class="op">-</span>MS<span class="op">/</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>│</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>├── src<span class="op">/</span></span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>│   └── ms_autoqc<span class="op">/</span></span>
@@ -279,39 +279,39 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>The instrument database(s)</li>
 <li>The settings database</li>
 </ol>
-<p>An <strong>MS-AutoQC workspace</strong> is comprised of the <strong>instrument databases</strong> and <strong>methods directory</strong> (which stores MSP/TXT libraries, MS-DIAL parameter files, and the settings database).</p>
+<p>An <strong>Rapid-QC-MS workspace</strong> is comprised of the <strong>instrument databases</strong> and <strong>methods directory</strong> (which stores MSP/TXT libraries, MS-DIAL parameter files, and the settings database).</p>
 <p>A diagram of the each database’s schema is shown below.</p>
 <section id="instrument-database" class="level3">
 <h3 class="anchored" data-anchor-id="instrument-database">Instrument database</h3>
-<p><img src="https://user-images.githubusercontent.com/7220175/214639898-4f0378c3-f280-49ee-a5fd-784bb14c300e.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/systemdesign/instrument_database.png" class="img-fluid"></p>
 </section>
 <section id="settings-database" class="level3">
 <h3 class="anchored" data-anchor-id="settings-database">Settings database</h3>
-<p><img src="https://user-images.githubusercontent.com/7220175/214639903-6dce09a2-2d06-49fa-8d6b-6a1fd1b9bbb4.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/systemdesign/settings_database.png" class="img-fluid"></p>
 </section>
 </section>
 <section id="processing-workflow" class="level1">
 <h1>Processing workflow</h1>
-<p>The diagram below gives a broad overview of how MS-AutoQC listens to instrument runs and processes your data safely and securely. To summarize:</p>
+<p>The diagram below gives a broad overview of how Rapid-QC-MS listens to instrument runs and processes your data safely and securely. To summarize:</p>
 <ol type="1">
 <li>The user prepares their run sequence and starts an instrument run</li>
-<li>The user gives MS-AutoQC the sequence file and the data acquisition path</li>
+<li>The user gives Rapid-QC-MS the sequence file and the data acquisition path</li>
 </ol>
-<p><strong>At this point, the user’s work is done.</strong> They can start monitoring their instrument run from the MS-AutoQC dashboard. Now, the MS-AutoQC workflow is initialized.</p>
+<p><strong>At this point, the user’s work is done.</strong> They can start monitoring their instrument run from the Rapid-QC-MS dashboard. Now, the Rapid-QC-MS workflow is initialized.</p>
 <ol type="1">
-<li>MS-AutoQC starts “listening” to the data acquisition path</li>
-<li>When the instrument starts collecting sample data, MS-AutoQC starts comparing checksums</li>
+<li>Rapid-QC-MS starts “listening” to the data acquisition path</li>
+<li>When the instrument starts collecting sample data, Rapid-QC-MS starts comparing checksums</li>
 <li>Once the sample data has been acquired, the processing pipeline is launched</li>
 <li>MSConvert converts a copy of the raw data file from closed vendor format to open mzML format</li>
 <li>MS-DIAL processes the mzML file and quantifies internal standards</li>
-<li>MS-AutoQC performs quality control checks (based on user-defined criteria)</li>
+<li>Rapid-QC-MS performs quality control checks (based on user-defined criteria)</li>
 <li>If there are any QC fails or warnings, the user is notified (if user opted in for notifications)</li>
-<li>QC results are written to the local database and trigger an update to the MS-AutoQC dashboard</li>
+<li>QC results are written to the local database and trigger an update to the Rapid-QC-MS dashboard</li>
 </ol>
-<p><img src="https://user-images.githubusercontent.com/7220175/201808870-ee51397e-c101-4647-9098-5f43acf5e944.png" class="img-fluid"></p>
-<p>The following sections discuss the MS-AutoQC workflow in detail.</p>
-<section id="ms-autoqc-starts-listening-to-the-data-acquisition-path" class="level3">
-<h3 class="anchored" data-anchor-id="ms-autoqc-starts-listening-to-the-data-acquisition-path">1. MS-AutoQC starts listening to the data acquisition path</h3>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/systemdesign/rapid-qc-ms_flowchart.png" class="img-fluid"></p>
+<p>The following sections discuss the Rapid-QC-MS workflow in detail.</p>
+<section id="rapid-qc-ms-starts-listening-to-the-data-acquisition-path" class="level3">
+<h3 class="anchored" data-anchor-id="rapid-qc-ms-starts-listening-to-the-data-acquisition-path">1. Rapid-QC-MS starts listening to the data acquisition path</h3>
 <p>To initialize the workflow, several functions are executed:</p>
 <ul>
 <li>The instrument run is written to the database</li>
@@ -370,14 +370,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <p><strong>Jump to relevant functions:</strong></p>
 <ul>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DashWebApp.py#:~:text=new_autoqc_job_setup"><code>new_autoqc_job_setup()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,get_msp_file_path"><code>db.get_msp_file_path()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=generate_msdial_parameters_file"><code>db.generate_msdial_parameters_file()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,get_filenames_from_sequence"><code>db.get_filenames_from_sequence()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/DashWebApp.py#:~:text=new_autoqc_job_setup"><code>new_autoqc_job_setup()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/DatabaseFunctions.py#:~:text=def-,get_msp_file_path"><code>db.get_msp_file_path()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/DatabaseFunctions.py#:~:text=generate_msdial_parameters_file"><code>db.generate_msdial_parameters_file()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/DatabaseFunctions.py#:~:text=def-,get_filenames_from_sequence"><code>db.get_filenames_from_sequence()</code></a></li>
 </ul>
 </section>
-<section id="ms-autoqc-compares-checksums" class="level3">
-<h3 class="anchored" data-anchor-id="ms-autoqc-compares-checksums">2. MS-AutoQC compares checksums</h3>
+<section id="rapid-qc-ms-compares-checksums" class="level3">
+<h3 class="anchored" data-anchor-id="rapid-qc-ms-compares-checksums">2. Rapid-QC-MS compares checksums</h3>
 <p>Once the acquisition listener has been called, it waits for a file to be created in the data acquisition path.</p>
 <p>Upon file creation, <code>watch_file()</code> is called. It writes an initial MD5 checksum<sup>1</sup> of the file to the database, and then initializes an indefinite loop.</p>
 <p><strong><code>DataAcquisitionEventHandler</code> class in <code>AcquisitionListener.py</code>:</strong></p>
@@ -413,7 +413,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    </span>
 <span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">True</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>The loop waits 3 minutes, then computes the file’s MD5 checksum again. If the checksums match, MS-AutoQC then checks whether the next sample has begun acquiring (unless, of course, it is the last sample in the sequence).</p>
+<p>The loop waits 3 minutes, then computes the file’s MD5 checksum again. If the checksums match, Rapid-QC-MS then checks whether the next sample has begun acquiring (unless, of course, it is the last sample in the sequence).</p>
 <p>If checksums match and the next sample in the sequence has begun acquiring, the loop breaks and <code>qc.process_data_file()</code> is called. If either requirement is not filled, the loop repeats and waits again.</p>
 <p><strong><code>DataAcquisitionEventHandler</code> class in <code>AcquisitionListener.py</code>:</strong></p>
 <div class="code-with-filename">
@@ -445,18 +445,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <p><strong>Jump to relevant functions:</strong></p>
 <ul>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AcquisitionListener.py#:~:text=def-,on_created"><code>on_created()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AcquisitionListener.py#:~:text=def-,watch_file"><code>watch_file()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AcquisitionListener.py#:~:text=def-,get_md5"><code>get_md5()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,get_md5"><code>db.get_md5()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,update_md5_checksum"><code>db.update_md5_checksum()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,process_data_file"><code>qc.process_data_file()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/AcquisitionListener.py#:~:text=def-,on_created"><code>on_created()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/AcquisitionListener.py#:~:text=def-,watch_file"><code>watch_file()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/AcquisitionListener.py#:~:text=def-,get_md5"><code>get_md5()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/DatabaseFunctions.py#:~:text=def-,get_md5"><code>db.get_md5()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/DatabaseFunctions.py#:~:text=def-,update_md5_checksum"><code>db.update_md5_checksum()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/AutoQCProcessing.py#:~:text=def-,process_data_file"><code>qc.process_data_file()</code></a></li>
 </ul>
 <p><sup>1</sup><sub>An MD5 checksum is a 32-character serialized string that represents the contents of a file. If two files have the same MD5 checksum, it is highly likely that they are identical files. Computing this checksum is unlikely to corrupt raw data files, or files of any kind for that matter.</sub></p>
 </section>
 <section id="the-processing-pipeline-is-launched" class="level3">
 <h3 class="anchored" data-anchor-id="the-processing-pipeline-is-launched">3. The processing pipeline is launched</h3>
-<p>The processing pipeline is a wrapper function called <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/AutoQCProcessing.py#L352"><code>qc.process_data_file()</code></a>, which gets executed when the instrument has finished writing to the data file. It is be described in detail in the upcoming steps.</p>
+<p>The processing pipeline is a wrapper function called <a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/AutoQCProcessing.py#L352"><code>qc.process_data_file()</code></a>, which gets executed when the instrument has finished writing to the data file. It is be described in detail in the upcoming steps.</p>
 <p>In preparation, this function retrieves the following information from the database:</p>
 <ul>
 <li>Instrument run ID</li>
@@ -474,24 +474,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>For the purpose of untargeted metabolomics, data is currently processed by calling the MS-DIAL via the command line.</p>
 <p><strong>Jump to relevant functions:</strong></p>
 <ul>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,get_instrument_run"><code>db.get_instrument_run()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,get_samples_in_run"><code>db.get_samples_in_run()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=get_parameter_file_path"><code>db.get_parameter_file_path()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=get_targeted_features"><code>db.get_targeted_features()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=get_internal_standards"><code>db.get_internal_standards()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=get_msdial_directory"><code>db.get_msdial_directory()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,run_msconvert"><code>run_msconvert()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,run_msdial_processing"><code>run_msdial_processing()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,peak_list_to_dataframe"><code>peak_list_to_dataframe()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,qc_sample"><code>qc_sample()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,write_qc_results"><code>db.write_qc_results()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/DatabaseFunctions.py#:~:text=def-,get_instrument_run"><code>db.get_instrument_run()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/DatabaseFunctions.py#:~:text=def-,get_samples_in_run"><code>db.get_samples_in_run()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/DatabaseFunctions.py#:~:text=get_parameter_file_path"><code>db.get_parameter_file_path()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/DatabaseFunctions.py#:~:text=get_targeted_features"><code>db.get_targeted_features()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/DatabaseFunctions.py#:~:text=get_internal_standards"><code>db.get_internal_standards()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/DatabaseFunctions.py#:~:text=get_msdial_directory"><code>db.get_msdial_directory()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/AutoQCProcessing.py#:~:text=def-,run_msconvert"><code>run_msconvert()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/AutoQCProcessing.py#:~:text=def-,run_msdial_processing"><code>run_msdial_processing()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/AutoQCProcessing.py#:~:text=def-,peak_list_to_dataframe"><code>peak_list_to_dataframe()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/AutoQCProcessing.py#:~:text=def-,qc_sample"><code>qc_sample()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/DatabaseFunctions.py#:~:text=def-,write_qc_results"><code>db.write_qc_results()</code></a></li>
 </ul>
 <p><sup>2</sup><sub>As development continues, implementation of other data processing software tools is as straightforward as making a function call to that tool (and storing user parameters, of course).</sub></p>
 </section>
 <section id="msconvert-converts-the-raw-data-to-mzml-format" class="level3">
 <h3 class="anchored" data-anchor-id="msconvert-converts-the-raw-data-to-mzml-format">4. MSConvert converts the raw data to mzML format</h3>
-<p>To ensure that the raw data remains untouched (and therefore uncorrupted) by MS-AutoQC, it is copied<sup>3</sup> to a local app directory, <code>MS-AutoQC/data</code>.</p>
-<p><a href="https://hub.docker.com/r/chambm/pwiz-skyline-i-agree-to-the-vendor-licenses">MSConvert</a> is then called via the command line. After a few seconds, the mzML file will be saved to <code>MS-AutoQC/data</code>.</p>
+<p>To ensure that the raw data remains untouched (and therefore uncorrupted) by Rapid-QC-MS, it is copied<sup>3</sup> to a local app directory, <code>Rapid-QC-MS/data</code>.</p>
+<p><a href="https://hub.docker.com/r/chambm/pwiz-skyline-i-agree-to-the-vendor-licenses">MSConvert</a> is then called via the command line. After a few seconds, the mzML file will be saved to <code>Rapid-QC-MS/data</code>.</p>
 <p>To prevent unnecessary storage, the copy of the original raw data file is deleted.</p>
 <div class="code-with-filename">
 <div class="code-with-filename-file">
@@ -543,7 +543,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Return mzML file path to indicate success</span></span>
 <span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> output_folder <span class="op">+</span> filename <span class="op">+</span> <span class="st">".mzml"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p><strong>Jump to relevant functions:</strong> - <a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,run_msconvert"><code>run_msconvert()</code></a></p>
+<p><strong>Jump to relevant functions:</strong> - <a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/AutoQCProcessing.py#:~:text=def-,run_msconvert"><code>run_msconvert()</code></a></p>
 <p><sup>3</sup><sub>Copying is performed using the native Python function <a href="https://docs.python.org/3/library/shutil.html#shutil.copy2"><code>shutil.copy2()</code></a>, and is unlikely to corrupt the raw data file, or files of any kind.</sub></p>
 </section>
 <section id="ms-dial-processes-the-mzml-file" class="level3">
@@ -585,8 +585,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> output_folder <span class="op">+</span> <span class="st">"/"</span> <span class="op">+</span> filename.split(<span class="st">"."</span>)[<span class="dv">0</span>] <span class="op">+</span> <span class="st">".msdial"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="ms-autoqc-performs-quality-control-checks" class="level3">
-<h3 class="anchored" data-anchor-id="ms-autoqc-performs-quality-control-checks">6. MS-AutoQC performs quality control checks</h3>
+<section id="rapid-qc-ms-performs-quality-control-checks" class="level3">
+<h3 class="anchored" data-anchor-id="rapid-qc-ms-performs-quality-control-checks">6. Rapid-QC-MS performs quality control checks</h3>
 <p>The .msdial file is then routed to the <code>peak_list_to_dataframe()</code> function, which searches for internal standards (or targeted features for a biological standard sample) before returning the peak list as a pandas DataFrame for further processing.</p>
 <div class="code-with-filename">
 <div class="code-with-filename-file">
@@ -617,7 +617,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Return DataFrame</span></span>
 <span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> df_peak_list</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>This DataFrame is passed to the <code>qc_sample()</code> function, which performs user-enabled QC checks based on user-defined criteria in Settings &gt; QC Configurations. For MS-AutoQC v1.0, there are four checks performed:</p>
+<p>This DataFrame is passed to the <code>qc_sample()</code> function, which performs user-enabled QC checks based on user-defined criteria in Settings &gt; QC Configurations. For Rapid-QC-MS v1.0, there are four checks performed:</p>
 <ol type="1">
 <li><strong>Intensity dropouts cutoff:</strong> the minimum number of missing internal standards in a sample to constitute a QC fail</li>
 <li><strong>RT shift from library value cutoff:</strong> the minimum retention time shift from the expected library value to constitute a QC fail</li>
@@ -664,9 +664,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <p><strong>Jump to relevant functions:</strong></p>
 <ul>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,peak_list_to_dataframe"><code>peak_list_to_dataframe()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/AutoQCProcessing.py#:~:text=def-,qc_sample"><code>qc_sample()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def-,write_qc_results"><code>db.write_qc_results()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/AutoQCProcessing.py#:~:text=def-,peak_list_to_dataframe"><code>peak_list_to_dataframe()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/AutoQCProcessing.py#:~:text=def-,qc_sample"><code>qc_sample()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/DatabaseFunctions.py#:~:text=def-,write_qc_results"><code>db.write_qc_results()</code></a></li>
 </ul>
 </section>
 <section id="the-user-is-notified-of-qc-fails-and-warnings" class="level3">
@@ -689,8 +689,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Currently, this is the simplest component of the pipeline, but posesses a large potential to transform analytical workflows. Future updates will bring more intelligent and informative messages, detailing what went wrong and which component of the LC-MS system may be causing the issue.</p>
 <p><strong>Jump to relevant functions:</strong></p>
 <ul>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/b43ae82a777a7ad8a33d1664a099ab4fd02c7234/src/ms_autoqc/DatabaseFunctions.py#L448:~:text=slack_notifications_are_enabled"><code>db.slack_notifications_are_enabled()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/b43ae82a777a7ad8a33d1664a099ab4fd02c7234/src/ms_autoqc/SlackNotifications.py#L6:~:text=def-,send_message"><code>slack_bot.send_message()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/b43ae82a777a7ad8a33d1664a099ab4fd02c7234/src/rapidqcms/DatabaseFunctions.py#L448:~:text=slack_notifications_are_enabled"><code>db.slack_notifications_are_enabled()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/b43ae82a777a7ad8a33d1664a099ab4fd02c7234/src/rapidqcms/SlackNotifications.py#L6:~:text=def-,send_message"><code>slack_bot.send_message()</code></a></li>
 </ul>
 </section>
 <section id="the-dashboard-is-refreshed-with-qc-results" class="level3">
@@ -768,9 +768,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>When a change in the database is detected (via comparing sample counters), all plots in the dashboard are re-populated. The callback continues to check for updates until the end of the instrument run, effectively updating itself in realtime.</p>
 <p><strong>Jump to relevant functions:</strong></p>
 <ul>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#L821:~:text=update_sample_counters_for_run"><code>update_sample_counters_for_run()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DatabaseFunctions.py#:~:text=def%20get_completed_samples_count"><code>get_completed_samples_count()</code></a></li>
-<li><a href="https://github.com/czbiohub/MS-AutoQC/blob/main/src/ms_autoqc/DashWebApp.py#:~:text=def%20load_data"><code>load_data()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/DatabaseFunctions.py#L821:~:text=update_sample_counters_for_run"><code>update_sample_counters_for_run()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/DatabaseFunctions.py#:~:text=def%20get_completed_samples_count"><code>get_completed_samples_count()</code></a></li>
+<li><a href="https://github.com/czbiohub-sf/Rapid-QC-MS/blob/main/src/rapidqcms/DashWebApp.py#:~:text=def%20load_data"><code>load_data()</code></a></li>
 </ul>
 
 

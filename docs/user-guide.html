@@ -176,7 +176,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul>
   <li><a href="#workspace-configuration-1" id="toc-workspace-configuration-1" class="nav-link active" data-scroll-target="#workspace-configuration-1">Workspace configuration</a>
   <ul class="collapse">
-  <li><a href="#incorporating-metadata-for-samples" id="toc-incorporating-metadata-for-samples" class="nav-link" data-scroll-target="#incorporating-metadata-for-samples">Incorporating metadata for samples</a></li>
+  <li><a href="#incorporating-metadata-for-specimens" id="toc-incorporating-metadata-for-specimens" class="nav-link" data-scroll-target="#incorporating-metadata-for-specimens">Incorporating metadata for Specimens</a></li>
   <li><a href="#setting-up-chromatography-methods" id="toc-setting-up-chromatography-methods" class="nav-link" data-scroll-target="#setting-up-chromatography-methods">Setting up chromatography methods</a>
   <ul class="collapse">
   <li><a href="#a.-add-a-chromatography-method" id="toc-a.-add-a-chromatography-method" class="nav-link" data-scroll-target="#a.-add-a-chromatography-method">3a. Add a chromatography method</a></li>
@@ -236,7 +236,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="workspace-configuration" class="level4">
 <h4 class="anchored" data-anchor-id="workspace-configuration">Workspace configuration</h4>
 <ul>
-<li><a href="#incorporating-metadata-for-samples">Incorporating metadata for samples</a></li>
+<li><a href="#incorporating-metadata-for-Specimens">Incorporating metadata for Specimens</a></li>
 <li><a href="#setting-up-chromatography-methods">Setting up chromatography methods</a></li>
 <li><a href="#setting-up-biological-standards">Setting up biological standards</a></li>
 <li><a href="#configuring-qc-parameters">Configuring QC parameters</a></li>
@@ -247,11 +247,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h4 class="anchored" data-anchor-id="dashboard-usage">Dashboard usage</h4>
 <ul>
 <li><a href="./overview.html#new-qc-job-setup">Setting up new QC jobs</a></li>
-<li><a href="./overview.html#retention-time-across-samples">Retention time across samples plot</a></li>
-<li><a href="./overview.html#intensity-across-samples">Intensity across samples plot</a></li>
-<li><a href="./overview.html#delta-mz-across-samples">Delta m/z across samples plot</a></li>
-<li><a href="./overview.html#system-suitability-benchmarks">Targeted feature m/z across RT plot</a></li>
-<li><a href="./overview.html#system-suitability-benchmarks">Targeted feature intensity across instrument runs plot</a></li>
+<li><a href="./overview.html#retention-time-across-specimens">Retention time across Specimens plot</a></li>
+<li><a href="./overview.html#intensity-across-specimens">Intensity across Specimens plot</a></li>
+<li><a href="./overview.html#delta-mz-across-specimens">Delta m/z across Specimens plot</a></li>
+<li><a href="./overview.html#biological-standards">Targeted feature m/z across RT plot</a></li>
 </ul>
 </section>
 <section id="google-drive-sync" class="level4">
@@ -272,13 +271,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="workspace-configuration-1" class="level1">
 <h1>Workspace configuration</h1>
-<section id="incorporating-metadata-for-samples" class="level2">
-<h2 class="anchored" data-anchor-id="incorporating-metadata-for-samples">Incorporating metadata for samples</h2>
-<p>To map metadata to samples, you can create a metadata table in CSV format and fill the following columns (where applicable):</p>
+<section id="incorporating-metadata-for-specimens" class="level2">
+<h2 class="anchored" data-anchor-id="incorporating-metadata-for-specimens">Incorporating metadata for Specimens</h2>
+<p>To map metadata to Specimens, you can create a metadata table in CSV format and fill the following columns (where applicable):</p>
 <ul>
 <li>Filename</li>
 <li>Name from collaborator</li>
-<li>Sample Name</li>
+<li>Specimen Name</li>
 <li>Species</li>
 <li>Matrix</li>
 <li>Growth-Harvest Conditions</li>
@@ -300,7 +299,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="header">
 <th>Filename</th>
 <th>Name from collaborator</th>
-<th>Sample Name</th>
+<th>Specimen Name</th>
 <th>Species</th>
 <th>Matrix</th>
 <th>Growth-Harvest Conditions</th>
@@ -310,7 +309,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td>Sample_001</td>
+<td>Specimen_001</td>
 <td>A_1</td>
 <td>EMGO001_A_1</td>
 <td>Human HEK293T</td>
@@ -320,7 +319,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td></td>
 </tr>
 <tr class="even">
-<td>Sample_002</td>
+<td>Specimen_002</td>
 <td>A_2</td>
 <td>EMGO001_A_2</td>
 <td>Human HEK293T</td>
@@ -330,7 +329,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td></td>
 </tr>
 <tr class="odd">
-<td>Sample_003</td>
+<td>Specimen_003</td>
 <td>A_3</td>
 <td>EMGO001_A_3</td>
 <td>Human HEK293T</td>
@@ -341,8 +340,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 </tbody>
 </table>
-<p>Including a metadata table in a QC job allows metadata to be viewed in sample information cards. It also allows the intensity across samples plot to be filtered by treatments.</p>
-<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Overview/sample_card.png" class="img-fluid"></p>
+<p>Including a metadata table in a QC job allows metadata to be viewed in Specimen information cards. It also allows the intensity across Specimens plot to be filtered by treatments.</p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Overview/specimen_card.png" class="img-fluid"></p>
 </section>
 <section id="setting-up-chromatography-methods" class="level2">
 <h2 class="anchored" data-anchor-id="setting-up-chromatography-methods">Setting up chromatography methods</h2>
@@ -448,7 +447,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="setting-up-biological-standards" class="level2">
 <h2 class="anchored" data-anchor-id="setting-up-biological-standards">Setting up biological standards</h2>
-<p>Biological standards are used to benchmark instrument performance based on the intensity of targeted features in the biological standard samples.</p>
+<p>Biological standards are used to benchmark instrument performance based on the intensity of targeted features in the biological standard Specimens.</p>
 <p>You can configure Rapid-QC-MS to detect and process biological standards accordingly using the following guide:</p>
 <ol type="1">
 <li>Navigate to <strong>Settings &gt; Chromatography Methods</strong>.</li>
@@ -456,7 +455,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><strong>Select the chromatography method to edit:</strong> you can add libraries for different chromatography methods and polarities.</li>
 <li><strong>Add an MSP library:</strong> this MSP library will be used for the biological standard / chromatography combination you select.</li>
 </ol>
-<p>The <strong>sequence identifier</strong> is simply the text string that identifies biological standards in your acquisition sequences. For example, if “bac_sup” is the identifier for a biological standard, then any sample with “bac_sup” in its filename will be processed as a biological standard.</p>
+<p>The <strong>sequence identifier</strong> is simply the text string that identifies biological standards in your acquisition sequences. For example, if “bac_sup” is the identifier for a biological standard, then any Specimen with “bac_sup” in its filename will be processed as a biological standard.</p>
 <blockquote class="blockquote">
 <p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Overview/settings_bio_stnds.png" class="img-fluid"></p>
 </blockquote>
@@ -486,7 +485,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="configuring-qc-parameters">Configuring QC parameters</h2>
 <p>Navigate to <strong>Settings &gt; QC Configurations</strong> to define your QC criteria. Briefly, these are:</p>
 <ol type="1">
-<li><strong>Intensity dropouts cutoff:</strong> the minimum number of missing internal standards in a sample to constitute a QC fail</li>
+<li><strong>Intensity dropouts cutoff:</strong> the minimum number of missing internal standards in a Specimen to constitute a QC fail</li>
 <li><strong>RT shift from library value cutoff:</strong> the minimum retention time shift from the expected library value to constitute a QC fail</li>
 <li><strong>RT shift from in-run average cutoff:</strong> the minimum retention time shift from the average RT during the course of the run to constitute a QC fail</li>
 <li><strong>m/z shift from library value cutoff:</strong> the minimum m/z shift from the expected library value to constitute a QC fail</li>
@@ -501,7 +500,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="configuring-ms-dial-processing-parameters" class="level2">
 <h2 class="anchored" data-anchor-id="configuring-ms-dial-processing-parameters">Configuring MS-DIAL processing parameters</h2>
-<p><a href="http://prime.psc.riken.jp/compms/msdial/main.html">MS-DIAL</a> is the processing software used to quantify internal standards in samples and targeted features in biological standards.</p>
+<p><a href="http://prime.psc.riken.jp/compms/msdial/main.html">MS-DIAL</a> is the processing software used to quantify internal standards in Specimens and targeted features in biological standards.</p>
 <p>Rapid-QC-MS stores a set of MS-DIAL parameters in <strong>configurations</strong>, so that you can configure a specific configuration to fit each chromatography method. Every installation comes preloaded with a “Default” configuration containing recommended parameters.</p>
 <blockquote class="blockquote">
 <p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Overview/settings_msdial.png" class="img-fluid"></p>
@@ -548,11 +547,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/google_newproject.png" class="img-fluid"></p>
 </blockquote>
 <p>Choose <strong>Create or select a project</strong>, then click <strong>New Project</strong>.</p>
-<p>Name the project whatever you like, ideally something you’ll recogize, and click <strong>Create</strong>. If your google account belongs to an organization, this screen might look a little different but should function the same.</p>
+<p>Name the project whatever you like, ideally something partly unique that you’ll recognize, and click <strong>Create</strong>. If you don’t see the Organization field, your account doesn’t belong to a google workspace. Without a workspace, the only option is to create an external app which does not work for our use case.</p>
 <blockquote class="blockquote">
 <p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/google_nameandcreate.png" class="img-fluid"></p>
 </blockquote>
-<p>From the sidebar, navigate to <strong>Enabled APIs and services</strong> and click <strong>Enable APIs and Services</strong>.</p>
+<p>Then select your newly created project from the dropdown in the upper left</p>
+<blockquote class="blockquote">
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/google_selectproject.png" class="img-fluid"></p>
+</blockquote>
+<p>Now, from the sidebar, navigate to <strong>Enabled APIs and services</strong> and click <strong>Enable APIs and Services</strong>.</p>
 <p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/google_apis_and_services.png" class="img-fluid"></p>
 <blockquote class="blockquote">
 <p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/google_click_enable.png" class="img-fluid"></p>
@@ -565,33 +568,34 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="configure-the-oauth-consent-screen" class="level3">
 <h3 class="anchored" data-anchor-id="configure-the-oauth-consent-screen">2. Configure the OAuth consent screen</h3>
 <p>From the sidebar, navigate to <strong><a href="https://console.cloud.google.com/apis/credentials/consent">APIs &amp; Services &gt; OAuth consent screen</a></strong>.</p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/google_click_enable.png" class="img-fluid"></p>
 <p>For user type, choose <strong>Internal</strong> and click <strong>Create</strong>. Fill in the following:</p>
 <ul>
-<li>App name: Rapid-QC-MS</li>
-<li>User support email: [email]</li>
-<li>Developer contact information: [email]</li>
+<li>App name: Something unique to you or your organization + RapidQCMS</li>
+<li>User support email: [youremail]</li>
+<li>Developer contact information (at the bottom): [youremail]</li>
 </ul>
-<p>Once you’re done, click <strong>Save and Continue.</strong></p>
+<p>Once you’re done, click <strong>Save and Continue</strong> at the bottom.</p>
 <p>On the next screen, select <strong>Add or Remove Scopes</strong>. Scroll down to the <strong>Manually add scopes</strong> section and paste in the following:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>https:<span class="op">//</span>www.googleapis.com<span class="op">/</span>auth<span class="op">/</span>drive</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>https:<span class="op">//</span>www.googleapis.com<span class="op">/</span>auth<span class="op">/</span>gmail.send</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>https:<span class="op">//</span>www.googleapis.com<span class="op">/</span>auth<span class="op">/</span>userinfo.email</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <blockquote class="blockquote">
-<p><img src="https://user-images.githubusercontent.com/7220175/217109624-c9e48c72-5175-44df-90a9-2a2ce3aefa66.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/google_add_scopes.png" class="img-fluid"></p>
 </blockquote>
-<p>Click <strong>Add to Table</strong>. Then click <strong>Update</strong>. Then click <strong>Save and Continue</strong>.</p>
+<p>Click <strong>Add to Table</strong>. Then click <strong>Update</strong>. Then click <strong>Save and Continue</strong> at the bottom on the left.</p>
 </section>
 <section id="generate-the-oauth-client-id" class="level3">
 <h3 class="anchored" data-anchor-id="generate-the-oauth-client-id">3. Generate the OAuth Client ID</h3>
 <p>From the sidebar, navigate to <strong><a href="https://console.cloud.google.com/apis/credentials">APIs &amp; Services &gt; Credentials</a></strong>.</p>
 <p>Click the <strong>Create Credentials</strong> button and select <strong>OAuth client ID</strong>.</p>
 <blockquote class="blockquote">
-<p><img src="https://user-images.githubusercontent.com/7220175/217107214-e1e950c1-7131-4c95-ae07-e3d06e0cbae8.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/google_create_credentials.png" class="img-fluid"></p>
 </blockquote>
-<p>For application type, choose <strong>Desktop application</strong>. Name the application <strong>Rapid-QC-MS</strong>.</p>
+<p>For application type, choose <strong>Desktop application</strong> and enter a name, this won’t show up except in logs so some combination of a unique name + desktop + RapidQCMS is fine (e.g.&nbsp;IraDesktopRapidQCMS).</p>
 <p>Once you’re done, click <strong>Create</strong>. A dialog window will appear, providing your client ID and client secret.</p>
 <blockquote class="blockquote">
-<p><img src="https://user-images.githubusercontent.com/7220175/217111496-32c84253-6abb-4178-a108-20f2a84ef387.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/google_client_created.png" class="img-fluid"></p>
 </blockquote>
 <p>That’s it – you’re all set! Copy these and save them somewhere accessible. If you’re here from the Quickstart guide, <a href="./quickstart.html#optional-sync-with-google-drive">click here</a> to head back and use these credentials to <strong>set up</strong> or <strong>sign in</strong> to your workspace.</p>
 </section>
@@ -609,7 +613,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>Once you’re done, Rapid-QC-MS will alert you that your workspace was found</li>
 <li>Click <strong>Complete setup</strong> and you’re all set!</li>
 </ol>
-<p><img src="https://user-images.githubusercontent.com/7220175/221498964-de960a23-ee82-4ee0-942b-f026d790d153.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/rapidqcms_welcome_screen.png" class="img-fluid"></p>
 <p><strong>Important:</strong> Currently, it is not possible to add an instrument to an existing workspace after setup. If you want to add your instrument to an existing workspace, it must be done during setup immediately after a fresh install.</p>
 </section>
 <section id="granting-revoking-workspace-access" class="level2">
@@ -617,7 +621,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>You can grant and revoke access to your Rapid-QC-MS workspace from <strong>Settings &gt; General</strong>.</p>
 <p>Under <strong>Manage workspace access,</strong> add the email addresses for Google accounts you’d like to share your workspace with.</p>
 <blockquote class="blockquote">
-<p><img src="https://user-images.githubusercontent.com/7220175/209615187-08b15542-3dd4-44b6-8094-e3b183f81d60.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/rapidqcms_settings.png" class="img-fluid"></p>
 </blockquote>
 </section>
 <section id="signing-in-to-workspace-from-external-devices" class="level2">
@@ -631,9 +635,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>Complete the authentication flow</li>
 <li>Click <strong>Sign in to Rapid-QC-MS workspace</strong> and you’re all set!</li>
 </ol>
-<p><strong>Important:</strong> Do NOT check the <em>I’m signing in from an instrument computer</em> checkbox – it is intended for signing in to the workspace after reinstalls on the instrument computer.</p>
-<p><img src="https://user-images.githubusercontent.com/7220175/221499159-a3d867ba-e477-4b06-8289-3fb5dd44843e.png" class="img-fluid"></p>
-<p><strong>Important note:</strong> To allow your team members to sign in to the workspace using their Google account, you must first <a href="#granting--revoking-workspace-access">grant them access in Settings &gt; General</a>.</p>
+<p><strong>Important:</strong> the <em>I’m signing in from an instrument computer</em> checkbox is intended for signing in to the workspace after reinstalls on the instrument computer.</p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/google_rapid_login.png" class="img-fluid"></p>
+<p><strong>Important:</strong> To allow your team members to sign in to the workspace using their Google account, you must first <a href="#granting--revoking-workspace-access">grant them access in Settings &gt; General</a>.</p>
 </section>
 </section>
 <section id="qc-notifications-1" class="level1">
@@ -645,9 +649,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="create-your-slack-bot" class="level3">
 <h3 class="anchored" data-anchor-id="create-your-slack-bot">1. Create your Slack bot</h3>
 <p>Navigate to the <a href="https://api.slack.com/apps">Slack API console</a> and click the <strong>Create New App</strong> button.</p>
-<p>Choose to create your app <strong>From Scratch</strong>. Fill in the App Name and your Slack workspace, then click <strong>Create App</strong>.</p>
+<p>Choose to create your app <strong>From Scratch</strong>. Fill in the App Name (Rapid-QC-MS is fine) and your Slack workspace, then click <strong>Create App</strong>.</p>
 <blockquote class="blockquote">
-<p><img src="https://user-images.githubusercontent.com/7220175/217332096-0e07f90c-a7a5-4b74-9602-0ff9706ca577.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/slack_new_app.png" class="img-fluid"></p>
 </blockquote>
 </section>
 <section id="generate-an-oauth-token" class="level3">
@@ -658,18 +662,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>chat:write.public</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>incoming<span class="op">-</span>webhook</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <blockquote class="blockquote">
-<p><img src="https://user-images.githubusercontent.com/7220175/217333810-f02cc17a-cb5f-43a8-b4d5-49f3b735e383.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/slack_add_bot_scopes.png" class="img-fluid"></p>
 </blockquote>
-<p>Now, scroll back up to the <strong>OAuth Tokens for Your Workspace</strong> section and click <strong>Install to Workspace</strong>. Once that’s done, you will have generated your Bot User OAuth Token!</p>
+<p>Now, scroll back up to the <strong>OAuth Tokens for Your Workspace</strong> section and click <strong>Install to Workspace</strong>, then copy the generated <strong>Bot User OAuth Token</strong>.</p>
 </section>
 <section id="give-token-to-rapid-qc-ms" class="level3">
 <h3 class="anchored" data-anchor-id="give-token-to-rapid-qc-ms">3. Give token to Rapid-QC-MS</h3>
-<p>In Rapid-QC-MS, navigate to <strong>Settings &gt; General</strong> and paste the token you generated in the Slack API client credentials field. Click <strong>Save bot token</strong>.</p>
+<p>In Rapid-QC-MS, navigate to <strong>Settings &gt; General</strong> and paste the <strong>Bot User OAuth Token</strong> you generated in the Slack API client credentials field. Click <strong>Save bot token</strong>.</p>
 <p>Now, enter the name of the channel you’d like Rapid-QC-MS to post messages to. Once you’re done, toggle <strong>Enable notifications</strong>.</p>
 <blockquote class="blockquote">
-<p><img src="https://user-images.githubusercontent.com/7220175/221497926-03688b21-685f-4bab-9764-c5796c27bf11.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/rapidqcms_slack_zoomed.png" class="img-fluid"></p>
 </blockquote>
-<p>Lastly, you need to invite the bot to the channel. The easiest way of doing this is to just @botname in the channel and slack will ask if you want to invite it.</p>
+<p>Lastly, you may need to invite the bot to the channel. The easiest way of doing this is to just @botname in the channel and slack will ask if you want to invite it.</p>
 </section>
 </section>
 <section id="setting-up-email-notifications" class="level2">
@@ -677,7 +681,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>To set up email notifications, you must first <a href="#setting-up-google-drive-sync">enable Google Drive sync</a>.</p>
 <p>Once that’s done, all you have to do is navigate to <strong>Settings &gt; General</strong> and register email addresses for notifications!</p>
 <blockquote class="blockquote">
-<p><img src="https://user-images.githubusercontent.com/7220175/221497523-1f829884-169f-41bc-8ba9-224f5b258fe2.png" class="img-fluid"></p>
+<p><img src="https://public.czbiohub.org/rapid-qc-ms-docs/Userguide/rapidqcms_emails.png" class="img-fluid"></p>
 </blockquote>
 
 
