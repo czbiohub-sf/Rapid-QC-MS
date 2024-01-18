@@ -187,7 +187,7 @@ def convert_sequence_to_json(sequence_contents, vendor="Thermo Fisher"):
 
     # Select columns from sequence using correct vendor software nomenclature
     if vendor == "Thermo Fisher":
-        bracket_type = sequence_contents.readline())
+        bracket_type = sequence_contents.readline()
         log.debug("convert_sequence_to_json bracket_type is = {}".format(bracket_type))
         df_sequence = pd.read_csv(sequence_contents, index_col=False)
 
