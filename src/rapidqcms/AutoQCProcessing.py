@@ -35,7 +35,6 @@ def sequence_is_valid(filename, contents, vendor="Thermo Fisher"):
     Returns:
         True if sequence table is valid, otherwise False.
     """
-    print("in sequence is valid")
     if ".csv" not in filename:
         return False
 
