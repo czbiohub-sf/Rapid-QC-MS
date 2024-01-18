@@ -19,7 +19,7 @@ Developed at the [Mass Spectrometry Platform of CZ Biohub San Francisco](https:/
 # Requirements
 **Rapid QC-MS was designed to run on Windows platforms** because of its dependency on [MSConvert](https://proteowizard.sourceforge.io/tools/msconvert.html) for vendor format data conversion and [MS-DIAL](http://prime.psc.riken.jp/compms/msdial/main.html) for data processing and identification. However, MacOS users can still use Rapid QC-MS to monitor / view their instrument run data.
 
-In addition, Rapid QC-MS requires Python 3.8+ and various Python packages, including:
+In addition, Rapid QC-MS requires Python 3.8 to 3.11 and various Python packages, including:
 
 - Pandas
 - SQLAlchemy
@@ -38,6 +38,9 @@ Installing Rapid QC-MS is easy. Simply open your Terminal or Command Prompt and 
 ```python
 py -m pip install rapid-qc-ms
 ```
+
+If you have multiple versions of python on your system, you can specifiy the version you want to use this way
+```py -3.# -m pip install ms-autoqc```
 
 Python dependencies are installed automatically, but dependencies such as MSConvert and MS-DIAL will need to be installed manually.
 
