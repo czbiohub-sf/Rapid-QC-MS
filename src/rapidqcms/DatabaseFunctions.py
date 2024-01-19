@@ -1258,15 +1258,15 @@ def get_md5(instrument_id, sample_id):
     engine = sa.create_engine(database)
 
     # Check if sample is a biological standard
-    table = "sample_qc_results"
+    # can't parameterize tablenames
+    query = sa.text("SELECT * FROM sample_qc_results WHERE sample_id=:sample_id").bindparams(sample_id=sample_id)
 
     for identifier in get_biological_standard_identifiers().keys():
         if identifier in sample_id:
-            table = "bio_qc_results"
+            query = sa.text("SELECT * FROM bio_qc_results WHERE sample_id=:sample_id").bindparams(sample_id=sample_id)
             break
 
     # Get sample from correct table
-    query = sa.text("SELECT * FROM :table WHERE sample_id = :sample_id").bindparams(table=table, sample_id=sample_id)
     df_sample_qc_results = pd.read_sql(query, engine)
 
     return df_sample_qc_results["md5"].astype(str).values[0]
