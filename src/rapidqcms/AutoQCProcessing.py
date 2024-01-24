@@ -35,7 +35,6 @@ def sequence_is_valid(filename, contents, vendor="Thermo Fisher"):
     Returns:
         True if sequence table is valid, otherwise False.
     """
-
     if ".csv" not in filename:
         return False
 
@@ -44,14 +43,14 @@ def sequence_is_valid(filename, contents, vendor="Thermo Fisher"):
 
         # Attempt to load sequence file as a pandas DataFrame
         try:
+            #Remove the bracket_type header from the Xcalibur export/import
+            bracket_type = contents.readline()
+            log.debug("Sequence_is_valid bracket_type = {}".format(bracket_type))
             df_sequence = pd.read_csv(contents, index_col=False)
         except Exception as error:
             print("Sequence file could not be read.")
             traceback.print_exc()
             return False
-
-        df_sequence.columns = df_sequence.iloc[0]
-        df_sequence = df_sequence.drop(df_sequence.index[0])
 
         # Define required columns and columns found in sequence file
         required_columns = ["File Name", "Path", "Instrument Method", "Position", "Inj Vol"]
@@ -188,9 +187,10 @@ def convert_sequence_to_json(sequence_contents, vendor="Thermo Fisher"):
 
     # Select columns from sequence using correct vendor software nomenclature
     if vendor == "Thermo Fisher":
+        bracket_type = sequence_contents.readline()
+        log.debug("convert_sequence_to_json bracket_type is = {}".format(bracket_type))
         df_sequence = pd.read_csv(sequence_contents, index_col=False)
-        df_sequence.columns = df_sequence.iloc[0]
-        df_sequence = df_sequence.drop(df_sequence.index[0])
+
 
     # Convert DataFrames to JSON strings
     return df_sequence.to_json(orient="split")
