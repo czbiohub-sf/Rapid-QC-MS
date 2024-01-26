@@ -46,6 +46,8 @@ Python dependencies are installed automatically, but dependencies such as MSConv
 
 You can also opt to download and install Rapid QC-MS manually, or in a virtual environment if you prefer. Check out the [installation guide](https://czbiohub-sf.github.io/Rapid-QC-MS/installation.html#2-install-ms-autoqc) for more details.
 
+[Example data](http://dx.doi.org/10.21228/M8Z119) can be downloaded from metabolomics workbench with [supplementary example files](https://doi.org/10.5281/zenodo.10525183) (sequence .csv, library .msp, and additional .raw files not published through workbench) available on zenodo.
+
 # Usage
 To start Rapid QC-MS, simply enter:
 ```python
@@ -53,8 +55,6 @@ rapidqcms
 ```
 
 Check out the [quickstart guide](https://czbiohub-sf.github.io/Rapid-QC-MS/quickstart.html) to learn how easy setting up new QC jobs is.
-
-[Example data](http://dx.doi.org/10.21228/M8Z119) can be downloaded from metabolomics workbench with [supplementary example files](https://doi.org/10.5281/zenodo.10525183) (sequence .csv, library .msp, and additional .raw files not published through workbench) available on zenodo.
 
 ![](https://public.czbiohub.org/rapid-qc-ms-docs/Overview/new_job_process.gif)
 
