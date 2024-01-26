@@ -54,6 +54,8 @@ rapidqcms
 
 Check out the [quickstart guide](https://czbiohub-sf.github.io/Rapid-QC-MS/quickstart.html) to learn how easy setting up new QC jobs is.
 
+[Example data](http://dx.doi.org/10.21228/M8Z119) can be downloaded from metabolomics workbench with [supplementary example files](https://doi.org/10.5281/zenodo.10525183) (sequence .csv, library .msp, and additional .raw files not published through workbench) available on zenodo.
+
 ![](https://public.czbiohub.org/rapid-qc-ms-docs/Overview/new_job_process.gif)
 
 # Supported instrument vendors
