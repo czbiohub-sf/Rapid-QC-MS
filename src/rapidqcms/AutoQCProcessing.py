@@ -321,12 +321,12 @@ def run_msdial_processing(filename, msdial_path, parameter_file, input_folder, o
     process = psutil.Popen(command)
     pid = process.pid
 
-    # Check every second for 30 seconds if process was completed; if process hangs, return None
-    for index in range(31):
+    # Check every second for 5 minutes if process was completed; if process hangs, return None
+    for index in range(301):
         if not subprocess_is_running(pid):
             break
         else:
-            if index != 30:
+            if index != 300:
                 time.sleep(1)
             else:
                 kill_subprocess(pid)
