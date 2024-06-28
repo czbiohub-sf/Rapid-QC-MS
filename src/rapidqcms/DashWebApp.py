@@ -524,11 +524,7 @@ def serve_layout():
                                                                   pattern="^[A-Za-z0-9_ -]+$"),
                                                         dbc.DropdownMenu(id="first-time-instrument-vendor",
                                                             label="Choose Vendor", color="primary", children=[
-                                                                dbc.DropdownMenuItem("Thermo Fisher", id="thermo-fisher-item"),
-                                                                dbc.DropdownMenuItem("Agilent", id="agilent-item"),
-                                                                dbc.DropdownMenuItem("Bruker", id="bruker-item"),
-                                                                dbc.DropdownMenuItem("Sciex", id="sciex-item"),
-                                                                dbc.DropdownMenuItem("Waters", id="waters-item")
+                                                                dbc.DropdownMenuItem("Thermo Fisher", id="thermo-fisher-item")
                                                         ]),
                                                     ]),
                                                     dbc.FormText("Enter name (alphanumeric, underscores, dashes, spaces) 4 chars or longer and vendor for this instrument."),
