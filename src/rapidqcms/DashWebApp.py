@@ -1693,7 +1693,7 @@ def vendor_dropdown_handling(thermo_fisher_click):
     The world may never know...
     """
 
-    thermo_selected = "Thermo Fisher", 0, 0, 0, 0, 0
+    thermo_selected = "Thermo Fisher"
     agilent_selected = "Agilent", 0, 0, 0, 0, 0,
     bruker_selected = "Bruker", 0, 0, 0, 0, 0
     sciex_selected = "Sciex", 0, 0, 0, 0, 0
@@ -1702,10 +1702,7 @@ def vendor_dropdown_handling(thermo_fisher_click):
     inputs = [thermo_fisher_click]
     outputs = [thermo_selected]
 
-    for index, input in enumerate(inputs):
-        if input is not None:
-            if input > 0:
-                return outputs[index]
+    return ["Thermo Fisher", 0]
 
 
 @app.callback(Output("first-time-complete-setup-button", "disabled"),
