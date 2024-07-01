@@ -458,6 +458,8 @@ def serve_layout():
 
                         # Modal for sample information card
                         dbc.Modal(id="sample-info-modal", size="xl", centered=True, is_open=False, scrollable=True, children=[
+                            dbc.Button("dump to .csv", id="dump-sample-modal-to-csv"),
+                            dcc.Download(id="dumped-sample-info-card"),
                             dbc.ModalHeader(dbc.ModalTitle(id="sample-modal-title"), close_button=True),
                             dbc.ModalBody(id="sample-modal-body")
                         ]),
@@ -524,11 +526,7 @@ def serve_layout():
                                                                   pattern="^[A-Za-z0-9_ -]+$"),
                                                         dbc.DropdownMenu(id="first-time-instrument-vendor",
                                                             label="Choose Vendor", color="primary", children=[
-                                                                dbc.DropdownMenuItem("Thermo Fisher", id="thermo-fisher-item"),
-                                                                dbc.DropdownMenuItem("Agilent", id="agilent-item"),
-                                                                dbc.DropdownMenuItem("Bruker", id="bruker-item"),
-                                                                dbc.DropdownMenuItem("Sciex", id="sciex-item"),
-                                                                dbc.DropdownMenuItem("Waters", id="waters-item")
+                                                                dbc.DropdownMenuItem("Thermo Fisher", id="thermo-fisher-item")
                                                         ]),
                                                     ]),
                                                     dbc.FormText("Enter name (alphanumeric, underscores, dashes, spaces) 4 chars or longer and vendor for this instrument."),
@@ -1497,7 +1495,8 @@ def serve_layout():
             dcc.Store(id="job-restarted"),
             dcc.Store(id="job-deleted"),
             dcc.Store(id="job-action-failed"),
-
+            dcc.Store(id="feature-table-for-csv", storage_type='local', data={}),
+            dcc.Store(id="csv-filename"),
             # Dummy inputs for Google Drive authentication
             dcc.Store(id="google-drive-download-database"),
             dcc.Store(id="workspace-has-been-setup-1"),
@@ -3051,6 +3050,8 @@ def populate_bio_standard_benchmark_plot(polarity, selected_feature, intensity_p
               Output("istd-rt-plot", "clickData"),
               Output("istd-intensity-plot", "clickData"),
               Output("istd-mz-plot", "clickData"),
+              Output("feature-table-for-csv","data"),
+              Output("csv-filename", "data"),
               State("sample-info-modal", "is_open"),
               Input("sample-table", "active_cell"),
               State("sample-table", "data"),
@@ -3197,12 +3198,12 @@ def toggle_sample_card(is_open, active_cell, table_data, rt_click, intensity_cli
     # Add tables to sample information modal
     title = clicked_sample
     body = html.Div(children=[metadata_table, feature_table])
-
+    
     # Toggle modal
     if is_open:
-        return False, title, body, [], None, None, None, None
+        return False, title, body, [], None, None, None, None, None, clicked_sample
     else:
-        return True, title, body, [], None, None, None, None
+        return True, title, body, [], None, None, None, None, df_sample_features.to_json(), clicked_sample
 
 
 @app.callback(Output("settings-modal", "is_open"),
@@ -5291,3 +5292,14 @@ def perform_action_on_job(confirm_button, modal_title, resources):
 
     else:
         raise PreventUpdate
+
+@app.callback(Output("dumped-sample-info-card","data"),
+              Input("dump-sample-modal-to-csv","n_clicks"),
+              State("feature-table-for-csv","data"),
+              State("csv-filename","data"),
+              prevent_initial_call=True)
+def dump_sample_modal_to_csv(button, feature_table, filename):
+    df_feature_table = pd.read_json(feature_table)
+    filename = filename + ".csv"
+    csv = df_feature_table.to_csv
+    return dcc.send_data_frame(csv, filename=filename, index=False)
