@@ -1685,16 +1685,8 @@ def check_first_time_google_drive_authentication(google_drive_is_authenticated):
 
 @app.callback(Output("first-time-instrument-vendor", "label"),
               Output("thermo-fisher-item", "n_clicks"),
-              Output("agilent-item", "n_clicks"),
-              Output("bruker-item", "n_clicks"),
-              Output("sciex-item", "n_clicks"),
-              Output("waters-item", "n_clicks"),
-              Input("thermo-fisher-item", "n_clicks"),
-              Input("agilent-item", "n_clicks"),
-              Input("bruker-item", "n_clicks"),
-              Input("sciex-item", "n_clicks"),
-              Input("waters-item", "n_clicks"), prevent_initial_call=True)
-def vendor_dropdown_handling(thermo_fisher_click, agilent_click, bruker_click, sciex_click, waters_click):
+              Input("thermo-fisher-item", "n_clicks"), prevent_initial_call=True)
+def vendor_dropdown_handling(thermo_fisher_click):
 
     """
     Why didn't Dash Bootstrap Components implement this themselves?
@@ -1707,8 +1699,8 @@ def vendor_dropdown_handling(thermo_fisher_click, agilent_click, bruker_click, s
     sciex_selected = "Sciex", 0, 0, 0, 0, 0
     waters_selected = "Waters", 0, 0, 0, 0, 0
 
-    inputs = [thermo_fisher_click, agilent_click, bruker_click, sciex_click, waters_click]
-    outputs = [thermo_selected, agilent_selected, bruker_selected, sciex_selected, waters_selected]
+    inputs = [thermo_fisher_click]
+    outputs = [thermo_selected]
 
     for index, input in enumerate(inputs):
         if input is not None:
