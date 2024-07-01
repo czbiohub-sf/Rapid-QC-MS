@@ -536,7 +536,7 @@ def serve_layout():
 
                                                 # Google Drive authentication button
                                                 html.Div([
-                                                    dbc.Label("Sync with Google Drive (recommended)"),
+                                                    dbc.Label("Sync with Google Drive (experimental)"),
                                                     html.Br(),
                                                     dbc.InputGroup([
                                                         dbc.Input(placeholder="Client ID", id="gdrive-client-id-1"),
