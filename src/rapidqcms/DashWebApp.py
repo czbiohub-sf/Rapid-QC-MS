@@ -2901,10 +2901,13 @@ def populate_biological_standards_compare_dropdowns(resources, polarity, intensi
                 df_bio_intensity = df_bio_intensity.loc[df_bio_intensity["run_id"] == runselector]
             instrument_runs = df_bio_intensity["Name"].astype(str).tolist()
             instrument_runs = list(filter(lambda x: x != "None", instrument_runs))
+            inst_runs_all_prev = instrument_runs.copy()
+            inst_runs_all_prev.append('All previous')
         
         log.debug("populate_biological_standards_compare_dropdown returns variables: ")
         log.debug("{} {}".format(instrument_runs, instrument_runs[0]))
-
+        #All previous behavior is still buggy
+        #return inst_runs_all_prev, inst_runs_all_prev[0], instrument_runs, instrument_runs[0]
         return instrument_runs, instrument_runs[0], instrument_runs, instrument_runs[0]
     else:
         instrument_runs = [""]

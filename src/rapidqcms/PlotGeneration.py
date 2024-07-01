@@ -503,15 +503,17 @@ def generate_bio_standard_dataframe(clicked_sample, instrument_id, run_id, df_rt
     log.debug("generate_bio_standard_dataframe")
     log.debug(locals())
 
-    metabolites = df_mz.columns.tolist()
+    metabolites = df_mz[df_mz["Name"] == clicked_sample].columns.tolist()
     metabolites.remove("Name")
     metabolites.remove("run_id")
 
+    index = df_mz[df_mz["Name"] == clicked_sample].index[0]
+
     df_sample_features = pd.DataFrame()
     df_sample_features["Metabolite name"] = metabolites
-    df_sample_features["Precursor m/z"] = df_mz[metabolites].iloc[0].astype(float).values
-    df_sample_features["Retention time (min)"] = df_rt[metabolites].iloc[0].astype(float).round(3).values
-    intensities = df_intensity[metabolites].iloc[0].fillna(0).astype(float).values.tolist()
+    df_sample_features["Precursor m/z"] = df_mz[metabolites].iloc[index].astype(float).values
+    df_sample_features["Retention time (min)"] = df_rt[metabolites].iloc[index].astype(float).round(3).values
+    intensities = df_intensity[metabolites].iloc[index].fillna(0).astype(float).values.tolist()
     df_sample_features["Intensity"] = ["{:.2e}".format(x) for x in intensities]
 
     df_sample_info = pd.DataFrame()
@@ -722,6 +724,7 @@ def load_bio_feature_plot(run_id, df_rt, df_mz, df_intensity, target_biostnd, so
             df_intensity = df_intensity[0:index_of_run + 1]
         finally:
             feature_intensity_from_study = df_intensity.loc[df_intensity["run_id"] == run_id][metabolites].iloc[0].astype(float).values
+            print("feature_intensity_from_study:",feature_intensity_from_study)
 
         if len(df_intensity) > 1:
             average_intensity_in_studies = df_intensity.loc[df_intensity["run_id"] != run_id][metabolites].astype(float).mean().values
