@@ -66,3 +66,7 @@ Rapid QC-MS was designed to be a universal, open-source solution for data qualit
 If you encounter a bug, please report it by [opening an issue on GitHub](https://github.com/czbiohub-sf/Rapid-QC-MS/issues).
 
 We are open to collaboration! If you would like to help us develop support for Agilent, Bruker, Sciex, or Waters acquisition sequences and data files, please send an email to [brian.defelice@czbiohub.org](mailto:brian.defelice@czbiohub.org).
+
+# Publication
+https://pubs.acs.org/doi/full/10.1021/acs.analchem.4c00786
+If you found this useful, please cite the paper
