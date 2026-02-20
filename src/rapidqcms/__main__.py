@@ -35,6 +35,19 @@ def main() -> None:
     )
     listen_parser.add_argument("--run-id", required=True, help="Run / job ID")
 
+    # ── migrate ───────────────────────────────────────────────────────────────
+    # One-shot import from a legacy per-instrument Settings.db into the new DB.
+    migrate_parser = subparsers.add_parser(
+        "migrate",
+        help="Import internal standards and QC configs from a legacy Settings.db",
+    )
+    migrate_parser.add_argument(
+        "--settings-db",
+        required=True,
+        metavar="PATH",
+        help="Path to the legacy Settings.db SQLite file",
+    )
+
     # ── serve ─────────────────────────────────────────────────────────────────
     # Runs on the shared server. Serves the Dash dashboard for all users.
     serve_parser = subparsers.add_parser(
@@ -54,8 +67,42 @@ def main() -> None:
     logging.basicConfig(filename="rapid-qc-ms.log", level=logging.INFO)
 
     if args.command == "listen":
-        from rapidqcms.AcquisitionListener import start_listener
-        start_listener(args.path, args.instrument, args.run_id)
+        from pathlib import Path
+        from rapidqcms.service.listener import ListenerConfig, start_listener
+        from rapidqcms.config import get_settings
+        from rapidqcms.db.connection import get_engine
+        from rapidqcms.storage import get_storage
+
+        s = get_settings()
+        cfg = ListenerConfig(
+            instrument_id=args.instrument,
+            run_id=args.run_id,
+            watch_path=Path(args.path),
+            extension=s.extension,
+            experiment_type=s.experiment_type,
+            chromatography=s.chromatography,
+            polarity=s.polarity,
+            stage=s.qc_stage,
+            msconvert_exe=s.msconvert_exe,
+            msdial_exe=s.msdial_exe,
+            msdial_params=s.msdial_params,
+        )
+        start_listener(cfg, db_engine=get_engine(), storage=get_storage())
+
+    elif args.command == "migrate":
+        from pathlib import Path
+        from sqlalchemy.orm import sessionmaker
+        from rapidqcms.db.connection import get_engine
+        from rapidqcms.db.migration import import_internal_standards, import_qc_configurations
+
+        settings_db = Path(args.settings_db)
+        engine = get_engine()
+        Session = sessionmaker(engine)
+        with Session() as session:
+            n_is = import_internal_standards(settings_db, session)
+            n_qc = import_qc_configurations(settings_db, session)
+            session.commit()
+        print(f"Imported {n_is} internal standards and {n_qc} QC configurations.")
 
     elif args.command == "serve":
         from rapidqcms.DashWebApp import app

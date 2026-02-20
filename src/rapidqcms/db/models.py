@@ -1,7 +1,7 @@
 import datetime
 from datetime import UTC
 
-from sqlalchemy import DateTime, ForeignKey, Integer, JSON, String
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -62,3 +62,30 @@ class QCResult(Base):
     )
 
     run: Mapped["Run"] = relationship("Run", back_populates="qc_results")
+
+
+class InternalStandard(Base):
+    __tablename__ = "internal_standards"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    chromatography: Mapped[str] = mapped_column(String, nullable=False)  # "HILIC", "C18", etc.
+    polarity: Mapped[str] = mapped_column(String, nullable=False)        # "Pos" | "Neg"
+    precursor_mz: Mapped[float] = mapped_column(Float, nullable=False)
+    retention_time: Mapped[float] = mapped_column(Float, nullable=False)
+    ms2_spectrum: Mapped[str | None] = mapped_column(String, nullable=True)
+    inchikey: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
+class QCConfiguration(Base):
+    __tablename__ = "qc_configurations"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)  # config name e.g. "default"
+    intensity_dropouts_cutoff: Mapped[int] = mapped_column(Integer, nullable=False, default=4)
+    library_rt_shift_cutoff: Mapped[float] = mapped_column(Float, nullable=False, default=0.3)
+    in_run_rt_shift_cutoff: Mapped[float] = mapped_column(Float, nullable=False, default=0.1)
+    library_mz_shift_cutoff: Mapped[float] = mapped_column(Float, nullable=False, default=0.005)
+    intensity_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    library_rt_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    in_run_rt_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    library_mz_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

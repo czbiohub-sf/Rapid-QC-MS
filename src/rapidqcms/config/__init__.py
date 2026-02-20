@@ -43,8 +43,22 @@ class Settings:
     # QC module config path
     qc_modules_config: Path
 
+    # Listener / acquisition — deployment-stable, set once per instrument computer
+    extension: str           # file extension to watch, e.g. ".raw", ".d", ".mzML"
+    experiment_type: str     # "metabolomics" | "proteomics"
+    chromatography: str      # "HILIC", "C18", etc.
+    polarity: str            # "Pos" | "Neg"
+    qc_stage: str            # "pre_search" | "post_search"
+    msconvert_exe: Path | None   # None → MSConvert step skipped
+    msdial_exe: Path | None      # None → MS-DIAL step skipped
+    msdial_params: Path | None   # None → MS-DIAL step skipped
+
     @classmethod
     def from_env(cls) -> "Settings":
+        def _optional_path(var: str) -> Path | None:
+            val = os.getenv(var)
+            return Path(val) if val else None
+
         return cls(
             db_url=os.getenv("RAPIDQCMS_DB_URL", "sqlite:///data/rapidqcms.db"),
             storage_backend=os.getenv("RAPIDQCMS_STORAGE_BACKEND", "local"),
@@ -64,6 +78,14 @@ class Settings:
                     str(Path(__file__).parent / "qc_modules.toml"),
                 )
             ),
+            extension=os.getenv("RAPIDQCMS_EXTENSION", ".raw"),
+            experiment_type=os.getenv("RAPIDQCMS_EXPERIMENT_TYPE", "metabolomics"),
+            chromatography=os.getenv("RAPIDQCMS_CHROMATOGRAPHY", "HILIC"),
+            polarity=os.getenv("RAPIDQCMS_POLARITY", "Pos"),
+            qc_stage=os.getenv("RAPIDQCMS_QC_STAGE", "pre_search"),
+            msconvert_exe=_optional_path("RAPIDQCMS_MSCONVERT_EXE"),
+            msdial_exe=_optional_path("RAPIDQCMS_MSDIAL_EXE"),
+            msdial_params=_optional_path("RAPIDQCMS_MSDIAL_PARAMS"),
         )
 
 

@@ -260,7 +260,7 @@ class MetabolomicsQCModule(QCModule):
             df_compare["In-run delta RT"] = np.nan
 
         # Build per-standard QC table with dropout rows for missing standards
-        qc_df = df_compare[["Name", "Delta m/z", "Delta RT", "In-run delta RT"]].copy()
+        qc_df = df_compare[["Name", "RT (min)", "Delta m/z", "Delta RT", "In-run delta RT"]].copy()
         qc_df["Intensity dropout"] = 0
         qc_df["Warnings"] = ""
         qc_df["Fails"] = ""
@@ -270,6 +270,7 @@ class MetabolomicsQCModule(QCModule):
             if feature not in detected:
                 missing_row = pd.DataFrame.from_records([{
                     "Name": feature,
+                    "RT (min)": np.nan,
                     "Delta m/z": np.nan,
                     "Delta RT": np.nan,
                     "In-run delta RT": np.nan,
