@@ -1,0 +1,50 @@
+# QC module configuration
+#
+# Each [modules.<name>] block configures one QC module.
+# Set enabled = false to disable a module without removing its config.
+# The registry loads all enabled modules at startup.
+#
+# WARN/FAIL thresholds can be updated here without code changes (P2 requirement).
+# A UI for editing thresholds will be added in Phase 4.
+
+[modules.metabolomics]
+class   = "rapidqcms.qc.metabolomics.MetabolomicsQCModule"
+enabled = true
+
+[modules.metabolomics.thresholds]
+intensity_dropouts_cutoff  = 4      # number of missing internal standards → Fail
+library_rt_shift_cutoff    = 0.3    # minutes shift from library RT → Fail
+in_run_rt_shift_cutoff     = 0.1    # minutes shift from in-run average → Fail
+library_mz_shift_cutoff    = 0.005  # Da shift from library m/z → Fail
+
+[modules.metabolomics.checks]
+intensity_enabled  = true
+library_rt_enabled = true
+in_run_rt_enabled  = true
+library_mz_enabled = true
+
+
+[modules.proteomics_pre]
+class   = "rapidqcms.qc.proteomics_pre.ProteomicsPreSearchQCModule"
+enabled = true
+
+[modules.proteomics_pre.thresholds]
+min_ms1_scans     = 100   # fewer MS1 scans → Fail
+min_ms2_scans     = 500   # fewer MS2 scans → Fail
+min_ms2_ms1_ratio = 2.0   # MS2/MS1 ratio below this → Warn
+
+[modules.proteomics_pre.checks]
+ms1_enabled   = true
+ms2_enabled   = true
+ratio_enabled = true
+
+
+[modules.proteomics_post]
+class   = "rapidqcms.qc.proteomics_post.ProteomicsPostSearchQCModule"
+enabled = false  # enable when proteomics module is implemented in Phase 2
+
+[modules.proteomics_post.thresholds]
+min_psm_count            = 1000   # fewer PSMs → Fail
+min_protein_count        = 500    # fewer proteins → Warn
+max_contamination_pct    = 5.0    # contamination above this % → Fail
+max_missed_cleavage_pct  = 30.0   # missed cleavages above this % → Warn

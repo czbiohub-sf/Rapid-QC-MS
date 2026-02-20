@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rapid-qc-ms"
-version = "1.0.0"
+version = "2.0.0"
 description = "Realtime quality control for mass spectrometry data acquisition"
 readme = "README.md"
 authors = [{ name = "Brian DeFelice", email = "brian.defelice@czbiohub.org" }]
@@ -18,22 +18,29 @@ classifiers = [
 ]
 keywords = ["mass-spectrometry", "mass-spec", "autoqc", "mass-spec-quality-control"]
 dependencies = [
-    "pandas==1.4.2",
-    "plotly==5.6.0",
-    "dash==2.6.1",
-    "flask==2.2.4",
-    "dash_bootstrap_components==1.2.1",
-    "psutil==5.9.4",
-    "pydrive2==1.14.0",
-    "slack_sdk==3.18.1",
-    "sqlalchemy==1.4.32",
-    "watchdog==2.1.9",
-    'tomli; python_version <= "3.11"',
+    "pandas>=2.2,<3",
+    "numpy>=1.26",
+    "plotly>=5.24,<6",
+    "dash>=2.18,<3",
+    "flask>=3.0",
+    "dash_bootstrap_components>=1.6,<2",
+    "psutil>=5.9",
+    "pydrive2>=1.14",        # kept until Google Drive → S3 migration (Phase 3)
+    "slack_sdk>=3.18",
+    "sqlalchemy>=2.0,<3",
+    "watchdog>=4.0,<5",
+    "boto3>=1.35",
+    "gunicorn>=23.0",        # production WSGI server
+    "pyteomics>=4.7",        # mzML scan-level proteomics QC
 ]
-requires-python = ">=3.8,<3.12"
+requires-python = ">=3.11"
 
 [project.optional-dependencies]
-dev = []
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "moto[s3]>=5.0",        # AWS mock for storage tests
+]
 
 [project.urls]
 Homepage = "https://czbiohub-sf.github.io/Rapid-QC-MS"
