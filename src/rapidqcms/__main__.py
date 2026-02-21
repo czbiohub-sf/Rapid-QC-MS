@@ -105,7 +105,7 @@ def main() -> None:
         print(f"Imported {n_is} internal standards and {n_qc} QC configurations.")
 
     elif args.command == "serve":
-        from rapidqcms.DashWebApp import app
+        from rapidqcms.dashboard.app import app
         if not args.no_browser:
             _open_browser(args.host, args.port)
         app.run_server(threaded=False, debug=args.debug, host=args.host, port=args.port)
@@ -113,7 +113,7 @@ def main() -> None:
     else:
         # Legacy: bare `rapidqcms` with no subcommand retains the original
         # single-machine desktop behaviour for backward compatibility.
-        from rapidqcms.DashWebApp import app
+        from rapidqcms.dashboard.app import app
         _open_browser("127.0.0.1", 8050)
         app.run_server(threaded=False, debug=False, port=8050)
 

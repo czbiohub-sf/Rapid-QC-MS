@@ -89,3 +89,28 @@ class QCConfiguration(Base):
     library_rt_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     in_run_rt_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     library_mz_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+
+class MsDialConfiguration(Base):
+    __tablename__ = "msdial_configurations"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)  # config name
+    parameter_file_path: Mapped[str] = mapped_column(String, nullable=False)
+    msdial_exe_path: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
+class BioStandard(Base):
+    __tablename__ = "bio_standards"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    chromatography: Mapped[str] = mapped_column(String, nullable=False)
+    msdial_config_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("msdial_configurations.id"), nullable=True
+    )
+
+
+class EmailNotification(Base):
+    __tablename__ = "email_notifications"
+
+    email: Mapped[str] = mapped_column(String, primary_key=True)

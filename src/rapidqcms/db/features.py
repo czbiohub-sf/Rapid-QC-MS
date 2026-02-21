@@ -13,7 +13,14 @@ import json
 import pandas as pd
 from sqlalchemy.orm import Session
 
-from .models import InternalStandard, QCConfiguration, QCResult as QCResultModel
+from .models import (
+    BioStandard,
+    EmailNotification,
+    InternalStandard,
+    MsDialConfiguration,
+    QCConfiguration,
+    QCResult as QCResultModel,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -128,6 +135,173 @@ def upsert_qc_configuration(
         setattr(record, key, value)
 
     return record
+
+
+# ---------------------------------------------------------------------------
+# QC configuration list / delete
+# ---------------------------------------------------------------------------
+
+
+def list_qc_configurations(session: Session) -> list[QCConfiguration]:
+    """Return all QC configurations ordered by ID."""
+    return session.query(QCConfiguration).order_by(QCConfiguration.id).all()
+
+
+def delete_qc_configuration(session: Session, config_id: str) -> None:
+    """Delete a QCConfiguration by ID (no-op if not found)."""
+    record = session.get(QCConfiguration, config_id)
+    if record is not None:
+        session.delete(record)
+
+
+# ---------------------------------------------------------------------------
+# Biological standards
+# ---------------------------------------------------------------------------
+
+
+def list_bio_standards(
+    session: Session, chromatography: str | None = None
+) -> list[BioStandard]:
+    """Return all biological standards, optionally filtered by chromatography."""
+    q = session.query(BioStandard)
+    if chromatography is not None:
+        q = q.filter_by(chromatography=chromatography)
+    return q.order_by(BioStandard.name).all()
+
+
+def upsert_bio_standard(
+    session: Session,
+    name: str,
+    chromatography: str,
+    msdial_config_id: str | None = None,
+) -> BioStandard:
+    """Insert or update a BioStandard (matched on name + chromatography)."""
+    record = (
+        session.query(BioStandard)
+        .filter_by(name=name, chromatography=chromatography)
+        .one_or_none()
+    )
+    if record is None:
+        record = BioStandard(name=name, chromatography=chromatography)
+        session.add(record)
+    record.msdial_config_id = msdial_config_id
+    return record
+
+
+def delete_bio_standard(session: Session, name: str, chromatography: str) -> None:
+    """Delete a BioStandard by name + chromatography (no-op if not found)."""
+    record = (
+        session.query(BioStandard)
+        .filter_by(name=name, chromatography=chromatography)
+        .one_or_none()
+    )
+    if record is not None:
+        session.delete(record)
+
+
+# ---------------------------------------------------------------------------
+# MS-DIAL configurations
+# ---------------------------------------------------------------------------
+
+
+def list_msdial_configurations(session: Session) -> list[MsDialConfiguration]:
+    """Return all MS-DIAL configurations ordered by ID."""
+    return session.query(MsDialConfiguration).order_by(MsDialConfiguration.id).all()
+
+
+def upsert_msdial_configuration(
+    session: Session,
+    config_id: str,
+    parameter_file_path: str,
+    msdial_exe_path: str | None = None,
+) -> MsDialConfiguration:
+    """Insert or update an MsDialConfiguration by ID."""
+    record = session.get(MsDialConfiguration, config_id)
+    if record is None:
+        record = MsDialConfiguration(id=config_id)
+        session.add(record)
+    record.parameter_file_path = parameter_file_path
+    record.msdial_exe_path = msdial_exe_path
+    return record
+
+
+def get_msdial_configuration(
+    session: Session, config_id: str
+) -> MsDialConfiguration | None:
+    """Return an MsDialConfiguration by ID, or None if not found."""
+    return session.get(MsDialConfiguration, config_id)
+
+
+def delete_msdial_configuration(session: Session, config_id: str) -> None:
+    """Delete an MsDialConfiguration by ID (no-op if not found)."""
+    record = session.get(MsDialConfiguration, config_id)
+    if record is not None:
+        session.delete(record)
+
+
+# ---------------------------------------------------------------------------
+# MSP file import
+# ---------------------------------------------------------------------------
+
+
+def parse_msp_to_internal_standards(
+    session: Session,
+    msp_bytes: bytes,
+    chromatography: str,
+    polarity: str,
+) -> int:
+    """Parse MSP file bytes and upsert each entry as an InternalStandard.
+
+    Returns the count of entries successfully imported.
+    """
+    text = msp_bytes.decode("utf-8", errors="ignore")
+    # MSP entries are separated by blank lines
+    raw_entries = [e.strip() for e in text.strip().split("\n\n") if e.strip()]
+
+    count = 0
+    for entry in raw_entries:
+        name: str | None = None
+        precursor_mz: float | None = None
+        retention_time: float | None = None
+        ms2_spectrum: str | None = None
+        inchikey: str | None = None
+
+        for line in entry.splitlines():
+            key, _, value = line.partition(":")
+            key = key.strip().upper()
+            value = value.strip()
+
+            if key in ("NAME",):
+                name = value
+            elif key in ("PRECURSORMZ", "PRECURSOR_MZ"):
+                try:
+                    precursor_mz = float(value)
+                except ValueError:
+                    pass
+            elif key in ("RT", "RETENTIONTIME", "RETENTION_TIME"):
+                try:
+                    retention_time = float(value)
+                except ValueError:
+                    pass
+            elif key in ("INCHIKEY", "INCHI_KEY"):
+                inchikey = value
+            elif key == "NUM PEAKS" and value and value != "0":
+                ms2_spectrum = "MS2"
+
+        if name and precursor_mz is not None and retention_time is not None:
+            upsert_internal_standard(
+                session,
+                name=name,
+                chromatography=chromatography,
+                polarity=polarity,
+                precursor_mz=precursor_mz,
+                retention_time=retention_time,
+                ms2_spectrum=ms2_spectrum,
+                inchikey=inchikey,
+            )
+            count += 1
+
+    return count
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,341 @@
+=============================================================================
+RAPID-QC-MS — DEPLOYMENT REFERENCE
+=============================================================================
+Last updated: 2026-02-21
+
+CONTENTS
+  1. Local development
+  2. Instrument computer (listener)
+  3. AWS RDS (PostgreSQL)
+  4. AWS S3 (result storage)
+  5. Shared server (dashboard)
+  6. HPC / CZB-MAP Nextflow integration
+  7. Migration from legacy Settings.db
+  8. Environment variable reference
+  9. Troubleshooting
+
+=============================================================================
+1. LOCAL DEVELOPMENT
+=============================================================================
+
+Prerequisites: Python 3.11+
+
+  git clone https://github.com/czbiohub-sf/Rapid-QC-MS
+  cd Rapid-QC-MS
+  pip install -e ".[dev]"
+
+No env vars needed — SQLite + local storage are the defaults.
+
+Create DB tables:
+  python -c "from rapidqcms.db.connection import init_db; init_db()"
+
+Seed internal standards (or migrate from legacy Settings.db — see §7):
+  python - <<'EOF'
+  from sqlalchemy.orm import sessionmaker
+  from rapidqcms.db.connection import get_engine
+  from rapidqcms.db.features import upsert_internal_standard
+  engine = get_engine()
+  from rapidqcms.db.models import Base; Base.metadata.create_all(engine)
+  with sessionmaker(engine)() as s:
+      upsert_internal_standard(s, "CarnitineD3", "HILIC", "Pos", 165.123, 0.85)
+      s.commit()
+  EOF
+
+Start dashboard:
+  rapidqcms serve --debug
+
+Smoke-test listener (drop .mzML directly — no MSConvert/MS-DIAL needed):
+  export RAPIDQCMS_EXTENSION=.mzML
+  mkdir /tmp/acq
+  rapidqcms listen --instrument DEV01 --run-id TEST001 --path /tmp/acq
+  # In another terminal: cp sample.mzML /tmp/acq/
+
+=============================================================================
+2. INSTRUMENT COMPUTER (LISTENER)
+=============================================================================
+
+Purpose: watches the acquisition directory, routes raw files through the QC
+pipeline, writes .qc_pass / .qc_fail sidecars for downstream consumers.
+
+Install:
+  pip install rapidqcms
+
+Required env vars (set in /etc/environment, a .env file, or systemd unit):
+  RAPIDQCMS_DB_URL=postgresql://user:pass@rds-host:5432/rapidqcms
+  RAPIDQCMS_STORAGE_BACKEND=s3
+  RAPIDQCMS_S3_BUCKET=czbiohub-rapidqcms
+  RAPIDQCMS_EXTENSION=.raw          # .raw | .d | .mzML
+  RAPIDQCMS_CHROMATOGRAPHY=HILIC    # HILIC | C18 | RP | ...
+  RAPIDQCMS_POLARITY=Pos            # Pos | Neg
+  RAPIDQCMS_QC_STAGE=pre_search     # pre_search | post_search
+  RAPIDQCMS_MSCONVERT_EXE=C:\Program Files\ProteoWizard\msconvert.exe
+  RAPIDQCMS_MSDIAL_EXE=C:\MSDial\MsdialConsoleApp.exe
+  RAPIDQCMS_MSDIAL_PARAMS=C:\MSDial\params\HILIC_Pos.txt
+
+Start (manually):
+  rapidqcms listen \
+    --instrument QEHF_01 \
+    --run-id RUN_2026_001 \
+    --path "D:\AcquisitionData\2026-02-21"
+
+Start (systemd unit, Linux):
+  [Unit]
+  Description=Rapid-QC-MS Acquisition Listener
+  After=network.target
+
+  [Service]
+  EnvironmentFile=/etc/rapidqcms/env
+  ExecStart=rapidqcms listen --instrument QEHF_01 --run-id %DATE% --path /data/acq
+  Restart=on-failure
+
+  [Install]
+  WantedBy=multi-user.target
+
+Start (Windows Task Scheduler):
+  Action: rapidqcms listen --instrument QEHF_01 --run-id %run_id% --path D:\Data
+  Trigger: at logon / on folder creation event
+
+Note: Run ID must be unique per acquisition batch. Use the date or batch ID.
+      If the same run ID is reused, results are appended to the existing run.
+
+=============================================================================
+3. AWS RDS (POSTGRESQL)
+=============================================================================
+
+Provision:
+  Engine:     PostgreSQL 15+
+  Instance:   db.t3.medium (adequate for < 10 instruments)
+  Storage:    50 GB gp3 (expand as needed; QC results are small)
+  Multi-AZ:   recommended for production
+  SG inbound: port 5432 from instrument IPs + dashboard server IP only
+
+Create database:
+  psql -h <rds-endpoint> -U postgres -c "CREATE DATABASE rapidqcms;"
+
+Create tables (run once, idempotent):
+  RAPIDQCMS_DB_URL=postgresql://user:pass@rds-host:5432/rapidqcms \
+    python -c "from rapidqcms.db.connection import init_db; init_db()"
+
+Connection string format:
+  postgresql://username:password@endpoint.rds.amazonaws.com:5432/rapidqcms
+
+IAM authentication (optional, avoids embedding passwords):
+  Use RDS IAM auth tokens. Set RAPIDQCMS_DB_URL with the IAM token as password;
+  tokens expire every 15 min so use a connection proxy or refresh mechanism.
+
+=============================================================================
+4. AWS S3 (RESULT STORAGE)
+=============================================================================
+
+Create bucket:
+  aws s3 mb s3://czbiohub-rapidqcms --region us-west-2
+
+IAM policy for instrument computers (attach to instance role or user):
+  s3:PutObject   on arn:aws:s3:::czbiohub-rapidqcms/*
+  s3:GetObject   on arn:aws:s3:::czbiohub-rapidqcms/*
+
+IAM policy for dashboard server:
+  s3:GetObject, s3:ListBucket  on the bucket
+
+S3 key layout produced by the listener:
+  {instrument_id}/{run_id}/{sample_stem}/sample.raw
+  {instrument_id}/{run_id}/{sample_stem}/sample.mzML
+  {instrument_id}/{run_id}/{sample_stem}/sample.msdial
+
+Env vars:
+  RAPIDQCMS_STORAGE_BACKEND=s3
+  RAPIDQCMS_S3_BUCKET=czbiohub-rapidqcms
+  RAPIDQCMS_S3_PREFIX=rapidqcms          # optional key prefix
+
+=============================================================================
+5. SHARED SERVER (DASHBOARD)
+=============================================================================
+
+Purpose: serves the Dash UI for all users; reads exclusively from RDS.
+
+Install:
+  pip install rapidqcms gunicorn
+
+Required env vars:
+  RAPIDQCMS_DB_URL=postgresql://user:pass@rds-host:5432/rapidqcms
+  RAPIDQCMS_STORAGE_BACKEND=s3
+  RAPIDQCMS_S3_BUCKET=czbiohub-rapidqcms
+  RAPIDQCMS_SLACK_BOT_TOKEN=xoxb-...    # optional
+  RAPIDQCMS_SLACK_CHANNEL=#qc-alerts    # optional
+
+Start (development):
+  rapidqcms serve --debug
+
+Start (production with gunicorn):
+  gunicorn "rapidqcms.dashboard.app:server" \
+    --workers 4 \
+    --bind 0.0.0.0:8050 \
+    --timeout 120 \
+    --access-logfile /var/log/rapidqcms/access.log \
+    --error-logfile  /var/log/rapidqcms/error.log
+
+nginx reverse-proxy snippet (add SSL termination here):
+  server {
+    listen 443 ssl;
+    server_name qc.czbiohub.org;
+    ssl_certificate     /etc/ssl/certs/czbiohub.crt;
+    ssl_certificate_key /etc/ssl/private/czbiohub.key;
+    location / {
+      proxy_pass         http://127.0.0.1:8050;
+      proxy_set_header   Host $host;
+      proxy_set_header   X-Real-IP $remote_addr;
+      proxy_read_timeout 300s;
+    }
+  }
+
+systemd unit (save as /etc/systemd/system/rapidqcms.service):
+  [Unit]
+  Description=Rapid-QC-MS Dashboard
+  After=network.target
+
+  [Service]
+  EnvironmentFile=/etc/rapidqcms/env
+  ExecStart=gunicorn "rapidqcms.dashboard.app:server" \
+    --workers 4 --bind 0.0.0.0:8050 --timeout 120
+  Restart=on-failure
+  User=rapidqcms
+
+  [Install]
+  WantedBy=multi-user.target
+
+  systemctl enable rapidqcms && systemctl start rapidqcms
+
+=============================================================================
+6. HPC / CZB-MAP NEXTFLOW INTEGRATION
+=============================================================================
+
+Gating contract: the listener writes a sidecar JSON file next to every raw file
+after QC completes.
+
+  sample_001.raw         ← original raw file
+  sample_001.qc_pass     ← written on PASS → downstream proceeds
+  sample_001.qc_fail     ← written on WARN or FAIL → downstream blocked
+
+Gate file format:
+  {
+    "status":  "Pass" | "Warn" | "Fail",
+    "stage":   "pre_search" | "post_search",
+    "module":  "pipeline",
+    "metrics": {"modules_run": 1, "per_module": {"metabolomics": "Pass"}},
+    "message": null,
+    "timestamp": "2026-02-21T14:23:01+00:00"
+  }
+
+Two-gate pipeline:
+
+  Gate 1 — pre-search (raw → QC → FragPipe/MS-DIAL):
+    RAPIDQCMS_QC_STAGE=pre_search
+    rapidqcms listen --instrument INST01 --run-id RUN001 --path /data/acq
+    Downstream: FragPipe launcher watches for *.qc_pass
+
+  Gate 2 — post-search (msstats.csv → QC → CZB-MAP Nextflow):
+    RAPIDQCMS_QC_STAGE=post_search
+    RAPIDQCMS_EXTENSION=.csv
+    rapidqcms listen --instrument HPC --run-id RUN001 --path /hpc/fragpipe/output
+
+Nextflow channel pattern (watch for gate files):
+  Channel
+    .watchPath("${params.data_dir}/*.qc_pass")
+    .filter  { it.name.endsWith('.qc_pass') }
+    .map     { f -> tuple(f.baseName, f) }
+    .set     { qc_passed }
+
+Read gate file content in Nextflow:
+  def gate = new groovy.json.JsonSlurper().parse(qc_pass_file)
+  assert gate.status == "Pass"
+
+=============================================================================
+7. MIGRATION FROM LEGACY SETTINGS.DB
+=============================================================================
+
+Each old instrument computer had a per-instrument Settings.db SQLite file.
+Import into the new consolidated database with:
+
+  rapidqcms migrate --settings-db /path/to/Settings.db
+
+This imports:
+  internal_standards table → rapidqcms.internal_standards
+  qc_parameters table      → rapidqcms.qc_configurations
+
+Run once per instrument's Settings.db.
+Safe to run multiple times — uses upsert, no duplicate records created.
+
+If you have multiple instruments:
+  for f in /path/to/instruments/*/Settings.db; do
+      rapidqcms migrate --settings-db "$f"
+  done
+
+=============================================================================
+8. ENVIRONMENT VARIABLE REFERENCE
+=============================================================================
+
+Database
+  RAPIDQCMS_DB_URL            SQLAlchemy URL
+                              default: sqlite:///data/rapidqcms.db
+
+Storage
+  RAPIDQCMS_STORAGE_BACKEND   "local" | "s3"   default: local
+  RAPIDQCMS_S3_BUCKET         required if backend=s3
+  RAPIDQCMS_S3_PREFIX         key prefix        default: rapidqcms
+  RAPIDQCMS_LOCAL_STORAGE_PATH  root dir        default: data/storage
+
+Notifications
+  RAPIDQCMS_SLACK_BOT_TOKEN
+  RAPIDQCMS_SLACK_CHANNEL
+
+Auth (Phase 5 — Okta SSO, not yet active)
+  RAPIDQCMS_OKTA_DOMAIN
+  RAPIDQCMS_OKTA_CLIENT_ID
+  RAPIDQCMS_OKTA_CLIENT_SECRET
+
+QC modules
+  RAPIDQCMS_QC_MODULES_CONFIG  path to qc_modules.toml
+                               default: package built-in
+
+Listener / acquisition (set once per instrument computer)
+  RAPIDQCMS_EXTENSION          file extension to watch   default: .raw
+  RAPIDQCMS_EXPERIMENT_TYPE    metabolomics | proteomics default: metabolomics
+  RAPIDQCMS_CHROMATOGRAPHY     HILIC | C18 | ...         default: HILIC
+  RAPIDQCMS_POLARITY           Pos | Neg                 default: Pos
+  RAPIDQCMS_QC_STAGE           pre_search | post_search  default: pre_search
+  RAPIDQCMS_MSCONVERT_EXE      path to msconvert.exe     unset = step skipped
+  RAPIDQCMS_MSDIAL_EXE         path to MsdialConsoleApp  unset = step skipped
+  RAPIDQCMS_MSDIAL_PARAMS      path to parameter file    unset = step skipped
+
+=============================================================================
+9. TROUBLESHOOTING
+=============================================================================
+
+Dashboard shows "no runs" for an instrument
+  → Verify the listener ran and wrote QC results to the same RDS instance
+  → Check RAPIDQCMS_DB_URL on both the instrument computer and server match
+  → Inspect rapid-qc-ms.log on the instrument computer for errors
+
+.qc_pass not written after a sample completes
+  → If MSCONVERT/MSDIAL exes are unset, input file must already be .msdial
+  → Ensure internal standards are populated: rapidqcms migrate or seed via API
+  → Look for "No QC results produced" in rapid-qc-ms.log
+
+Dashboard plots are blank
+  → At least one sample must complete processing before plots render
+  → Biological standard plots are empty until Phase 5 (grading not implemented)
+
+"Database connection refused"
+  → Check RDS security group allows the connecting IP on port 5432
+  → Verify RAPIDQCMS_DB_URL credentials and endpoint are correct
+  → For SQLite: ensure data/ directory exists and is writable
+
+"S3 upload fails (403 Forbidden)"
+  → Confirm the IAM role/user has s3:PutObject on the bucket ARN
+  → Verify RAPIDQCMS_S3_BUCKET matches the actual bucket name exactly
+
+"ModuleNotFoundError: rapidqcms"
+  → Run pip install -e . from the repo root (editable install needed for dev)
+  → Check the Python environment is the same one used to start the process
+
+=============================================================================

@@ -9,7 +9,7 @@ Phase 1 provides the skeleton. Full migration happens in Phase 3.
 
 from sqlalchemy.orm import Session
 
-from .models import Instrument, Run
+from .models import Instrument, QCResult, Run
 
 
 # ---------------------------------------------------------------------------
@@ -91,3 +91,11 @@ def list_runs_for_instrument(
         .order_by(Run.started_at.desc())
         .all()
     )
+
+
+def delete_run(session: Session, run_id: str) -> None:
+    """Delete a Run and cascade-delete its QCResult children."""
+    session.query(QCResult).filter_by(run_id=run_id).delete()
+    run = session.get(Run, run_id)
+    if run is not None:
+        session.delete(run)
