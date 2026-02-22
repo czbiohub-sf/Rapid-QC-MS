@@ -7,6 +7,7 @@ DB rewiring:
   Bio-standard plot callbacks              → return empty figures (Phase 5)
 """
 
+import io
 import json
 import logging
 import traceback
@@ -367,8 +368,21 @@ def register(app):
     def populate_biological_standards_compare_dropdowns(
         resources, polarity, intensity_pos, intensity_neg, selected_bio_standard, runselector
     ):
-        # Bio standard grading deferred to Phase 5
-        return [""], "", [""], ""
+        intensity_store = intensity_pos if polarity == "Pos" else intensity_neg
+        if not intensity_store or not selected_bio_standard:
+            return [""], "", [""], ""
+        try:
+            bio_dict = json.loads(intensity_store)
+            df_json = bio_dict.get(selected_bio_standard)
+            if not df_json:
+                return [""], "", [""], ""
+            df = pd.read_json(io.StringIO(df_json), orient="records")
+            names = df["Name"].astype(str).tolist()
+            options = ["All previous"] + names
+            return options, options[0], options, options[0]
+        except Exception:
+            log.debug("Error in bio compare dropdowns: %s", traceback.format_exc())
+            return [""], "", [""], ""
 
     @app.callback(
         Output("bio-standard-mz-rt-plot", "figure"),
@@ -394,8 +408,51 @@ def register(app):
         polarity, rt_pos, rt_neg, intensity_pos, intensity_neg, mz_pos, mz_neg,
         resources, click_data, selected_bio_standard, target_biostnd, source_biostnd, jobid,
     ):
-        # Bio standard grading deferred to Phase 5
-        return {}, None, None, {"display": "none"}
+        rt_store = rt_pos if polarity == "Pos" else rt_neg
+        intensity_store = intensity_pos if polarity == "Pos" else intensity_neg
+        mz_store = mz_pos if polarity == "Pos" else mz_neg
+
+        if not rt_store or not selected_bio_standard:
+            return {}, None, None, {"display": "none"}
+
+        try:
+            rt_dict = json.loads(rt_store)
+            int_dict = json.loads(intensity_store) if intensity_store else {}
+            mz_dict = json.loads(mz_store) if mz_store else {}
+
+            rt_json = rt_dict.get(selected_bio_standard)
+            if not rt_json:
+                return {}, None, None, {"display": "none"}
+
+            df_rt = pd.read_json(io.StringIO(rt_json), orient="records")
+            int_json = int_dict.get(selected_bio_standard)
+            df_intensity = (
+                pd.read_json(io.StringIO(int_json), orient="records")
+                if int_json else df_rt.copy()
+            )
+            mz_json = mz_dict.get(selected_bio_standard)
+            df_mz = (
+                pd.read_json(io.StringIO(mz_json), orient="records")
+                if mz_json else df_rt.copy()
+            )
+
+            resources_dict = json.loads(resources) if resources else {}
+            run_id = resources_dict.get("run_id", "")
+
+            selected_feature = None
+            if click_data:
+                try:
+                    selected_feature = click_data["points"][0]["hovertext"]
+                except (KeyError, IndexError):
+                    pass
+
+            fig = load_bio_feature_plot(
+                run_id, df_rt, df_mz, df_intensity, target_biostnd, source_biostnd
+            )
+            return fig, selected_feature, None, {"display": "block"}
+        except Exception:
+            log.debug("Error in bio mz/rt plot: %s", traceback.format_exc())
+            return {}, None, None, {"display": "none"}
 
     @app.callback(
         Output("bio-standard-benchmark-plot", "figure"),
@@ -411,8 +468,26 @@ def register(app):
     def populate_bio_standard_benchmark_plot(
         polarity, selected_feature, intensity_pos, intensity_neg, selected_bio_standard, resources
     ):
-        # Bio standard grading deferred to Phase 5
-        return {}, {"display": "none"}
+        intensity_store = intensity_pos if polarity == "Pos" else intensity_neg
+
+        if not intensity_store or not selected_bio_standard or not selected_feature:
+            return {}, {"display": "none"}
+
+        try:
+            bio_dict = json.loads(intensity_store)
+            df_json = bio_dict.get(selected_bio_standard)
+            if not df_json:
+                return {}, {"display": "none"}
+
+            df = pd.read_json(io.StringIO(df_json), orient="records")
+            if selected_feature not in df.columns:
+                return {}, {"display": "none"}
+
+            fig = load_bio_benchmark_plot(df, selected_feature)
+            return fig, {"display": "block"}
+        except Exception:
+            log.debug("Error in bio benchmark plot: %s", traceback.format_exc())
+            return {}, {"display": "none"}
 
     @app.callback(
         Output("sample-info-modal", "is_open"),

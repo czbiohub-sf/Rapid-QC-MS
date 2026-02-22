@@ -35,10 +35,11 @@ class Settings:
     slack_bot_token: str | None
     slack_channel: str | None
 
-    # Auth (Okta, Phase 4)
+    # Auth (Okta, Phase 5)
     okta_domain: str | None
     okta_client_id: str | None
     okta_client_secret: str | None
+    session_secret: str | None    # RAPIDQCMS_SESSION_SECRET
 
     # QC module config path
     qc_modules_config: Path
@@ -72,6 +73,7 @@ class Settings:
             okta_domain=os.getenv("RAPIDQCMS_OKTA_DOMAIN"),
             okta_client_id=os.getenv("RAPIDQCMS_OKTA_CLIENT_ID"),
             okta_client_secret=os.getenv("RAPIDQCMS_OKTA_CLIENT_SECRET"),
+            session_secret=os.getenv("RAPIDQCMS_SESSION_SECRET"),
             qc_modules_config=Path(
                 os.getenv(
                     "RAPIDQCMS_QC_MODULES_CONFIG",

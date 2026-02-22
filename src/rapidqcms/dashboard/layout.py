@@ -11,6 +11,11 @@ import dash_bootstrap_components as dbc
 
 from rapidqcms.dashboard.plots import bootstrap_colors
 
+try:
+    from flask import session as flask_session
+except ImportError:
+    flask_session = None
+
 # Initialize directories (same as original DashWebApp.py)
 src_folder = os.path.dirname(os.path.realpath(__file__))
 root_directory = src_folder
@@ -26,6 +31,26 @@ def serve_layout():
 
     biohub_logo = "https://raw.githubusercontent.com/czbiohub-sf/Rapid-QC-MS/77a5b4908dc331ac94d186b4b85d804543b7df14/docs/CZ-Biohub-Mark-SF-Color-RGB.png"
 
+    # Read user from session if Okta auth is active
+    try:
+        user = flask_session.get("user") if flask_session is not None else None
+    except RuntimeError:
+        user = None
+
+    nav_items = [
+        dbc.NavItem(dbc.NavLink("About", href="https://github.com/czbiohub-sf/Rapid-QC-MS", className="navbar-button", target="_blank")),
+        dbc.NavItem(dbc.NavLink("Support", href="https://github.com/czbiohub-sf/Rapid-QC-MS/wiki", className="navbar-button", target="_blank")),
+        dbc.NavItem(dbc.NavLink("Settings", href="#", id="settings-button", className="navbar-button")),
+    ]
+    if user:
+        display_name = user.get("name") or user.get("email", "")
+        nav_items.append(
+            dbc.NavItem(dbc.NavLink(display_name, disabled=True, className="navbar-button"))
+        )
+        nav_items.append(
+            dbc.NavItem(dbc.NavLink("Logout", href="/logout", className="navbar-button"))
+        )
+
     return html.Div(className="app-layout", children=[
 
         # Navigation bar
@@ -39,13 +64,9 @@ def serve_layout():
                         ], align="center", className="g-0",
                     ), href="https://www.czbiohub.org/", style={"textDecoration": "none"},
                 ),
-                # Settings button
+                # Nav links (About, Support, Settings, [user, Logout])
                 dbc.Row([
-                    dbc.Nav([
-                        dbc.NavItem(dbc.NavLink("About", href="https://github.com/czbiohub-sf/Rapid-QC-MS", className="navbar-button", target="_blank")),
-                        dbc.NavItem(dbc.NavLink("Support", href="https://github.com/czbiohub-sf/Rapid-QC-MS/wiki", className="navbar-button", target="_blank")),
-                        dbc.NavItem(dbc.NavLink("Settings", href="#", id="settings-button", className="navbar-button")),
-                    ], className="me-auto")
+                    dbc.Nav(nav_items, className="me-auto")
                 ], className="g-0 ms-auto flex-nowrap mt-3 mt-md-0")
             ]), color="dark", dark=True
         ),

@@ -14,7 +14,7 @@ import logging
 import pandas as pd
 from sqlalchemy.orm import Session
 
-from rapidqcms.db.features import get_internal_standards
+from rapidqcms.db.features import get_internal_standards, list_bio_standards
 from rapidqcms.db.models import QCResult as QCResultModel
 from rapidqcms.db.settings import get_run
 
@@ -203,6 +203,22 @@ def get_run_dataframes(
         cols = pd.read_json(io.StringIO(neg_rt), orient="records").columns.tolist()
         neg_internal_standards = [c for c in cols if c != "Specimen"]
 
+    # Bio standard DataFrames
+    bio = get_bio_standard_dataframes(session, instrument_id, run_id, chromatography)
+    bio_names = bio.get("bio_standard_names") or []
+
+    def _bio_dict_to_json(d: dict | None) -> str | None:
+        if not d:
+            return None
+        return json.dumps(d)
+
+    result["bio_rt_pos"] = _bio_dict_to_json(bio.get("bio_rt_pos"))
+    result["bio_rt_neg"] = _bio_dict_to_json(bio.get("bio_rt_neg"))
+    result["bio_intensity_pos"] = _bio_dict_to_json(bio.get("bio_intensity_pos"))
+    result["bio_intensity_neg"] = _bio_dict_to_json(bio.get("bio_intensity_neg"))
+    result["bio_mz_pos"] = _bio_dict_to_json(bio.get("bio_mz_pos"))
+    result["bio_mz_neg"] = _bio_dict_to_json(bio.get("bio_mz_neg"))
+
     resources = {
         "instrument": instrument_id,
         "run_id": run_id,
@@ -211,7 +227,7 @@ def get_run_dataframes(
         "precursor_mass_dict": precursor_mz_dict,
         "retention_times_dict": retention_times_dict,
         "samples_completed": len(rows),
-        "biological_standards": None,
+        "biological_standards": bio_names or None,
     }
 
     result["df_samples"] = pd.DataFrame(sample_records).to_json(orient="records")
@@ -220,6 +236,144 @@ def get_run_dataframes(
     result["neg_internal_standards"] = json.dumps(sorted(neg_internal_standards))
 
     return result
+
+
+def _identify_bio_standards(
+    sample_ids: list[str],
+    bio_std_names: list[str],
+) -> dict[str, str]:
+    """Return {sample_id: bio_standard_name} for every sample that matches a bio standard.
+
+    Matching rules (case-insensitive):
+      - exact match: sample_id == name
+      - prefix match: sample_id starts with name + "_" or name + "-"
+    """
+    result: dict[str, str] = {}
+    for sample_id in sample_ids:
+        sid_lower = sample_id.lower()
+        for name in bio_std_names:
+            name_lower = name.lower()
+            if (
+                sid_lower == name_lower
+                or sid_lower.startswith(name_lower + "_")
+                or sid_lower.startswith(name_lower + "-")
+            ):
+                result[sample_id] = name
+                break
+    return result
+
+
+def get_bio_standard_dataframes(
+    session,
+    instrument_id: str,
+    run_id: str,
+    chromatography: str = "HILIC",
+) -> dict:
+    """Build wide DataFrames for biological standard samples in a run.
+
+    Returns a dict with keys:
+      bio_standard_names: sorted list of matched bio standard names
+      bio_rt_pos / bio_rt_neg: {name: df_records_json} RT DataFrames
+      bio_intensity_pos / bio_intensity_neg: Height DataFrames
+      bio_mz_pos / bio_mz_neg: library precursor_mz DataFrames
+
+    Each DataFrame has columns: Name (sample_id), run_id, <IS1>, <IS2>, ...
+    """
+    _empty: dict = {"bio_standard_names": []}
+
+    bio_stds = list_bio_standards(session, chromatography)
+    if not bio_stds:
+        return _empty
+
+    bio_std_names = [b.name for b in bio_stds]
+    rows = get_results_for_run(session, instrument_id, run_id)
+    if not rows:
+        return {**_empty, "bio_standard_names": bio_std_names}
+
+    bio_map = _identify_bio_standards([r.sample_id for r in rows], bio_std_names)
+    if not bio_map:
+        return _empty
+
+    # IS library for polarity detection and m/z lookups
+    pos_is_df = get_internal_standards(session, chromatography, "Pos")
+    neg_is_df = get_internal_standards(session, chromatography, "Neg")
+    pos_names = set(pos_is_df["name"].tolist()) if not pos_is_df.empty else set()
+    neg_names = set(neg_is_df["name"].tolist()) if not neg_is_df.empty else set()
+    pos_mz_lookup = (
+        dict(zip(pos_is_df["name"], pos_is_df["precursor_mz"]))
+        if not pos_is_df.empty else {}
+    )
+    neg_mz_lookup = (
+        dict(zip(neg_is_df["name"], neg_is_df["precursor_mz"]))
+        if not neg_is_df.empty else {}
+    )
+
+    # Accumulate records per bio standard per polarity
+    bio_data: dict[str, dict[str, list[dict]]] = {
+        n: {"Pos": [], "Neg": []} for n in bio_std_names
+    }
+
+    for row in rows:
+        std_name = bio_map.get(row.sample_id)
+        if std_name is None or not row.details:
+            continue
+
+        names_in_details = {e.get("Name") for e in row.details if e.get("Name")}
+        polarity = "Pos"
+        if names_in_details & neg_names and not (names_in_details & pos_names):
+            polarity = "Neg"
+
+        mz_lookup = pos_mz_lookup if polarity == "Pos" else neg_mz_lookup
+
+        rt_rec: dict = {"Name": row.sample_id, "run_id": run_id}
+        int_rec: dict = {"Name": row.sample_id, "run_id": run_id}
+        mz_rec: dict = {"Name": row.sample_id, "run_id": run_id}
+
+        for entry in row.details:
+            name = entry.get("Name")
+            if name:
+                rt_rec[name] = entry.get("RT (min)", "")
+                int_rec[name] = entry.get("Height", "")
+                mz_rec[name] = mz_lookup.get(name, "")
+
+        bio_data[std_name][polarity].append({"rt": rt_rec, "int": int_rec, "mz": mz_rec})
+
+    def _to_json(record_dicts: list[dict], key: str) -> str | None:
+        recs = [r[key] for r in record_dicts]
+        if not recs:
+            return None
+        return pd.DataFrame(recs).to_json(orient="records")
+
+    bio_rt_pos: dict[str, str | None] = {}
+    bio_rt_neg: dict[str, str | None] = {}
+    bio_intensity_pos: dict[str, str | None] = {}
+    bio_intensity_neg: dict[str, str | None] = {}
+    bio_mz_pos: dict[str, str | None] = {}
+    bio_mz_neg: dict[str, str | None] = {}
+    found_names: list[str] = []
+
+    for name in sorted(bio_std_names):
+        pos_recs = bio_data[name]["Pos"]
+        neg_recs = bio_data[name]["Neg"]
+        if not pos_recs and not neg_recs:
+            continue
+        found_names.append(name)
+        bio_rt_pos[name] = _to_json(pos_recs, "rt")
+        bio_rt_neg[name] = _to_json(neg_recs, "rt")
+        bio_intensity_pos[name] = _to_json(pos_recs, "int")
+        bio_intensity_neg[name] = _to_json(neg_recs, "int")
+        bio_mz_pos[name] = _to_json(pos_recs, "mz")
+        bio_mz_neg[name] = _to_json(neg_recs, "mz")
+
+    return {
+        "bio_standard_names": found_names,
+        "bio_rt_pos": bio_rt_pos,
+        "bio_rt_neg": bio_rt_neg,
+        "bio_intensity_pos": bio_intensity_pos,
+        "bio_intensity_neg": bio_intensity_neg,
+        "bio_mz_pos": bio_mz_pos,
+        "bio_mz_neg": bio_mz_neg,
+    }
 
 
 def _build_mz_from_library(

@@ -163,6 +163,16 @@ Required env vars:
   RAPIDQCMS_SLACK_BOT_TOKEN=xoxb-...    # optional
   RAPIDQCMS_SLACK_CHANNEL=#qc-alerts    # optional
 
+Okta SSO (optional — dashboard runs open if these are not set):
+  RAPIDQCMS_OKTA_DOMAIN=czbiohub.okta.com
+  RAPIDQCMS_OKTA_CLIENT_ID=<client id from Okta app>
+  RAPIDQCMS_OKTA_CLIENT_SECRET=<client secret from Okta app>
+  RAPIDQCMS_SESSION_SECRET=<output of: openssl rand -hex 32>
+
+  Before enabling Okta, register the redirect URI in the Okta application:
+    Sign-In redirect URI: https://<server-hostname>/oauth/callback
+    Sign-Out redirect URI: https://<server-hostname>/login
+
 Start (development):
   rapidqcms serve --debug
 
@@ -288,10 +298,12 @@ Notifications
   RAPIDQCMS_SLACK_BOT_TOKEN
   RAPIDQCMS_SLACK_CHANNEL
 
-Auth (Phase 5 — Okta SSO, not yet active)
+Auth (Okta SSO — opt-in; dashboard runs open if these are unset)
   RAPIDQCMS_OKTA_DOMAIN
   RAPIDQCMS_OKTA_CLIENT_ID
   RAPIDQCMS_OKTA_CLIENT_SECRET
+  RAPIDQCMS_SESSION_SECRET    Flask session key; generate with: openssl rand -hex 32
+                              If unset, derived deterministically from Okta credentials.
 
 QC modules
   RAPIDQCMS_QC_MODULES_CONFIG  path to qc_modules.toml

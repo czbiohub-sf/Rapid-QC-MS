@@ -17,6 +17,7 @@ import plotly.express as px
 from sqlalchemy.orm import Session
 
 from rapidqcms.dashboard.data import get_run_dataframes, get_results_for_run
+from rapidqcms.db.models import QCResult as QCResultModel
 
 log = logging.getLogger(__name__)
 
@@ -55,13 +56,13 @@ def get_qc_results(
     """
     data = get_run_dataframes(session, instrument_id, run_id, chromatography)
 
-    # Biological standard DataFrames are deferred to Phase 5
-    df_bio_rt_pos = None
-    df_bio_rt_neg = None
-    df_bio_intensity_pos = None
-    df_bio_intensity_neg = None
-    df_bio_mz_pos = None
-    df_bio_mz_neg = None
+    # Biological standard DataFrames (populated by get_run_dataframes via get_bio_standard_dataframes)
+    df_bio_rt_pos = data.get("bio_rt_pos")
+    df_bio_rt_neg = data.get("bio_rt_neg")
+    df_bio_intensity_pos = data.get("bio_intensity_pos")
+    df_bio_intensity_neg = data.get("bio_intensity_neg")
+    df_bio_mz_pos = data.get("bio_mz_pos")
+    df_bio_mz_neg = data.get("bio_mz_neg")
 
     # Sequence and metadata are not stored in the new DB schema
     df_sequence = pd.DataFrame()
@@ -214,8 +215,12 @@ def generate_bio_standard_dataframe(
 
     df_sample_info = pd.DataFrame()
     df_sample_info["Specimen ID"] = [clicked_sample]
-    # Bio standard grading deferred to Phase 5
-    df_sample_info["QC Result"] = ["N/A"]
+    qc_result = (
+        session.query(QCResultModel)
+        .filter_by(instrument_id=instrument_id, run_id=run_id, sample_id=clicked_sample)
+        .first()
+    )
+    df_sample_info["QC Result"] = [qc_result.status if qc_result else "N/A"]
 
     return df_sample_features, df_sample_info
 

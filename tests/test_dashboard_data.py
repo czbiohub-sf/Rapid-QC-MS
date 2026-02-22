@@ -11,8 +11,13 @@ import io
 import pandas as pd
 import pytest
 
-from rapidqcms.db.models import Instrument, InternalStandard, QCResult, Run
-from rapidqcms.dashboard.data import get_run_dataframes, get_sample_table
+from rapidqcms.db.models import BioStandard, Instrument, InternalStandard, QCResult, Run
+from rapidqcms.dashboard.data import (
+    _identify_bio_standards,
+    get_bio_standard_dataframes,
+    get_run_dataframes,
+    get_sample_table,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -183,3 +188,64 @@ def test_dashboard_app_imports():
 
     assert app is not None
     assert app.title == "Rapid-QC-MS"
+
+
+# ---------------------------------------------------------------------------
+# Bio standard tests
+# ---------------------------------------------------------------------------
+
+
+def test_identify_bio_standards_prefix_matching():
+    """Pure unit test — no DB needed."""
+    bio_names = ["HeLa", "K562"]
+    sample_ids = ["HeLa_01", "HeLa-rep2", "HeLa", "K562_A", "Sample_1"]
+    result = _identify_bio_standards(sample_ids, bio_names)
+
+    assert result["HeLa_01"] == "HeLa"
+    assert result["HeLa-rep2"] == "HeLa"
+    assert result["HeLa"] == "HeLa"
+    assert result["K562_A"] == "K562"
+    assert "Sample_1" not in result
+
+
+def test_get_bio_standard_dataframes_empty_when_no_bio_standards(db_session):
+    """Returns empty names list when no bio standards in DB."""
+    _seed_instrument(db_session)
+    db_session.commit()
+
+    result = get_bio_standard_dataframes(db_session, "INST01", "RUN001", "HILIC")
+    assert result["bio_standard_names"] == []
+
+
+def test_get_bio_standard_dataframes_identifies_hela_samples(db_session):
+    """Bio standard samples are identified and pivoted into DataFrames."""
+    _seed_instrument(db_session)
+    _seed_is(db_session)
+
+    db_session.add(BioStandard(name="HeLa", chromatography="HILIC"))
+
+    now = datetime.datetime.now(datetime.UTC)
+    db_session.add(QCResult(
+        instrument_id="INST01",
+        run_id="RUN001",
+        sample_id="HeLa_01",
+        experiment_type="HILIC",
+        qc_stage="pre_search",
+        qc_module="metabolomics",
+        status="Pass",
+        acquired_at=now,
+        details=_make_details(0.85, 1.10),
+    ))
+    db_session.commit()
+
+    result = get_bio_standard_dataframes(db_session, "INST01", "RUN001", "HILIC")
+
+    assert result["bio_standard_names"] == ["HeLa"]
+    assert "HeLa" in result["bio_rt_pos"]
+
+    df = pd.read_json(io.StringIO(result["bio_rt_pos"]["HeLa"]), orient="records")
+    assert len(df) == 1
+    assert "Name" in df.columns
+    assert df["Name"].iloc[0] == "HeLa_01"
+    assert "CarnitineD3" in df.columns
+    assert "AcetylcarnitineD3" in df.columns
