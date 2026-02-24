@@ -93,6 +93,27 @@ def list_runs_for_instrument(
     )
 
 
+def list_all_runs(
+    session: Session,
+    instrument_ids: list[str] | None = None,
+    experiment_type: str | None = None,
+    status: str | None = None,
+    since=None,
+    limit: int = 500,
+) -> list[Run]:
+    """Return runs across all instruments, newest first, with optional filters."""
+    q = session.query(Run)
+    if instrument_ids:
+        q = q.filter(Run.instrument_id.in_(instrument_ids))
+    if experiment_type:
+        q = q.filter(Run.experiment_type == experiment_type)
+    if status:
+        q = q.filter(Run.status == status)
+    if since:
+        q = q.filter(Run.started_at >= since)
+    return q.order_by(Run.started_at.desc()).limit(limit).all()
+
+
 def delete_run(session: Session, run_id: str) -> None:
     """Delete a Run and cascade-delete its QCResult children."""
     session.query(QCResult).filter_by(run_id=run_id).delete()

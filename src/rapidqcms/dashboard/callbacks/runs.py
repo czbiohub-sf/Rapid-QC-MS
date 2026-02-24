@@ -21,6 +21,7 @@ import json
 import logging
 import os
 import sys
+import time
 
 import pandas as pd
 from dash import Input, Output, State, ctx, dcc, html
@@ -36,6 +37,7 @@ from rapidqcms.db.settings import (
     delete_run,
     list_instruments,
     list_runs_for_instrument,
+    list_all_runs,
     get_run,
 )
 from rapidqcms.dashboard import plots as dashboard_plots
@@ -97,81 +99,104 @@ def _pipeline_valid(module=None):
 def register(app):
 
     @app.callback(
-        Output("tabs", "children"),
-        Output("tabs", "value"),
-        Input("instruments", "data"),
-        Input("workspace-setup-modal", "is_open"),
-        Input("google-drive-sync-update", "data"),
+        Output("filter-instrument", "options"),
+        Input("filter-date-range", "value"),
     )
-    def get_instrument_tabs(instruments, check_workspace_setup, sync_update):
-        """Retrieves all instruments and creates a tab for each."""
+    def populate_instrument_filter_dropdown(_):
+        """Populates the instrument filter dropdown with all instruments."""
         with get_session() as session:
-            instrument_list = _get_instruments_list(session)
-            if not instrument_list:
-                raise PreventUpdate
-            tabs = [dcc.Tab(label=i, value=i) for i in instrument_list]
-            return tabs, instrument_list[0]
+            instruments = list_instruments(session)
+            return [{"label": i.id, "value": i.id} for i in instruments]
 
     @app.callback(
         Output("instrument-run-table", "active_cell"),
         Output("instrument-run-table", "selected_cells"),
-        Input("tabs", "value"),
+        Input("filter-instrument", "value"),
+        Input("filter-type", "value"),
+        Input("filter-status", "value"),
+        Input("filter-date-range", "value"),
         Input("job-deleted", "data"),
         prevent_initial_call=True,
     )
-    def reset_instrument_table(instrument, job_deleted):
-        """Removes selected cell highlight upon tab switch."""
+    def reset_run_selection(*_):
+        """Clears run table selection when filters change or a job is deleted."""
         return None, []
 
     @app.callback(
         Output("instrument-run-table", "data"),
         Output("table-container", "style"),
         Output("plot-container", "style"),
-        Input("tabs", "value"),
+        Input("filter-instrument", "value"),
+        Input("filter-type", "value"),
+        Input("filter-status", "value"),
+        Input("filter-date-range", "value"),
         Input("refresh-interval", "n_intervals"),
-        State("study-resources", "data"),
-        Input("google-drive-sync-update", "data"),
-        Input("start-run-monitor-modal", "is_open"),
         Input("job-marked-completed", "data"),
         Input("job-deleted", "data"),
+        State("study-resources", "data"),
     )
-    def populate_instrument_runs_table(
-        instrument_id, refresh, resources, sync_update,
-        new_job_started, job_marked_completed, job_deleted,
+    def populate_run_browser(
+        instrument_ids, exp_type, status_filter, date_range,
+        refresh, job_completed, job_deleted, resources,
     ):
-        """Populates table with list of past/active instrument runs."""
-        trigger = ctx.triggered_id
+        """Populates the run browser table with runs across all instruments."""
+        import datetime as _dt
 
-        # Suppress refresh if no new samples
-        if trigger == "refresh-interval" and resources:
+        # Suppress refresh when no new samples
+        if ctx.triggered_id == "refresh-interval" and resources:
             try:
                 res = json.loads(resources)
-                run_id = res.get("run_id")
-                cached_count = res.get("samples_completed", 0)
                 with get_session() as session:
-                    completed, _ = _get_completed_count(session, instrument_id, run_id)
-                if cached_count == completed:
+                    completed, _ = _get_completed_count(
+                        session, res.get("instrument"), res.get("run_id"))
+                if res.get("samples_completed", 0) == completed:
                     raise PreventUpdate
             except PreventUpdate:
                 raise
             except Exception:
                 raise PreventUpdate
 
-        if instrument_id and instrument_id != "tab-1":
-            with get_session() as session:
-                df = _get_instrument_runs_df(session, instrument_id)
+        since = None
+        now = _dt.datetime.now(_dt.timezone.utc)
+        if date_range == "2w":
+            since = now - _dt.timedelta(weeks=2)
+        elif date_range == "1m":
+            since = now - _dt.timedelta(days=30)
+        elif date_range == "3m":
+            since = now - _dt.timedelta(days=90)
 
-            if df.empty:
-                empty_table = [{"Job ID": "N/A", "Chromatography": "N/A", "Status": "N/A"}]
-                return empty_table, {"display": "block"}, {"display": "none"}
-
-            df = df[["run_id", "chromatography", "status"]].rename(
-                columns={"run_id": "Job ID", "chromatography": "Chromatography", "status": "Status"}
+        with get_session() as session:
+            runs = list_all_runs(
+                session,
+                instrument_ids=instrument_ids or None,
+                experiment_type=exp_type or None,
+                status=status_filter or None,
+                since=since,
             )
-            df = df[::-1]
-            return df.to_dict("records"), {"display": "block"}, {"display": "block"}
+            rows = [{
+                "Run ID":     r.id,
+                "Instrument": r.instrument_id,
+                "Date":       r.started_at.strftime("%Y-%m-%d") if r.started_at else "",
+                "Status":     r.status,
+            } for r in runs]
 
-        raise PreventUpdate
+        if not rows:
+            empty = [{"Run ID": "N/A", "Instrument": "N/A", "Date": "N/A", "Status": "N/A"}]
+            return empty, {"display": "block"}, {"display": "none"}
+
+        return rows, {"display": "block"}, {"display": "block"}
+
+    @app.callback(
+        Output("selected-instrument", "data"),
+        Input("instrument-run-table", "active_cell"),
+        State("instrument-run-table", "data"),
+        prevent_initial_call=True,
+    )
+    def store_selected_instrument(active_cell, table_data):
+        """Stores the instrument_id of the currently selected run."""
+        if not active_cell or not table_data:
+            raise PreventUpdate
+        return table_data[active_cell["row"]]["Instrument"]
 
     @app.callback(
         Output("loading-modal", "is_open"),
@@ -179,27 +204,31 @@ def register(app):
         Output("loading-modal-body", "children"),
         Input("instrument-run-table", "active_cell"),
         State("instrument-run-table", "data"),
-        Input("close-load-modal", "data"),
         prevent_initial_call=True,
-        suppress_callback_exceptions=True,
     )
-    def open_loading_modal(active_cell, table_data, load_finished):
-        """Shows loading modal on selection of an instrument run."""
-        trigger = ctx.triggered_id
-        if active_cell:
-            run_id = table_data[active_cell["row"]]["Job ID"]
-            title = html.Div([
-                html.Div(children=[
-                    dbc.Spinner(color="primary"),
-                    " Loading QC results for " + run_id,
-                ])
+    def open_loading_modal(active_cell, table_data):
+        """Opens loading modal when user selects a run."""
+        if not active_cell:
+            raise PreventUpdate
+        run_id = table_data[active_cell["row"]]["Run ID"]
+        title = html.Div([
+            html.Div(children=[
+                dbc.Spinner(color="primary"),
+                " Loading QC results for " + run_id,
             ])
-            body = "This may take a few seconds..."
-            if trigger == "instrument-run-table":
-                return True, title, body
-            elif trigger == "close-load-modal":
-                return False, title, body
-        raise PreventUpdate
+        ])
+        return True, title, "This may take a few seconds..."
+
+    @app.callback(
+        Output("loading-modal", "is_open", allow_duplicate=True),
+        Input("load-finished", "data"),
+        prevent_initial_call=True,
+    )
+    def close_loading_modal(load_finished):
+        """Closes loading modal once load_data has finished."""
+        if load_finished is None:
+            raise PreventUpdate
+        return False
 
     @app.callback(
         Output("istd-rt-pos", "data"),
@@ -235,11 +264,10 @@ def register(app):
         Input("instrument-run-table", "active_cell"),
         State("instrument-run-table", "data"),
         State("study-resources", "data"),
-        State("tabs", "value"),
         prevent_initial_call=True,
         suppress_callback_exceptions=True,
     )
-    def load_data(refresh, active_cell, table_data, resources, instrument_id):
+    def load_data(refresh, active_cell, table_data, resources):
         """Updates and stores QC results in dcc.Store objects."""
         _none29 = (None,) * 29
 
@@ -248,7 +276,8 @@ def register(app):
         if not active_cell:
             return _none29
 
-        run_id = table_data[active_cell["row"]]["Job ID"]
+        run_id = table_data[active_cell["row"]]["Run ID"]
+        instrument_id = table_data[active_cell["row"]]["Instrument"]
 
         # Suppress refresh if no new samples processed
         if trigger == "refresh-interval":
@@ -295,19 +324,11 @@ def register(app):
                 in_run_delta_rt_pos, in_run_delta_rt_neg,
                 delta_mz_pos, delta_mz_neg,
                 warn_pos, warn_neg, fail_pos, fail_neg,
-                True,
+                time.time(),
             )
         except Exception:
             log.exception("load_data failed")
             return _none29
-
-    @app.callback(
-        Output("close-load-modal", "data"),
-        Input("load-finished", "data"),
-        prevent_initial_call=True,
-    )
-    def signal_load_finished(load_finished):
-        return True
 
     @app.callback(
         Output("sample-table", "data"),
@@ -436,7 +457,7 @@ def register(app):
         Output("setup-new-run-modal-title", "children"),
         Input("setup-new-run-button", "n_clicks"),
         Input("start-run-monitor-modal", "is_open"),
-        State("tabs", "value"),
+        State("selected-instrument", "data"),
         Input("data-acquisition-folder-button", "n_clicks"),
         Input("file-explorer-select-button", "n_clicks"),
         State("settings-modal", "is_open"),
@@ -586,7 +607,7 @@ def register(app):
         State("metadata-path", "invalid"),
         State("data-acquisition-folder-path", "valid"),
         State("data-acquisition-folder-path", "invalid"),
-        State("tabs", "value"),
+        State("selected-instrument", "data"),
         prevent_initial_call=True,
     )
     def validation_feedback_for_new_run_setup_form(
@@ -684,7 +705,7 @@ def register(app):
         Output("new-job-error-modal", "is_open"),
         Input("monitor-new-run-button", "n_clicks"),
         State("instrument-run-id", "value"),
-        State("tabs", "value"),
+        State("selected-instrument", "data"),
         State("start-run-chromatography-dropdown", "value"),
         State("start-run-bio-standards-dropdown", "value"),
         State("new-sequence", "data"),
@@ -901,18 +922,18 @@ def register(app):
         Input("instrument-run-table", "active_cell"),
         State("instrument-run-table", "data"),
         Input("refresh-interval", "n_intervals"),
-        Input("tabs", "value"),
         Input("start-run-monitor-modal", "is_open"),
         prevent_initial_call=True,
     )
     def update_progress_bar_during_active_instrument_run(
-        active_cell, table_data, refresh, instrument_id, new_job_started
+        active_cell, table_data, refresh, new_job_started
     ):
         """Displays and updates progress bar for the selected instrument run."""
         if not active_cell:
             return {"display": "none"}, None, None, None, True, {"display": "none"}
 
-        run_id = table_data[active_cell["row"]]["Job ID"]
+        run_id = table_data[active_cell["row"]]["Run ID"]
+        instrument_id = table_data[active_cell["row"]]["Instrument"]
         status = table_data[active_cell["row"]]["Status"]
 
         with get_session() as session:
@@ -941,10 +962,10 @@ def register(app):
 
     @app.callback(
         Output("setup-new-run-button", "style"),
-        Input("tabs", "value"),
+        Input("filter-date-range", "value"),
         prevent_initial_call=True,
     )
-    def hide_elements_for_non_instrument_devices(instrument_id):
+    def hide_elements_for_non_instrument_devices(_):
         """Shows new run button (always visible on server dashboard)."""
         with get_session() as session:
             if list_instruments(session):

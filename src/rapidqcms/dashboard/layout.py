@@ -80,10 +80,38 @@ def serve_layout():
 
                     dbc.Row(justify="center", children=[
 
-                        # Tabs to switch between instruments
-                        dcc.Tabs(id="tabs", className="instrument-tabs"),
-
                         dbc.Col(width=12, lg=4, children=[
+
+                            # Filter bar for the run browser
+                            dbc.Row(className="mb-2", children=[
+                                dbc.Col(width=3, children=[
+                                    dcc.Dropdown(id="filter-instrument", placeholder="All instruments",
+                                                 multi=True, clearable=True),
+                                ]),
+                                dbc.Col(width=3, children=[
+                                    dcc.Dropdown(id="filter-type", placeholder="All types", clearable=True,
+                                        options=[
+                                            {"label": "Metabolomics", "value": "metabolomics"},
+                                            {"label": "Proteomics",   "value": "proteomics"},
+                                        ]),
+                                ]),
+                                dbc.Col(width=3, children=[
+                                    dcc.Dropdown(id="filter-status", placeholder="All statuses", clearable=True,
+                                        options=[
+                                            {"label": "Active",    "value": "active"},
+                                            {"label": "Completed", "value": "completed"},
+                                        ]),
+                                ]),
+                                dbc.Col(width=3, children=[
+                                    dcc.Dropdown(id="filter-date-range", value="2w", clearable=False,
+                                        options=[
+                                            {"label": "Last 2 weeks", "value": "2w"},
+                                            {"label": "Last month",   "value": "1m"},
+                                            {"label": "Last 3 months","value": "3m"},
+                                            {"label": "All time",     "value": "all"},
+                                        ]),
+                                ]),
+                            ]),
 
                             html.Div(id="table-container", className="table-container", style={"display": "none"}, children=[
 
@@ -102,7 +130,7 @@ def serve_layout():
                                         "textOverflow": "ellipsis",
                                         "maxWidth": 0},
                                     style_table={
-                                        "max-height": "285px",
+                                        "max-height": "420px",
                                         "overflowY": "auto"},
                                     style_data_conditional=[
                                         {"if": {"state": "active"},
@@ -111,12 +139,14 @@ def serve_layout():
                                         "border": "1px solid " + bootstrap_colors["blue"]
                                         }],
                                     style_cell_conditional=[
-                                        {"if": {"column_id": "Job ID"},
-                                            "width": "40%"},
-                                        {"if": {"column_id": "Chromatography"},
+                                        {"if": {"column_id": "Run ID"},
                                             "width": "35%"},
+                                        {"if": {"column_id": "Instrument"},
+                                            "width": "20%"},
+                                        {"if": {"column_id": "Date"},
+                                            "width": "25%"},
                                         {"if": {"column_id": "Status"},
-                                            "width": "25%"}
+                                            "width": "20%"},
                                     ]
                                 ),
 
@@ -1435,6 +1465,7 @@ def serve_layout():
             dcc.Store(id="pos-internal-standards"),
             dcc.Store(id="neg-internal-standards"),
             dcc.Store(id="instruments"),
+            dcc.Store(id="selected-instrument"),
             dcc.Store(id="load-finished"),
             dcc.Store(id="close-load-modal"),
 
