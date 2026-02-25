@@ -35,6 +35,21 @@ def main() -> None:
     )
     listen_parser.add_argument("--run-id", required=True, help="Run / job ID")
 
+    # ── watch ─────────────────────────────────────────────────────────────────
+    # Always-on root watcher. Reads lab_config.toml on startup, syncs
+    # instruments to the DB, then watches for new run subdirectories.
+    watch_parser = subparsers.add_parser(
+        "watch", help="Start the always-on root directory watcher"
+    )
+    watch_parser.add_argument(
+        "--path", required=True,
+        help="Root directory to watch (e.g. /hpc/projects/mass_spec/projects)",
+    )
+    watch_parser.add_argument(
+        "--config", required=True, metavar="CONFIG",
+        help="Path to lab_config.toml",
+    )
+
     # ── migrate ───────────────────────────────────────────────────────────────
     # One-shot import from a legacy per-instrument Settings.db into the new DB.
     migrate_parser = subparsers.add_parser(
@@ -88,6 +103,19 @@ def main() -> None:
             msdial_params=s.msdial_params,
         )
         start_listener(cfg, db_engine=get_engine(), storage=get_storage())
+
+    elif args.command == "watch":
+        from pathlib import Path
+        from rapidqcms.config.lab_config import load_lab_config
+        from rapidqcms.service.watcher import start_watcher
+        from rapidqcms.db.connection import get_engine
+
+        config = load_lab_config(Path(args.config))
+        start_watcher(
+            root_path=Path(args.path),
+            config=config,
+            db_engine=get_engine(),
+        )
 
     elif args.command == "migrate":
         from pathlib import Path

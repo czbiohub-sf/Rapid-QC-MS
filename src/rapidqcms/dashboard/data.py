@@ -25,19 +25,21 @@ def get_results_for_run(
     session: Session,
     instrument_id: str,
     run_id: str,
-    qc_module: str = "metabolomics",
+    qc_module: str | None = None,
 ) -> list[QCResultModel]:
-    """Return all QCResult rows for a run, ordered by acquisition time."""
-    return (
+    """Return all QCResult rows for a run, ordered by acquisition time.
+
+    If qc_module is given, filter to that module only (e.g. "metabolomics").
+    If None (default), return results for all modules so proteomics and
+    metabolomics runs both populate the sample table correctly.
+    """
+    q = (
         session.query(QCResultModel)
-        .filter_by(
-            instrument_id=instrument_id,
-            run_id=run_id,
-            qc_module=qc_module,
-        )
-        .order_by(QCResultModel.acquired_at)
-        .all()
+        .filter_by(instrument_id=instrument_id, run_id=run_id)
     )
+    if qc_module is not None:
+        q = q.filter(QCResultModel.qc_module == qc_module)
+    return q.order_by(QCResultModel.acquired_at).all()
 
 
 def _pivot_field(
