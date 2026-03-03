@@ -163,7 +163,7 @@ def process_sample(
         instrument_id:  Instrument identifier (used for storage key prefix).
         run_id:         Acquisition run identifier (used for storage key prefix).
         context:        Context dict forwarded to QCModule.analyze().
-        stage:          "pre_search" or "post_search".
+        stage:          QC stage identifier (e.g. "pre_search").
         msconvert_exe:  MSConvert executable path, or None to skip.
         msdial_exe:     MsdialConsoleApp executable path, or None to skip.
         msdial_params:  MS-DIAL parameter file path, or None to skip.

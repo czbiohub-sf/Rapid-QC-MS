@@ -25,11 +25,10 @@ def run_qc(
     """Run all enabled QC modules for the given input file.
 
     Args:
-        input_path:  Path to the input file (mzML, .msdial peak list, etc.)
+        input_path:  Path to the input file (mzML).
         context:     Dict of shared data passed to every module.
                      Keys vary by module — see each module's docstring.
-        stage:       "pre_search" or "post_search".  Written into gate files
-                     so downstream watchers can distinguish which gate fired.
+        stage:       QC stage identifier written into gate files (e.g. "pre_search").
         config_path: Optional path to qc_modules.toml.  Uses the package
                      default when omitted.
 

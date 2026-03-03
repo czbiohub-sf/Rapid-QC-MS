@@ -24,8 +24,8 @@ def write_gate_file(raw_path: Path, result: QCResult, stage: str) -> Path:
     Args:
         raw_path: Path to the raw instrument file.
         result:   QCResult from the module that ran.
-        stage:    "pre_search" or "post_search" — allows downstream watchers
-                  to distinguish which gate to act on.
+        stage:    QC stage identifier embedded in the gate file payload
+                  (e.g. "pre_search").
 
     Returns:
         Path to the written gate file.

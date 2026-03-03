@@ -1,16 +1,14 @@
 """Always-on root directory watcher.
 
 Watches a single root path (e.g. /hpc/projects/mass_spec/projects) for new
-run subdirectories and trigger files. On startup it reads lab_config.toml,
-syncs instruments to the DB, then enters the watch loop.
+.raw files. On startup it reads lab_config.toml, syncs instruments to the DB,
+then enters the watch loop.
 
 Trigger rules:
-    metabolomics  — *PyCutterStep1_Export.txt  (one file per polarity)
-    proteomics    — *.raw                       (one file per sample)
+    proteomics    — *.raw  (one file per sample; instrument ID from filename stem)
 
-Run ID    = name of the immediate subdirectory under the root.
-Instrument = extracted from file content (metabolomics) or filename stem
-             (proteomics), as the trailing _SUFFIX token.
+Run ID     = name of the immediate subdirectory under the root.
+Instrument = trailing _SUFFIX token of the filename stem.
 
 Unknown instruments cause a hard error logged at ERROR level — register
 them in lab_config.toml before running the watcher.
@@ -38,11 +36,9 @@ from ..config.lab_config import load_lab_config, sync_to_db
 from ..db.models import Instrument
 from ..db.results import write_qc_result
 from ..db.settings import create_run, get_run
-from ..qc.metabolomics_pycutter import extract_instrument_id, run_pycutter_qc
 
 log = logging.getLogger(__name__)
 
-_PYCUTTER_SUFFIX = "PyCutterStep1_Export.txt"
 _STABILITY_INTERVAL = 30   # seconds between MD5 checks for file stability
 
 
@@ -69,9 +65,7 @@ class RootEventHandler(FileSystemEventHandler):
             return
         path = Path(event.src_path)
 
-        if _PYCUTTER_SUFFIX in path.name:
-            self._dispatch(path, self._handle_pycutter)
-        elif path.suffix.lower() == ".raw":
+        if path.suffix.lower() == ".raw":
             self._dispatch(path, self._handle_raw)
 
     def _dispatch(self, path: Path, handler) -> None:
@@ -93,60 +87,7 @@ class RootEventHandler(FileSystemEventHandler):
                 self._active.discard(str(path))
 
     # ------------------------------------------------------------------
-    # Metabolomics (PyCutter export)
-    # ------------------------------------------------------------------
-
-    def _handle_pycutter(self, path: Path) -> None:
-        run_id = self._run_id_from_path(path)
-        if run_id is None:
-            log.error("Cannot determine run ID for %s — file not in a run subdir", path)
-            return
-
-        if not self._wait_for_stable(path):
-            return
-
-        instrument_id = extract_instrument_id(path)
-        if instrument_id is None:
-            log.error(
-                "Cannot extract instrument ID from %s — no QC_/BK_ columns found", path.name
-            )
-            return
-
-        with self._session_factory() as session:
-            inst = self._require_instrument(session, instrument_id, path)
-            if inst is None:
-                return
-            self._ensure_run(session, run_id, instrument_id, "metabolomics")
-            session.commit()
-
-        polarity = "Pos" if "Positive" in path.name else "Neg"
-        thresholds = self._config.get("qc_thresholds", {}).get("metabolomics", {})
-
-        results = run_pycutter_qc(path, polarity, thresholds)
-        if not results:
-            log.warning("No QC results produced for %s", path.name)
-            return
-
-        with self._session_factory() as session:
-            for sample_id, result in results:
-                write_qc_result(
-                    session,
-                    instrument_id=instrument_id,
-                    run_id=run_id,
-                    sample_id=sample_id,
-                    experiment_type="metabolomics",
-                    qc_stage="post_search",
-                    result=result,
-                )
-            session.commit()
-
-        log.info(
-            "Metabolomics QC complete: run=%s polarity=%s file=%s results=%d",
-            run_id, polarity, path.name, len(results),
-        )
-
-    # ------------------------------------------------------------------
-    # Proteomics (raw file, pre-search)
+    # Proteomics (.raw file, pre-search)
     # ------------------------------------------------------------------
 
     def _handle_raw(self, path: Path) -> None:

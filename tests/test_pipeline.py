@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-import pandas as pd
 import pytest
 
 from rapidqcms.qc.base import QCResult, QCStatus
@@ -33,18 +32,9 @@ class TestWorstStatus:
 
 
 # ---------------------------------------------------------------------------
-# run_qc integration: uses a custom toml with the metabolomics module
+# run_qc integration: uses proteomics_pre with injected scan_counts
+# (avoids needing a real mzML file)
 # ---------------------------------------------------------------------------
-
-def _write_peak_list(tmp_path: Path, names: list[str]) -> Path:
-    """Write a minimal .msdial TSV where all ISs are found at library values."""
-    rows = [{"Title": n, "Precursor m/z": 500.0, "RT (min)": 1.0,
-             "Height": 1e6, "MSMS spectrum": None} for n in names]
-    df = pd.DataFrame(rows)
-    p = tmp_path / "sample.msdial"
-    df.to_csv(p, sep="\t", index=False)
-    return p
-
 
 def _write_toml(tmp_path: Path, content: str) -> Path:
     p = tmp_path / "qc_modules.toml"
@@ -52,79 +42,50 @@ def _write_toml(tmp_path: Path, content: str) -> Path:
     return p
 
 
+_PROTEOMICS_PRE_TOML = """
+[modules.proteomics_pre]
+class           = "rapidqcms.qc.proteomics_pre.ProteomicsPreSearchQCModule"
+enabled         = true
+stage           = "pre_search"
+experiment_type = "proteomics"
+
+[modules.proteomics_pre.thresholds]
+min_ms1_scans     = 100
+min_ms2_scans     = 500
+min_ms2_ms1_ratio = 2.0
+
+[modules.proteomics_pre.checks]
+ms1_enabled   = true
+ms2_enabled   = true
+ratio_enabled = true
+"""
+
+
 class TestRunQC:
     def test_returns_list_of_results(self, tmp_path):
-        toml_path = _write_toml(tmp_path, """
-[modules.metabolomics]
-class   = "rapidqcms.qc.metabolomics.MetabolomicsQCModule"
-enabled = true
-
-[modules.metabolomics.thresholds]
-intensity_dropouts_cutoff = 4
-library_rt_shift_cutoff   = 0.3
-in_run_rt_shift_cutoff    = 0.1
-library_mz_shift_cutoff   = 0.005
-
-[modules.metabolomics.checks]
-intensity_enabled  = true
-library_rt_enabled = true
-in_run_rt_enabled  = true
-library_mz_enabled = true
-""")
-        features = pd.DataFrame({
-            "name": ["IS1", "IS2"],
-            "precursor_mz": [500.0, 500.0],
-            "retention_time": [1.0, 1.0],
-            "ms2_spectrum": [None, None],
-            "inchikey": ["IK1", "IK2"],
-            "chromatography": ["HILIC", "HILIC"],
-            "polarity": ["Pos", "Pos"],
-        })
-        peak_file = _write_peak_list(tmp_path, ["IS1", "IS2"])
+        toml_path = _write_toml(tmp_path, _PROTEOMICS_PRE_TOML)
+        fake_raw = tmp_path / "sample.raw"
+        fake_raw.touch()
 
         results = run_qc(
-            input_path=peak_file,
-            context={"df_features": features},
+            input_path=fake_raw,
+            context={"scan_counts": {"ms1": 200, "ms2": 1000}},
             stage="pre_search",
             config_path=toml_path,
         )
 
         assert len(results) == 1
-        assert results[0].module == "metabolomics"
+        assert results[0].module == "proteomics_pre"
         assert results[0].status == QCStatus.PASS
 
     def test_gate_file_written_on_pass(self, tmp_path):
-        toml_path = _write_toml(tmp_path, """
-[modules.metabolomics]
-class   = "rapidqcms.qc.metabolomics.MetabolomicsQCModule"
-enabled = true
-
-[modules.metabolomics.thresholds]
-intensity_dropouts_cutoff = 4
-library_rt_shift_cutoff   = 0.3
-in_run_rt_shift_cutoff    = 0.1
-library_mz_shift_cutoff   = 0.005
-
-[modules.metabolomics.checks]
-intensity_enabled  = true
-library_rt_enabled = true
-in_run_rt_enabled  = true
-library_mz_enabled = true
-""")
-        features = pd.DataFrame({
-            "name": ["IS1"],
-            "precursor_mz": [500.0],
-            "retention_time": [1.0],
-            "ms2_spectrum": [None],
-            "inchikey": ["IK1"],
-            "chromatography": ["HILIC"],
-            "polarity": ["Pos"],
-        })
-        peak_file = _write_peak_list(tmp_path, ["IS1"])
+        toml_path = _write_toml(tmp_path, _PROTEOMICS_PRE_TOML)
+        fake_raw = tmp_path / "sample.raw"
+        fake_raw.touch()
 
         run_qc(
-            input_path=peak_file,
-            context={"df_features": features},
+            input_path=fake_raw,
+            context={"scan_counts": {"ms1": 200, "ms2": 1000}},
             stage="pre_search",
             config_path=toml_path,
         )
@@ -133,38 +94,14 @@ library_mz_enabled = true
         assert not (tmp_path / "sample.qc_fail").exists()
 
     def test_gate_file_written_on_fail(self, tmp_path):
-        toml_path = _write_toml(tmp_path, """
-[modules.metabolomics]
-class   = "rapidqcms.qc.metabolomics.MetabolomicsQCModule"
-enabled = true
+        toml_path = _write_toml(tmp_path, _PROTEOMICS_PRE_TOML)
+        fake_raw = tmp_path / "sample.raw"
+        fake_raw.touch()
 
-[modules.metabolomics.thresholds]
-intensity_dropouts_cutoff = 1
-library_rt_shift_cutoff   = 0.3
-in_run_rt_shift_cutoff    = 0.1
-library_mz_shift_cutoff   = 0.005
-
-[modules.metabolomics.checks]
-intensity_enabled  = true
-library_rt_enabled = true
-in_run_rt_enabled  = true
-library_mz_enabled = true
-""")
-        features = pd.DataFrame({
-            "name": ["IS1", "IS2"],
-            "precursor_mz": [500.0, 500.0],
-            "retention_time": [1.0, 1.0],
-            "ms2_spectrum": [None, None],
-            "inchikey": ["IK1", "IK2"],
-            "chromatography": ["HILIC", "HILIC"],
-            "polarity": ["Pos", "Pos"],
-        })
-        # Only IS1 found, IS2 missing → 1 dropout ≥ cutoff(1) → FAIL
-        peak_file = _write_peak_list(tmp_path, ["IS1"])
-
+        # ms2=50 far below min_ms2=500 → hard Fail
         run_qc(
-            input_path=peak_file,
-            context={"df_features": features},
+            input_path=fake_raw,
+            context={"scan_counts": {"ms1": 200, "ms2": 50}},
             stage="pre_search",
             config_path=toml_path,
         )
@@ -174,10 +111,11 @@ library_mz_enabled = true
 
     def test_empty_registry_returns_empty_list(self, tmp_path):
         toml_path = _write_toml(tmp_path, "# no modules\n")
-        peak_file = _write_peak_list(tmp_path, [])
+        fake_raw = tmp_path / "sample.raw"
+        fake_raw.touch()
 
         results = run_qc(
-            input_path=peak_file,
+            input_path=fake_raw,
             context={},
             stage="pre_search",
             config_path=toml_path,

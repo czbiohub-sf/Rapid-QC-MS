@@ -48,7 +48,7 @@ class QCResult(Base):
     )
     sample_id: Mapped[str] = mapped_column(String, nullable=False)
     experiment_type: Mapped[str] = mapped_column(String, nullable=False, index=True)
-    qc_stage: Mapped[str] = mapped_column(String, nullable=False)  # pre_search / post_search
+    qc_stage: Mapped[str] = mapped_column(String, nullable=False)  # e.g. "pre_search"
     qc_module: Mapped[str] = mapped_column(String, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False)    # Pass / Warn / Fail
     acquired_at: Mapped[datetime.datetime | None] = mapped_column(

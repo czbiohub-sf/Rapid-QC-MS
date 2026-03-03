@@ -49,7 +49,7 @@ class Settings:
     experiment_type: str     # "metabolomics" | "proteomics"
     chromatography: str      # "HILIC", "C18", etc.
     polarity: str            # "Pos" | "Neg"
-    qc_stage: str            # "pre_search" | "post_search"
+    qc_stage: str            # e.g. "pre_search"
     msconvert_exe: Path | None   # None → MSConvert step skipped
     msdial_exe: Path | None      # None → MS-DIAL step skipped
     msdial_params: Path | None   # None → MS-DIAL step skipped

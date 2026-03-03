@@ -45,10 +45,10 @@ class TestWriteGateFile:
         assert "timestamp" in data
 
     def test_gate_file_includes_stage(self, tmp_path):
-        result = QCResult(status=QCStatus.PASS, module="proteomics_post")
-        gate = write_gate_file(_raw(tmp_path), result, stage="post_search")
+        result = QCResult(status=QCStatus.PASS, module="metabolomics_pre")
+        gate = write_gate_file(_raw(tmp_path), result, stage="pre_search")
         data = read_gate_file(gate)
-        assert data["stage"] == "post_search"
+        assert data["stage"] == "pre_search"
 
 
 class TestGetGateStatus:
@@ -74,4 +74,4 @@ class TestGetGateStatus:
     def test_stage_mismatch_returns_none(self, tmp_path):
         raw = _raw(tmp_path)
         write_gate_file(raw, QCResult(status=QCStatus.PASS, module="m"), stage="pre_search")
-        assert get_gate_status(raw, "post_search") is None
+        assert get_gate_status(raw, "other_stage") is None
