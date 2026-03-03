@@ -64,18 +64,6 @@ class QCResult(Base):
     run: Mapped["Run"] = relationship("Run", back_populates="qc_results")
 
 
-class InternalStandard(Base):
-    __tablename__ = "internal_standards"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String, nullable=False)
-    chromatography: Mapped[str] = mapped_column(String, nullable=False)  # "HILIC", "C18", etc.
-    polarity: Mapped[str] = mapped_column(String, nullable=False)        # "Pos" | "Neg"
-    precursor_mz: Mapped[float] = mapped_column(Float, nullable=False)
-    retention_time: Mapped[float] = mapped_column(Float, nullable=False)
-    ms2_spectrum: Mapped[str | None] = mapped_column(String, nullable=True)
-    inchikey: Mapped[str | None] = mapped_column(String, nullable=True)
-
 
 class QCConfiguration(Base):
     __tablename__ = "qc_configurations"

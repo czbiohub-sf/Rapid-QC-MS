@@ -33,6 +33,7 @@ dependencies = [
     "gunicorn>=23.0",        # production WSGI server
     "pyteomics>=4.7",        # mzML scan-level proteomics QC
     "authlib>=1.3",          # Okta SSO (Phase 5)
+    "pyyaml>=6.0",           # QC library config (qc_config.yaml)
 ]
 requires-python = ">=3.11"
 
@@ -51,3 +52,4 @@ rapidqcms = "rapidqcms.__main__:main"
 
 [tool.setuptools.package-data]
 "rapidqcms.assets" = ["*.css", "*.ico"]
+"rapidqcms.config" = ["*.toml", "*.yaml"]

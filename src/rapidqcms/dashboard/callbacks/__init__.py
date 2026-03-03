@@ -7,9 +7,10 @@ inside the register() functions are attached to the Dash app instance.
 
 
 def register_callbacks(app):
-    from . import notifications, plots, runs, settings
+    from . import notifications, performance, plots, runs, settings
 
     runs.register(app)
     plots.register(app)
     settings.register(app)
     notifications.register(app)
+    performance.register(app)

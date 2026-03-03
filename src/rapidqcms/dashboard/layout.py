@@ -74,6 +74,10 @@ def serve_layout():
         # App layout
         html.Div(className="page", children=[
 
+            dbc.Tabs(id="main-tabs", active_tab="run-browser", className="main-tabs mt-2", children=[
+
+                dbc.Tab(label="Run Browser", tab_id="run-browser", children=[
+
             dbc.Row(justify="center", children=[
 
                 dbc.Col(width=11, children=[
@@ -205,20 +209,17 @@ def serve_layout():
                                 ]),
 
                                 # Polarity filtering options
-                                html.Div(className="radio-group-container", children=[
-                                    html.Div(className="radio-group margin-top-30", children=[
-                                        dbc.RadioItems(
-                                            id="polarity-options",
-                                            className="btn-group",
-                                            inputClassName="btn-check",
-                                            labelClassName="btn btn-outline-primary",
-                                            inputCheckedClassName="active",
-                                            options=[
-                                                {"label": "Positive Mode", "value": "Pos"},
-                                                {"label": "Negative Mode", "value": "Neg"}],
-                                            value="Pos"
-                                        ),
-                                    ])
+                                html.Div(className="margin-top-15", children=[
+                                    dcc.Dropdown(
+                                        id="polarity-options",
+                                        placeholder="All polarities",
+                                        clearable=True,
+                                        value=None,
+                                        options=[
+                                            {"label": "Positive", "value": "Pos"},
+                                            {"label": "Negative", "value": "Neg"},
+                                        ],
+                                    ),
                                 ]),
 
                                 # Sample / blank / pool / treatment filtering options
@@ -277,11 +278,11 @@ def serve_layout():
                                     ],
                                     style_cell_conditional=[
                                         {"if": {"column_id": "Specimen"},
-                                        "width": "60%"},
-                                        {"if": {"column_id": "Position"},
-                                        "width": "20%"},
+                                        "width": "55%"},
                                         {"if": {"column_id": "QC"},
                                         "width": "20%"},
+                                        {"if": {"column_id": "Polarity"},
+                                        "width": "25%"},
                                     ]
                                 )
                             ]),
@@ -1431,6 +1432,82 @@ def serve_layout():
                 ]),
             ]),
 
+                ]),  # end Run Browser Tab
+
+                dbc.Tab(label="Instrument Performance", tab_id="performance", children=[
+                    dbc.Row(justify="center", style={"paddingTop": "20px"}, children=[
+                        dbc.Col(width=11, children=[
+
+                            # Filter row
+                            dbc.Row(className="mb-3", children=[
+                                dbc.Col(width=4, children=[
+                                    dcc.Dropdown(id="perf-instrument", placeholder="All instruments",
+                                                 multi=True, clearable=True),
+                                ]),
+                                dbc.Col(width=4, children=[
+                                    dcc.Dropdown(id="perf-exp-type", placeholder="All types", clearable=True,
+                                        options=[
+                                            {"label": "Metabolomics", "value": "metabolomics"},
+                                            {"label": "Proteomics",   "value": "proteomics"},
+                                        ]),
+                                ]),
+                                dbc.Col(width=4, children=[
+                                    dcc.Dropdown(id="perf-date-range", value="3m", clearable=False,
+                                        options=[
+                                            {"label": "Last month",    "value": "1m"},
+                                            {"label": "Last 3 months", "value": "3m"},
+                                            {"label": "Last 6 months", "value": "6m"},
+                                            {"label": "All time",      "value": "all"},
+                                        ]),
+                                ]),
+                            ]),
+
+                            # Summary cards
+                            dbc.Row(className="mb-3", children=[
+                                dbc.Col(width=3, children=[dbc.Card(dbc.CardBody([
+                                    html.H6("Total Runs", className="text-muted small"),
+                                    html.H4(id="perf-card-runs", children="—"),
+                                ]))]),
+                                dbc.Col(width=3, children=[dbc.Card(dbc.CardBody([
+                                    html.H6("Pass Rate", className="text-muted small"),
+                                    html.H4(id="perf-card-passrate", children="—"),
+                                ]))]),
+                                dbc.Col(width=3, children=[dbc.Card(dbc.CardBody([
+                                    html.H6("Avg IS Detection", className="text-muted small"),
+                                    html.H4(id="perf-card-detection", children="—"),
+                                ]))]),
+                                dbc.Col(width=3, children=[dbc.Card(dbc.CardBody([
+                                    html.H6("Last Run", className="text-muted small"),
+                                    html.H4(id="perf-card-lastrun", children="—"),
+                                ]))]),
+                            ]),
+
+                            # Status chart — always visible
+                            dbc.Row(className="mb-3", children=[
+                                dbc.Col(width=12, children=[dcc.Graph(id="perf-status-chart")]),
+                            ]),
+
+                            # Metabolomics-specific charts
+                            html.Div(id="perf-metabolomics-section", children=[
+                                dbc.Row(className="mb-3", children=[
+                                    dbc.Col(width=6, children=[dcc.Graph(id="perf-detection-chart")]),
+                                    dbc.Col(width=6, children=[dcc.Graph(id="perf-issues-chart")]),
+                                ]),
+                            ]),
+
+                            # Proteomics-specific charts
+                            html.Div(id="perf-proteomics-section", children=[
+                                dbc.Row(className="mb-3", children=[
+                                    dbc.Col(width=12, children=[dcc.Graph(id="perf-scan-chart")]),
+                                ]),
+                            ]),
+
+                        ]),
+                    ]),
+                ]),  # end Instrument Performance Tab
+
+            ]),  # end dbc.Tabs
+
             # Dummy input object for callbacks on page load
             dcc.Store(id="on-page-load"),
             dcc.Store(id="google-drive-authenticated"),
@@ -1510,6 +1587,7 @@ def serve_layout():
             dcc.Store(id="job-action-failed"),
             dcc.Store(id="feature-table-for-csv", storage_type='local', data={}),
             dcc.Store(id="csv-filename"),
+            dcc.Store(id="perf-data"),
             # Dummy inputs for Google Drive authentication
             dcc.Store(id="google-drive-download-database"),
             dcc.Store(id="workspace-has-been-setup-1"),

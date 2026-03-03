@@ -14,7 +14,8 @@ import logging
 import pandas as pd
 from sqlalchemy.orm import Session
 
-from rapidqcms.db.features import get_internal_standards, list_bio_standards
+from rapidqcms.config.library import get_internal_standards_df
+from rapidqcms.db.features import list_bio_standards
 from rapidqcms.db.models import QCResult as QCResultModel
 from rapidqcms.db.settings import get_run
 
@@ -124,8 +125,8 @@ def get_run_dataframes(
     # Build polarity lookup: IS library has polarity per standard name.
     # We infer sample polarity from which IS library produced results.
     # Strategy: if a sample's details contain standards found in Pos IS lib → Pos, else Neg.
-    pos_is_df = get_internal_standards(session, chromatography, "Pos")
-    neg_is_df = get_internal_standards(session, chromatography, "Neg")
+    pos_is_df = get_internal_standards_df(chromatography, "Pos")
+    neg_is_df = get_internal_standards_df(chromatography, "Neg")
     pos_names = set(pos_is_df["name"].tolist()) if not pos_is_df.empty else set()
     neg_names = set(neg_is_df["name"].tolist()) if not neg_is_df.empty else set()
 
@@ -148,6 +149,9 @@ def get_run_dataframes(
             names_in_details = {e.get("Name") for e in row.details if e.get("Name")}
             if names_in_details & neg_names and not (names_in_details & pos_names):
                 polarity = "Neg"
+        elif "Neg" in row.sample_id:
+            # Fallback for runs without per-IS details: infer from sample name
+            polarity = "Neg"
         polarity_map[row.sample_id] = polarity
         sample_records.append({
             "Specimen": row.sample_id,
@@ -297,8 +301,8 @@ def get_bio_standard_dataframes(
         return _empty
 
     # IS library for polarity detection and m/z lookups
-    pos_is_df = get_internal_standards(session, chromatography, "Pos")
-    neg_is_df = get_internal_standards(session, chromatography, "Neg")
+    pos_is_df = get_internal_standards_df(chromatography, "Pos")
+    neg_is_df = get_internal_standards_df(chromatography, "Neg")
     pos_names = set(pos_is_df["name"].tolist()) if not pos_is_df.empty else set()
     neg_names = set(neg_is_df["name"].tolist()) if not neg_is_df.empty else set()
     pos_mz_lookup = (

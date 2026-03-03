@@ -28,7 +28,8 @@ from sqlalchemy.orm import sessionmaker
 from watchdog.events import FileCreatedEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
-from ..db.features import get_internal_standards, get_in_run_rt_history
+from ..config.library import get_internal_standards_df
+from ..db.features import get_in_run_rt_history
 from ..db.results import write_qc_result
 from ..qc.base import QCStatus
 from .gating import write_gate_file
@@ -138,7 +139,7 @@ class AcquisitionEventHandler(FileSystemEventHandler):
                 cfg = self._cfg
 
                 # Build context from DB
-                df_features = get_internal_standards(session, cfg.chromatography, cfg.polarity)
+                df_features = get_internal_standards_df(cfg.chromatography, cfg.polarity)
                 df_run_rt = get_in_run_rt_history(session, cfg.run_id, cfg.instrument_id)
 
                 context = {

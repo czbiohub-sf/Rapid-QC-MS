@@ -43,15 +43,13 @@ from rapidqcms.db.features import (
     get_msdial_configuration,
     get_qc_configuration,
     list_bio_standards,
-    list_internal_standards,
     list_msdial_configurations,
     list_qc_configurations,
-    parse_msp_to_internal_standards,
     upsert_bio_standard,
     upsert_msdial_configuration,
     upsert_qc_configuration,
 )
-from rapidqcms.db.models import BioStandard, InternalStandard, MsDialConfiguration
+from rapidqcms.db.models import BioStandard, MsDialConfiguration
 from rapidqcms.db.settings import list_instruments
 
 log = logging.getLogger(__name__)
@@ -85,25 +83,21 @@ _MSDIAL_DEFAULTS = {
 
 
 def _get_chromatography_methods_df(session):
-    """Build chromatography methods DataFrame from InternalStandard table."""
-    standards = list_internal_standards(session)
-    if not standards:
+    """Build chromatography methods DataFrame from QC config YAML."""
+    from rapidqcms.config.library import load_qc_config
+    is_config = load_qc_config().get("internal_standards", {})
+    if not is_config:
         return pd.DataFrame(
             columns=["method_id", "num_pos_standards", "num_neg_standards", "msdial_config_id"]
         )
-
-    chrom_data: dict[str, dict] = {}
-    for s in standards:
-        chrom = s.chromatography
-        if chrom not in chrom_data:
-            chrom_data[chrom] = {"num_pos_standards": 0, "num_neg_standards": 0, "msdial_config_id": ""}
-        if s.polarity == "Pos":
-            chrom_data[chrom]["num_pos_standards"] += 1
-        else:
-            chrom_data[chrom]["num_neg_standards"] += 1
-
     rows = [
-        {"method_id": chrom, **data} for chrom, data in sorted(chrom_data.items())
+        {
+            "method_id": chrom,
+            "num_pos_standards": len(polarities.get("Pos", [])),
+            "num_neg_standards": len(polarities.get("Neg", [])),
+            "msdial_config_id": "",
+        }
+        for chrom, polarities in sorted(is_config.items())
     ]
     return pd.DataFrame(rows)
 
@@ -197,15 +191,8 @@ def register(app):
         prevent_initial_call=True,
     )
     def remove_chromatography_method(button_click, chromatography):
-        """Remove all internal standards for a chromatography method."""
-        if chromatography is None:
-            return ""
-        with get_session() as session:
-            session.query(InternalStandard).filter_by(
-                chromatography=chromatography
-            ).delete()
-            session.commit()
-        return "Removed"
+        """IS library is now managed via qc_config.yaml — no DB op needed."""
+        raise PreventUpdate
 
     @app.callback(
         Output("chromatography-addition-alert", "is_open"),
@@ -263,12 +250,7 @@ def register(app):
         decoded = base64.b64decode(content_string)
 
         if filename and filename.endswith(".msp"):
-            with get_session() as session:
-                count = parse_msp_to_internal_standards(
-                    session, decoded, chromatography, polarity
-                )
-                session.commit()
-            return f"Success! {filename} has been added to {chromatography} {polarity}. ({count} standards imported)"
+            return "IS library is now managed via qc_config.yaml — MSP upload to DB is disabled."
         else:
             return "Error: Only .msp files are supported."
 
@@ -865,12 +847,7 @@ def register(app):
         decoded = base64.b64decode(content_string)
 
         if filename and filename.endswith(".msp"):
-            with get_session() as session:
-                count = parse_msp_to_internal_standards(
-                    session, decoded, chromatography, polarity
-                )
-                session.commit()
-            return f"Success! Added {filename} to {bio_standard} in {chromatography} {polarity}. ({count} metabolites imported)"
+            return f"IS library is now managed via qc_config.yaml — MSP upload to DB is disabled."
         return "Error 2"
 
     @app.callback(

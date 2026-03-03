@@ -1,0 +1,65 @@
+# Rapid-QC-MS quality-control library configuration
+#
+# This file defines the reference data used by QC modules:
+#   - internal_standards : IS detection for metabolomics pre-search QC
+#   - instrument_drift   : (future) per-instrument RT/mz drift thresholds
+#   - bio_standards      : (future) biological reference sample definitions
+#
+# To use a custom config file instead of this one, set:
+#   RAPIDQCMS_QC_CONFIG=/path/to/your/config.yaml
+#
+# To add a new chromatography method, add a new key under
+# internal_standards (e.g. C18, PFPCol).  Each key contains
+# Pos and Neg lists; each entry has name, mz, and rt (minutes).
+
+internal_standards:
+  HILIC:
+    Pos:
+      - {name: "1_1-Methylnicotinamide-d3",   mz: 140.0897,  rt: 6.3567}
+      - {name: "1_Acetylcarnitine_d3",         mz: 207.1419,  rt: 7.15}
+      - {name: "1_Alanine_d3",                 mz:  93.07427, rt: 8.15395}
+      - {name: "1_Arginine_d7",                mz: 182.1627,  rt: 9.45}
+      - {name: "1_Aspartic acid_d3",           mz: 137.0637,  rt: 9.2787}
+      - {name: "1_Carnitine_d3",               mz: 165.1313,  rt: 7.6615}
+      - {name: "1_Choline_d9",                 mz: 113.1637,  rt: 5.3859}
+      - {name: "1_Creatine_d3",                mz: 135.0956,  rt: 8.145284}
+      - {name: "1_Creatinine_d3",              mz: 117.0851,  rt: 4.881467}
+      - {name: "1_CUDA iSTD",                  mz: 341.2798,  rt: 1.197767}
+      - {name: "1_Glutamic Acid_d3",           mz: 151.0793,  rt: 8.75}
+      - {name: "1_Glutamine_d5",               mz: 152.1078,  rt: 8.6509}
+      - {name: "1_HippuricAcid_d5",            mz: 185.0967,  rt: 3.0}
+      - {name: "1_Lysine-d8",                  mz: 155.1628,  rt: 9.536}
+      - {name: "1_Methionine_d8",              mz: 158.1082,  rt: 7.4}
+      - {name: "1_N-Methyl-D3-Histamine iSTD", mz: 129.1215,  rt: 7.4057}
+      - {name: "1_Phenylalanine-d8",           mz: 174.1361,  rt: 6.9}
+      - {name: "1_Serine_d3",                  mz: 109.0686,  rt: 8.645}
+      - {name: "1_TMAO_d9",                    mz:  85.1328,  rt: 5.5965}
+      - {name: "1_Tryptophan-d5",              mz: 210.1283,  rt: 6.849}
+      - {name: "1_Valine_d8",                  mz: 126.1364,  rt: 7.66}
+    Neg:
+      - {name: "1_Arginine_d7",                mz: 180.1485,  rt: 9.495}
+      - {name: "1_CUDA",                       mz: 339.2653,  rt: 1.2052}
+      - {name: "1_CUDA iSTD",                  mz: 339.2655,  rt: 1.205217}
+      - {name: "1_D3-Alanine iSTD",            mz:  91.05797, rt: 8.1475}
+      - {name: "1_D3-Aspartic acid iSTD",      mz: 135.0479,  rt: 9.288283}
+      - {name: "1_D3-Creatinine iSTD",         mz: 115.0693,  rt: 4.881467}
+      - {name: "1_D3-Glutamic acid iSTD",      mz: 149.0636,  rt: 8.803884}
+      - {name: "1_D5-L-Glutamine iSTD",        mz: 150.0922,  rt: 8.658283}
+      - {name: "1_d5_Hippuric Acid",           mz: 183.0822,  rt: 3.2}
+      - {name: "1_Glutamine_d5",               mz: 150.0922,  rt: 8.575}
+      - {name: "1_Hippuric acid_d5",           mz: 183.082,   rt: 3.2}
+      - {name: "1_Lysine_d8",                  mz: 153.1486,  rt: 9.5798}
+      - {name: "1_Methionine_d8",              mz: 156.0941,  rt: 7.4717}
+      - {name: "1_Serine_d8",                  mz: 107.0543,  rt: 8.7138}
+      - {name: "1_TRYPTOPHAN-2,4,5,6,7-D5",   mz: 208.114,   rt: 6.849}
+      - {name: "1_Val-Tyr-Val iSTD",           mz: 378.2038,  rt: 6.96425}
+
+# ---------------------------------------------------------------------------
+# Future: instrument drift thresholds (one block per instrument ID)
+# ---------------------------------------------------------------------------
+# instrument_drift: {}
+
+# ---------------------------------------------------------------------------
+# Future: biological reference standards
+# ---------------------------------------------------------------------------
+# bio_standards: {}

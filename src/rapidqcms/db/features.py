@@ -16,91 +16,10 @@ from sqlalchemy.orm import Session
 from .models import (
     BioStandard,
     EmailNotification,
-    InternalStandard,
     MsDialConfiguration,
     QCConfiguration,
     QCResult as QCResultModel,
 )
-
-
-# ---------------------------------------------------------------------------
-# Internal standards
-# ---------------------------------------------------------------------------
-
-
-def get_internal_standards(
-    session: Session,
-    chromatography: str,
-    polarity: str,
-) -> pd.DataFrame:
-    """Return the internal standard library for a given chromatography / polarity.
-
-    Returns a DataFrame with columns:
-        name, precursor_mz, retention_time, ms2_spectrum, inchikey,
-        chromatography, polarity
-    """
-    rows = (
-        session.query(InternalStandard)
-        .filter_by(chromatography=chromatography, polarity=polarity)
-        .order_by(InternalStandard.name)
-        .all()
-    )
-    return pd.DataFrame(
-        [
-            {
-                "name": r.name,
-                "precursor_mz": r.precursor_mz,
-                "retention_time": r.retention_time,
-                "ms2_spectrum": r.ms2_spectrum,
-                "inchikey": r.inchikey,
-                "chromatography": r.chromatography,
-                "polarity": r.polarity,
-            }
-            for r in rows
-        ]
-    )
-
-
-def upsert_internal_standard(
-    session: Session,
-    name: str,
-    chromatography: str,
-    polarity: str,
-    precursor_mz: float,
-    retention_time: float,
-    ms2_spectrum: str | None = None,
-    inchikey: str | None = None,
-) -> InternalStandard:
-    """Insert or update an internal standard record (matched on name + chromatography + polarity)."""
-    record = (
-        session.query(InternalStandard)
-        .filter_by(name=name, chromatography=chromatography, polarity=polarity)
-        .one_or_none()
-    )
-    if record is None:
-        record = InternalStandard(
-            name=name,
-            chromatography=chromatography,
-            polarity=polarity,
-        )
-        session.add(record)
-
-    record.precursor_mz = precursor_mz
-    record.retention_time = retention_time
-    record.ms2_spectrum = ms2_spectrum
-    record.inchikey = inchikey
-    return record
-
-
-def list_internal_standards(
-    session: Session,
-    chromatography: str | None = None,
-) -> list[InternalStandard]:
-    """Return all internal standards, optionally filtered by chromatography."""
-    q = session.query(InternalStandard)
-    if chromatography is not None:
-        q = q.filter_by(chromatography=chromatography)
-    return q.order_by(InternalStandard.name).all()
 
 
 # ---------------------------------------------------------------------------
@@ -237,71 +156,6 @@ def delete_msdial_configuration(session: Session, config_id: str) -> None:
     record = session.get(MsDialConfiguration, config_id)
     if record is not None:
         session.delete(record)
-
-
-# ---------------------------------------------------------------------------
-# MSP file import
-# ---------------------------------------------------------------------------
-
-
-def parse_msp_to_internal_standards(
-    session: Session,
-    msp_bytes: bytes,
-    chromatography: str,
-    polarity: str,
-) -> int:
-    """Parse MSP file bytes and upsert each entry as an InternalStandard.
-
-    Returns the count of entries successfully imported.
-    """
-    text = msp_bytes.decode("utf-8", errors="ignore")
-    # MSP entries are separated by blank lines
-    raw_entries = [e.strip() for e in text.strip().split("\n\n") if e.strip()]
-
-    count = 0
-    for entry in raw_entries:
-        name: str | None = None
-        precursor_mz: float | None = None
-        retention_time: float | None = None
-        ms2_spectrum: str | None = None
-        inchikey: str | None = None
-
-        for line in entry.splitlines():
-            key, _, value = line.partition(":")
-            key = key.strip().upper()
-            value = value.strip()
-
-            if key in ("NAME",):
-                name = value
-            elif key in ("PRECURSORMZ", "PRECURSOR_MZ"):
-                try:
-                    precursor_mz = float(value)
-                except ValueError:
-                    pass
-            elif key in ("RT", "RETENTIONTIME", "RETENTION_TIME"):
-                try:
-                    retention_time = float(value)
-                except ValueError:
-                    pass
-            elif key in ("INCHIKEY", "INCHI_KEY"):
-                inchikey = value
-            elif key == "NUM PEAKS" and value and value != "0":
-                ms2_spectrum = "MS2"
-
-        if name and precursor_mz is not None and retention_time is not None:
-            upsert_internal_standard(
-                session,
-                name=name,
-                chromatography=chromatography,
-                polarity=polarity,
-                precursor_mz=precursor_mz,
-                retention_time=retention_time,
-                ms2_spectrum=ms2_spectrum,
-                inchikey=inchikey,
-            )
-            count += 1
-
-    return count
 
 
 # ---------------------------------------------------------------------------

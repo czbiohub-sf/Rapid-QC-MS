@@ -7,6 +7,7 @@ Derived from PlotGeneration.py with the following changes:
   - Pure plot functions (load_istd_rt_plot etc.) are unchanged
 """
 
+import datetime
 import json
 import logging
 import traceback
@@ -14,6 +15,7 @@ import traceback
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 from sqlalchemy.orm import Session
 
 from rapidqcms.dashboard.data import get_run_dataframes, get_results_for_run
@@ -513,3 +515,224 @@ def get_internal_standard_index(previous, next, max):
         index = 0
 
     return index
+
+
+# ---------------------------------------------------------------------------
+# Performance trend chart functions
+# ---------------------------------------------------------------------------
+
+_EMPTY_LAYOUT = dict(
+    margin=dict(t=50, b=40, l=50, r=20),
+    paper_bgcolor="white",
+    plot_bgcolor="white",
+)
+
+_STATUS_COLORS = {
+    "Pass": bootstrap_colors["green"],
+    "Warn": bootstrap_colors["yellow"],
+    "Fail": bootstrap_colors["red"],
+}
+
+
+def _empty_figure(title: str) -> go.Figure:
+    fig = go.Figure()
+    fig.update_layout(
+        title=title,
+        annotations=[{
+            "text": "No data available",
+            "xref": "paper", "yref": "paper",
+            "x": 0.5, "y": 0.5,
+            "showarrow": False,
+            "font": {"size": 14, "color": "gray"},
+        }],
+        **_EMPTY_LAYOUT,
+    )
+    return fig
+
+
+def build_qc_status_chart(run_summaries: list[dict]) -> go.Figure:
+    """Stacked bar: Pass/Warn/Fail sample counts per run, per instrument."""
+    if not run_summaries:
+        return _empty_figure("QC Status Over Time")
+
+    instruments = sorted({s["instrument_id"] for s in run_summaries})
+    fig = go.Figure()
+
+    for status in ("Pass", "Warn", "Fail"):
+        key = f"n_{status.lower()}"
+        color = _STATUS_COLORS[status]
+        x_vals, y_vals, text_vals = [], [], []
+        for s in run_summaries:
+            label = (
+                s["started_at"].strftime("%Y-%m-%d")
+                if isinstance(s["started_at"], datetime.datetime)
+                else str(s["started_at"] or s["run_id"])
+            )
+            x_vals.append(f"{s['instrument_id']}<br>{label}")
+            y_vals.append(s.get(key, 0) or 0)
+            text_vals.append(s["instrument_id"])
+
+        fig.add_trace(go.Bar(
+            name=status,
+            x=x_vals,
+            y=y_vals,
+            marker_color=color,
+            hovertemplate=f"Status: {status}<br>Count: %{{y}}<extra></extra>",
+        ))
+
+    fig.update_layout(
+        title="QC Status Over Time",
+        barmode="stack",
+        xaxis_title="Run",
+        yaxis_title="Sample Count",
+        legend_title="Status",
+        xaxis={"tickangle": -45, "tickfont": {"size": 10}},
+        **_EMPTY_LAYOUT,
+    )
+    return fig
+
+
+def build_is_detection_chart(run_summaries: list[dict]) -> go.Figure:
+    """Line chart: avg IS fill_fraction per run over time, per instrument."""
+    metab = [s for s in run_summaries if s.get("experiment_type") == "metabolomics"
+             and s.get("avg_fill_fraction") is not None]
+    if not metab:
+        return _empty_figure("IS Detection Rate Over Time")
+
+    instruments = sorted({s["instrument_id"] for s in metab})
+    fig = go.Figure()
+
+    for inst in instruments:
+        inst_data = [s for s in metab if s["instrument_id"] == inst]
+        x = [
+            s["started_at"].strftime("%Y-%m-%d")
+            if isinstance(s["started_at"], datetime.datetime)
+            else str(s["started_at"] or s["run_id"])
+            for s in inst_data
+        ]
+        y = [s["avg_fill_fraction"] for s in inst_data]
+        fig.add_trace(go.Scatter(
+            x=x, y=y, mode="lines+markers", name=inst,
+            hovertemplate=f"{inst}<br>Date: %{{x}}<br>Fill fraction: %{{y:.1%}}<extra></extra>",
+        ))
+
+    # Threshold bands
+    fig.add_hrect(y0=0.80, y1=0.95, fillcolor=bootstrap_colors["yellow-low-opacity"],
+                  line_width=0, annotation_text="Warn zone")
+    fig.add_hrect(y0=0, y1=0.80, fillcolor=bootstrap_colors["red-low-opacity"],
+                  line_width=0, annotation_text="Fail zone")
+    fig.add_hline(y=0.95, line_dash="dash", line_color=bootstrap_colors["yellow"],
+                  annotation_text="Warn threshold")
+    fig.add_hline(y=0.80, line_dash="dash", line_color=bootstrap_colors["red"],
+                  annotation_text="Fail threshold")
+
+    fig.update_layout(
+        title="IS Detection Rate Over Time",
+        xaxis_title="Run Date",
+        yaxis_title="Avg Fill Fraction",
+        yaxis={"tickformat": ".0%", "range": [0, 1.05]},
+        **_EMPTY_LAYOUT,
+    )
+    return fig
+
+
+def build_qc_issues_chart(run_summaries: list[dict]) -> go.Figure:
+    """Line chart: avg # IS with RT/m/z/CV issues per run over time."""
+    metab = [s for s in run_summaries if s.get("experiment_type") == "metabolomics"]
+    if not metab:
+        return _empty_figure("QC Issue Counts Over Time")
+
+    issue_series = [
+        ("avg_rt_warn",  "RT Warn",  bootstrap_colors["blue"],          "solid"),
+        ("avg_rt_fail",  "RT Fail",  bootstrap_colors["blue-low-opacity"], "dash"),
+        ("avg_mz_warn",  "m/z Warn", "rgb(255, 127, 14)",               "solid"),
+        ("avg_mz_fail",  "m/z Fail", "rgba(255, 127, 14, 0.5)",         "dash"),
+        ("avg_cv_warn",  "CV Warn",  "rgb(148, 103, 189)",               "solid"),
+        ("avg_cv_fail",  "CV Fail",  "rgba(148, 103, 189, 0.5)",         "dash"),
+    ]
+
+    fig = go.Figure()
+    instruments = sorted({s["instrument_id"] for s in metab})
+
+    for key, label, color, dash in issue_series:
+        for inst in instruments:
+            inst_data = [s for s in metab if s["instrument_id"] == inst and s.get(key) is not None]
+            if not inst_data:
+                continue
+            x = [
+                s["started_at"].strftime("%Y-%m-%d")
+                if isinstance(s["started_at"], datetime.datetime)
+                else str(s["started_at"] or s["run_id"])
+                for s in inst_data
+            ]
+            y = [s[key] for s in inst_data]
+            trace_name = f"{inst} – {label}" if len(instruments) > 1 else label
+            fig.add_trace(go.Scatter(
+                x=x, y=y, mode="lines+markers",
+                name=trace_name,
+                line={"color": color, "dash": dash},
+                hovertemplate=f"{trace_name}<br>Date: %{{x}}<br>Avg count: %{{y:.1f}}<extra></extra>",
+            ))
+
+    fig.update_layout(
+        title="QC Issue Counts Over Time",
+        xaxis_title="Run Date",
+        yaxis_title="Avg # IS with Issues",
+        **_EMPTY_LAYOUT,
+    )
+    return fig
+
+
+def build_scan_count_chart(run_summaries: list[dict]) -> go.Figure:
+    """Line chart: avg MS1 and MS2 scan counts per run, per instrument."""
+    proto = [s for s in run_summaries if s.get("experiment_type") == "proteomics"
+             and (s.get("avg_ms1") is not None or s.get("avg_ms2") is not None)]
+    if not proto:
+        return _empty_figure("MS1/MS2 Scan Counts Over Time")
+
+    instruments = sorted({s["instrument_id"] for s in proto})
+    fig = go.Figure()
+
+    for inst in instruments:
+        inst_data = [s for s in proto if s["instrument_id"] == inst]
+        x = [
+            s["started_at"].strftime("%Y-%m-%d")
+            if isinstance(s["started_at"], datetime.datetime)
+            else str(s["started_at"] or s["run_id"])
+            for s in inst_data
+        ]
+        ms1 = [s.get("avg_ms1") for s in inst_data]
+        ms2 = [s.get("avg_ms2") for s in inst_data]
+        ratio = [s.get("avg_ratio") for s in inst_data]
+
+        prefix = f"{inst} – " if len(instruments) > 1 else ""
+        fig.add_trace(go.Scatter(
+            x=x, y=ms1, mode="lines+markers",
+            name=f"{prefix}MS1",
+            line={"color": bootstrap_colors["blue"]},
+            hovertemplate=f"{prefix}MS1<br>Date: %{{x}}<br>Count: %{{y:,}}<extra></extra>",
+        ))
+        fig.add_trace(go.Scatter(
+            x=x, y=ms2, mode="lines+markers",
+            name=f"{prefix}MS2",
+            line={"color": bootstrap_colors["green"]},
+            hovertemplate=f"{prefix}MS2<br>Date: %{{x}}<br>Count: %{{y:,}}<extra></extra>",
+        ))
+        if any(v is not None for v in ratio):
+            fig.add_trace(go.Scatter(
+                x=x, y=ratio, mode="lines+markers",
+                name=f"{prefix}MS2/MS1 ratio",
+                line={"color": bootstrap_colors["yellow"], "dash": "dot"},
+                yaxis="y2",
+                hovertemplate=f"{prefix}Ratio<br>Date: %{{x}}<br>Ratio: %{{y:.2f}}<extra></extra>",
+            ))
+
+    fig.update_layout(
+        title="MS1/MS2 Scan Counts Over Time",
+        xaxis_title="Run Date",
+        yaxis={"title": "Avg Scan Count"},
+        yaxis2={"title": "MS2/MS1 Ratio", "overlaying": "y", "side": "right",
+                "showgrid": False},
+        **_EMPTY_LAYOUT,
+    )
+    return fig

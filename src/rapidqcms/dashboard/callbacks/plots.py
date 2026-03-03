@@ -18,7 +18,7 @@ from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 
 from rapidqcms.db.connection import get_session
-from rapidqcms.db.features import get_internal_standards
+from rapidqcms.config.library import get_internal_standards_df as get_internal_standards_df_lib
 from rapidqcms.db.models import QCResult as QCResultModel
 from rapidqcms.dashboard.plots import (
     generate_bio_standard_dataframe,
@@ -49,8 +49,8 @@ def _get_polarity_for_sample(session, instrument_id, run_id, sample_id, chromato
     if result is None or not result.details:
         return "Pos"
 
-    pos_is = get_internal_standards(session, chromatography, "Pos")
-    neg_is = get_internal_standards(session, chromatography, "Neg")
+    pos_is = get_internal_standards_df_lib(chromatography, "Pos")
+    neg_is = get_internal_standards_df_lib(chromatography, "Neg")
     pos_names = set(pos_is["name"].tolist()) if not pos_is.empty else set()
     neg_names = set(neg_is["name"].tolist()) if not neg_is.empty else set()
 
@@ -58,6 +58,13 @@ def _get_polarity_for_sample(session, instrument_id, run_id, sample_id, chromato
     if names_in_details & neg_names and not (names_in_details & pos_names):
         return "Neg"
     return "Pos"
+
+
+def _pick_polarity(polarity, pos_data, neg_data):
+    """Resolve None ('All polarities') to whichever side has data, preferring Pos."""
+    if polarity is not None:
+        return polarity
+    return "Pos" if pos_data else "Neg"
 
 
 def register(app):
@@ -100,6 +107,8 @@ def register(app):
 
         df_istd_rt_pos = pd.DataFrame(json.loads(rt_pos)) if rt_pos else pd.DataFrame()
         df_istd_rt_neg = pd.DataFrame(json.loads(rt_neg)) if rt_neg else pd.DataFrame()
+
+        polarity = _pick_polarity(polarity, rt_pos, rt_neg)
 
         df_samples = pd.DataFrame(json.loads(samples))
         all_samples = (
@@ -183,6 +192,8 @@ def register(app):
         df_istd_intensity_neg = (
             pd.DataFrame(json.loads(intensity_neg)) if intensity_neg else pd.DataFrame()
         )
+
+        polarity = _pick_polarity(polarity, intensity_pos, intensity_neg)
 
         df_samples = pd.DataFrame(json.loads(samples))
         all_samples = (
@@ -278,6 +289,8 @@ def register(app):
             pd.DataFrame(json.loads(delta_mz_neg)) if delta_mz_neg else pd.DataFrame()
         )
 
+        polarity = _pick_polarity(polarity, delta_mz_pos, delta_mz_neg)
+
         df_samples = pd.DataFrame(json.loads(samples))
         all_samples = (
             df_samples.loc[df_samples["Polarity"] == polarity]["Specimen"]
@@ -368,6 +381,7 @@ def register(app):
     def populate_biological_standards_compare_dropdowns(
         resources, polarity, intensity_pos, intensity_neg, selected_bio_standard, runselector
     ):
+        polarity = _pick_polarity(polarity, intensity_pos, intensity_neg)
         intensity_store = intensity_pos if polarity == "Pos" else intensity_neg
         if not intensity_store or not selected_bio_standard:
             return [""], "", [""], ""
@@ -408,6 +422,7 @@ def register(app):
         polarity, rt_pos, rt_neg, intensity_pos, intensity_neg, mz_pos, mz_neg,
         resources, click_data, selected_bio_standard, target_biostnd, source_biostnd, jobid,
     ):
+        polarity = _pick_polarity(polarity, rt_pos, rt_neg)
         rt_store = rt_pos if polarity == "Pos" else rt_neg
         intensity_store = intensity_pos if polarity == "Pos" else intensity_neg
         mz_store = mz_pos if polarity == "Pos" else mz_neg
@@ -468,6 +483,7 @@ def register(app):
     def populate_bio_standard_benchmark_plot(
         polarity, selected_feature, intensity_pos, intensity_neg, selected_bio_standard, resources
     ):
+        polarity = _pick_polarity(polarity, intensity_pos, intensity_neg)
         intensity_store = intensity_pos if polarity == "Pos" else intensity_neg
 
         if not intensity_store or not selected_bio_standard or not selected_feature:

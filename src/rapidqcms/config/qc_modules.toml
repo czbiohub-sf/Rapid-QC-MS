@@ -8,8 +8,10 @@
 # A UI for editing thresholds will be added in Phase 4.
 
 [modules.metabolomics]
-class   = "rapidqcms.qc.metabolomics.MetabolomicsQCModule"
-enabled = true
+class           = "rapidqcms.qc.metabolomics.MetabolomicsQCModule"
+enabled         = true
+stage           = "post_search"
+experiment_type = "metabolomics"
 
 [modules.metabolomics.thresholds]
 intensity_dropouts_cutoff  = 4      # number of missing internal standards → Fail
@@ -24,9 +26,30 @@ in_run_rt_enabled  = true
 library_mz_enabled = true
 
 
+[modules.metabolomics_pre]
+class           = "rapidqcms.qc.metabolomics_pre.MetabolomicsPreSearchQCModule"
+enabled         = true
+stage           = "pre_search"
+experiment_type = "metabolomics"
+
+[modules.metabolomics_pre.thresholds]
+mz_ppm              = 10.0   # m/z tolerance for XIC extraction (ppm)
+rt_window_min       = 0.75   # ±minutes around library RT to search for IS peak
+min_intensity       = 1e4    # minimum peak intensity to count as detected
+warn_fill_fraction  = 0.90   # IS detection rate below this → Warn
+fail_fill_fraction  = 0.70   # IS detection rate below this → Fail
+rt_deviation_warn   = 0.50   # IS RT shift above this (min) → Warn
+
+[modules.metabolomics_pre.checks]
+fill_fraction_enabled = true
+rt_deviation_enabled  = true
+
+
 [modules.proteomics_pre]
 class   = "rapidqcms.qc.proteomics_pre.ProteomicsPreSearchQCModule"
 enabled = true
+stage   = "pre_search"
+experiment_type = "proteomics"  # only run for proteomics; metabolomics uses metabolomics_pre
 
 [modules.proteomics_pre.thresholds]
 min_ms1_scans     = 100   # fewer MS1 scans → Fail
@@ -40,8 +63,10 @@ ratio_enabled = true
 
 
 [modules.proteomics_post]
-class   = "rapidqcms.qc.proteomics_post.ProteomicsPostSearchQCModule"
-enabled = false  # enable when proteomics module is implemented in Phase 2
+class           = "rapidqcms.qc.proteomics_post.ProteomicsPostSearchQCModule"
+enabled         = false  # enable when proteomics module is implemented in Phase 2
+stage           = "post_search"
+experiment_type = "proteomics"
 
 [modules.proteomics_post.thresholds]
 min_psm_count            = 1000   # fewer PSMs → Fail

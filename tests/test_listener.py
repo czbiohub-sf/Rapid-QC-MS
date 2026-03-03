@@ -119,7 +119,7 @@ def test_handle_file_persists_qc_result(tmp_path):
             return_value=[fake_result],
         ),
         mock.patch(
-            "rapidqcms.service.listener.get_internal_standards",
+            "rapidqcms.service.listener.get_internal_standards_df",
             return_value=mock.MagicMock(),
         ),
         mock.patch(

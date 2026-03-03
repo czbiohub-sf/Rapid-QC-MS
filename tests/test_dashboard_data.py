@@ -11,7 +11,7 @@ import io
 import pandas as pd
 import pytest
 
-from rapidqcms.db.models import BioStandard, Instrument, InternalStandard, QCResult, Run
+from rapidqcms.db.models import BioStandard, Instrument, QCResult, Run
 from rapidqcms.dashboard.data import (
     _identify_bio_standards,
     get_bio_standard_dataframes,
@@ -31,23 +31,6 @@ def _seed_instrument(session, instrument_id="INST01"):
     session.add(run)
     return inst, run
 
-
-def _seed_is(session, chromatography="HILIC"):
-    """Seed two Pos internal standards."""
-    session.add(InternalStandard(
-        name="CarnitineD3",
-        chromatography=chromatography,
-        polarity="Pos",
-        precursor_mz=165.123,
-        retention_time=0.85,
-    ))
-    session.add(InternalStandard(
-        name="AcetylcarnitineD3",
-        chromatography=chromatography,
-        polarity="Pos",
-        precursor_mz=207.149,
-        retention_time=1.10,
-    ))
 
 
 def _make_details(rt1, rt2):
@@ -99,7 +82,6 @@ def test_get_run_dataframes_returns_empty_dicts_for_no_results(db_session):
 def test_get_run_dataframes_pivots_rt_correctly(db_session):
     """Two samples with Pos IS should produce df_rt_pos with 2 rows and IS columns."""
     _seed_instrument(db_session)
-    _seed_is(db_session)
 
     now = datetime.datetime.now(datetime.UTC)
     for i, (rt1, rt2) in enumerate([(0.84, 1.09), (0.86, 1.11)]):
@@ -135,7 +117,6 @@ def test_get_run_dataframes_pivots_rt_correctly(db_session):
 def test_get_run_dataframes_pos_internal_standards_sorted(db_session):
     """pos_internal_standards key should be a sorted JSON list."""
     _seed_instrument(db_session)
-    _seed_is(db_session)
 
     db_session.add(QCResult(
         instrument_id="INST01",
@@ -220,7 +201,6 @@ def test_get_bio_standard_dataframes_empty_when_no_bio_standards(db_session):
 def test_get_bio_standard_dataframes_identifies_hela_samples(db_session):
     """Bio standard samples are identified and pivoted into DataFrames."""
     _seed_instrument(db_session)
-    _seed_is(db_session)
 
     db_session.add(BioStandard(name="HeLa", chromatography="HILIC"))
 

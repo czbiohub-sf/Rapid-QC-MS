@@ -40,8 +40,20 @@ def run_qc(
     kwargs = {"config_path": config_path} if config_path else {}
     registry = load_registry(**kwargs)
 
+    experiment_type = context.get("experiment_type")
+
     results: list[QCResult] = []
     for module_name, module in registry.items():
+        m_stage = module.config.get("stage")
+        m_exp   = module.config.get("experiment_type")
+        # Skip modules that declare a stage that doesn't match
+        if m_stage is not None and m_stage != stage:
+            log.debug("Skipping %s (stage=%s, current=%s)", module_name, m_stage, stage)
+            continue
+        # Skip modules that declare an experiment_type that doesn't match
+        if m_exp is not None and experiment_type is not None and m_exp != experiment_type:
+            log.debug("Skipping %s (exp_type=%s, current=%s)", module_name, m_exp, experiment_type)
+            continue
         log.info("Running %s QC on %s", module_name, input_path.name)
         try:
             result = module.analyze(input_path, context)

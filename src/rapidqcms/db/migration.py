@@ -5,11 +5,13 @@ Usage (CLI):
     rapidqcms migrate --settings-db /path/to/Settings.db
 
 Programmatic:
-    from rapidqcms.db.migration import import_internal_standards, import_qc_configurations
+    from rapidqcms.db.migration import import_qc_configurations
     from sqlalchemy.orm import Session
 
-    n_is  = import_internal_standards(Path("/path/to/Settings.db"), session)
-    n_qc  = import_qc_configurations(Path("/path/to/Settings.db"), session)
+    n_qc = import_qc_configurations(Path("/path/to/Settings.db"), session)
+
+Note: internal_standards are no longer stored in the database.
+      They are defined in config/qc_config.yaml.
 """
 
 from __future__ import annotations
@@ -19,38 +21,7 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from .features import upsert_internal_standard, upsert_qc_configuration
-
-
-def import_internal_standards(settings_db_path: Path, session: Session) -> int:
-    """Read the internal_standards table from a legacy Settings.db and upsert into the new DB.
-
-    Returns the number of records imported.
-    """
-    conn = sqlite3.connect(settings_db_path)
-    try:
-        cursor = conn.execute("SELECT * FROM internal_standards")
-        cols = [d[0] for d in cursor.description]
-        rows = cursor.fetchall()
-    finally:
-        conn.close()
-
-    count = 0
-    for row in rows:
-        data = dict(zip(cols, row))
-        upsert_internal_standard(
-            session,
-            name=data["name"],
-            chromatography=data.get("chromatography", "HILIC"),
-            polarity=data.get("polarity", "Pos"),
-            precursor_mz=float(data["precursor_mz"]),
-            retention_time=float(data["retention_time"]),
-            ms2_spectrum=data.get("ms2_spectrum") or None,
-            inchikey=data.get("inchikey") or None,
-        )
-        count += 1
-
-    return count
+from .features import upsert_qc_configuration
 
 
 def import_qc_configurations(settings_db_path: Path, session: Session) -> int:

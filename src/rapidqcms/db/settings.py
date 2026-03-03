@@ -120,3 +120,83 @@ def delete_run(session: Session, run_id: str) -> None:
     run = session.get(Run, run_id)
     if run is not None:
         session.delete(run)
+
+
+def get_instrument_run_qc_summary(
+    session: Session,
+    instrument_ids: list[str] | None = None,
+    experiment_type: str | None = None,
+    since=None,
+    limit: int = 500,
+) -> list[dict]:
+    """Return run-level QC aggregates for performance trend charts.
+
+    Each entry covers one (instrument_id, run_id) pair with aggregated
+    Pass/Warn/Fail counts and experiment-type-specific metric averages.
+    Results are ordered by started_at ascending (chronological for charting).
+    """
+    import datetime
+    from collections import defaultdict
+
+    q = (
+        session.query(QCResult, Run.started_at, Run.experiment_type)
+        .join(Run, QCResult.run_id == Run.id)
+    )
+    if instrument_ids:
+        q = q.filter(QCResult.instrument_id.in_(instrument_ids))
+    if experiment_type:
+        q = q.filter(Run.experiment_type == experiment_type)
+    if since:
+        q = q.filter(Run.started_at >= since)
+
+    rows = q.order_by(Run.started_at.asc()).limit(limit).all()
+
+    groups: dict = defaultdict(list)
+    meta: dict = {}
+    for qc, started_at, exp_type in rows:
+        key = (qc.instrument_id, qc.run_id)
+        groups[key].append(qc)
+        meta[key] = (started_at, exp_type)
+
+    result = []
+    for (instrument_id, run_id), qcs in groups.items():
+        started_at, exp_type = meta[(instrument_id, run_id)]
+        n_pass  = sum(1 for q in qcs if q.status == "Pass")
+        n_warn  = sum(1 for q in qcs if q.status == "Warn")
+        n_fail  = sum(1 for q in qcs if q.status == "Fail")
+        n_total = len(qcs)
+        m_list  = [q.metrics or {} for q in qcs]
+
+        def _avg(key):
+            vals = [m[key] for m in m_list if key in m and m[key] is not None]
+            return round(sum(vals) / len(vals), 3) if vals else None
+
+        def _avg_len(key):
+            vals = [len(m[key]) for m in m_list if key in m]
+            return round(sum(vals) / len(vals), 2) if vals else None
+
+        result.append({
+            "instrument_id":     instrument_id,
+            "run_id":            run_id,
+            "started_at":        started_at,
+            "experiment_type":   exp_type,
+            "n_pass":            n_pass,
+            "n_warn":            n_warn,
+            "n_fail":            n_fail,
+            "n_total":           n_total,
+            "pass_rate":         round(n_pass / n_total, 3) if n_total else None,
+            # metabolomics
+            "avg_fill_fraction": _avg("fill_fraction"),
+            "avg_rt_warn":       _avg_len("rt_warn_is"),
+            "avg_rt_fail":       _avg_len("rt_fail_is"),
+            "avg_mz_warn":       _avg_len("mz_warn_is"),
+            "avg_mz_fail":       _avg_len("mz_fail_is"),
+            "avg_cv_warn":       _avg_len("cv_warn_is"),
+            "avg_cv_fail":       _avg_len("cv_fail_is"),
+            # proteomics
+            "avg_ms1":           _avg("ms1_count"),
+            "avg_ms2":           _avg("ms2_count"),
+            "avg_ratio":         _avg("ms2_ms1_ratio"),
+        })
+
+    return sorted(result, key=lambda x: x["started_at"] or datetime.datetime.min)

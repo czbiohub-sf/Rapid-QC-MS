@@ -333,15 +333,34 @@ def register(app):
     @app.callback(
         Output("sample-table", "data"),
         Input("specimens", "data"),
+        Input("polarity-options", "value"),
+        Input("sample-filtering-options", "value"),
         prevent_initial_call=True,
     )
-    def populate_sample_tables(samples):
-        """Populates table with list of samples for selected run."""
-        if samples is not None:
-            df = pd.DataFrame(json.loads(samples))
-            df = df[["Specimen", "Position", "QC"]]
-            return df.to_dict("records")
-        return None
+    def populate_sample_tables(samples, polarity, sample_filter):
+        """Populates table with list of samples for selected run.
+
+        Filters rows by the active polarity button and sample-type filter so that
+        clicking those controls updates the table even when there are no ISTD plots.
+        """
+        if samples is None:
+            raise PreventUpdate
+
+        df = pd.DataFrame(json.loads(samples))
+
+        # Filter by polarity
+        if polarity and "Polarity" in df.columns:
+            df = df.loc[df["Polarity"] == polarity]
+
+        # Filter by sample type
+        if sample_filter == "pools":
+            df = df.loc[df["Specimen"].str.contains("QC", na=False)]
+        elif sample_filter == "blanks":
+            df = df.loc[df["Specimen"].str.contains("BK", na=False)]
+        elif sample_filter == "specimens":
+            df = df.loc[~df["Specimen"].str.contains("QC|BK", na=False, regex=True)]
+
+        return df[["Specimen", "QC", "Polarity"]].to_dict("records")
 
     @app.callback(
         Output("istd-rt-dropdown", "options"),
@@ -386,7 +405,7 @@ def register(app):
             sample_dropdown = df_samples.loc[
                 df_samples["Specimen"].str.contains("Neg", na=False)
             ]["Specimen"].tolist()
-        else:
+        elif polarity == "Pos":
             istd_dropdown = json.loads(pos_internal_standards) if pos_internal_standards else []
             bio_dropdown = []
             if bio_intensity_pos is not None and selected_bio_standard:
@@ -399,6 +418,23 @@ def register(app):
             sample_dropdown = df_samples.loc[
                 df_samples["Specimen"].str.contains("Pos", na=False)
             ]["Specimen"].tolist()
+        else:
+            # "All polarities" — combine both IS lists, show all samples
+            pos_is = json.loads(pos_internal_standards) if pos_internal_standards else []
+            neg_is = json.loads(neg_internal_standards) if neg_internal_standards else []
+            istd_dropdown = sorted(set(pos_is + neg_is))
+            bio_dropdown = []
+            for bio_store in [bio_intensity_pos, bio_intensity_neg]:
+                if bio_store and selected_bio_standard:
+                    try:
+                        df = pd.DataFrame(json.loads(bio_store[selected_bio_standard]))
+                        df.drop(columns=["Name", "run_id"], inplace=True, errors="ignore")
+                        bio_dropdown = df.columns.tolist()
+                        if bio_dropdown:
+                            break
+                    except Exception:
+                        pass
+            sample_dropdown = df_samples["Specimen"].tolist()
 
         return (
             istd_dropdown, istd_dropdown, istd_dropdown,
@@ -422,7 +458,8 @@ def register(app):
             raise PreventUpdate
 
         df_samples = pd.DataFrame(json.loads(samples))
-        df_samples = df_samples.loc[df_samples["Polarity"].str.contains(polarity, na=False)]
+        if polarity:
+            df_samples = df_samples.loc[df_samples["Polarity"].str.contains(polarity, na=False)]
         sample_list = df_samples["Specimen"].tolist()
 
         if filter == "all" or filter is None:
