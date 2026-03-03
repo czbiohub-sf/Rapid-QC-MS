@@ -88,25 +88,18 @@ def serve_layout():
 
                             # Filter bar for the run browser
                             dbc.Row(className="mb-2", children=[
-                                dbc.Col(width=3, children=[
+                                dbc.Col(width=4, children=[
                                     dcc.Dropdown(id="filter-instrument", placeholder="All instruments",
                                                  multi=True, clearable=True),
                                 ]),
-                                dbc.Col(width=3, children=[
+                                dbc.Col(width=4, children=[
                                     dcc.Dropdown(id="filter-type", placeholder="All types", clearable=True,
                                         options=[
                                             {"label": "Metabolomics", "value": "metabolomics"},
                                             {"label": "Proteomics",   "value": "proteomics"},
                                         ]),
                                 ]),
-                                dbc.Col(width=3, children=[
-                                    dcc.Dropdown(id="filter-status", placeholder="All statuses", clearable=True,
-                                        options=[
-                                            {"label": "Active",    "value": "active"},
-                                            {"label": "Completed", "value": "completed"},
-                                        ]),
-                                ]),
-                                dbc.Col(width=3, children=[
+                                dbc.Col(width=4, children=[
                                     dcc.Dropdown(id="filter-date-range", value="2w", clearable=False,
                                         options=[
                                             {"label": "Last 2 weeks", "value": "2w"},
@@ -144,59 +137,13 @@ def serve_layout():
                                         }],
                                     style_cell_conditional=[
                                         {"if": {"column_id": "Run ID"},
-                                            "width": "35%"},
+                                            "width": "45%"},
                                         {"if": {"column_id": "Instrument"},
-                                            "width": "20%"},
-                                        {"if": {"column_id": "Date"},
                                             "width": "25%"},
-                                        {"if": {"column_id": "Status"},
-                                            "width": "20%"},
+                                        {"if": {"column_id": "Date"},
+                                            "width": "30%"},
                                     ]
                                 ),
-
-                                # Progress bar for instrument run
-                                dbc.Card(id="active-run-progress-card", style={"display": "none"},
-                                    className="margin-top-15", children=[
-                                        dbc.CardHeader(id="active-run-progress-header", style={"padding": "0.75rem"}),
-                                        dbc.CardBody([
-
-                                            # Instrument run progress
-                                            dcc.Interval(id="refresh-interval", n_intervals=0, interval=30000, disabled=True),
-                                            dbc.Progress(id="active-run-progress-bar", animated=False),
-
-                                            # Buttons for managing Rapid-QC-MS jobs
-                                            html.Div(id="job-controller-panel", children=[
-                                                html.Div(className="d-flex justify-content-center btn-toolbar", children=[
-                                                    # Button to mark current job as complete
-                                                    html.Div(className="me-1", children=[
-                                                        dbc.Button("Mark as Completed",
-                                                            id="mark-as-completed-button",
-                                                            className="run-button",
-                                                            outline=True,
-                                                            color="success"),
-                                                    ]),
-
-                                                    # Button to restart job
-                                                    html.Div(className="me-1", children=[
-                                                        dbc.Button("Restart Job",
-                                                            id="restart-job-button",
-                                                            className="run-button",
-                                                            outline=True,
-                                                            color="warning"),
-                                                    ]),
-
-                                                    # Button to delete job
-                                                    html.Div(className="me-1", children=[
-                                                        dbc.Button("Delete Job",
-                                                            id="delete-job-button",
-                                                            className="run-button",
-                                                            outline=True,
-                                                            color="danger"),
-                                                    ]),
-                                                ]),
-                                            ]),
-                                        ])
-                                ]),
 
                                 # Button to start new Rapid-QC-MS job
                                 html.Div(className="d-grid gap-2", children=[
@@ -261,12 +208,12 @@ def serve_layout():
                                         "height": "475px",
                                         "overflowY": "auto"},
                                     style_data_conditional=[
-                                        {"if": {"filter_query": "{QC} = 'Fail'"},
+                                        {"if": {"filter_query": "{Status} = 'Fail'"},
                                         "backgroundColor": bootstrap_colors[
                                         "red-low-opacity"],
                                         "font-weight": "bold"
                                         },
-                                        {"if": {"filter_query": "{QC} = 'Warn'"},
+                                        {"if": {"filter_query": "{Status} = 'Warn'"},
                                         "backgroundColor": bootstrap_colors[
                                         "yellow-low-opacity"]
                                         },
@@ -278,13 +225,13 @@ def serve_layout():
                                     ],
                                     style_cell_conditional=[
                                         {"if": {"column_id": "Specimen"},
-                                        "width": "30%"},
+                                        "width": "25%"},
+                                        {"if": {"column_id": "Status"},
+                                        "width": "10%"},
                                         {"if": {"column_id": "QC"},
-                                        "width": "12%"},
-                                        {"if": {"column_id": "Notes"},
-                                        "width": "58%",
+                                        "width": "65%",
                                         "fontSize": "13px",
-                                        "color": "#555"},
+                                        "color": "#444"},
                                     ]
                                 )
                             ]),
@@ -727,19 +674,6 @@ def serve_layout():
                                     dbc.FormText(id="data-acquisition-path-form-text",
                                         children="Please type the folder path to which incoming data files will be saved."),
 
-                                ]),
-
-                                html.Br(),
-
-                                # Switch between running AutoQC on a live run vs. past completed run
-                                html.Div(children=[
-                                    dbc.Label("Is this an active or completed instrument run?"),
-                                    dbc.RadioItems(id="ms_autoqc-job-type", value="active", options=[
-                                        {"label": "Monitor an active instrument run",
-                                         "value": "active"},
-                                        {"label": "QC a completed instrument run",
-                                         "value": "completed"}],
-                                    ),
                                 ]),
 
                                 html.Br(),
@@ -1583,10 +1517,7 @@ def serve_layout():
             dcc.Store(id="slack-bot-token-saved"),
             dcc.Store(id="slack-channel-saved"),
             dcc.Store(id="google-drive-sync-update"),
-            dcc.Store(id="job-marked-completed"),
-            dcc.Store(id="job-restarted"),
             dcc.Store(id="job-deleted"),
-            dcc.Store(id="job-action-failed"),
             dcc.Store(id="feature-table-for-csv", storage_type='local', data={}),
             dcc.Store(id="csv-filename"),
             dcc.Store(id="perf-data"),

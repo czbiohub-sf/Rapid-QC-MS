@@ -29,6 +29,7 @@ from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 
 from rapidqcms.config import get_settings
+from rapidqcms.config.library import get_registered_chromatographies
 from rapidqcms.db.connection import get_session
 from rapidqcms.db.models import QCResult as QCResultModel
 from rapidqcms.db.settings import (
@@ -113,7 +114,6 @@ def register(app):
         Output("instrument-run-table", "selected_cells"),
         Input("filter-instrument", "value"),
         Input("filter-type", "value"),
-        Input("filter-status", "value"),
         Input("filter-date-range", "value"),
         Input("job-deleted", "data"),
         prevent_initial_call=True,
@@ -128,33 +128,13 @@ def register(app):
         Output("plot-container", "style"),
         Input("filter-instrument", "value"),
         Input("filter-type", "value"),
-        Input("filter-status", "value"),
         Input("filter-date-range", "value"),
-        Input("refresh-interval", "n_intervals"),
-        Input("job-marked-completed", "data"),
         Input("job-deleted", "data"),
         State("study-resources", "data"),
     )
-    def populate_run_browser(
-        instrument_ids, exp_type, status_filter, date_range,
-        refresh, job_completed, job_deleted, resources,
-    ):
+    def populate_run_browser(instrument_ids, exp_type, date_range, job_deleted, resources):
         """Populates the run browser table with runs across all instruments."""
         import datetime as _dt
-
-        # Suppress refresh when no new samples
-        if ctx.triggered_id == "refresh-interval" and resources:
-            try:
-                res = json.loads(resources)
-                with get_session() as session:
-                    completed, _ = _get_completed_count(
-                        session, res.get("instrument"), res.get("run_id"))
-                if res.get("samples_completed", 0) == completed:
-                    raise PreventUpdate
-            except PreventUpdate:
-                raise
-            except Exception:
-                raise PreventUpdate
 
         since = None
         now = _dt.datetime.now(_dt.timezone.utc)
@@ -165,23 +145,23 @@ def register(app):
         elif date_range == "3m":
             since = now - _dt.timedelta(days=90)
 
+        registered = sorted(get_registered_chromatographies())
         with get_session() as session:
             runs = list_all_runs(
                 session,
                 instrument_ids=instrument_ids or None,
                 experiment_type=exp_type or None,
-                status=status_filter or None,
+                chromatographies=registered,
                 since=since,
             )
             rows = [{
                 "Run ID":     r.id,
                 "Instrument": r.instrument_id,
                 "Date":       r.started_at.strftime("%Y-%m-%d") if r.started_at else "",
-                "Status":     r.status,
             } for r in runs]
 
         if not rows:
-            empty = [{"Run ID": "N/A", "Instrument": "N/A", "Date": "N/A", "Status": "N/A"}]
+            empty = [{"Run ID": "N/A", "Instrument": "N/A", "Date": "N/A"}]
             return empty, {"display": "block"}, {"display": "none"}
 
         return rows, {"display": "block"}, {"display": "block"}
@@ -260,37 +240,21 @@ def register(app):
         Output("qc-fails-pos", "data"),
         Output("qc-fails-neg", "data"),
         Output("load-finished", "data"),
-        Input("refresh-interval", "n_intervals"),
         Input("instrument-run-table", "active_cell"),
         State("instrument-run-table", "data"),
         State("study-resources", "data"),
         prevent_initial_call=True,
         suppress_callback_exceptions=True,
     )
-    def load_data(refresh, active_cell, table_data, resources):
+    def load_data(active_cell, table_data, resources):
         """Updates and stores QC results in dcc.Store objects."""
         _none29 = (None,) * 29
-
-        trigger = ctx.triggered_id
 
         if not active_cell:
             return _none29
 
         run_id = table_data[active_cell["row"]]["Run ID"]
         instrument_id = table_data[active_cell["row"]]["Instrument"]
-
-        # Suppress refresh if no new samples processed
-        if trigger == "refresh-interval":
-            try:
-                cached = json.loads(resources or "{}").get("samples_completed", 0)
-                with get_session() as session:
-                    completed, _ = _get_completed_count(session, instrument_id, run_id)
-                if cached == completed:
-                    raise PreventUpdate
-            except PreventUpdate:
-                raise
-            except Exception:
-                raise PreventUpdate
 
         try:
             with get_session() as session:
@@ -356,9 +320,7 @@ def register(app):
         elif sample_filter == "specimens":
             df = df.loc[~df["Specimen"].str.contains("QC|BK", na=False, regex=True)]
 
-        cols = ["Specimen", "QC"]
-        if "Notes" in df.columns:
-            cols.append("Notes")
+        cols = [c for c in ["Specimen", "Status", "QC"] if c in df.columns]
         return df[cols].to_dict("records")
 
     @app.callback(
@@ -584,18 +546,13 @@ def register(app):
         Output("monitor-new-run-button", "children"),
         Output("data-acquisition-path-title", "children"),
         Output("data-acquisition-path-form-text", "children"),
-        Input("ms_autoqc-job-type", "value"),
+        Input("setup-new-run-modal", "is_open"),
     )
-    def update_new_job_button_text(job_type):
-        """Updates New Rapid-QC-MS Job form submit button based on job type."""
-        if job_type == "active":
-            button_text = "Start monitoring instrument run"
-            text_field_title = "Data acquisition path"
-            form_text = "Please enter the folder path to which incoming raw data files will be saved."
-        else:
-            button_text = "Start QC processing data files"
-            text_field_title = "Data file path"
-            form_text = "Please enter the folder path where your data files are saved."
+    def update_new_job_button_text(is_open):
+        """Updates New Rapid-QC-MS Job form submit button text."""
+        button_text = "Start monitoring instrument run"
+        text_field_title = "Data acquisition path"
+        form_text = "Please enter the folder path to which incoming raw data files will be saved."
 
         msconvert_valid = _pipeline_valid("msconvert")
         msdial_valid = _pipeline_valid("msdial")
@@ -748,12 +705,11 @@ def register(app):
         State("new-metadata", "data"),
         State("data-acquisition-folder-path", "value"),
         State("start-run-qc-configs-dropdown", "value"),
-        State("ms_autoqc-job-type", "value"),
         prevent_initial_call=True,
     )
     def new_autoqc_job_setup(
         button_clicks, run_id, instrument_id, chromatography, bio_standards,
-        sequence, metadata, acquisition_path, qc_config_id, job_type,
+        sequence, metadata, acquisition_path, qc_config_id,
     ):
         """Creates new run record in the database.
 
@@ -944,58 +900,6 @@ def register(app):
         if not settings_is_open:
             return selected_folder
 
-    # -------------------------------------------------------------------------
-    # Progress bar and job control
-    # -------------------------------------------------------------------------
-
-    @app.callback(
-        Output("active-run-progress-card", "style"),
-        Output("active-run-progress-header", "children"),
-        Output("active-run-progress-bar", "value"),
-        Output("active-run-progress-bar", "label"),
-        Output("refresh-interval", "disabled"),
-        Output("job-controller-panel", "style"),
-        Input("instrument-run-table", "active_cell"),
-        State("instrument-run-table", "data"),
-        Input("refresh-interval", "n_intervals"),
-        Input("start-run-monitor-modal", "is_open"),
-        prevent_initial_call=True,
-    )
-    def update_progress_bar_during_active_instrument_run(
-        active_cell, table_data, refresh, new_job_started
-    ):
-        """Displays and updates progress bar for the selected instrument run."""
-        if not active_cell:
-            return {"display": "none"}, None, None, None, True, {"display": "none"}
-
-        run_id = table_data[active_cell["row"]]["Run ID"]
-        instrument_id = table_data[active_cell["row"]]["Instrument"]
-        status = table_data[active_cell["row"]]["Status"]
-
-        with get_session() as session:
-            completed, total = _get_completed_count(session, instrument_id, run_id)
-
-        percent_complete = int((completed / total) * 100) if total > 0 else 0
-        progress_label = str(percent_complete) + "%"
-        header_text = (
-            run_id + " – " + str(completed) + " out of " + str(total) + " specimens processed"
-        )
-
-        refresh_interval_disabled = (status in ("Complete", "completed"))
-
-        # On the shared server, the job controller panel is always hidden
-        # (job control actions are done on the instrument computer)
-        controller_panel_visibility = {"display": "none"}
-
-        return (
-            {"display": "block"},
-            header_text,
-            percent_complete,
-            progress_label,
-            refresh_interval_disabled,
-            controller_panel_visibility,
-        )
-
     @app.callback(
         Output("setup-new-run-button", "style"),
         Input("filter-date-range", "value"),
@@ -1014,20 +918,13 @@ def register(app):
         Output("job-controller-modal-body", "children"),
         Output("job-controller-confirm-button", "children"),
         Output("job-controller-confirm-button", "color"),
-        Input("mark-as-completed-button", "n_clicks"),
-        Input("job-marked-completed", "data"),
-        Input("restart-job-button", "n_clicks"),
-        Input("job-restarted", "data"),
         Input("delete-job-button", "n_clicks"),
         Input("job-deleted", "data"),
         State("study-resources", "data"),
         prevent_initial_call=True,
     )
-    def confirm_action_on_job(
-        mark_job_as_completed, job_completed, restart_job, job_restarted,
-        delete_job, job_deleted, resources,
-    ):
-        """Shows confirmation modal before performing action on a job."""
+    def confirm_action_on_job(delete_job, job_deleted, resources):
+        """Shows confirmation modal before deleting a job."""
         trigger = ctx.triggered_id
         if resources is None:
             raise PreventUpdate
@@ -1036,19 +933,7 @@ def register(app):
         instrument_id = resources["instrument"]
         run_id = resources["run_id"]
 
-        if trigger == "mark-as-completed-button":
-            title = "Mark " + run_id + " as completed?"
-            body = dbc.Label("This will save your QC results as-is and end the current job. Continue?")
-            return True, title, body, "Mark Job as Completed", "success"
-
-        elif trigger == "restart-job-button":
-            title = "Restart " + run_id + "?"
-            body = dbc.Label(
-                "This will restart the acquisition listener process for " + run_id + ". Continue?"
-            )
-            return True, title, body, "Restart Job", "warning"
-
-        elif trigger == "delete-job-button":
+        if trigger == "delete-job-button":
             title = "Delete " + run_id + " on " + instrument_id + "?"
             body = dbc.Label(
                 "This will delete all QC results for " + run_id + " on " + instrument_id +
@@ -1056,66 +941,33 @@ def register(app):
             )
             return True, title, body, "Delete Job", "danger"
 
-        elif trigger in (
-            "job-marked-completed", "job-restarted", "job-deleted", "job-action-failed"
-        ):
+        elif trigger == "job-deleted":
             return False, None, None, None, None
 
         raise PreventUpdate
 
     @app.callback(
-        Output("job-marked-completed", "data"),
-        Output("job-restarted", "data"),
         Output("job-deleted", "data"),
-        Output("job-action-failed", "data"),
         Input("job-controller-confirm-button", "n_clicks"),
-        State("job-controller-modal-title", "children"),
         State("study-resources", "data"),
         prevent_initial_call=True,
     )
-    def perform_action_on_job(confirm_button, modal_title, resources):
-        """Performs the selected action on the selected Rapid-QC-MS job."""
+    def perform_action_on_job(confirm_button, resources):
+        """Deletes the selected job."""
         if resources is None:
             raise PreventUpdate
 
         resources = json.loads(resources)
-        instrument_id = resources["instrument"]
         run_id = resources["run_id"]
 
-        if "Mark" in (modal_title or ""):
-            try:
-                with get_session() as session:
-                    complete_run(session, run_id)
-                    session.commit()
-                return True, None, None, None
-            except Exception:
-                log.exception("Could not mark run as completed")
-                return None, None, None, True
-
-        elif "Restart" in (modal_title or ""):
-            # On the server, restart just clears status — listener must be restarted manually
-            try:
-                with get_session() as session:
-                    run = get_run(session, run_id)
-                    if run:
-                        run.status = "active"
-                        session.commit()
-                return None, True, None, None
-            except Exception:
-                log.exception("Could not restart job")
-                return None, None, None, True
-
-        elif "Delete" in (modal_title or ""):
-            try:
-                with get_session() as session:
-                    delete_run(session, run_id)
-                    session.commit()
-                return None, None, True, None
-            except Exception:
-                log.exception("Could not delete job")
-                return None, None, None, True
-
-        raise PreventUpdate
+        try:
+            with get_session() as session:
+                delete_run(session, run_id)
+                session.commit()
+            return True
+        except Exception:
+            log.exception("Could not delete job")
+            raise PreventUpdate
 
     @app.callback(
         Output("dumped-sample-info-card", "data"),

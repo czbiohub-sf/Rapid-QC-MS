@@ -139,7 +139,7 @@ def test_get_run_dataframes_pos_internal_standards_sorted(db_session):
 
 
 def test_get_sample_table_shape(db_session):
-    """get_sample_table returns a DataFrame with Specimen, QC, Notes columns."""
+    """get_sample_table returns a DataFrame with Specimen, Status, QC columns."""
     _seed_instrument(db_session)
 
     for i in range(3):
@@ -160,12 +160,12 @@ def test_get_sample_table_shape(db_session):
     assert isinstance(df, pd.DataFrame)
     assert len(df) == 3
     assert "Specimen" in df.columns
+    assert "Status" in df.columns
     assert "QC" in df.columns
-    assert "Notes" in df.columns
 
 
-def test_get_sample_table_notes_from_grades(db_session):
-    """Notes column is populated from Warn/Fail grade messages."""
+def test_get_sample_table_qc_from_grades(db_session):
+    """QC column shows per-check breakdown from grades; Status holds overall status."""
     _seed_instrument(db_session)
 
     db_session.add(QCResult(
@@ -202,8 +202,44 @@ def test_get_sample_table_notes_from_grades(db_session):
     warn_row = df.loc[df["Specimen"] == "Sample_warn"].iloc[0]
     pass_row = df.loc[df["Specimen"] == "Sample_pass"].iloc[0]
 
-    assert "85.7%" in warn_row["Notes"]
-    assert pass_row["Notes"] == ""
+    assert warn_row["Status"] == "Warn"
+    assert "fill_fraction: Warn" in warn_row["QC"]
+    assert "rt_deviation: Pass" in warn_row["QC"]
+    assert pass_row["Status"] == "Pass"
+    assert "fill_fraction: Pass" in pass_row["QC"]
+
+
+def test_get_sample_table_qc_from_metrics_fallback(db_session):
+    """QC column derives per-check breakdown from metrics when grades is absent."""
+    _seed_instrument(db_session)
+
+    db_session.add(QCResult(
+        instrument_id="INST01",
+        run_id="RUN001",
+        sample_id="Sample_legacy",
+        experiment_type="HILIC",
+        qc_stage="pre_search",
+        qc_module="metabolomics",
+        status="Warn",
+        acquired_at=datetime.datetime.now(datetime.UTC),
+        grades=None,
+        metrics={
+            "dropout_pct": 2.5,
+            "mean_cv_pct": 38.3,
+            "in_range_pct": 83.1,
+            "warnings": ["Mean CV 38.3% > 30.0%", "Only 83.1% features within 2× median"],
+            "fails": [],
+        },
+    ))
+    db_session.commit()
+
+    df = get_sample_table(db_session, "INST01", "RUN001")
+    row = df.iloc[0]
+
+    assert row["Status"] == "Warn"
+    assert "cv: Warn" in row["QC"]
+    assert "in_range: Warn" in row["QC"]
+    assert "dropout: Pass" in row["QC"]
 
 
 def test_dashboard_app_imports():

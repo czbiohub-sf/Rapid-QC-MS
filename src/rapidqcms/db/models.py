@@ -28,6 +28,7 @@ class Run(Base):
         String, ForeignKey("instruments.id"), nullable=False, index=True
     )
     experiment_type: Mapped[str] = mapped_column(String, nullable=False)
+    chromatography: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     status: Mapped[str] = mapped_column(String, nullable=False, default="active")
     started_at: Mapped[datetime.datetime | None] = mapped_column(
         DateTime, default=lambda: datetime.datetime.now(UTC)

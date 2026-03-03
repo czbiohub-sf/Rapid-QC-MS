@@ -62,11 +62,13 @@ def create_run(
     run_id: str,
     instrument_id: str,
     experiment_type: str,
+    chromatography: str | None = None,
 ) -> Run:
     run = Run(
         id=run_id,
         instrument_id=instrument_id,
         experiment_type=experiment_type,
+        chromatography=chromatography,
         status="active",
     )
     session.add(run)
@@ -97,18 +99,22 @@ def list_all_runs(
     session: Session,
     instrument_ids: list[str] | None = None,
     experiment_type: str | None = None,
-    status: str | None = None,
+    chromatographies: list[str] | None = None,
     since=None,
     limit: int = 500,
 ) -> list[Run]:
-    """Return runs across all instruments, newest first, with optional filters."""
+    """Return runs across all instruments, newest first, with optional filters.
+
+    chromatographies: if given, only return runs whose chromatography is in
+    this list (e.g. ["HILIC"]).  Runs with chromatography=None are excluded.
+    """
     q = session.query(Run)
     if instrument_ids:
         q = q.filter(Run.instrument_id.in_(instrument_ids))
     if experiment_type:
         q = q.filter(Run.experiment_type == experiment_type)
-    if status:
-        q = q.filter(Run.status == status)
+    if chromatographies:
+        q = q.filter(Run.chromatography.in_(chromatographies))
     if since:
         q = q.filter(Run.started_at >= since)
     return q.order_by(Run.started_at.desc()).limit(limit).all()

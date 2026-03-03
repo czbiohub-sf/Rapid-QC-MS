@@ -63,6 +63,37 @@ def get_internal_standards_df(chromatography: str, polarity: str) -> pd.DataFram
     ])
 
 
+def get_registered_chromatographies() -> frozenset[str]:
+    """Return the set of chromatography methods defined in qc_config.yaml.
+
+    Currently driven by the top-level keys under ``internal_standards``.
+    Example: frozenset({'HILIC'})
+    """
+    config = load_qc_config()
+    return frozenset(config.get("internal_standards", {}).keys())
+
+
+def chromatography_from_filename(stem: str) -> str | None:
+    """Infer chromatography method from a filename stem.
+
+    Splits the stem on ``_``, ``-``, and ``.``, then looks for a case-insensitive
+    match against any registered chromatography method name.  Returns the
+    canonical name (as written in qc_config.yaml) on a match, or None if no
+    registered method is found.
+
+    Example::
+
+        chromatography_from_filename("MILA024_HILIC_Pos_001")  # → "HILIC"
+        chromatography_from_filename("AAGI001_proteomics")     # → None
+    """
+    registered = get_registered_chromatographies()
+    tokens = {t.upper() for t in stem.replace("-", "_").replace(".", "_").split("_") if t}
+    for method in registered:
+        if method.upper() in tokens:
+            return method
+    return None
+
+
 def _reset_cache() -> None:
     """Clear the config cache (for use in tests only)."""
     _load.cache_clear()

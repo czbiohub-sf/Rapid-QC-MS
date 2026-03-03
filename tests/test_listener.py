@@ -99,7 +99,7 @@ def test_unstable_file_retried(tmp_path):
 
 def test_handle_file_persists_qc_result(tmp_path):
     """_handle_file calls write_qc_result and write_gate_file after processing."""
-    raw = tmp_path / "sample.raw"
+    raw = tmp_path / "sample_HILIC_Pos_001.raw"
     raw.write_bytes(b"data")
 
     cfg = _make_config(tmp_path)

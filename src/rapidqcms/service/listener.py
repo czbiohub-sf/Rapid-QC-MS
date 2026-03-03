@@ -28,7 +28,11 @@ from sqlalchemy.orm import sessionmaker
 from watchdog.events import FileCreatedEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
-from ..config.library import get_internal_standards_df
+from ..config.library import (
+    chromatography_from_filename,
+    get_internal_standards_df,
+    get_registered_chromatographies,
+)
 from ..db.features import get_in_run_rt_history
 from ..db.results import write_qc_result
 from ..qc.base import QCStatus
@@ -135,11 +139,40 @@ class AcquisitionEventHandler(FileSystemEventHandler):
             if not self._wait_for_stable(path):
                 return
 
+            # Validate chromatography from filename before doing any work
+            file_chrom = chromatography_from_filename(path.stem)
+            registered = get_registered_chromatographies()
+            if file_chrom is None:
+                log.error(
+                    "Cannot determine chromatography from filename '%s' — "
+                    "no registered method name found (registered: %s). Skipping.",
+                    path.name,
+                    ", ".join(sorted(registered)) or "none",
+                )
+                return
+            if file_chrom not in registered:
+                log.error(
+                    "Chromatography '%s' in filename '%s' is not a registered method "
+                    "(registered: %s). Skipping.",
+                    file_chrom,
+                    path.name,
+                    ", ".join(sorted(registered)) or "none",
+                )
+                return
+            if file_chrom != self._cfg.chromatography:
+                log.warning(
+                    "Filename chromatography '%s' differs from configured '%s' for %s. "
+                    "Using chromatography from filename.",
+                    file_chrom,
+                    self._cfg.chromatography,
+                    path.name,
+                )
+
             with self._session_factory() as session:
                 cfg = self._cfg
 
-                # Build context from DB
-                df_features = get_internal_standards_df(cfg.chromatography, cfg.polarity)
+                # Build context from DB (use chromatography inferred from filename)
+                df_features = get_internal_standards_df(file_chrom, cfg.polarity)
                 df_run_rt = get_in_run_rt_history(session, cfg.run_id, cfg.instrument_id)
 
                 context = {

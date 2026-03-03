@@ -71,16 +71,63 @@ def _pivot_field(
     return pd.DataFrame(records)
 
 
-def _build_notes(grades: dict | None) -> str:
-    """Concatenate Warn/Fail grade messages into a single Notes string."""
+_GRADES_KEYWORD_MAP = {
+    # metabolomics batch module: map warning/fail message keywords → check name
+    "dropout":  ["dropout", "Dropout"],
+    "cv":       ["CV", " cv "],
+    "in_range": ["within", "median", "range"],
+}
+
+
+def _grades_from_metrics(qc_module: str, metrics: dict) -> dict:
+    """Derive per-check grades from metrics for rows written before the grades field existed.
+
+    For the 'metabolomics' batch module, parses the ``warnings`` and ``fails``
+    lists in metrics and maps them back to named checks via keyword matching.
+    Returns an empty dict for unknown modules.
+    """
+    if not metrics:
+        return {}
+
+    if qc_module == "metabolomics":
+        warns = metrics.get("warnings") or []
+        fails = metrics.get("fails") or []
+        grades: dict = {}
+        for check_name, keywords in _GRADES_KEYWORD_MAP.items():
+            if not any(k in metrics for k in ["dropout_pct", "mean_cv_pct", "in_range_pct"]):
+                continue
+            fail_msg = next(
+                (m for m in fails if any(kw in m for kw in keywords)), None
+            )
+            warn_msg = next(
+                (m for m in warns if any(kw in m for kw in keywords)), None
+            )
+            if fail_msg:
+                grades[check_name] = {"status": "Fail", "message": fail_msg}
+            elif warn_msg:
+                grades[check_name] = {"status": "Warn", "message": warn_msg}
+            else:
+                grades[check_name] = {"status": "Pass", "message": None}
+        return grades
+
+    return {}
+
+
+def _format_qc(grades: dict) -> str:
+    """Format a grades dict into a compact per-check breakdown string.
+
+    Example output: ``fill_fraction: Pass | rt_deviation: Warn``
+
+    Check names have the leading ``is_`` prefix stripped for brevity.
+    If grades is empty, returns an empty string.
+    """
     if not grades:
         return ""
-    parts = [
-        g["message"]
-        for g in grades.values()
-        if g.get("status") in ("Warn", "Fail") and g.get("message")
-    ]
-    return "; ".join(parts)
+    parts = []
+    for check, entry in grades.items():
+        short = check[3:] if check.startswith("is_") else check
+        parts.append(f"{short}: {entry.get('status', '?')}")
+    return " | ".join(parts)
 
 
 def get_sample_table(
@@ -88,18 +135,20 @@ def get_sample_table(
     instrument_id: str,
     run_id: str,
 ) -> pd.DataFrame:
-    """Return [Specimen, QC, Notes] from QCResult rows for the sample table.
+    """Return [Specimen, Status, QC] from QCResult rows for the sample table.
 
-    Notes is a human-readable summary of per-check grade messages for any
-    Warn or Fail grades on this sample, empty for Pass samples.
+    Status is the overall Pass/Warn/Fail used for row colour-coding.
+    QC is a per-check modular breakdown string built from the grades field
+    (or derived from metrics for legacy rows without grades).
     """
     rows = get_results_for_run(session, instrument_id, run_id)
     records = []
     for row in rows:
+        grades = row.grades or _grades_from_metrics(row.qc_module, row.metrics or {})
         records.append({
             "Specimen": row.sample_id,
-            "QC": row.status,
-            "Notes": _build_notes(row.grades),
+            "Status":   row.status,
+            "QC":       _format_qc(grades),
         })
     return pd.DataFrame(records)
 
@@ -134,8 +183,12 @@ def get_run_dataframes(
     # Determine chromatography from the run record if not provided
     if chromatography is None:
         run = get_run(session, run_id)
-        # chromatography is not stored on Run directly; default to "HILIC"
-        chromatography = "HILIC"
+        chromatography = (run.chromatography if run and run.chromatography else None)
+        if chromatography is None:
+            log.warning(
+                "Run %s has no chromatography set; defaulting to HILIC", run_id
+            )
+            chromatography = "HILIC"
 
     # Build polarity lookup: IS library has polarity per standard name.
     # We infer sample polarity from which IS library produced results.
