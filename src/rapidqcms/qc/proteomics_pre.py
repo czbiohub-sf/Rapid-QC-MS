@@ -60,6 +60,38 @@ class ProteomicsPreSearchQCModule(QCModule):
 
         status, fails, warnings = self._evaluate(ms1, ms2, ratio)
 
+        thresholds = self.config.get("thresholds", {})
+        min_ms1 = int(thresholds.get("min_ms1_scans", 100))
+        min_ms2 = int(thresholds.get("min_ms2_scans", 500))
+        min_ratio = float(thresholds.get("min_ms2_ms1_ratio", 2.0))
+
+        grades: dict = {
+            "ms1_count": (
+                {"status": "Fail",
+                 "message": f"MS1 count {ms1} < hard minimum ({min_ms1 / _HARD_FAIL_RATIO:.0f})"}
+                if ms1 < min_ms1 / _HARD_FAIL_RATIO else
+                {"status": "Warn",
+                 "message": f"MS1 count {ms1} below recommended minimum {min_ms1}"}
+                if ms1 < min_ms1 else
+                {"status": "Pass", "message": None}
+            ),
+            "ms2_count": (
+                {"status": "Fail",
+                 "message": f"MS2 count {ms2} < hard minimum ({min_ms2 / _HARD_FAIL_RATIO:.0f})"}
+                if ms2 < min_ms2 / _HARD_FAIL_RATIO else
+                {"status": "Warn",
+                 "message": f"MS2 count {ms2} below recommended minimum {min_ms2}"}
+                if ms2 < min_ms2 else
+                {"status": "Pass", "message": None}
+            ),
+            "ms2_ms1_ratio": (
+                {"status": "Warn",
+                 "message": f"MS2/MS1 ratio {ratio:.2f} < minimum {min_ratio}"}
+                if ratio < min_ratio and status != QCStatus.FAIL else
+                {"status": "Pass", "message": None}
+            ),
+        }
+
         metrics = {
             "ms1_count": ms1,
             "ms2_count": ms2,
@@ -71,6 +103,7 @@ class ProteomicsPreSearchQCModule(QCModule):
             status=status,
             module=self.name,
             metrics=metrics,
+            grades=grades,
         )
 
     # ------------------------------------------------------------------

@@ -172,3 +172,33 @@ class TestResultStructure:
     def test_ratio_rounded_to_three_decimals(self):
         result = _analyze({"ms1": 3, "ms2": 10})
         assert result.metrics["ms2_ms1_ratio"] == round(10 / 3, 3)
+
+
+# ---------------------------------------------------------------------------
+# Grades
+# ---------------------------------------------------------------------------
+
+class TestGrades:
+    def test_grades_present_on_pass(self):
+        result = _analyze({"ms1": 200, "ms2": 1000})
+        assert result.grades, "grades dict should not be empty"
+        for key in ("ms1_count", "ms2_count", "ms2_ms1_ratio"):
+            assert key in result.grades
+            assert result.grades[key]["status"] == "Pass"
+            assert result.grades[key]["message"] is None
+
+    def test_grades_warn_on_ms1_warn(self):
+        result = _analyze({"ms1": 85, "ms2": 1000})
+        assert result.grades["ms1_count"]["status"] == "Warn"
+        assert "85" in result.grades["ms1_count"]["message"]
+
+    def test_grades_fail_on_ms1_fail(self):
+        result = _analyze({"ms1": 50, "ms2": 1000})
+        assert result.grades["ms1_count"]["status"] == "Fail"
+        assert "50" in result.grades["ms1_count"]["message"]
+
+    def test_grades_warn_on_low_ratio(self):
+        result = _analyze({"ms1": 400, "ms2": 650})
+        assert result.grades["ms2_ms1_ratio"]["status"] == "Warn"
+        assert result.grades["ms1_count"]["status"] == "Pass"
+        assert result.grades["ms2_count"]["status"] == "Pass"

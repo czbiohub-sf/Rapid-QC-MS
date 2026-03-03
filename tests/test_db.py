@@ -80,6 +80,30 @@ class TestWriteQCResult:
         assert records[0].status == "Fail"
         assert records[0].message == "Too many intensity dropouts"
 
+    def test_writes_grades_and_round_trips(self, db_session):
+        instrument_id, run_id = _seed_instrument_and_run(db_session)
+        grades = {
+            "is_fill_fraction": {"status": "Warn", "message": "IS detection 18/21 (85.7%) < 90% warn threshold"},
+            "is_rt_deviation": {"status": "Pass", "message": None},
+        }
+        result = QCResult(
+            status=QCStatus.WARN,
+            module="metabolomics_pre",
+            grades=grades,
+        )
+
+        write_qc_result(
+            db_session, instrument_id, run_id, "SAMPLE_003",
+            "metabolomics", "pre_search", result,
+        )
+        db_session.commit()
+
+        records = get_results_for_run(db_session, instrument_id, run_id)
+        assert records[0].grades is not None
+        assert records[0].grades["is_fill_fraction"]["status"] == "Warn"
+        assert "85.7%" in records[0].grades["is_fill_fraction"]["message"]
+        assert records[0].grades["is_rt_deviation"]["status"] == "Pass"
+
 
 class TestGetResultsForRun:
     def test_ordered_by_acquired_at(self, db_session):

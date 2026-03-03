@@ -71,20 +71,35 @@ def _pivot_field(
     return pd.DataFrame(records)
 
 
+def _build_notes(grades: dict | None) -> str:
+    """Concatenate Warn/Fail grade messages into a single Notes string."""
+    if not grades:
+        return ""
+    parts = [
+        g["message"]
+        for g in grades.values()
+        if g.get("status") in ("Warn", "Fail") and g.get("message")
+    ]
+    return "; ".join(parts)
+
+
 def get_sample_table(
     session: Session,
     instrument_id: str,
     run_id: str,
 ) -> pd.DataFrame:
-    """Return [Specimen, QC, Polarity] from QCResult rows for sample table."""
+    """Return [Specimen, QC, Notes] from QCResult rows for the sample table.
+
+    Notes is a human-readable summary of per-check grade messages for any
+    Warn or Fail grades on this sample, empty for Pass samples.
+    """
     rows = get_results_for_run(session, instrument_id, run_id)
     records = []
     for row in rows:
         records.append({
             "Specimen": row.sample_id,
-            "Position": "",  # legacy field — not stored in new schema
             "QC": row.status,
-            "Polarity": "",  # derived below from IS library
+            "Notes": _build_notes(row.grades),
         })
     return pd.DataFrame(records)
 

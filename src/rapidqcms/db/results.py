@@ -29,6 +29,7 @@ def write_qc_result(
         metrics=result.metrics,
         details=result.details,
         message=result.message or None,
+        grades=result.grades or None,
     )
     session.add(record)
     return record

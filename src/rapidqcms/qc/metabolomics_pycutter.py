@@ -132,6 +132,37 @@ def run_pycutter_qc(
                 f"IS detection {fill_fraction:.1%} < {t['fill_warn']:.0%}"
             )
 
+        grades: dict = {
+            "is_rt_shift": (
+                {"status": "Fail", "message": f"IS RT shift ≥{t['rt_shift_fail']} min: {rt_fail_names}"}
+                if rt_fail_names else
+                {"status": "Warn", "message": f"IS RT shift ≥{t['rt_shift_warn']} min: {rt_warn_names}"}
+                if rt_warn_names else
+                {"status": "Pass", "message": None}
+            ),
+            "is_mz_shift": (
+                {"status": "Fail", "message": f"IS m/z shift ≥{t['mz_shift_fail']} Da: {mz_fail_names}"}
+                if mz_fail_names else
+                {"status": "Warn", "message": f"IS m/z shift ≥{t['mz_shift_warn']} Da: {mz_warn_names}"}
+                if mz_warn_names else
+                {"status": "Pass", "message": None}
+            ),
+            "is_pool_cv": (
+                {"status": "Fail", "message": f"IS Pool CV ≥{t['cv_fail']}%: {cv_fail_names}"}
+                if cv_fail_names else
+                {"status": "Warn", "message": f"IS Pool CV ≥{t['cv_warn']}%: {cv_warn_names}"}
+                if cv_warn_names else
+                {"status": "Pass", "message": None}
+            ),
+            "is_fill_fraction": (
+                {"status": "Fail", "message": f"IS detection {fill_fraction:.1%} < {t['fill_fail']:.0%} fail threshold"}
+                if fill_fraction < t["fill_fail"] else
+                {"status": "Warn", "message": f"IS detection {fill_fraction:.1%} < {t['fill_warn']:.0%} warn threshold"}
+                if fill_fraction < t["fill_warn"] else
+                {"status": "Pass", "message": None}
+            ),
+        }
+
         results.append((
             col,
             QCResult(
@@ -151,6 +182,7 @@ def run_pycutter_qc(
                     "fails":            fails,
                     "warnings":         warnings,
                 },
+                grades=grades,
             ),
         ))
 

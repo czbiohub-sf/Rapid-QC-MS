@@ -17,6 +17,16 @@ class QCResult:
     metrics: dict = field(default_factory=dict)
     details: dict = field(default_factory=dict)
     message: str = ""
+    grades: dict = field(default_factory=dict)
+    """Per-check grade breakdown.
+
+    Keys are check identifiers (e.g. "is_fill_fraction", "ms1_count").
+    Values are {"status": "Pass"|"Warn"|"Fail", "message": str|None}.
+
+    Supports UI drill-down, future bio-standard backfill, and
+    independent auditing of individual checks without changing
+    the overall sample status.
+    """
 
 
 class QCModule(ABC):

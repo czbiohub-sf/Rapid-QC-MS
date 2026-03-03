@@ -348,10 +348,6 @@ def register(app):
 
         df = pd.DataFrame(json.loads(samples))
 
-        # Filter by polarity
-        if polarity and "Polarity" in df.columns:
-            df = df.loc[df["Polarity"] == polarity]
-
         # Filter by sample type
         if sample_filter == "pools":
             df = df.loc[df["Specimen"].str.contains("QC", na=False)]
@@ -360,7 +356,10 @@ def register(app):
         elif sample_filter == "specimens":
             df = df.loc[~df["Specimen"].str.contains("QC|BK", na=False, regex=True)]
 
-        return df[["Specimen", "QC", "Polarity"]].to_dict("records")
+        cols = ["Specimen", "QC"]
+        if "Notes" in df.columns:
+            cols.append("Notes")
+        return df[cols].to_dict("records")
 
     @app.callback(
         Output("istd-rt-dropdown", "options"),

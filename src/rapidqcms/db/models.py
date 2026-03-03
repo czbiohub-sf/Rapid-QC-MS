@@ -57,6 +57,7 @@ class QCResult(Base):
     metrics: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     details: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     message: Mapped[str | None] = mapped_column(String, nullable=True)
+    grades: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, default=lambda: datetime.datetime.now(UTC)
     )

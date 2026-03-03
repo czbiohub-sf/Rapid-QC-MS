@@ -266,7 +266,7 @@ def serve_layout():
                                         "red-low-opacity"],
                                         "font-weight": "bold"
                                         },
-                                        {"if": {"filter_query": "{QC} = 'Check'"},
+                                        {"if": {"filter_query": "{QC} = 'Warn'"},
                                         "backgroundColor": bootstrap_colors[
                                         "yellow-low-opacity"]
                                         },
@@ -278,11 +278,13 @@ def serve_layout():
                                     ],
                                     style_cell_conditional=[
                                         {"if": {"column_id": "Specimen"},
-                                        "width": "55%"},
+                                        "width": "30%"},
                                         {"if": {"column_id": "QC"},
-                                        "width": "20%"},
-                                        {"if": {"column_id": "Polarity"},
-                                        "width": "25%"},
+                                        "width": "12%"},
+                                        {"if": {"column_id": "Notes"},
+                                        "width": "58%",
+                                        "fontSize": "13px",
+                                        "color": "#555"},
                                     ]
                                 )
                             ]),

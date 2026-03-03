@@ -139,7 +139,7 @@ def test_get_run_dataframes_pos_internal_standards_sorted(db_session):
 
 
 def test_get_sample_table_shape(db_session):
-    """get_sample_table returns a DataFrame with expected columns."""
+    """get_sample_table returns a DataFrame with Specimen, QC, Notes columns."""
     _seed_instrument(db_session)
 
     for i in range(3):
@@ -161,6 +161,49 @@ def test_get_sample_table_shape(db_session):
     assert len(df) == 3
     assert "Specimen" in df.columns
     assert "QC" in df.columns
+    assert "Notes" in df.columns
+
+
+def test_get_sample_table_notes_from_grades(db_session):
+    """Notes column is populated from Warn/Fail grade messages."""
+    _seed_instrument(db_session)
+
+    db_session.add(QCResult(
+        instrument_id="INST01",
+        run_id="RUN001",
+        sample_id="Sample_warn",
+        experiment_type="HILIC",
+        qc_stage="pre_search",
+        qc_module="metabolomics_pre",
+        status="Warn",
+        acquired_at=datetime.datetime.now(datetime.UTC),
+        grades={
+            "is_fill_fraction": {"status": "Warn", "message": "IS detection 18/21 (85.7%) < 90% warn threshold"},
+            "is_rt_deviation": {"status": "Pass", "message": None},
+        },
+    ))
+    db_session.add(QCResult(
+        instrument_id="INST01",
+        run_id="RUN001",
+        sample_id="Sample_pass",
+        experiment_type="HILIC",
+        qc_stage="pre_search",
+        qc_module="metabolomics_pre",
+        status="Pass",
+        acquired_at=datetime.datetime.now(datetime.UTC),
+        grades={
+            "is_fill_fraction": {"status": "Pass", "message": None},
+            "is_rt_deviation": {"status": "Pass", "message": None},
+        },
+    ))
+    db_session.commit()
+
+    df = get_sample_table(db_session, "INST01", "RUN001")
+    warn_row = df.loc[df["Specimen"] == "Sample_warn"].iloc[0]
+    pass_row = df.loc[df["Specimen"] == "Sample_pass"].iloc[0]
+
+    assert "85.7%" in warn_row["Notes"]
+    assert pass_row["Notes"] == ""
 
 
 def test_dashboard_app_imports():

@@ -110,6 +110,31 @@ class MetabolomicsPreSearchQCModule(QCModule):
             },
         }
 
+        # Build per-check grades
+        grades: dict = {}
+
+        if fill_fraction < fail_fill:
+            grades["is_fill_fraction"] = {
+                "status": "Fail",
+                "message": f"IS detection {n_detected}/{n_total} ({fill_fraction:.1%}) < {fail_fill:.0%} fail threshold",
+            }
+        elif fill_fraction < warn_fill:
+            grades["is_fill_fraction"] = {
+                "status": "Warn",
+                "message": f"IS detection {n_detected}/{n_total} ({fill_fraction:.1%}) < {warn_fill:.0%} warn threshold",
+            }
+        else:
+            grades["is_fill_fraction"] = {"status": "Pass", "message": None}
+
+        if max_rt_dev > rt_dev_warn:
+            worst_nm = max(rt_devs, key=lambda k: abs(rt_devs[k]))
+            grades["is_rt_deviation"] = {
+                "status": "Warn",
+                "message": f"{worst_nm}: {rt_devs[worst_nm]:+.2f} min (>{rt_dev_warn} min threshold)",
+            }
+        else:
+            grades["is_rt_deviation"] = {"status": "Pass", "message": None}
+
         msg_parts = [f"IS detected: {n_detected}/{n_total}"]
         if missing:
             msg_parts.append(f"missing: {', '.join(missing[:3])}{'...' if len(missing) > 3 else ''}")
@@ -122,6 +147,7 @@ class MetabolomicsPreSearchQCModule(QCModule):
             module=self.name,
             metrics=metrics,
             message="; ".join(msg_parts),
+            grades=grades,
         )
 
     # ------------------------------------------------------------------
