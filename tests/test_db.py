@@ -11,7 +11,6 @@ from rapidqcms.db.results import (
     write_qc_result,
 )
 from rapidqcms.db.settings import (
-    complete_run,
     create_run,
     get_run,
     list_instruments,
@@ -186,21 +185,16 @@ class TestInstrumentCRUD:
 
 
 class TestRunCRUD:
-    def test_create_and_complete_run(self, db_session):
+    def test_create_run(self, db_session):
         upsert_instrument(db_session, "INSTR_001", "Test")
         create_run(db_session, "RUN_001", "INSTR_001", "metabolomics")
         db_session.commit()
 
         run = get_run(db_session, "RUN_001")
-        assert run.status == "active"
-        assert run.completed_at is None
-
-        complete_run(db_session, "RUN_001")
-        db_session.commit()
-
-        run = get_run(db_session, "RUN_001")
-        assert run.status == "completed"
-        assert run.completed_at is not None
+        assert run is not None
+        assert run.id == "RUN_001"
+        assert run.instrument_id == "INSTR_001"
+        assert run.experiment_type == "metabolomics"
 
     def test_list_runs_for_instrument(self, db_session):
         upsert_instrument(db_session, "INSTR_001", "Test")

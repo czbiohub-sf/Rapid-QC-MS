@@ -145,16 +145,6 @@ def serve_layout():
                                     ]
                                 ),
 
-                                # Button to start new Rapid-QC-MS job
-                                html.Div(className="d-grid gap-2", children=[
-                                    dbc.Button("Setup New QC Job",
-                                        id="setup-new-run-button",
-                                        style={"margin-top": "15px",
-                                            "line-height": "1.75"},
-                                        outline=True,
-                                        color="primary"),
-                                ]),
-
                                 # Polarity filtering options
                                 html.Div(className="margin-top-15", children=[
                                     dcc.Dropdown(
@@ -225,11 +215,11 @@ def serve_layout():
                                     ],
                                     style_cell_conditional=[
                                         {"if": {"column_id": "Specimen"},
-                                        "width": "25%"},
+                                        "width": "55%"},
                                         {"if": {"column_id": "Status"},
-                                        "width": "10%"},
+                                        "width": "12%"},
                                         {"if": {"column_id": "QC"},
-                                        "width": "65%",
+                                        "width": "33%",
                                         "fontSize": "13px",
                                         "color": "#444"},
                                     ]
@@ -453,17 +443,6 @@ def serve_layout():
                                 dbc.ModalBody("This may take a few seconds...")
                         ]),
 
-                        # Custom file explorer modal for new job setup
-                        dbc.Modal(id="file-explorer-modal", size="md", centered=True, is_open=False, scrollable=True,
-                            keyboard=True, children=[
-                                dbc.ModalHeader(dbc.ModalTitle(id="file-explorer-modal-title")),
-                                dbc.ModalBody(id="file-explorer-modal-body"),
-                                dbc.ModalFooter(children=[
-                                    dbc.Button("Go Back", id="file-explorer-back-button", color="secondary"),
-                                    dbc.Button("Select Current Folder", id="file-explorer-select-button")
-                                ])
-                        ]),
-
                         # Modal for first-time workspace setup
                         dbc.Modal(id="workspace-setup-modal", size="lg", centered=True, scrollable=True,
                                   keyboard=False, backdrop="static", children=[
@@ -568,135 +547,6 @@ def serve_layout():
                                     ]),
                                 ]),
                             ])
-                        ]),
-
-                        # Modal for starting an instrument run listener
-                        dbc.Modal(id="setup-new-run-modal", size="lg", centered=True, is_open=False, scrollable=True, children=[
-                            dbc.ModalHeader(dbc.ModalTitle(id="setup-new-run-modal-title", children="New QC Job"), close_button=True),
-                            dbc.ModalBody(id="setup-new-run-modal-body", className="modal-styles-2", children=[
-
-                                # Text field for entering your job ID
-                                html.Div([
-                                    dbc.Label("Job ID"),
-                                    dbc.Input(id="instrument-run-id", placeholder="Give your job a unique ID", type="text"),
-                                    dbc.FormFeedback("Looks good!", type="valid"),
-                                    dbc.FormFeedback("Please enter a unique ID for this job.", type="invalid"),
-                                ]),
-
-                                html.Br(),
-
-                                # Select chromatography
-                                html.Div([
-                                    dbc.Label("Select chromatography"),
-                                    dbc.Select(id="start-run-chromatography-dropdown",
-                                               placeholder="No chromatography selected"),
-                                    dbc.FormFeedback("Looks good!", type="valid"),
-                                    dbc.FormFeedback(
-                                        "Please ensure that your chromatography method has identification files "
-                                        "(MSP or CSV) configured for positive and negative mode in Settings > "
-                                        "Internal Standards and Settings > Biological Standards.", type="invalid")
-                                ]),
-
-                                html.Br(),
-
-                                # Select biological standard used in this study
-                                html.Div(children=[
-                                    dbc.Label("Select biological standards (optional)"),
-                                    dcc.Dropdown(id="start-run-bio-standards-dropdown",
-                                        options=[], placeholder="Select biological standards...",
-                                        style={"text-align": "left", "height": "1.5", "font-size": "1rem",
-                                            "width": "100%", "display": "inline-block"},
-                                        multi=True)
-                                ]),
-
-                                html.Br(),
-
-                                # Select AutoQC configuration
-                                html.Div(children=[
-                                    dbc.Label("Select Rapid-QC-MS configuration"),
-                                    dbc.Select(id="start-run-qc-configs-dropdown",
-                                               placeholder="No configuration selected"),
-                                ]),
-
-                                html.Br(),
-
-                                # Button and field for selecting a sequence file
-                                html.Div([
-                                    dbc.Label("Acquisition sequence (.csv)"),
-                                    dbc.InputGroup([
-                                        dbc.Input(id="sequence-path",
-                                            placeholder="No file selected"),
-                                        dbc.Button(dcc.Upload(
-                                            id="sequence-upload-button",
-                                            accept="text/plain, application/vnd.ms-excel, .csv",
-                                            children=[html.A("Browse Files")]),
-                                            color="secondary"),
-                                        dbc.FormFeedback("Looks good!", type="valid"),
-                                        dbc.FormFeedback("Please ensure that the sequence file is a CSV file "
-                                            "and in the correct vendor format.", type="invalid"),
-                                    ]),
-                                ]),
-
-                                html.Br(),
-
-                                # Button and field for selecting a sample metadata file
-                                html.Div([
-                                    dbc.Label("Sample metadata (.csv) (optional)"),
-                                    dbc.InputGroup([
-                                        dbc.Input(id="metadata-path",
-                                            placeholder="No file selected"),
-                                        dbc.Button(dcc.Upload(
-                                            id="metadata-upload-button",
-                                            accept="text/plain, application/vnd.ms-excel, .csv",
-                                            children=[html.A("Browse Files")]),
-                                            color="secondary"),
-                                        dbc.FormFeedback("Looks good!", type="valid"),
-                                        dbc.FormFeedback("Please ensure that the metadata file is a CSV and contains "
-                                            "the following columns: Sample Name, Species, Matrix, Treatment, "
-                                            "and Growth-Harvest Conditions", type="invalid"),
-                                    ]),
-                                ]),
-
-                                html.Br(),
-
-                                # Button and field for selecting the data acquisition directory
-                                html.Div([
-                                    dbc.Label("Data file directory", id="data-acquisition-path-title"),
-                                    dbc.InputGroup([
-                                        dbc.Input(placeholder="Browse folders or enter the folder path",
-                                                  id="data-acquisition-folder-path"),
-                                        dbc.Button("Browse Folders", id="data-acquisition-folder-button",
-                                                  color="secondary"),
-                                        dbc.FormFeedback("Looks good!", type="valid"),
-                                        dbc.FormFeedback(
-                                            "This path does not exist. Please enter a valid path.", type="invalid"),
-                                    ]),
-                                    dbc.FormText(id="data-acquisition-path-form-text",
-                                        children="Please type the folder path to which incoming data files will be saved."),
-
-                                ]),
-
-                                html.Br(),
-
-                                html.Div([
-                                    dbc.Button("Start monitoring instrument run", id="monitor-new-run-button", disabled=True,
-                                    style={"line-height": "1.75"}, color="primary")],
-                                className="d-grid gap-2")
-                            ]),
-                        ]),
-
-                        # Modal to alert user that run monitoring has started
-                        dbc.Modal(id="start-run-monitor-modal", size="md", centered=True, is_open=False, children=[
-                            dbc.ModalHeader(dbc.ModalTitle(id="start-run-monitor-modal-title", children="Success!"), close_button=True),
-                            dbc.ModalBody(id="start-run-monitor-modal-body", className="modal-styles", children=[
-                                dbc.Alert("Rapid-QC-MS will start monitoring your run. Please do not restart your computer.", color="success")
-                            ]),
-                        ]),
-
-                        # Error modal for new AutoQC job setup
-                        dbc.Modal(id="new-job-error-modal", size="md", centered=True, is_open=False, children=[
-                            dbc.ModalHeader(dbc.ModalTitle(id="new-job-error-modal-title"), close_button=False),
-                            dbc.ModalBody(id="new-job-error-modal-body", className="modal-styles"),
                         ]),
 
                         # Rapid-QC-MS settings
@@ -1405,7 +1255,7 @@ def serve_layout():
                                     html.H4(id="perf-card-runs", children="—"),
                                 ]))]),
                                 dbc.Col(width=3, children=[dbc.Card(dbc.CardBody([
-                                    html.H6("Pass Rate", className="text-muted small"),
+                                    html.H6("Fail Rate", className="text-muted small"),
                                     html.H4(id="perf-card-passrate", children="—"),
                                 ]))]),
                                 dbc.Col(width=3, children=[dbc.Card(dbc.CardBody([
@@ -1444,6 +1294,9 @@ def serve_layout():
 
             ]),  # end dbc.Tabs
 
+            # Polling interval — refreshes the active run's data every 60 s
+            dcc.Interval(id="live-update-interval", interval=60_000, n_intervals=0),
+
             # Dummy input object for callbacks on page load
             dcc.Store(id="on-page-load"),
             dcc.Store(id="google-drive-authenticated"),
@@ -1481,10 +1334,6 @@ def serve_layout():
             dcc.Store(id="selected-instrument"),
             dcc.Store(id="load-finished"),
             dcc.Store(id="close-load-modal"),
-
-            # Data for starting a new AutoQC job
-            dcc.Store(id="new-sequence"),
-            dcc.Store(id="new-metadata"),
 
             # Dummy inputs for UI update callbacks
             dcc.Store(id="chromatography-added"),

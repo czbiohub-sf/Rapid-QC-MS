@@ -78,7 +78,7 @@ def register(app):
         metab_style = {"display": "block"} if has_metabolomics else {"display": "none"}
         proto_style = {"display": "block"} if has_proteomics   else {"display": "none"}
 
-        all_pass = [s["pass_rate"]         for s in summaries if s["pass_rate"] is not None]
+        all_fail = [s["n_fail"] / s["n_total"] for s in summaries if s["n_total"]]
         all_fill = [s["avg_fill_fraction"] for s in summaries if s["avg_fill_fraction"] is not None]
         last_dt  = max((s["started_at"] for s in summaries if s["started_at"]), default=None)
 
@@ -87,7 +87,7 @@ def register(app):
             status_fig, detection_fig, issues_fig, scan_fig,
             metab_style, proto_style,
             str(len(summaries)) if summaries else "—",
-            f"{sum(all_pass)/len(all_pass):.0%}" if all_pass else "—",
+            f"{sum(all_fail)/len(all_fail):.0%}" if all_fail else "—",
             f"{sum(all_fill)/len(all_fill):.1%}" if all_fill else "—",
             last_dt.strftime("%Y-%m-%d") if last_dt else "—",
         )

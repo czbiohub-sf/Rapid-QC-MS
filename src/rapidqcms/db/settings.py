@@ -69,18 +69,8 @@ def create_run(
         instrument_id=instrument_id,
         experiment_type=experiment_type,
         chromatography=chromatography,
-        status="active",
     )
     session.add(run)
-    return run
-
-
-def complete_run(session: Session, run_id: str) -> Run | None:
-    import datetime
-    run = session.get(Run, run_id)
-    if run:
-        run.status = "completed"
-        run.completed_at = datetime.datetime.now(datetime.timezone.utc)
     return run
 
 
@@ -145,7 +135,7 @@ def get_instrument_run_qc_summary(
     from collections import defaultdict
 
     q = (
-        session.query(QCResult, Run.started_at, Run.experiment_type)
+        session.query(QCResult, Run.started_at, Run.experiment_type, Run.summary_metrics)
         .join(Run, QCResult.run_id == Run.id)
     )
     if instrument_ids:
@@ -159,14 +149,14 @@ def get_instrument_run_qc_summary(
 
     groups: dict = defaultdict(list)
     meta: dict = {}
-    for qc, started_at, exp_type in rows:
+    for qc, started_at, exp_type, run_summary in rows:
         key = (qc.instrument_id, qc.run_id)
         groups[key].append(qc)
-        meta[key] = (started_at, exp_type)
+        meta[key] = (started_at, exp_type, run_summary or {})
 
     result = []
     for (instrument_id, run_id), qcs in groups.items():
-        started_at, exp_type = meta[(instrument_id, run_id)]
+        started_at, exp_type, run_summary = meta[(instrument_id, run_id)]
         n_pass  = sum(1 for q in qcs if q.status == "Pass")
         n_warn  = sum(1 for q in qcs if q.status == "Warn")
         n_fail  = sum(1 for q in qcs if q.status == "Fail")
@@ -197,8 +187,9 @@ def get_instrument_run_qc_summary(
             "avg_rt_fail":       _avg_len("rt_fail_is"),
             "avg_mz_warn":       _avg_len("mz_warn_is"),
             "avg_mz_fail":       _avg_len("mz_fail_is"),
-            "avg_cv_warn":       _avg_len("cv_warn_is"),
-            "avg_cv_fail":       _avg_len("cv_fail_is"),
+            # CV comes from run-level summary_metrics (computed across all samples)
+            "avg_cv_warn":       len(run_summary.get("cv_warn_is") or []),
+            "avg_cv_fail":       len(run_summary.get("cv_fail_is") or []),
             # proteomics
             "avg_ms1":           _avg("ms1_count"),
             "avg_ms2":           _avg("ms2_count"),

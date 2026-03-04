@@ -13,7 +13,7 @@ import logging
 import traceback
 
 import pandas as pd
-from dash import Input, Output, State, ctx, html
+from dash import Input, Output, State, ctx, dash_table, html
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 
@@ -38,12 +38,8 @@ def _get_polarity_for_sample(session, instrument_id, run_id, sample_id, chromato
     """Infer sample polarity from which IS library its details match."""
     result = (
         session.query(QCResultModel)
-        .filter_by(
-            instrument_id=instrument_id,
-            run_id=run_id,
-            sample_id=sample_id,
-            qc_module="metabolomics",
-        )
+        .filter_by(instrument_id=instrument_id, run_id=run_id, sample_id=sample_id)
+        .filter(QCResultModel.qc_module.in_(["metabolomics", "metabolomics_pre"]))
         .first()
     )
     if result is None or not result.details:
@@ -58,6 +54,65 @@ def _get_polarity_for_sample(session, instrument_id, run_id, sample_id, chromato
     if names_in_details & neg_names and not (names_in_details & pos_names):
         return "Neg"
     return "Pos"
+
+
+def _build_details_modal_body(session, instrument_id, run_id, sample_id):
+    """Build modal body from QCResult.details for the clicked sample.
+
+    Returns (body_component, feature_table_json, csv_filename) or None if no details.
+    """
+    result = (
+        session.query(QCResultModel)
+        .filter_by(instrument_id=instrument_id, run_id=run_id, sample_id=sample_id)
+        .filter(QCResultModel.qc_module.in_(["metabolomics", "metabolomics_pre"]))
+        .first()
+    )
+    if result is None or not isinstance(result.details, list) or not result.details:
+        return None
+
+    rows = []
+    for e in result.details:
+        delta_rt = e.get("Delta RT")
+        delta_mz = e.get("Delta m/z")
+        warns = e.get("Warnings", "")
+        fails = e.get("Fails", "")
+        issues = "; ".join(filter(None, [warns, fails]))
+        rows.append({
+            "Name":          e.get("Name", ""),
+            "Height":        f"{e.get('Height', 0):,.0f}" if e.get("Height") else "—",
+            "RT (min)":      f"{e['RT (min)']:.3f}" if e.get("RT (min)") is not None else "—",
+            "ΔRT (min)":     f"{delta_rt:+.3f}" if delta_rt is not None else "—",
+            "Δm/z (ppm)":    f"{delta_mz:+.1f}" if delta_mz is not None else "—",
+            "Issues":        issues,
+        })
+
+    df = pd.DataFrame(rows)
+
+    status_badge = {
+        "Pass": "success", "Warn": "warning", "Fail": "danger",
+    }.get(result.status, "secondary")
+
+    header = dbc.Row(className="mb-2", children=[
+        dbc.Col(dbc.Badge(result.status, color=status_badge, className="me-2")),
+        dbc.Col(html.Small(f"Run: {run_id}  |  Module: {result.qc_module}", className="text-muted")),
+    ])
+
+    tbl = dash_table.DataTable(
+        data=df.to_dict("records"),
+        columns=[{"name": c, "id": c} for c in df.columns],
+        style_cell={"textAlign": "left", "fontSize": "13px", "padding": "6px 10px"},
+        style_data={"whiteSpace": "normal"},
+        style_data_conditional=[
+            {"if": {"filter_query": '{Issues} != ""'}, "backgroundColor": "rgba(255,193,7,0.15)"},
+            {"if": {"filter_query": '{Issues} contains "not detected"'}, "backgroundColor": "rgba(220,53,69,0.15)"},
+        ],
+        style_header={"fontWeight": "bold", "backgroundColor": "#f8f9fa"},
+        page_action="none",
+        style_table={"overflowX": "auto"},
+    )
+
+    body = html.Div([header, tbl])
+    return body, df.to_json(), sample_id
 
 
 def _pick_polarity(polarity, pos_data, neg_data):
@@ -577,21 +632,33 @@ def register(app):
         instrument_id = resources["instrument"]
         run_id = resources["run_id"]
 
-        # Infer polarity from session
+        # Build modal body from QCResult.details (DB-driven)
+        with get_session() as session:
+            detail_result = _build_details_modal_body(
+                session, instrument_id, run_id, clicked_sample
+            )
+
+        if detail_result is not None:
+            body, feature_table_json, csv_name = detail_result
+            title = clicked_sample
+            if is_open:
+                return False, title, body, [], None, None, None, None, None, csv_name
+            return True, title, body, [], None, None, None, None, feature_table_json, csv_name
+
+        # Fallback: try old pivot-table approach for legacy data
         with get_session() as session:
             polarity = _get_polarity_for_sample(session, instrument_id, run_id, clicked_sample)
 
-        # Get sequence and metadata
         df_sequence = pd.DataFrame()
         df_metadata = pd.DataFrame()
         if sequence:
             try:
-                df_sequence = pd.read_json(sequence, orient="split")
+                df_sequence = pd.read_json(io.StringIO(sequence), orient="split")
             except Exception:
                 pass
         if metadata:
             try:
-                df_metadata = pd.read_json(metadata, orient="split")
+                df_metadata = pd.read_json(io.StringIO(metadata), orient="split")
             except Exception:
                 pass
 

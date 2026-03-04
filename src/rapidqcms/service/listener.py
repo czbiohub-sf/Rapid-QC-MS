@@ -34,7 +34,7 @@ from ..config.library import (
     get_registered_chromatographies,
 )
 from ..db.features import get_in_run_rt_history
-from ..db.results import write_qc_result
+from ..db.results import update_run_cv, write_qc_result
 from ..qc.base import QCStatus
 from .gating import write_gate_file
 from .processor import process_sample
@@ -211,6 +211,10 @@ class AcquisitionEventHandler(FileSystemEventHandler):
                         qc_stage=cfg.stage,
                         result=r,
                     )
+                session.commit()
+
+                # Update running CV for the run now that a new sample is in
+                update_run_cv(session, cfg.run_id, qc_stage=cfg.stage)
                 session.commit()
 
                 # Write gate file for the worst outcome

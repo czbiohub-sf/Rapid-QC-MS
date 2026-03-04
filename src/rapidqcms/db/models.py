@@ -29,11 +29,10 @@ class Run(Base):
     )
     experiment_type: Mapped[str] = mapped_column(String, nullable=False)
     chromatography: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
-    status: Mapped[str] = mapped_column(String, nullable=False, default="active")
     started_at: Mapped[datetime.datetime | None] = mapped_column(
         DateTime, default=lambda: datetime.datetime.now(UTC)
     )
-    completed_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)
+    summary_metrics: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     instrument: Mapped["Instrument"] = relationship("Instrument", back_populates="runs")
     qc_results: Mapped[list["QCResult"]] = relationship("QCResult", back_populates="run")

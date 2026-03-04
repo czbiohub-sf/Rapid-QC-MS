@@ -113,20 +113,32 @@ def _grades_from_metrics(qc_module: str, metrics: dict) -> dict:
     return {}
 
 
+_CHECK_ABBREV = {
+    "fill_fraction": "fill",
+    "rt_deviation":  "RT",
+    "mz_shift":      "m/z",
+    "dropout":       "dropout",
+    "cv":            "CV",
+    "in_range":      "in_range",
+}
+
+
 def _format_qc(grades: dict) -> str:
-    """Format a grades dict into a compact per-check breakdown string.
+    """Format grades as a compact string showing only non-Pass checks.
 
-    Example output: ``fill_fraction: Pass | rt_deviation: Warn``
-
-    Check names have the leading ``is_`` prefix stripped for brevity.
-    If grades is empty, returns an empty string.
+    Pass rows return an empty string (row colour already conveys status).
+    Warn/Fail checks appear as ``RT:Warn | m/z:Warn``.
     """
     if not grades:
         return ""
     parts = []
     for check, entry in grades.items():
+        st = entry.get("status", "Pass")
+        if st == "Pass":
+            continue
         short = check[3:] if check.startswith("is_") else check
-        parts.append(f"{short}: {entry.get('status', '?')}")
+        label = _CHECK_ABBREV.get(short, short)
+        parts.append(f"{label}:{st}")
     return " | ".join(parts)
 
 
@@ -221,10 +233,14 @@ def get_run_dataframes(
             # Fallback for runs without per-IS details: infer from sample name
             polarity = "Neg"
         polarity_map[row.sample_id] = polarity
+        grades = row.grades
+        if not grades and row.metrics:
+            grades = _grades_from_metrics(row.qc_module or "", row.metrics)
         sample_records.append({
             "Specimen": row.sample_id,
             "Position": "",
-            "QC": row.status,
+            "Status":   row.status,
+            "QC":       _format_qc(grades or {}),
             "Polarity": polarity,
         })
 
@@ -296,7 +312,6 @@ def get_run_dataframes(
     resources = {
         "instrument": instrument_id,
         "run_id": run_id,
-        "status": "Complete",
         "chromatography": chromatography,
         "precursor_mass_dict": precursor_mz_dict,
         "retention_times_dict": retention_times_dict,

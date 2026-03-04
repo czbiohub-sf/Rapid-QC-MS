@@ -203,10 +203,10 @@ def test_get_sample_table_qc_from_grades(db_session):
     pass_row = df.loc[df["Specimen"] == "Sample_pass"].iloc[0]
 
     assert warn_row["Status"] == "Warn"
-    assert "fill_fraction: Warn" in warn_row["QC"]
-    assert "rt_deviation: Pass" in warn_row["QC"]
+    assert "fill:Warn" in warn_row["QC"]
+    assert "RT" not in warn_row["QC"]   # Pass checks are not shown
     assert pass_row["Status"] == "Pass"
-    assert "fill_fraction: Pass" in pass_row["QC"]
+    assert pass_row["QC"] == ""          # All-pass rows show nothing
 
 
 def test_get_sample_table_qc_from_metrics_fallback(db_session):
@@ -237,9 +237,9 @@ def test_get_sample_table_qc_from_metrics_fallback(db_session):
     row = df.iloc[0]
 
     assert row["Status"] == "Warn"
-    assert "cv: Warn" in row["QC"]
-    assert "in_range: Warn" in row["QC"]
-    assert "dropout: Pass" in row["QC"]
+    assert "CV:Warn" in row["QC"]
+    assert "in_range:Warn" in row["QC"]
+    assert "dropout" not in row["QC"]   # Pass checks are not shown
 
 
 def test_dashboard_app_imports():
