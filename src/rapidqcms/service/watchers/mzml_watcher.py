@@ -27,7 +27,7 @@ Usage
     rapidqcms mzml-watch --path ./data/mzml
 
 # Programmatic:
-    from rapidqcms.service.mzml_watcher import MzmlWatcherConfig, start_mzml_watcher
+    from rapidqcms.service.watchers.mzml_watcher import MzmlWatcherConfig, start_mzml_watcher
     cfg = MzmlWatcherConfig.from_env(watch_path=Path("./data/mzml"))
     start_mzml_watcher(cfg)
 """
@@ -230,9 +230,9 @@ class MzmlEventHandler:
             time.sleep(self._cfg.md5_check_interval)
 
     def _run_qc(self, mzml_path: Path) -> None:
-        from ..qc.base import QCStatus
-        from ..service.pipeline import run_qc
-        from ..config.library import get_internal_standards
+        from ...qc.base import QCStatus
+        from ..pipeline import run_qc
+        from ...config.library import get_internal_standards
 
         cfg = self._cfg
         run_id = cfg.resolve_run_id()
@@ -288,8 +288,8 @@ class MzmlEventHandler:
             self._persist_results(mzml_path, run_id, results)
 
     def _persist_results(self, mzml_path: Path, run_id: str, results) -> None:
-        from ..db.results import write_qc_result
-        from ..db.settings import upsert_instrument, get_run, create_run
+        from ...db.results import write_qc_result
+        from ...db.settings import upsert_instrument, get_run, create_run
 
         cfg = self._cfg
         try:
@@ -344,7 +344,7 @@ def start_mzml_watcher(
 
     session_factory = None
     if db_engine is not None:
-        from ..db.models import Base
+        from ...db.models import Base
         from sqlalchemy.orm import sessionmaker
 
         Base.metadata.create_all(db_engine)

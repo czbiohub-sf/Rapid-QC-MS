@@ -8,7 +8,7 @@ Usage
   rapidqcms listen --instrument INST01 --run-id RUN001 --path /data/acq
 
   # Or programmatically:
-  from rapidqcms.service.listener import ListenerConfig, start_listener
+  from rapidqcms.service.watchers.listener import ListenerConfig, start_listener
   cfg = ListenerConfig(instrument_id="INST01", run_id="RUN001", ...)
   start_listener(cfg, db_engine=engine, storage=backend)
 """
@@ -28,17 +28,17 @@ from sqlalchemy.orm import sessionmaker
 from watchdog.events import FileCreatedEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
-from ..config.library import (
+from ...config.library import (
     chromatography_from_filename,
     get_internal_standards_df,
     get_registered_chromatographies,
 )
-from ..db.features import get_in_run_rt_history
-from ..db.results import update_run_cv, write_qc_result
-from ..qc.base import QCStatus
-from .gating import write_gate_file
-from .processor import process_sample
-from .pipeline import _worst_status
+from ...db.features import get_in_run_rt_history
+from ...db.results import update_run_cv, write_qc_result
+from ...qc.base import QCStatus
+from ..events.gating import write_gate_file
+from ..processor import process_sample
+from ..pipeline import _worst_status
 
 log = logging.getLogger(__name__)
 
@@ -219,7 +219,7 @@ class AcquisitionEventHandler(FileSystemEventHandler):
 
                 # Write gate file for the worst outcome
                 worst = _worst_status(results)
-                from ..qc.base import QCResult
+                from ...qc.base import QCResult
                 gate_result = QCResult(
                     status=worst,
                     module="pipeline",
@@ -254,11 +254,11 @@ def start_listener(
         storage:    StorageBackend instance, or None to skip uploads.
     """
     if db_engine is None:
-        from ..config import get_settings
+        from ...config import get_settings
         s = get_settings()
         db_engine = create_engine(s.db_url)
 
-    from ..db.models import Base
+    from ...db.models import Base
     Base.metadata.create_all(db_engine)
 
     session_factory = sessionmaker(db_engine)

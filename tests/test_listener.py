@@ -13,7 +13,7 @@ from sqlalchemy.orm import sessionmaker
 
 from rapidqcms.db.models import Base, Instrument, Run
 from rapidqcms.qc.base import QCResult, QCStatus
-from rapidqcms.service.listener import AcquisitionEventHandler, ListenerConfig, _md5
+from rapidqcms.service.watchers.listener import AcquisitionEventHandler, ListenerConfig, _md5
 
 
 # ---------------------------------------------------------------------------
@@ -85,7 +85,7 @@ def test_unstable_file_retried(tmp_path):
         # Return different values for first two calls, then stabilise
         return str(call_count) if call_count < 3 else "stable"
 
-    with mock.patch("rapidqcms.service.listener._md5", side_effect=changing_md5):
+    with mock.patch("rapidqcms.service.watchers.listener._md5", side_effect=changing_md5):
         result = handler._wait_for_stable(raw)
 
     assert result is True
@@ -113,21 +113,21 @@ def test_handle_file_persists_qc_result(tmp_path):
     )
 
     with (
-        mock.patch("rapidqcms.service.listener._md5", return_value="fixed"),
+        mock.patch("rapidqcms.service.watchers.listener._md5", return_value="fixed"),
         mock.patch(
-            "rapidqcms.service.listener.process_sample",
+            "rapidqcms.service.watchers.listener.process_sample",
             return_value=[fake_result],
         ),
         mock.patch(
-            "rapidqcms.service.listener.get_internal_standards_df",
+            "rapidqcms.service.watchers.listener.get_internal_standards_df",
             return_value=mock.MagicMock(),
         ),
         mock.patch(
-            "rapidqcms.service.listener.get_in_run_rt_history",
+            "rapidqcms.service.watchers.listener.get_in_run_rt_history",
             return_value=None,
         ),
-        mock.patch("rapidqcms.service.listener.write_qc_result") as mock_write_qc,
-        mock.patch("rapidqcms.service.listener.write_gate_file") as mock_write_gate,
+        mock.patch("rapidqcms.service.watchers.listener.write_qc_result") as mock_write_qc,
+        mock.patch("rapidqcms.service.watchers.listener.write_gate_file") as mock_write_gate,
     ):
         handler = AcquisitionEventHandler(cfg, session_factory)
         handler._handle_file(raw)

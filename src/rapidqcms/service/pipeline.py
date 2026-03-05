@@ -9,7 +9,7 @@ that downstream processes (FragPipe, CZB-MAP) watch for.
 import logging
 from pathlib import Path
 
-from .gating import write_gate_file
+from .events.gating import write_gate_file
 from ..qc.base import QCResult, QCStatus
 from ..qc.registry import load_registry
 

@@ -3,7 +3,7 @@
 import json
 
 from rapidqcms.qc.base import QCResult, QCStatus
-from rapidqcms.service.gating import get_gate_status, read_gate_file, write_gate_file
+from rapidqcms.service.events.gating import get_gate_status, read_gate_file, write_gate_file
 
 
 def _raw(tmp_path, name="sample_001.raw"):

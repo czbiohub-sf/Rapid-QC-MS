@@ -63,3 +63,40 @@ internal_standards:
 # Future: biological reference standards
 # ---------------------------------------------------------------------------
 # bio_standards: {}
+
+# ---------------------------------------------------------------------------
+# Checkpoint definitions (c1–c4)
+#
+# Each checkpoint maps to one or more QC modules and documents the intended
+# downstream actions.  The on_pass / on_fail keys are stubs that describe the
+# contract for future trigger implementation — no code reads them today.
+# ---------------------------------------------------------------------------
+
+checkpoints:
+  c1:
+    label: "Pre-acquisition instrument check"
+    modules: []           # future: instrument_health module
+    on_pass: null         # future: trigger Bulkloader / data acquisition start
+    on_fail: null         # blocks acquisition
+
+  c2:
+    label: "Post-raw-file, pre-search"
+    modules:
+      - name: metabolomics_pre
+        experiment_types: [metabolomics, lipidomics]
+      - name: proteomics_pre
+        experiment_types: [proteomics]
+    on_pass: null         # future: trigger HPC backup + FragPipe/MSDIAL
+    on_fail: null         # blocks HPC backup
+
+  c3:
+    label: "Post-search, pre-statistical treatment"
+    modules: []           # future: post_search module
+    on_pass: null         # future: trigger statistical treatment job
+    on_fail: null
+
+  c4:
+    label: "Post-statistical treatment, pre-delivery"
+    modules: []           # future: post_stats module
+    on_pass: null         # future: deliver to ProteOhub
+    on_fail: null

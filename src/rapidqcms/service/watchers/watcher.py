@@ -32,10 +32,10 @@ from sqlalchemy.orm import sessionmaker
 from watchdog.events import FileCreatedEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
-from ..config.lab_config import load_lab_config, sync_to_db
-from ..db.models import Instrument
-from ..db.results import write_qc_result
-from ..db.settings import create_run, get_run
+from ...config.lab_config import load_lab_config, sync_to_db
+from ...db.models import Instrument
+from ...db.results import write_qc_result
+from ...db.settings import create_run, get_run
 
 log = logging.getLogger(__name__)
 
@@ -109,8 +109,8 @@ class RootEventHandler(FileSystemEventHandler):
             return
 
         # Import here to avoid circular imports at module level
-        from .processor import process_sample
-        from ..config import get_settings
+        from ..processor import process_sample
+        from ...config import get_settings
 
         s = get_settings()
         work_dir = path.parent / ".rapidqcms_work"
@@ -209,10 +209,10 @@ def start_watcher(
         db_engine:  SQLAlchemy Engine. Defaults to RAPIDQCMS_DB_URL env var.
     """
     if db_engine is None:
-        from ..config import get_settings
+        from ...config import get_settings
         db_engine = create_engine(get_settings().db_url)
 
-    from ..db.models import Base
+    from ...db.models import Base
     Base.metadata.create_all(db_engine)
 
     session_factory = sessionmaker(db_engine)

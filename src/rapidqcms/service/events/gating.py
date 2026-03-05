@@ -15,7 +15,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ..qc.base import QCResult, QCStatus
+from ...qc.base import QCResult, QCStatus
 
 
 def write_gate_file(raw_path: Path, result: QCResult, stage: str) -> Path:

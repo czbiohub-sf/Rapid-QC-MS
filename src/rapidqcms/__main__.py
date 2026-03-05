@@ -140,7 +140,7 @@ def main() -> None:
 
     if args.command == "listen":
         from pathlib import Path
-        from rapidqcms.service.listener import ListenerConfig, start_listener
+        from rapidqcms.service.watchers.listener import ListenerConfig, start_listener
         from rapidqcms.config import get_settings
         from rapidqcms.db.connection import get_engine
         from rapidqcms.storage import get_storage
@@ -164,7 +164,7 @@ def main() -> None:
     elif args.command == "watch":
         from pathlib import Path
         from rapidqcms.config.lab_config import load_lab_config
-        from rapidqcms.service.watcher import start_watcher
+        from rapidqcms.service.watchers.watcher import start_watcher
         from rapidqcms.db.connection import get_engine
 
         config = load_lab_config(Path(args.config))
@@ -176,7 +176,7 @@ def main() -> None:
 
     elif args.command == "mzml-watch":
         from pathlib import Path
-        from rapidqcms.service.mzml_watcher import MzmlWatcherConfig, start_mzml_watcher
+        from rapidqcms.service.watchers.mzml_watcher import MzmlWatcherConfig, start_mzml_watcher
 
         watch_path = Path(args.path) if args.path else None
         cfg = MzmlWatcherConfig.from_env(watch_path=watch_path)
