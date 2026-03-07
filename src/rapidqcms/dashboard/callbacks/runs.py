@@ -270,6 +270,9 @@ def register(app):
             log.exception("load_data failed")
             return _none29
 
+    _POOL_RE  = r"^(QC|Pool)[_\-]"
+    _BLANK_RE = r"^(BK|Blank)[_\-]"
+
     @app.callback(
         Output("sample-table", "data"),
         Input("specimens", "data"),
@@ -288,15 +291,21 @@ def register(app):
 
         df = pd.DataFrame(json.loads(samples))
 
+        # Filter by polarity ("All" or None → no filter)
+        if polarity and polarity != "All" and "Polarity" in df.columns:
+            df = df.loc[df["Polarity"] == polarity]
+
         # Filter by sample type
         if sample_filter == "pools":
-            df = df.loc[df["Specimen"].str.contains("QC", na=False)]
+            df = df.loc[df["Specimen"].str.contains(_POOL_RE, na=False, regex=True)]
         elif sample_filter == "blanks":
-            df = df.loc[df["Specimen"].str.contains("BK", na=False)]
+            df = df.loc[df["Specimen"].str.contains(_BLANK_RE, na=False, regex=True)]
         elif sample_filter == "specimens":
-            df = df.loc[~df["Specimen"].str.contains("QC|BK", na=False, regex=True)]
+            is_pool  = df["Specimen"].str.contains(_POOL_RE,  na=False, regex=True)
+            is_blank = df["Specimen"].str.contains(_BLANK_RE, na=False, regex=True)
+            df = df.loc[~(is_pool | is_blank)]
 
-        cols = [c for c in ["Specimen", "Status", "QC"] if c in df.columns]
+        cols = [c for c in ["Specimen", "Status"] if c in df.columns]
         return df[cols].to_dict("records")
 
     @app.callback(
@@ -395,8 +404,8 @@ def register(app):
             raise PreventUpdate
 
         df_samples = pd.DataFrame(json.loads(samples))
-        if polarity:
-            df_samples = df_samples.loc[df_samples["Polarity"].str.contains(polarity, na=False)]
+        if polarity and polarity != "All":
+            df_samples = df_samples.loc[df_samples["Polarity"] == polarity]
         sample_list = df_samples["Specimen"].tolist()
 
         if filter == "all" or filter is None:
@@ -411,12 +420,13 @@ def register(app):
             except Exception:
                 return [], [], []
 
+        import re as _re
         if filter == "pools":
-            pools = [s for s in sample_list if "QC" in s]
+            pools = [s for s in sample_list if _re.match(_POOL_RE, s)]
             return pools, pools, pools
 
         if filter == "blanks":
-            blanks = [s for s in sample_list if "BK" in s]
+            blanks = [s for s in sample_list if _re.match(_BLANK_RE, s)]
             return blanks, blanks, blanks
 
         return [], [], []

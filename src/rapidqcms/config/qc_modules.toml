@@ -26,6 +26,23 @@ fill_fraction_enabled = true
 rt_deviation_enabled  = true
 
 
+[modules.lipidomics_pre]
+class           = "rapidqcms.qc.lipidomics_pre.LipidomicsPreSearchQCModule"
+enabled         = true
+stage           = "pre_search"
+experiment_type = "lipidomics"
+
+[modules.lipidomics_pre.thresholds]
+min_ms1_scans     = 50    # lipidomics runs are shorter — fewer MS1 scans expected
+min_ms2_scans     = 200   # lipid DDA triggers fewer MS2 events than proteomics
+min_ms2_ms1_ratio = 1.0   # lower ratio acceptable for lipidomics
+
+[modules.lipidomics_pre.checks]
+ms1_enabled   = true
+ms2_enabled   = true
+ratio_enabled = true
+
+
 [modules.proteomics_pre]
 class           = "rapidqcms.qc.proteomics_pre.ProteomicsPreSearchQCModule"
 enabled         = true

@@ -400,7 +400,7 @@ def register(app):
         run_id_list = ["All"]
         if run_table is not None:
             for row in run_table:
-                run_id_list.append(row["Job ID"])
+                run_id_list.append(row["Run ID"])
             return run_id_list, run_id_list[0]
         return [""], ""
 

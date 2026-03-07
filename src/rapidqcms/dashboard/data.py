@@ -220,18 +220,34 @@ def get_run_dataframes(
         precursor_mz_dict[r["name"]] = r["precursor_mz"]
         retention_times_dict[r["name"]] = r["retention_time"]
 
-    # Determine polarity for each sample by inspecting which IS names appear
+    # Determine polarity for each sample.
+    # Primary: look for _Neg_ / _Pos_ tokens in the sample_id (most reliable).
+    # Fallback: compare exclusive (non-overlapping) IS names in details.
+    _neg_only = neg_names - pos_names
+    _pos_only = pos_names - neg_names
+
+    def _polarity_from_id(sample_id: str) -> str | None:
+        for tok in sample_id.replace("-", "_").split("_"):
+            if tok.lower() == "neg":
+                return "Neg"
+            if tok.lower() == "pos":
+                return "Pos"
+        return None
+
     polarity_map: dict[str, str] = {}
     sample_records: list[dict] = []
     for row in rows:
-        polarity = "Pos"
-        if row.details:
-            names_in_details = {e.get("Name") for e in row.details if e.get("Name")}
-            if names_in_details & neg_names and not (names_in_details & pos_names):
-                polarity = "Neg"
-        elif "Neg" in row.sample_id:
-            # Fallback for runs without per-IS details: infer from sample name
-            polarity = "Neg"
+        polarity = _polarity_from_id(row.sample_id)
+        if polarity is None:
+            # Fallback: use exclusive IS names in details
+            if row.details:
+                names_in_details = {e.get("Name") for e in row.details if e.get("Name")}
+                if names_in_details & _neg_only and not (names_in_details & _pos_only):
+                    polarity = "Neg"
+                else:
+                    polarity = "Pos"
+            else:
+                polarity = "Pos"
         polarity_map[row.sample_id] = polarity
         grades = row.grades
         if not grades and row.metrics:

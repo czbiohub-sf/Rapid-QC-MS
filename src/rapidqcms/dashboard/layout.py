@@ -146,17 +146,22 @@ def serve_layout():
                                 ),
 
                                 # Polarity filtering options
-                                html.Div(className="margin-top-15", children=[
-                                    dcc.Dropdown(
-                                        id="polarity-options",
-                                        placeholder="All polarities",
-                                        clearable=True,
-                                        value=None,
-                                        options=[
-                                            {"label": "Positive", "value": "Pos"},
-                                            {"label": "Negative", "value": "Neg"},
-                                        ],
-                                    ),
+                                html.Div(className="radio-group-container", children=[
+                                    html.Div(className="radio-group margin-top-15", children=[
+                                        dbc.RadioItems(
+                                            id="polarity-options",
+                                            className="btn-group",
+                                            inputClassName="btn-check",
+                                            labelClassName="btn btn-outline-primary",
+                                            inputCheckedClassName="active",
+                                            value="All",
+                                            options=[
+                                                {"label": "All", "value": "All"},
+                                                {"label": "Pos", "value": "Pos"},
+                                                {"label": "Neg", "value": "Neg"},
+                                            ],
+                                        ),
+                                    ]),
                                 ]),
 
                                 # Sample / blank / pool / treatment filtering options
@@ -215,13 +220,9 @@ def serve_layout():
                                     ],
                                     style_cell_conditional=[
                                         {"if": {"column_id": "Specimen"},
-                                        "width": "55%"},
+                                        "width": "75%"},
                                         {"if": {"column_id": "Status"},
-                                        "width": "12%"},
-                                        {"if": {"column_id": "QC"},
-                                        "width": "33%",
-                                        "fontSize": "13px",
-                                        "color": "#444"},
+                                        "width": "25%"},
                                     ]
                                 )
                             ]),

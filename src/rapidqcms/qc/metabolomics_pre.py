@@ -7,11 +7,15 @@ XIC (extracted ion chromatogram) and checks whether the IS was detected.
 QC checks:
     1. IS fill fraction  — fraction of configured IS detected above threshold
     2. RT deviation      — peak apex RT vs expected library RT
+    3. m/z deviation     — measured m/z vs expected library m/z
 
 Overall status rules:
-    Fail : fill_fraction < fail_fill_fraction  (default 0.70)
-    Warn : fill_fraction < warn_fill_fraction  (default 0.90)
+    Fail : any detected IS has RT deviation > rt_deviation_fail (default 1.0 min)
+           OR any detected IS has m/z deviation > mz_deviation_fail_ppm (default 8 ppm)
+    Warn : fill_fraction < warn_fill_fraction (default 0.90) — IS not detected is a
+           warning, not a failure; only detected-but-wrong IS can Fail
            OR any detected IS RT deviation > rt_deviation_warn (default 0.5 min)
+           OR any detected IS m/z deviation > mz_deviation_warn_ppm (default 5 ppm)
     Pass : otherwise
 
 If no IS are configured for the given polarity/chromatography the module
@@ -103,9 +107,10 @@ class MetabolomicsPreSearchQCModule(QCModule):
         mz_warn_is = [nm for nm in detected if abs(mz_devs_ppm.get(nm, 0.0)) > mz_dev_warn]
         mz_fail_is = [nm for nm in detected if abs(mz_devs_ppm.get(nm, 0.0)) > mz_dev_fail]
 
-        if fill_fraction < fail_fill or rt_fail_is:
+        # Not detected → at most Warn. Only detected-but-wrong IS can Fail.
+        if rt_fail_is or mz_fail_is:
             status = QCStatus.FAIL
-        elif fill_fraction < warn_fill or rt_warn_is or mz_warn_is or mz_fail_is:
+        elif fill_fraction < warn_fill or rt_warn_is or mz_warn_is:
             status = QCStatus.WARN
         else:
             status = QCStatus.PASS
@@ -157,15 +162,10 @@ class MetabolomicsPreSearchQCModule(QCModule):
         # Build per-check grades
         grades: dict = {}
 
-        if fill_fraction < fail_fill:
-            grades["is_fill_fraction"] = {
-                "status": "Fail",
-                "message": f"IS detection {n_detected}/{n_total} ({fill_fraction:.1%}) < {fail_fill:.0%} fail threshold",
-            }
-        elif fill_fraction < warn_fill:
+        if fill_fraction < warn_fill:
             grades["is_fill_fraction"] = {
                 "status": "Warn",
-                "message": f"IS detection {n_detected}/{n_total} ({fill_fraction:.1%}) < {warn_fill:.0%} warn threshold",
+                "message": f"IS detection {n_detected}/{n_total} ({fill_fraction:.1%}) < {warn_fill:.0%} threshold",
             }
         else:
             grades["is_fill_fraction"] = {"status": "Pass", "message": None}

@@ -51,12 +51,13 @@ def main() -> None:
     )
 
     # ── mzml-watch ────────────────────────────────────────────────────────────
-    # Watches a directory for .mzML files whose names contain HILIC and
-    # Metabolome, then triggers metabolomics pre-search QC automatically.
+    # Watches a directory for .mzML files and routes each to the right QC
+    # module based on filename:
+    #   HILIC in name → metabolomics   Lipid in name → lipidomics   else → proteomics
     # Works on macOS (FSEvents) and Linux/HPC (inotify or --polling for NFS).
     mzml_watch_parser = subparsers.add_parser(
         "mzml-watch",
-        help="Watch a directory for HILIC metabolomics mzML files and run QC",
+        help="Watch a directory for mzML files and route to QC by filename (HILIC/Lipid/other)",
     )
     mzml_watch_parser.add_argument(
         "--path",
@@ -84,14 +85,6 @@ def main() -> None:
         default=None,
         choices=["Pos", "Neg"],
         help="Ion polarity for IS lookup (default: RAPIDQCMS_POLARITY or Pos)",
-    )
-    mzml_watch_parser.add_argument(
-        "--filter",
-        dest="filters",
-        metavar="TOKEN",
-        nargs="+",
-        default=None,
-        help="Filename tokens that must ALL be present (default: HILIC Metabolome)",
     )
     mzml_watch_parser.add_argument(
         "--polling",
@@ -188,8 +181,6 @@ def main() -> None:
             cfg.run_id = args.run_id
         if args.polarity:
             cfg.polarity = args.polarity
-        if args.filters:
-            cfg.filename_filters = args.filters
         if args.polling:
             cfg.use_polling = True
 

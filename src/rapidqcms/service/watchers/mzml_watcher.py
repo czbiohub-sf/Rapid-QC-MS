@@ -1,9 +1,12 @@
-"""Watchdog-based watcher that triggers metabolomics pre-search QC on mzML files.
+"""Watchdog-based watcher that triggers pre-search QC on mzML files.
 
-Filters on:
-  - Extension  : .mzML  (case-insensitive)
-  - Filename   : must contain every token in ``filename_filters``
-                 Default: ``["HILIC", "Metabolome"]``
+Experiment type is determined automatically from the filename:
+  - "HILIC" in stem  → metabolomics  (chromatography = HILIC)
+  - "Lipid" in stem  → lipidomics    (chromatography derived from filename)
+  - anything else    → proteomics
+
+All .mzML files in the watch directory are picked up; the filename alone
+decides which QC module runs.
 
 Watch path resolution (first match wins):
   1. Argument passed to ``start_mzml_watcher()``
@@ -40,14 +43,32 @@ import os
 import signal
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
 
 log = logging.getLogger(__name__)
 
 _DEFAULT_WATCH_PATH = Path("data/mzml")
-_DEFAULT_FILTERS: tuple[str, ...] = ("HILIC", "Metabolome")
+
+
+# ---------------------------------------------------------------------------
+# Experiment-type classification
+# ---------------------------------------------------------------------------
+
+
+def _classify_experiment(stem: str) -> tuple[str, str | None]:
+    """Derive (experiment_type, chromatography) from an mzML filename stem.
+
+    Rules (first match wins):
+      - "HILIC" in stem  → metabolomics, chromatography=HILIC
+      - "Lipid" in stem  → lipidomics,   chromatography=None
+      - otherwise        → proteomics,   chromatography=None
+    """
+    if "HILIC" in stem:
+        return "metabolomics", "HILIC"
+    if "Lipid" in stem:
+        return "lipidomics", None
+    return "proteomics", None
 
 
 # ---------------------------------------------------------------------------
@@ -62,11 +83,6 @@ class MzmlWatcherConfig:
     watch_path: Path
     """Directory to watch for new .mzML files."""
 
-    filename_filters: Sequence[str] = field(
-        default_factory=lambda: list(_DEFAULT_FILTERS)
-    )
-    """Every token must be present in the filename stem to trigger QC."""
-
     instrument_id: str = "unknown"
     """Written to the DB and used as a storage-key prefix."""
 
@@ -79,9 +95,6 @@ class MzmlWatcherConfig:
 
     polarity: str = "Pos"
     """Ion polarity passed to the QC module (``"Pos"`` or ``"Neg"``)."""
-
-    chromatography: str = "HILIC"
-    """Chromatography method label passed to the QC context."""
 
     use_polling: bool = False
     """
@@ -99,19 +112,11 @@ class MzmlWatcherConfig:
             os.getenv("RAPIDQCMS_MZML_WATCH_PATH", str(_DEFAULT_WATCH_PATH))
         )
 
-        filters_raw = os.getenv("RAPIDQCMS_FILENAME_FILTERS", "")
-        filters = (
-            [t.strip() for t in filters_raw.split(",") if t.strip()]
-            or list(_DEFAULT_FILTERS)
-        )
-
         return cls(
             watch_path=path,
-            filename_filters=filters,
             instrument_id=os.getenv("RAPIDQCMS_INSTRUMENT_ID", "unknown"),
             run_id=os.getenv("RAPIDQCMS_RUN_ID", "auto"),
             polarity=os.getenv("RAPIDQCMS_POLARITY", "Pos"),
-            chromatography=os.getenv("RAPIDQCMS_CHROMATOGRAPHY", "HILIC"),
             use_polling=os.getenv("RAPIDQCMS_USE_POLLING", "0") == "1",
             md5_check_interval=int(os.getenv("RAPIDQCMS_MD5_INTERVAL", "30")),
         )
@@ -134,7 +139,7 @@ class MzmlWatcherConfig:
 
 
 class MzmlEventHandler:
-    """Watchdog event handler that filters mzML files and routes them to QC.
+    """Watchdog event handler that routes mzML files to the appropriate QC module.
 
     Handles both ``FileCreatedEvent`` and ``FileMovedEvent`` so that files
     written via an atomic temp-then-rename pattern are also caught.
@@ -167,15 +172,8 @@ class MzmlEventHandler:
     # ------------------------------------------------------------------
 
     def _matches(self, path: Path) -> bool:
-        """Return True if the file should trigger QC."""
-        if path.suffix.lower() != ".mzml":
-            return False
-        stem = path.stem
-        for token in self._cfg.filename_filters:
-            if token not in stem:
-                log.debug("Skipping %s — missing filter token %r", path.name, token)
-                return False
-        return True
+        """Return True if the file should trigger QC (any .mzML file)."""
+        return path.suffix.lower() == ".mzml"
 
     # ------------------------------------------------------------------
     # Dispatch to worker thread
@@ -184,7 +182,8 @@ class MzmlEventHandler:
     def _consider(self, path: Path) -> None:
         if not self._matches(path):
             return
-        log.info("Matched: %s — spawning QC worker", path.name)
+        experiment_type, _ = _classify_experiment(path.stem)
+        log.info("Matched: %s (%s) — spawning QC worker", path.name, experiment_type)
         t = threading.Thread(target=self._handle_file, args=(path,), daemon=True)
         t.start()
 
@@ -229,33 +228,53 @@ class MzmlEventHandler:
             )
             time.sleep(self._cfg.md5_check_interval)
 
+    def _derive_run_id(self, mzml_path: Path) -> str:
+        """Return run_id from the file's path.
+
+        When the watch directory has a ``<run_id>/...`` layout (e.g. after
+        rsync), the first subdirectory component is used as the run_id.
+        Falls back to ``config.resolve_run_id()`` for flat directories or
+        when an explicit run_id was configured.
+        """
+        if self._cfg.run_id != "auto":
+            return self._cfg.resolve_run_id()
+        try:
+            rel = mzml_path.relative_to(self._cfg.watch_path)
+            if len(rel.parts) >= 2:
+                return rel.parts[0]
+        except ValueError:
+            pass
+        return self._cfg.resolve_run_id()
+
     def _run_qc(self, mzml_path: Path) -> None:
-        from ...qc.base import QCStatus
         from ..pipeline import run_qc
-        from ...config.library import get_internal_standards
 
         cfg = self._cfg
-        run_id = cfg.resolve_run_id()
+        run_id = self._derive_run_id(mzml_path)
 
-        # Load IS for this polarity/chromatography
-        is_entries = get_internal_standards(cfg.chromatography, cfg.polarity)
-        internal_standards = [
-            {"name": e["name"], "precursor_mz": e["mz"], "retention_time": e["rt"]}
-            for e in is_entries
-        ]
+        experiment_type, chromatography = _classify_experiment(mzml_path.stem)
 
-        context = {
+        context: dict = {
             "polarity": cfg.polarity,
-            "chromatography": cfg.chromatography,
-            "experiment_type": "metabolomics",
-            "internal_standards": internal_standards,
+            "experiment_type": experiment_type,
         }
 
+        if chromatography is not None:
+            from ...config.library import get_internal_standards
+            context["chromatography"] = chromatography
+            is_entries = get_internal_standards(chromatography, cfg.polarity)
+            context["internal_standards"] = [
+                {"name": e["name"], "precursor_mz": e["mz"], "retention_time": e["rt"]}
+                for e in is_entries
+            ]
+
+        is_count = len(context.get("internal_standards", []))
         log.info(
-            "Running metabolomics pre-search QC on %s  [run=%s  IS=%d]",
+            "Running %s pre-search QC on %s  [run=%s%s]",
+            experiment_type,
             mzml_path.name,
             run_id,
-            len(internal_standards),
+            f"  IS={is_count}" if chromatography else "",
         )
 
         # run_qc also writes the gate file (.qc_pass / .qc_fail)
@@ -269,25 +288,26 @@ class MzmlEventHandler:
             log.warning("No QC results produced for %s", mzml_path.name)
             return
 
-        # Summarise to log
         for r in results:
             log.info("  [%s] %s — %s", r.module, r.status.value, r.message or "")
 
         worst = max(
             results,
-            key=lambda r: {
-                "FAIL": 2,
-                "WARN": 1,
-                "PASS": 0,
-            }.get(r.status.value, 0),
+            key=lambda r: {"FAIL": 2, "WARN": 1, "PASS": 0}.get(r.status.value, 0),
         )
         log.info("Overall QC outcome for %s: %s", mzml_path.name, worst.status.value)
 
-        # Persist to DB if a session factory was provided
         if self._session_factory is not None:
-            self._persist_results(mzml_path, run_id, results)
+            self._persist_results(mzml_path, run_id, experiment_type, chromatography, results)
 
-    def _persist_results(self, mzml_path: Path, run_id: str, results) -> None:
+    def _persist_results(
+        self,
+        mzml_path: Path,
+        run_id: str,
+        experiment_type: str,
+        chromatography: str | None,
+        results,
+    ) -> None:
         from ...db.results import write_qc_result
         from ...db.settings import upsert_instrument, get_run, create_run
 
@@ -297,14 +317,14 @@ class MzmlEventHandler:
                 # Ensure the Instrument row exists
                 upsert_instrument(session, cfg.instrument_id, cfg.instrument_id)
 
-                # Ensure the Run row exists — same directory → same run_id → same run
+                # Ensure the Run row exists
                 if get_run(session, run_id) is None:
                     create_run(
                         session,
                         run_id=run_id,
                         instrument_id=cfg.instrument_id,
-                        experiment_type="metabolomics",
-                        chromatography=cfg.chromatography,
+                        experiment_type=experiment_type,
+                        chromatography=chromatography,
                     )
                     log.info("Created run record: %s / %s", cfg.instrument_id, run_id)
 
@@ -314,13 +334,82 @@ class MzmlEventHandler:
                         instrument_id=cfg.instrument_id,
                         run_id=run_id,
                         sample_id=mzml_path.stem,
-                        experiment_type="metabolomics",
+                        experiment_type=experiment_type,
                         qc_stage="pre_search",
                         result=r,
                     )
                 session.commit()
         except Exception:
             log.exception("Failed to write QC results to DB for %s", mzml_path.name)
+
+
+# ---------------------------------------------------------------------------
+# Backfill
+# ---------------------------------------------------------------------------
+
+
+_BACKFILL_WORKERS = 4  # concurrent QC jobs during backfill
+
+
+def _backfill(handler: MzmlEventHandler, watch_path: Path) -> None:
+    """Process any existing .mzML files that have not yet been QC'd.
+
+    A file is considered already processed if a ``.qc_pass`` or ``.qc_fail``
+    sidecar exists next to it.  Files are processed in batches using a bounded
+    thread pool (``_BACKFILL_WORKERS``) so the machine isn't overwhelmed.
+    The pool runs in a background daemon thread so the watcher starts
+    immediately and live events are handled while backfill is in progress.
+    """
+    from ..events.gating import get_gate_status
+    from concurrent.futures import ThreadPoolExecutor
+    import threading
+
+    candidates = sorted(watch_path.rglob("*.mzML"))
+    if not candidates:
+        return
+
+    pending = [p for p in candidates if get_gate_status(p, "pre_search") is None]
+    if not pending:
+        log.info("Backfill: all %d existing mzML file(s) already processed.", len(candidates))
+        return
+
+    log.info(
+        "Backfill: %d of %d existing mzML file(s) need QC — starting (workers=%d).",
+        len(pending),
+        len(candidates),
+        _BACKFILL_WORKERS,
+    )
+    print(
+        f"[rapidqcms] Backfilling {len(pending)} unprocessed mzML file(s) "
+        f"({_BACKFILL_WORKERS} at a time)…"
+    )
+
+    def _run_stable(path: Path) -> None:
+        """Like _handle_file but skips the stability wait (file already exists)."""
+        key = str(path)
+        with handler._lock:
+            if key in handler._active:
+                return
+            handler._active.add(key)
+        try:
+            handler._run_qc(path)
+        except Exception:
+            log.exception("Backfill: unhandled error processing %s", path)
+        finally:
+            with handler._lock:
+                handler._active.discard(key)
+
+    def _run_pool() -> None:
+        done = 0
+        with ThreadPoolExecutor(max_workers=_BACKFILL_WORKERS) as pool:
+            for future in pool.map(_run_stable, pending):
+                done += 1
+                if done % 10 == 0:
+                    log.info("Backfill progress: %d / %d", done, len(pending))
+        log.info("Backfill complete: %d file(s) processed.", len(pending))
+        print(f"[rapidqcms] Backfill complete: {len(pending)} file(s) processed.")
+
+    threading.Thread(target=_run_pool, daemon=True, name="backfill-pool").start()
 
 
 # ---------------------------------------------------------------------------
@@ -352,6 +441,9 @@ def start_mzml_watcher(
 
     handler = MzmlEventHandler(config, session_factory=session_factory)
 
+    # Backfill: process any .mzML files already present that have no gate file
+    _backfill(handler, config.watch_path)
+
     # Choose observer type
     if config.use_polling:
         from watchdog.observers.polling import PollingObserver as ObserverClass
@@ -361,21 +453,21 @@ def start_mzml_watcher(
         from watchdog.observers import Observer as ObserverClass  # type: ignore[assignment]
 
     observer = ObserverClass()
-    observer.schedule(handler, str(config.watch_path), recursive=False)
+    observer.schedule(handler, str(config.watch_path), recursive=True)
     observer.start()
 
     run_id_display = config.resolve_run_id()
     log.info(
-        "Watching %s for *HILIC*Metabolome*.mzML  "
-        "[instrument=%s  run=%s  polling=%s]",
+        "Watching %s for *.mzML  [instrument=%s  run=%s  polling=%s]",
         config.watch_path,
         config.instrument_id,
         run_id_display,
         config.use_polling,
     )
     print(
-        f"[rapidqcms] Watching {config.watch_path} "
-        f"(filters: {list(config.filename_filters)}, polling={config.use_polling})"
+        f"[rapidqcms] Watching {config.watch_path} for *.mzML  "
+        f"(HILIC→metabolomics, Lipid→lipidomics, other→proteomics, "
+        f"polling={config.use_polling})"
     )
 
     # Graceful shutdown on SIGTERM (systemd / SLURM scancel).
