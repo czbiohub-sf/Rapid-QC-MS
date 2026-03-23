@@ -28,6 +28,7 @@ dependencies = [
     "pydrive2>=1.14",        # kept until Google Drive → S3 migration (Phase 3)
     "slack_sdk>=3.18",
     "sqlalchemy>=2.0,<3",
+    "psycopg2-binary>=2.9",  # PostgreSQL driver (SQLite is the default for local dev)
     "watchdog>=4.0,<5",
     "boto3>=1.35",
     "gunicorn>=23.0",        # production WSGI server

@@ -13,4 +13,11 @@ VOLUME ["/app/data"]
 
 EXPOSE 8050
 
-CMD ["rapidqcms", "serve", "--no-browser"]
+# Production: gunicorn WSGI server.
+# The ECS task definition overrides this command with worker count tuned to CPU.
+CMD ["gunicorn", "rapidqcms.dashboard.app:server", \
+     "--workers", "2", \
+     "--bind", "0.0.0.0:8050", \
+     "--timeout", "120", \
+     "--access-logfile", "-", \
+     "--error-logfile", "-"]
