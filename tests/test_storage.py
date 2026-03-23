@@ -1,8 +1,4 @@
-"""Tests for LocalStorageBackend and S3StorageBackend (via moto mock).
-
-Both backends are tested against the same contract so that switching between
-them in production vs. local dev is safe.
-"""
+"""Tests for LocalStorageBackend."""
 
 import pytest
 
@@ -70,25 +66,3 @@ class TestLocalStorageBackend:
         local_storage.delete("ghost.txt")  # should not raise
 
 
-class TestS3StorageBackend:
-    def test_contract(self, mock_s3, tmp_path):
-        _run_contract_tests(mock_s3, tmp_path)
-
-    def test_prefix_is_stripped_from_list_keys(self, mock_s3, tmp_path):
-        """Keys returned by list_keys should not include the backend prefix."""
-        src = _write_file(tmp_path, "result.json", '{"status":"Pass"}')
-        mock_s3.upload(src, "results/INSTR_001/result.json")
-
-        keys = mock_s3.list_keys("results/INSTR_001")
-        # Expect relative keys, not "test/results/INSTR_001/result.json"
-        assert all("test/" not in k for k in keys)
-        assert any("result.json" in k for k in keys)
-
-    def test_upload_and_download_round_trip(self, mock_s3, tmp_path):
-        content = "raw qc metrics data"
-        src = _write_file(tmp_path, "metrics.txt", content)
-        mock_s3.upload(src, "metrics.txt")
-
-        dest = tmp_path / "metrics_dl.txt"
-        mock_s3.download("metrics.txt", dest)
-        assert dest.read_text() == content

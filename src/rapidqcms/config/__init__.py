@@ -7,13 +7,10 @@ from pathlib import Path
 class Settings:
     """Application settings populated from environment variables.
 
-    Production (RDS + S3):
+    Production (RDS):
         RAPIDQCMS_DB_URL=postgresql://user:pass@host/rapidqcms
-        RAPIDQCMS_STORAGE_BACKEND=s3
-        RAPIDQCMS_S3_BUCKET=my-bucket
-        RAPIDQCMS_S3_PREFIX=rapidqcms
 
-    Local dev (SQLite + filesystem):
+    Local dev (SQLite):
         (defaults below apply — no env vars needed)
 
     Okta SSO (Phase 4):
@@ -24,12 +21,6 @@ class Settings:
 
     # Database
     db_url: str
-
-    # Storage
-    storage_backend: str           # "local" or "s3"
-    s3_bucket: str | None
-    s3_prefix: str
-    local_storage_path: str
 
     # Notifications
     slack_bot_token: str | None
@@ -62,12 +53,6 @@ class Settings:
 
         return cls(
             db_url=os.getenv("RAPIDQCMS_DB_URL", "sqlite:///data/rapidqcms.db"),
-            storage_backend=os.getenv("RAPIDQCMS_STORAGE_BACKEND", "local"),
-            s3_bucket=os.getenv("RAPIDQCMS_S3_BUCKET"),
-            s3_prefix=os.getenv("RAPIDQCMS_S3_PREFIX", "rapidqcms"),
-            local_storage_path=os.getenv(
-                "RAPIDQCMS_LOCAL_STORAGE_PATH", "data/storage"
-            ),
             slack_bot_token=os.getenv("RAPIDQCMS_SLACK_BOT_TOKEN"),
             slack_channel=os.getenv("RAPIDQCMS_SLACK_CHANNEL"),
             okta_domain=os.getenv("RAPIDQCMS_OKTA_DOMAIN"),

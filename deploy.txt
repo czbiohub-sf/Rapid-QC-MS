@@ -7,12 +7,11 @@ CONTENTS
   1. Local development
   2. Instrument computer (listener)
   3. AWS RDS (PostgreSQL)
-  4. AWS S3 (result storage)
-  5. Shared server (dashboard)
-  6. HPC / CZB-MAP Nextflow integration
-  7. Migration from legacy Settings.db
-  8. Environment variable reference
-  9. Troubleshooting
+  4. Shared server (dashboard)
+  5. HPC / CZB-MAP Nextflow integration
+  6. Migration from legacy Settings.db
+  7. Environment variable reference
+  8. Troubleshooting
 
 =============================================================================
 1. LOCAL DEVELOPMENT
@@ -62,8 +61,6 @@ Install:
 
 Required env vars (set in /etc/environment, a .env file, or systemd unit):
   RAPIDQCMS_DB_URL=postgresql://user:pass@rds-host:5432/rapidqcms
-  RAPIDQCMS_STORAGE_BACKEND=s3
-  RAPIDQCMS_S3_BUCKET=czbiohub-rapidqcms
   RAPIDQCMS_EXTENSION=.raw          # .raw | .d | .mzML
   RAPIDQCMS_CHROMATOGRAPHY=HILIC    # HILIC | C18 | RP | ...
   RAPIDQCMS_POLARITY=Pos            # Pos | Neg
@@ -124,31 +121,7 @@ IAM authentication (optional, avoids embedding passwords):
   tokens expire every 15 min so use a connection proxy or refresh mechanism.
 
 =============================================================================
-4. AWS S3 (RESULT STORAGE)
-=============================================================================
-
-Create bucket:
-  aws s3 mb s3://czbiohub-rapidqcms --region us-west-2
-
-IAM policy for instrument computers (attach to instance role or user):
-  s3:PutObject   on arn:aws:s3:::czbiohub-rapidqcms/*
-  s3:GetObject   on arn:aws:s3:::czbiohub-rapidqcms/*
-
-IAM policy for dashboard server:
-  s3:GetObject, s3:ListBucket  on the bucket
-
-S3 key layout produced by the listener:
-  {instrument_id}/{run_id}/{sample_stem}/sample.raw
-  {instrument_id}/{run_id}/{sample_stem}/sample.mzML
-  {instrument_id}/{run_id}/{sample_stem}/sample.msdial
-
-Env vars:
-  RAPIDQCMS_STORAGE_BACKEND=s3
-  RAPIDQCMS_S3_BUCKET=czbiohub-rapidqcms
-  RAPIDQCMS_S3_PREFIX=rapidqcms          # optional key prefix
-
-=============================================================================
-5. SHARED SERVER (DASHBOARD)
+4. SHARED SERVER (DASHBOARD)
 =============================================================================
 
 Purpose: serves the Dash UI for all users; reads exclusively from RDS.
@@ -158,8 +131,6 @@ Install:
 
 Required env vars:
   RAPIDQCMS_DB_URL=postgresql://user:pass@rds-host:5432/rapidqcms
-  RAPIDQCMS_STORAGE_BACKEND=s3
-  RAPIDQCMS_S3_BUCKET=czbiohub-rapidqcms
   RAPIDQCMS_SLACK_BOT_TOKEN=xoxb-...    # optional
   RAPIDQCMS_SLACK_CHANNEL=#qc-alerts    # optional
 
@@ -216,7 +187,7 @@ systemd unit (save as /etc/systemd/system/rapidqcms.service):
   systemctl enable rapidqcms && systemctl start rapidqcms
 
 =============================================================================
-6. HPC / CZB-MAP NEXTFLOW INTEGRATION
+5. HPC / CZB-MAP NEXTFLOW INTEGRATION
 =============================================================================
 
 Gating contract: the listener writes a sidecar JSON file next to every raw file
@@ -260,7 +231,7 @@ Read gate file content in Nextflow:
   assert gate.status == "Pass"
 
 =============================================================================
-7. MIGRATION FROM LEGACY SETTINGS.DB
+6. MIGRATION FROM LEGACY SETTINGS.DB
 =============================================================================
 
 Each old instrument computer had a per-instrument Settings.db SQLite file.
@@ -281,18 +252,12 @@ If you have multiple instruments:
   done
 
 =============================================================================
-8. ENVIRONMENT VARIABLE REFERENCE
+7. ENVIRONMENT VARIABLE REFERENCE
 =============================================================================
 
 Database
   RAPIDQCMS_DB_URL            SQLAlchemy URL
                               default: sqlite:///data/rapidqcms.db
-
-Storage
-  RAPIDQCMS_STORAGE_BACKEND   "local" | "s3"   default: local
-  RAPIDQCMS_S3_BUCKET         required if backend=s3
-  RAPIDQCMS_S3_PREFIX         key prefix        default: rapidqcms
-  RAPIDQCMS_LOCAL_STORAGE_PATH  root dir        default: data/storage
 
 Notifications
   RAPIDQCMS_SLACK_BOT_TOKEN
@@ -320,7 +285,7 @@ Listener / acquisition (set once per instrument computer)
   RAPIDQCMS_MSDIAL_PARAMS      path to parameter file    unset = step skipped
 
 =============================================================================
-9. TROUBLESHOOTING
+8. TROUBLESHOOTING
 =============================================================================
 
 Dashboard shows "no runs" for an instrument

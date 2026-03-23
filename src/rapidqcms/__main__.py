@@ -136,7 +136,6 @@ def main() -> None:
         from rapidqcms.service.watchers.listener import ListenerConfig, start_listener
         from rapidqcms.config import get_settings
         from rapidqcms.db.connection import get_engine
-        from rapidqcms.storage import get_storage
 
         s = get_settings()
         cfg = ListenerConfig(
@@ -152,7 +151,7 @@ def main() -> None:
             msdial_exe=s.msdial_exe,
             msdial_params=s.msdial_params,
         )
-        start_listener(cfg, db_engine=get_engine(), storage=get_storage())
+        start_listener(cfg, db_engine=get_engine())
 
     elif args.command == "watch":
         from pathlib import Path
