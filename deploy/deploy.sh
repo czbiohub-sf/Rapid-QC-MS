@@ -11,7 +11,7 @@
 # The defaults match the Terraform-managed resource names.
 #
 # First-time setup:
-#   1. Run `terraform apply` in deploy/terraform/ (or sci-data-infra) first.
+#   1. Run `terraform apply` in sci-data-infra terraform/envs/private-prod/rapid-qc-ms/
 #   2. Set AWS_PROFILE (or ensure your default profile targets sci-data-prod).
 #   3. Run this script.
 
@@ -19,8 +19,8 @@ set -euo pipefail
 
 # ── config ────────────────────────────────────────────────────────────────────
 AWS_REGION="${AWS_REGION:-us-west-2}"
-ECS_CLUSTER="${ECS_CLUSTER:-rapidqcms-prod}"
-ECS_SERVICE="${ECS_SERVICE:-rapidqcms-prod}"
+ECS_CLUSTER="${ECS_CLUSTER:-rapid-qc-ms}"
+ECS_SERVICE="${ECS_SERVICE:-rapid-qc-ms}"
 IMAGE_TAG="${IMAGE_TAG:-$(git rev-parse --short HEAD)}"
 
 AWS_ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
