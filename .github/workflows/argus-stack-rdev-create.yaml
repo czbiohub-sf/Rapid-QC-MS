@@ -1,29 +1,26 @@
-name: Create rdev stack (Argus)
+name: Create/update rdev stack
 
 on:
   pull_request:
-    types:
-      - labeled        # stack label added
-      - synchronize    # new commits pushed while stack label is present
-    branches:
-      - main
+    types: [ labeled, synchronize ]
 
-permissions:
-  id-token: write
-  contents: read
-  pull-requests: write  # post stack URL to PR body
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  create:
-    # Only run when the PR has the 'stack' label.
+  create-stack:
+    runs-on: ARM64
     if: contains(github.event.pull_request.labels.*.name, 'stack')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    permissions:
+      id-token: write
+      issues: write
+      pull-requests: write
 
-      - name: Create rdev stack
+    steps:
+      - name: Create/update rdev stack
         id: stack
-        uses: chanzuckerberg/argus-artifacts/ci/packages/create-stack@v1
+        uses: chanzuckerberg/argus-artifacts/ci/packages/create-stack@v0
         with:
           appName: rapid-qc-ms
           envName: rdev

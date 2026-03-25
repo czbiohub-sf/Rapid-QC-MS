@@ -1,16 +1,19 @@
 ###### Generated using `argus bootstrap` command ######
-name: Create/update prod stack
+name: Create/update staging stack
 
 on:
-  release:
-    types: [published]
+  pull_request:
+    paths:
+      - '.infra/common.yaml'
+      - '.infra/staging/values.yaml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  create-stack:
+  staging_stack_upsert:
+    if: github.head_ref == 'release-please--branches--main'
     runs-on: ARM64
     permissions:
       id-token: write
@@ -18,16 +21,9 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Create/update prod stack
-        id: upsert
+      - name: Create/update staging stack
         uses: chanzuckerberg/argus-artifacts/ci/packages/create-stack@v0
         with:
           appName: rapid-qc-ms
-          envName: prod
-          waitForDeploymentSeconds: 300
-          postStackDetails: body
-
-      - name: Notify
-        run: echo "Stack stable at $STACK_URL"
-        env:
-          STACK_URL: ${{ steps.upsert.outputs.baseURL }}
+          envName: staging
+          postStackDetails: comment

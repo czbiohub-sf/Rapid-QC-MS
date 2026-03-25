@@ -16,14 +16,13 @@ jobs:
   build:
     uses: chanzuckerberg/github-actions/.github/workflows/argus-docker-build.yaml@v6
     with:
-      # Stamp the new image tag into .infra/prod/values.yaml.
-      envs: '["prod"]'
-      # Map the Helm service name "web" to its Dockerfile.
+      envs: prod
       images: |
         {
           "web": {
+            "context": ".",
             "dockerfile": "Dockerfile",
-            "context": "."
+            "platform": "linux/amd64"
           }
         }
       arm_runner_labels: "['ubuntu-latest']"

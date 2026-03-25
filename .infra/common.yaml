@@ -1,133 +1,112 @@
-global:
-  autoscaling:
-    enabled: false
-
-services:
-  web:
-    image:
-      # ECR repo is created automatically by the docker-build workflow.
-      # argus-docker-build stamps the tag into .infra/prod/values.yaml on each deploy.
-      repository: 533267185808.dkr.ecr.us-west-2.amazonaws.com/core-platform/czbiohub-sf/rapid-qc-ms/web
-      tag: "latest"
-      pullPolicy: IfNotPresent
+stack:
+  global:
     replicaCount: 1
-    command:
-      - gunicorn
-      - "rapidqcms.dashboard.app:server"
-      - "--workers"
-      - "2"
-      - "--bind"
-      - "0.0.0.0:8050"
-      - "--timeout"
-      - "120"
-      - "--access-logfile"
-      - "-"
-      - "--error-logfile"
-      - "-"
-    service:
-      port: 8050
-    ingress:
-      enabled: true
-      className: nginx
-      oidcProtected: true
-      # host is auto-assigned by Argus if not set here.
-      # For a custom domain, set it in .infra/prod/values.yaml:
-      #   ingress:
-      #     host: rapid-qc-ms.prod-sci-data.prod.czi.team
-      paths:
-        - path: /
-          pathType: Prefix
-    livenessProbe:
-      httpGet:
-        path: /
-        port: http
-      initialDelaySeconds: 30
-      periodSeconds: 30
-      failureThreshold: 3
-      timeoutSeconds: 5
-    readinessProbe:
-      httpGet:
-        path: /
-        port: http
-      initialDelaySeconds: 15
-      periodSeconds: 10
-      failureThreshold: 3
-      timeoutSeconds: 5
-    resources:
-      requests:
-        cpu: "250m"
-        memory: "512Mi"
-      limits:
-        cpu: "1000m"
-        memory: "2Gi"
-
-  postgres:
-    image:
-      repository: postgres
-      tag: "15-alpine"
-      pullPolicy: IfNotPresent
-    replicaCount: 1
-    command: []
-    args: []
-    service:
-      port: 5432
-    ingress:
-      enabled: false
     autoscaling:
       enabled: false
-    persistence:
-      enabled: true
-      mountPath: /var/lib/postgresql/data
-      pvc:
-        accessModes:
-          - ReadWriteOnce
-        storageClassName: gp3
-        resources:
-          requests:
-            storage: 50Gi
-    livenessProbe:
-      tcpSocket:
+    nodeSelector:
+      kubernetes.io/arch: amd64
+
+  services:
+    web:
+      image:
+        repository: 533267185808.dkr.ecr.us-west-2.amazonaws.com/core-platform/rapid-qc-ms/web
+        pullPolicy: IfNotPresent
+      command:
+        - gunicorn
+        - "rapidqcms.dashboard.app:server"
+        - "--workers"
+        - "2"
+        - "--bind"
+        - "0.0.0.0:8050"
+        - "--timeout"
+        - "120"
+        - "--access-logfile"
+        - "-"
+        - "--error-logfile"
+        - "-"
+      service:
+        port: 8050
+      ingress:
+        enabled: true
+        className: nginx
+        oidcProtected: true
+        paths:
+          - path: /
+            pathType: Prefix
+      livenessProbe:
+        httpGet:
+          path: /
+          port: http
+        initialDelaySeconds: 30
+        periodSeconds: 30
+        failureThreshold: 3
+        timeoutSeconds: 5
+      readinessProbe:
+        httpGet:
+          path: /
+          port: http
+        initialDelaySeconds: 15
+        periodSeconds: 10
+        failureThreshold: 3
+        timeoutSeconds: 5
+      resources:
+        requests:
+          cpu: "250m"
+          memory: "512Mi"
+        limits:
+          cpu: "1000m"
+          memory: "2Gi"
+
+    postgres:
+      image:
+        repository: postgres
+        tag: "15-alpine"
+        pullPolicy: IfNotPresent
+      replicaCount: 1
+      command: []
+      args: []
+      service:
         port: 5432
-      initialDelaySeconds: 30
-      periodSeconds: 10
-      failureThreshold: 3
-      timeoutSeconds: 5
-    readinessProbe:
-      tcpSocket:
-        port: 5432
-      initialDelaySeconds: 10
-      periodSeconds: 5
-      failureThreshold: 3
-      timeoutSeconds: 3
-    resources:
-      requests:
-        cpu: "100m"
-        memory: "256Mi"
-      limits:
-        cpu: "500m"
-        memory: "1Gi"
-    env:
-      - name: POSTGRES_DB
-        value: rapidqcms
-      - name: PGDATA
-        # Subdirectory avoids a known conflict with the PVC mount point.
-        value: /var/lib/postgresql/data/pgdata
-      # POSTGRES_USER and POSTGRES_PASSWORD are injected from Argus-managed secrets.
-      # Set them once after registering the app:
-      #
-      #   argus set secret --app rapid-qc-ms --env prod POSTGRES_USER rapidqcms
-      #   argus set secret --app rapid-qc-ms --env prod POSTGRES_PASSWORD <strong-random-password>
-      #
-      # RAPIDQCMS_DB_URL is also set as an env-level secret so the web service picks it up.
-      # The postgres hostname inside the cluster is: <stack-name>-stack-postgres
-      # After the first deploy, look up the stack name:
-      #   argus list stacks --app rapid-qc-ms --env prod
-      # Then set:
-      #   argus set secret --app rapid-qc-ms --env prod \
-      #     RAPIDQCMS_DB_URL "postgresql://rapidqcms:<password>@<stack-name>-stack-postgres:5432/rapidqcms"
-      #
-      # Okta + session secrets:
-      #   argus set secret --app rapid-qc-ms --env prod RAPIDQCMS_OKTA_DOMAIN czbiohub.okta.com
-      #   argus set secret --app rapid-qc-ms --env prod RAPIDQCMS_OKTA_CLIENT_ID <client-id>
-      #   argus set secret --app rapid-qc-ms --env prod RAPIDQCMS_OKTA_CLIENT_SECRET <client-secret>
-      #   argus set secret --app rapid-qc-ms --env prod RAPIDQCMS_SESSION_SECRET "$(openssl rand -hex 32)"
+      ingress:
+        enabled: false
+      autoscaling:
+        enabled: false
+      persistence:
+        enabled: true
+        mountPath: /var/lib/postgresql/data
+        pvc:
+          accessModes:
+            - ReadWriteOnce
+          storageClassName: gp3
+          resources:
+            requests:
+              storage: 50Gi
+      livenessProbe:
+        tcpSocket:
+          port: 5432
+        initialDelaySeconds: 30
+        periodSeconds: 10
+        failureThreshold: 3
+        timeoutSeconds: 5
+      readinessProbe:
+        tcpSocket:
+          port: 5432
+        initialDelaySeconds: 10
+        periodSeconds: 5
+        failureThreshold: 3
+        timeoutSeconds: 3
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "256Mi"
+        limits:
+          cpu: "500m"
+          memory: "1Gi"
+      env:
+        - name: POSTGRES_DB
+          value: rapidqcms
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        # POSTGRES_USER and POSTGRES_PASSWORD injected from Argus-managed secrets:
+        #   argus set secret --app rapid-qc-ms --env <env> POSTGRES_USER rapidqcms
+        #   argus set secret --app rapid-qc-ms --env <env> POSTGRES_PASSWORD <password>
