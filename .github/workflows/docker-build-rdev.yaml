@@ -8,8 +8,10 @@ on:
       - ".infra/**"
 
 permissions:
-  id-token: write   # OIDC → ECR auth
-  contents: write   # commit updated rdev/values.yaml back to the PR branch
+  id-token: write        # OIDC → ECR auth
+  contents: write        # commit updated rdev/values.yaml back to the PR branch
+  pull-requests: write   # required by nested argus-docker-build jobs
+  issues: write          # required by nested argus-docker-build jobs
 
 jobs:
   build:

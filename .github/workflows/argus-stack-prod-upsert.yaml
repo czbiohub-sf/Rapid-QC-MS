@@ -30,5 +30,6 @@ jobs:
           postStackDetails: body
 
       - name: Print stack URL
-        run: |
-          echo "Prod stack URL: ${{ steps.deploy.outputs.baseURL }}"
+        run: echo "Prod stack URL: $STACK_URL"
+        env:
+          STACK_URL: ${{ steps.deploy.outputs.baseURL }}
