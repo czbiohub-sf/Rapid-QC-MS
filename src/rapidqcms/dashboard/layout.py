@@ -11,19 +11,13 @@ import dash_bootstrap_components as dbc
 
 from rapidqcms.dashboard.plots import bootstrap_colors
 
-try:
-    from flask import session as flask_session
-except ImportError:
-    flask_session = None
-
 # Initialize directories (same as original DashWebApp.py)
 src_folder = os.path.dirname(os.path.realpath(__file__))
 root_directory = src_folder
 data_directory = os.path.join(root_directory, "data")
 methods_directory = os.path.join(data_directory, "methods")
-auth_directory = os.path.join(root_directory, "auth")
 
-for directory in [data_directory, auth_directory, methods_directory]:
+for directory in [data_directory, methods_directory]:
     if not os.path.exists(directory):
         os.makedirs(directory)
 
@@ -31,26 +25,11 @@ def serve_layout():
 
     biohub_logo = "https://raw.githubusercontent.com/czbiohub-sf/Rapid-QC-MS/77a5b4908dc331ac94d186b4b85d804543b7df14/docs/CZ-Biohub-Mark-SF-Color-RGB.png"
 
-    # Read user from session if Okta auth is active
-    try:
-        user = flask_session.get("user") if flask_session is not None else None
-    except RuntimeError:
-        user = None
-
     nav_items = [
         dbc.NavItem(dbc.NavLink("About", href="https://github.com/czbiohub-sf/Rapid-QC-MS", className="navbar-button", target="_blank")),
         dbc.NavItem(dbc.NavLink("Support", href="https://github.com/czbiohub-sf/Rapid-QC-MS/wiki", className="navbar-button", target="_blank")),
         dbc.NavItem(dbc.NavLink("Settings", href="#", id="settings-button", className="navbar-button")),
     ]
-    if user:
-        display_name = user.get("name") or user.get("email", "")
-        nav_items.append(
-            dbc.NavItem(dbc.NavLink(display_name, disabled=True, className="navbar-button"))
-        )
-        nav_items.append(
-            dbc.NavItem(dbc.NavLink("Logout", href="/logout", className="navbar-button"))
-        )
-
     return html.Div(className="app-layout", children=[
 
         # Navigation bar

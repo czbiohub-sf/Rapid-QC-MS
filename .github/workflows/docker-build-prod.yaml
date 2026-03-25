@@ -1,0 +1,29 @@
+name: Build and push Docker image (prod)
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      # Avoid re-triggering on the tag-stamp commit that this workflow itself creates.
+      - ".infra/**"
+
+permissions:
+  id-token: write   # required for OIDC → ECR auth
+  contents: write   # required to commit the updated values.yaml back to the branch
+
+jobs:
+  build:
+    uses: chanzuckerberg/github-actions/.github/workflows/argus-docker-build.yaml@v6
+    with:
+      # Stamp the new image tag into .infra/prod/values.yaml.
+      envs: '["prod"]'
+      # Map the Helm service name "web" to its Dockerfile.
+      images: |
+        {
+          "web": {
+            "dockerfile": "Dockerfile",
+            "context": "."
+          }
+        }
+    secrets: inherit

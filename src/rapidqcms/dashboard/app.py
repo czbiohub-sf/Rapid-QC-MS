@@ -28,10 +28,6 @@ app = Dash(
 # Gunicorn entry point
 server = app.server
 
-from rapidqcms.config import get_settings  # noqa: E402
-from rapidqcms.dashboard.auth import init_auth  # noqa: E402
-init_auth(server, get_settings())
-
 from rapidqcms.dashboard.layout import serve_layout  # noqa: E402
 app.layout = serve_layout
 

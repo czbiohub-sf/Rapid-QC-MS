@@ -1,0 +1,34 @@
+name: Deploy to prod (Argus)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      # Only run after docker-build stamps a new image tag here.
+      - ".infra/prod/values.yaml"
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write  # allows create-stack to post the stack URL as a comment
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Upsert prod stack
+        uses: chanzuckerberg/argus-artifacts/ci/packages/create-stack@v1
+        with:
+          appName: rapid-qc-ms
+          envName: prod
+          # Wait up to 5 minutes for the Argo CD sync + rollout to complete.
+          waitForDeploymentSeconds: 300
+          # Post the live stack URL to the PR body.
+          postStackDetails: body
+
+      - name: Print stack URL
+        run: |
+          echo "Prod stack URL: ${{ steps.deploy.outputs.baseURL }}"

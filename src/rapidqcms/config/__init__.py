@@ -12,11 +12,6 @@ class Settings:
 
     Local dev (SQLite):
         (defaults below apply — no env vars needed)
-
-    Okta SSO (Phase 4):
-        RAPIDQCMS_OKTA_DOMAIN=czbiohub.okta.com
-        RAPIDQCMS_OKTA_CLIENT_ID=...
-        RAPIDQCMS_OKTA_CLIENT_SECRET=...
     """
 
     # Database
@@ -25,12 +20,6 @@ class Settings:
     # Notifications
     slack_bot_token: str | None
     slack_channel: str | None
-
-    # Auth (Okta, Phase 5)
-    okta_domain: str | None
-    okta_client_id: str | None
-    okta_client_secret: str | None
-    session_secret: str | None    # RAPIDQCMS_SESSION_SECRET
 
     # QC module config path
     qc_modules_config: Path
@@ -55,10 +44,6 @@ class Settings:
             db_url=os.getenv("RAPIDQCMS_DB_URL", "sqlite:///data/rapidqcms.db"),
             slack_bot_token=os.getenv("RAPIDQCMS_SLACK_BOT_TOKEN"),
             slack_channel=os.getenv("RAPIDQCMS_SLACK_CHANNEL"),
-            okta_domain=os.getenv("RAPIDQCMS_OKTA_DOMAIN"),
-            okta_client_id=os.getenv("RAPIDQCMS_OKTA_CLIENT_ID"),
-            okta_client_secret=os.getenv("RAPIDQCMS_OKTA_CLIENT_SECRET"),
-            session_secret=os.getenv("RAPIDQCMS_SESSION_SECRET"),
             qc_modules_config=Path(
                 os.getenv(
                     "RAPIDQCMS_QC_MODULES_CONFIG",

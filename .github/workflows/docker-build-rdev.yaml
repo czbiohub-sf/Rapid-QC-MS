@@ -1,0 +1,26 @@
+name: Build and push Docker image (rdev)
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - ".infra/**"
+
+permissions:
+  id-token: write   # OIDC → ECR auth
+  contents: write   # commit updated rdev/values.yaml back to the PR branch
+
+jobs:
+  build:
+    uses: chanzuckerberg/github-actions/.github/workflows/argus-docker-build.yaml@v6
+    with:
+      envs: '["rdev"]'
+      images: |
+        {
+          "web": {
+            "dockerfile": "Dockerfile",
+            "context": "."
+          }
+        }
+    secrets: inherit

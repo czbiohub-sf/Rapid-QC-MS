@@ -32,8 +32,7 @@ dependencies = [
     "watchdog>=4.0,<5",
     "gunicorn>=23.0",        # production WSGI server
     "pyteomics>=4.7",        # mzML scan-level proteomics QC
-    "authlib>=1.3",          # Okta SSO (Phase 5)
-    "pyyaml>=6.0",           # QC library config (qc_config.yaml)
+"pyyaml>=6.0",           # QC library config (qc_config.yaml)
 ]
 requires-python = ">=3.11"
 
