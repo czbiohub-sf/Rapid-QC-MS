@@ -26,4 +26,6 @@ jobs:
             "context": "."
           }
         }
+      arm_runner_labels: "['ubuntu-latest']"
+      amd_runner_labels: "['ubuntu-latest']"
     secrets: inherit
