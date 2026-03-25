@@ -14,7 +14,7 @@ concurrency:
 jobs:
   staging_stack_upsert:
     if: github.head_ref == 'release-please--branches--main'
-    runs-on: ARM64
+    runs-on: ubuntu-latest
     permissions:
       id-token: write
       issues: write

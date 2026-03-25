@@ -9,7 +9,7 @@ concurrency:
 name: release-please
 jobs:
   release-please:
-    runs-on: ARM64
+    runs-on: ubuntu-latest
     steps:
       - name: Generate token
         id: generate_token

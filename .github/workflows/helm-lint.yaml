@@ -13,21 +13,21 @@ permissions:
 
 jobs:
   lint-rdev:
-    runs-on: ARM64
+    runs-on: ubuntu-latest
     steps:
       - uses: chanzuckerberg/github-actions/.github/actions/helm-lint@v6
         with:
           chart_path: .infra/rdev
           values_files: ../common.yaml,./values.yaml
   lint-staging:
-    runs-on: ARM64
+    runs-on: ubuntu-latest
     steps:
       - uses: chanzuckerberg/github-actions/.github/actions/helm-lint@v6
         with:
           chart_path: .infra/staging
           values_files: ../common.yaml,./values.yaml
   lint-prod:
-    runs-on: ARM64
+    runs-on: ubuntu-latest
     steps:
       - uses: chanzuckerberg/github-actions/.github/actions/helm-lint@v6
         with:

@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   create-stack:
-    runs-on: ARM64
+    runs-on: ubuntu-latest
     permissions:
       id-token: write
       issues: write

@@ -5,7 +5,7 @@ on:
   - push
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
   id-token: write
   issues: write
@@ -19,11 +19,13 @@ jobs:
       path_filters: '!.infra/**'
       branches_include: release-please--branches--main
       force_update_manifests: true
+      arm_runner_labels: "['ubuntu-latest']"
+      amd_runner_labels: "['ubuntu-latest']"
       images: |
         {
           "web": {
-            "context": "Dockerfile",
-            "dockerfile": "Dockerfile/Dockerfile",
+            "context": ".",
+            "dockerfile": "Dockerfile",
             "platform": "linux/amd64"
           }
         }
