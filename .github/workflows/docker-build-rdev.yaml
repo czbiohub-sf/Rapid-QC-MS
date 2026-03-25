@@ -20,6 +20,8 @@ jobs:
       envs: rdev
       path_filters: '!.infra/**'
       branches_ignore: main,release-please--branches--main
+      arm_runner_labels: "['ubuntu-latest']"
+      amd_runner_labels: "['ubuntu-latest']"
       images: |
         {
           "web": {
