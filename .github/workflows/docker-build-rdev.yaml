@@ -1,11 +1,11 @@
 name: Build and push Docker image (rdev)
 
 on:
-  pull_request:
-    branches:
-      - main
+  push:
     paths-ignore:
       - ".infra/**"
+  pull_request:
+    types: [labeled]
 
 permissions:
   id-token: write        # OIDC → ECR auth
