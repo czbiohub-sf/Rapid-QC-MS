@@ -1,4 +1,3 @@
-###### Generated using `argus bootstrap` command ######
 name: Delete a RDev Stack
 
 on:
@@ -18,6 +17,5 @@ jobs:
       - name: Delete rdev stack
         uses: chanzuckerberg/argus-artifacts/ci/packages/delete-stack@v0
         with:
-          appName: rapid-qc-ms
+          appName: rapidqcms
           envName: rdev
-

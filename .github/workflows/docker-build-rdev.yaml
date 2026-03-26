@@ -1,4 +1,3 @@
-###### Generated using `argus bootstrap` command ######
 name: Docker Image Build - rdev
 
 on:

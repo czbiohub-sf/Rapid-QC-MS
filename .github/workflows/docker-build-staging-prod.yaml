@@ -1,5 +1,4 @@
-###### Generated using `argus bootstrap` command ######
-name: Docker Image Build - staging/prod
+name: Docker Image Build - prod
 
 on:
   - push
@@ -15,7 +14,7 @@ jobs:
     uses: chanzuckerberg/github-actions/.github/workflows/argus-docker-build.yaml@v6
     secrets: inherit
     with:
-      envs: staging,prod
+      envs: prod
       path_filters: '!.infra/**'
       branches_include: release-please--branches--main
       force_update_manifests: true

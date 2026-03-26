@@ -1,4 +1,3 @@
-###### Generated using `argus bootstrap` command ######
 name: Create/update prod stack
 
 on:
@@ -22,7 +21,7 @@ jobs:
         id: upsert
         uses: chanzuckerberg/argus-artifacts/ci/packages/create-stack@v0
         with:
-          appName: rapid-qc-ms
+          appName: rapidqcms
           envName: prod
           waitForDeploymentSeconds: 300
           postStackDetails: body

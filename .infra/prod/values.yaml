@@ -13,7 +13,7 @@ stack:
           memory: "4Gi"
       # Uncomment to pin a custom hostname:
       # ingress:
-      #   host: rapid-qc-ms.prod-sci-data.prod.czi.team
+      #   host: rapidqcms.prod-sci-data.prod.czi.team
     postgres:
       persistence:
         pvc:

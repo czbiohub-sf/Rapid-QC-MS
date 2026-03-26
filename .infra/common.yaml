@@ -9,7 +9,7 @@ stack:
   services:
     web:
       image:
-        repository: 533267185808.dkr.ecr.us-west-2.amazonaws.com/core-platform/rapid-qc-ms/web
+        repository: 533267185808.dkr.ecr.us-west-2.amazonaws.com/core-platform/rapidqcms/web
         pullPolicy: IfNotPresent
       command:
         - gunicorn
@@ -108,5 +108,5 @@ stack:
         - name: PGDATA
           value: /var/lib/postgresql/data/pgdata
         # POSTGRES_USER and POSTGRES_PASSWORD injected from Argus-managed secrets:
-        #   argus set secret --app rapid-qc-ms --env <env> POSTGRES_USER rapidqcms
-        #   argus set secret --app rapid-qc-ms --env <env> POSTGRES_PASSWORD <password>
+        #   argus set secret --app rapidqcms --env <env> POSTGRES_USER rapidqcms
+        #   argus set secret --app rapidqcms --env <env> POSTGRES_PASSWORD <password>

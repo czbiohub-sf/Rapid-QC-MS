@@ -22,7 +22,7 @@ jobs:
         id: stack
         uses: chanzuckerberg/argus-artifacts/ci/packages/create-stack@v0
         with:
-          appName: rapid-qc-ms
+          appName: rapidqcms
           envName: rdev
           waitForDeploymentSeconds: 300
           postStackDetails: body
