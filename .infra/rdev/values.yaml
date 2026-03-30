@@ -2,7 +2,7 @@ stack:
   services:
     web:
       image:
-        tag: sha-TO-BE-REPLACED-BY-BUILDER-WORKFLOW
+        tag: sha-93ac645
       replicaCount: 1
       resources:
         requests:
