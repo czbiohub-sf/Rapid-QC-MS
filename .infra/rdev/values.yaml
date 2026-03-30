@@ -1,23 +1,19 @@
-# rdev overrides — ephemeral per-PR stacks on argus-dev-sci-data.
-#
-# web.image.tag is stamped here automatically by the docker-build-rdev workflow
-# on every push to the PR branch. Do not edit the tag manually.
-
-services:
-  web:
-    image:
-      tag: "latest"
-    replicaCount: 1
-    resources:
-      requests:
-        cpu: "250m"
-        memory: "512Mi"
-      limits:
-        cpu: "1000m"
-        memory: "2Gi"
-  postgres:
-    persistence:
-      pvc:
-        resources:
-          requests:
-            storage: 10Gi
+stack:
+  services:
+    web:
+      image:
+        tag: sha-93ac645
+      replicaCount: 1
+      resources:
+        requests:
+          cpu: "250m"
+          memory: "512Mi"
+        limits:
+          cpu: "1000m"
+          memory: "2Gi"
+    postgres:
+      persistence:
+        pvc:
+          resources:
+            requests:
+              storage: 10Gi

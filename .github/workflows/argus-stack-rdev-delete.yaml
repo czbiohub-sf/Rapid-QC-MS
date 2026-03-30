@@ -1,29 +1,21 @@
-name: Delete rdev stack (Argus)
+name: Delete a RDev Stack
 
 on:
   pull_request:
-    types:
-      - unlabeled   # 'stack' label removed
-      - closed      # PR merged or closed
-    branches:
-      - main
-
-permissions:
-  id-token: write
-  contents: read
+    types: [ unlabeled, closed ]
 
 jobs:
-  delete:
-    # Run when the stack label was just removed, or the PR is closed (with or without the label).
-    if: |
-      github.event.action == 'closed' ||
-      (github.event.action == 'unlabeled' && github.event.label.name == 'stack')
+  delete-stack:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    if: ${{!contains(github.event.pull_request.labels.*.name, 'stack') || github.event.pull_request.state == 'closed'}}
+    permissions:
+      id-token: write
+      issues: write
+      pull-requests: write
 
+    steps:
       - name: Delete rdev stack
-        uses: chanzuckerberg/argus-artifacts/ci/packages/delete-stack@v1
+        uses: chanzuckerberg/argus-artifacts/ci/packages/delete-stack@v0
         with:
-          appName: rapid-qc-ms
+          appName: rapidqcms
           envName: rdev

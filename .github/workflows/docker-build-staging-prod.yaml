@@ -1,11 +1,7 @@
-name: Docker Image Build - rdev
+name: Docker Image Build - prod
 
 on:
-  push:
-    paths-ignore:
-      - ".infra/**"
-  pull_request:
-    types: [labeled]
+  - push
 
 permissions:
   contents: write
@@ -14,13 +10,14 @@ permissions:
   issues: write
 
 jobs:
-  rdev_argus_builder:
+  staging_prod_argus_builder:
     uses: chanzuckerberg/github-actions/.github/workflows/argus-docker-build.yaml@v6
     secrets: inherit
     with:
-      envs: rdev
+      envs: prod
       path_filters: '!.infra/**'
-      branches_ignore: main,release-please--branches--main
+      branches_include: release-please--branches--main
+      force_update_manifests: true
       arm_runner_labels: "['ubuntu-latest']"
       amd_runner_labels: "['ubuntu-latest']"
       images: |

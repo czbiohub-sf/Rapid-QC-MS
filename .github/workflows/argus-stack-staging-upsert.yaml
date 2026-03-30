@@ -1,0 +1,2 @@
+# Staging environment not registered — this workflow is intentionally disabled.
+# Re-enable by running: argus register env --app rapidqcms --env staging --cluster <cluster>
