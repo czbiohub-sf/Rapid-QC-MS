@@ -9,7 +9,7 @@ stack:
   services:
     web:
       image:
-        repository: 533267185808.dkr.ecr.us-west-2.amazonaws.com/core-platform/rapidqcms/web
+        repository: 533267185808.dkr.ecr.us-west-2.amazonaws.com/core-platform/rapid-qc-ms/web
         pullPolicy: IfNotPresent
       service:
         port: 8050
@@ -64,7 +64,6 @@ stack:
         pvc:
           accessModes:
             - ReadWriteOnce
-          storageClassName: gp3
           resources:
             requests:
               storage: 50Gi
