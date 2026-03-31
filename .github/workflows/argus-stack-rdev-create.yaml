@@ -28,6 +28,7 @@ jobs:
           postStackDetails: body
 
       - name: Print stack URL
-        run: echo "rdev stack URL: $STACK_URL"
+        run: |
+          echo "rdev stack URL: $STACK_URL"
         env:
           STACK_URL: ${{ steps.stack.outputs.baseURL }}
