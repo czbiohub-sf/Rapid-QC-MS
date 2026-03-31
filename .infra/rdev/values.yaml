@@ -2,7 +2,7 @@ stack:
   services:
     web:
       image:
-        tag: sha-e441c66
+        tag: sha-39aad73
       replicaCount: 1
       resources:
         requests:
