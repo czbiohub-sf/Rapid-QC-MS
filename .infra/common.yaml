@@ -11,19 +11,6 @@ stack:
       image:
         repository: 533267185808.dkr.ecr.us-west-2.amazonaws.com/core-platform/rapidqcms/web
         pullPolicy: IfNotPresent
-      command:
-        - gunicorn
-        - "rapidqcms.dashboard.app:server"
-        - "--workers"
-        - "2"
-        - "--bind"
-        - "0.0.0.0:8050"
-        - "--timeout"
-        - "120"
-        - "--access-logfile"
-        - "-"
-        - "--error-logfile"
-        - "-"
       service:
         port: 8050
       ingress:
