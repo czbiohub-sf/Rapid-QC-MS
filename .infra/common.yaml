@@ -5,6 +5,10 @@ stack:
       enabled: false
     nodeSelector:
       kubernetes.io/arch: amd64
+    oidcProxy:
+      enabled: true
+    ingress:
+      oidcProtected: true
 
   services:
     web:
