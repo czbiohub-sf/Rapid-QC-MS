@@ -6,9 +6,9 @@ stack:
     nodeSelector:
       kubernetes.io/arch: amd64
     oidcProxy:
-      enabled: true
+      enabled: false
     ingress:
-      oidcProtected: true
+      oidcProtected: false
 
   services:
     web:
@@ -20,7 +20,7 @@ stack:
       ingress:
         enabled: true
         className: nginx
-        oidcProtected: true
+        oidcProtected: false
         paths:
           - path: /
             pathType: Prefix
