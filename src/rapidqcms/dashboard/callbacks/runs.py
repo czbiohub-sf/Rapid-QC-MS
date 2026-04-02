@@ -305,7 +305,7 @@ def register(app):
             is_blank = df["Specimen"].str.contains(_BLANK_RE, na=False, regex=True)
             df = df.loc[~(is_pool | is_blank)]
 
-        cols = [c for c in ["Specimen", "Status"] if c in df.columns]
+        cols = [c for c in ["Specimen", "Status", "Notes"] if c in df.columns]
         return df[cols].to_dict("records")
 
     @app.callback(

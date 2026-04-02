@@ -107,10 +107,10 @@ class MetabolomicsPreSearchQCModule(QCModule):
         mz_warn_is = [nm for nm in detected if abs(mz_devs_ppm.get(nm, 0.0)) > mz_dev_warn]
         mz_fail_is = [nm for nm in detected if abs(mz_devs_ppm.get(nm, 0.0)) > mz_dev_fail]
 
-        # Not detected → at most Warn. Only detected-but-wrong IS can Fail.
+        # Missing IS do not affect status — only detected-but-wrong IS can Warn/Fail.
         if rt_fail_is or mz_fail_is:
             status = QCStatus.FAIL
-        elif fill_fraction < warn_fill or rt_warn_is or mz_warn_is:
+        elif rt_warn_is or mz_warn_is:
             status = QCStatus.WARN
         else:
             status = QCStatus.PASS
@@ -162,13 +162,12 @@ class MetabolomicsPreSearchQCModule(QCModule):
         # Build per-check grades
         grades: dict = {}
 
-        if fill_fraction < warn_fill:
-            grades["is_fill_fraction"] = {
-                "status": "Warn",
-                "message": f"IS detection {n_detected}/{n_total} ({fill_fraction:.1%}) < {warn_fill:.0%} threshold",
-            }
-        else:
-            grades["is_fill_fraction"] = {"status": "Pass", "message": None}
+        grades["is_fill_fraction"] = {
+            "status": "Pass",
+            "message": f"IS detected: {n_detected}/{n_total}" + (
+                f" — missing: {', '.join(missing)}" if missing else ""
+            ),
+        }
 
         if rt_fail_is:
             worst_nm = max(rt_fail_is, key=lambda k: abs(rt_devs[k]))

@@ -252,10 +252,13 @@ def get_run_dataframes(
         grades = row.grades
         if not grades and row.metrics:
             grades = _grades_from_metrics(row.qc_module or "", row.metrics)
+        missing_is = (row.metrics or {}).get("missing_is", [])
+        notes = f"missing: {', '.join(missing_is)}" if missing_is else ""
         sample_records.append({
             "Specimen": row.sample_id,
             "Position": "",
             "Status":   row.status,
+            "Notes":    notes,
             "QC":       _format_qc(grades or {}),
             "Polarity": polarity,
         })

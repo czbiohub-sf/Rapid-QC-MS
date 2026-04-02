@@ -199,9 +199,11 @@ def serve_layout():
                                     ],
                                     style_cell_conditional=[
                                         {"if": {"column_id": "Specimen"},
-                                        "width": "75%"},
+                                        "width": "40%"},
                                         {"if": {"column_id": "Status"},
-                                        "width": "25%"},
+                                        "width": "15%"},
+                                        {"if": {"column_id": "Notes"},
+                                        "width": "45%"},
                                     ]
                                 )
                             ]),
