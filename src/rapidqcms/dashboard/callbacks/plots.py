@@ -76,14 +76,14 @@ def _build_details_modal_body(session, instrument_id, run_id, sample_id):
         delta_mz = e.get("Delta m/z")
         warns = e.get("Warnings", "")
         fails = e.get("Fails", "")
-        issues = "; ".join(filter(None, [warns, fails]))
         rows.append({
             "Name":          e.get("Name", ""),
             "Height":        f"{e.get('Height', 0):,.0f}" if e.get("Height") else "—",
             "RT (min)":      f"{e['RT (min)']:.3f}" if e.get("RT (min)") is not None else "—",
             "ΔRT (min)":     f"{delta_rt:+.3f}" if delta_rt is not None else "—",
             "Δm/z (ppm)":    f"{delta_mz:+.1f}" if delta_mz is not None else "—",
-            "Issues":        issues,
+            "Warnings":      warns,
+            "Fails":         fails,
         })
 
     df = pd.DataFrame(rows)
@@ -99,12 +99,12 @@ def _build_details_modal_body(session, instrument_id, run_id, sample_id):
 
     tbl = dash_table.DataTable(
         data=df.to_dict("records"),
-        columns=[{"name": c, "id": c} for c in df.columns],
+        columns=[{"name": c, "id": c} for c in df.columns if c != "Fails"],
         style_cell={"textAlign": "left", "fontSize": "13px", "padding": "6px 10px"},
         style_data={"whiteSpace": "normal"},
         style_data_conditional=[
-            {"if": {"filter_query": '{Issues} != ""'}, "backgroundColor": "rgba(255,193,7,0.15)"},
-            {"if": {"filter_query": '{Issues} contains "not detected"'}, "backgroundColor": "rgba(220,53,69,0.15)"},
+            {"if": {"filter_query": '{Warnings} != ""'}, "backgroundColor": "rgba(255,193,7,0.15)"},
+            {"if": {"filter_query": '{Fails} != ""'}, "backgroundColor": "rgba(220,53,69,0.15)"},
         ],
         style_header={"fontWeight": "bold", "backgroundColor": "#f8f9fa"},
         page_action="none",
