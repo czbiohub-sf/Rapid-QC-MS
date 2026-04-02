@@ -144,10 +144,18 @@ class MetabolomicsPreSearchQCModule(QCModule):
             delta_rt = round(apex_rt - ert, 4) if apex_rt is not None else None
             delta_mz = mz_devs_ppm.get(nm) if is_detected else None
             warns = []
-            if delta_rt is not None and abs(delta_rt) > rt_dev_warn:
-                warns.append(f"RT dev {delta_rt:+.2f} min (>{rt_dev_warn} min)")
-            if delta_mz is not None and abs(delta_mz) > mz_dev_warn:
-                warns.append(f"m/z dev {delta_mz:+.1f} ppm (>{mz_dev_warn} ppm)")
+            fails = []
+            if is_detected:
+                if delta_rt is not None:
+                    if abs(delta_rt) > rt_dev_fail:
+                        fails.append(f"RT dev {delta_rt:+.2f} min (>{rt_dev_fail} min)")
+                    elif abs(delta_rt) > rt_dev_warn:
+                        warns.append(f"RT dev {delta_rt:+.2f} min (>{rt_dev_warn} min)")
+                if delta_mz is not None:
+                    if abs(delta_mz) > mz_dev_fail:
+                        fails.append(f"m/z dev {delta_mz:+.1f} ppm (>{mz_dev_fail} ppm)")
+                    elif abs(delta_mz) > mz_dev_warn:
+                        warns.append(f"m/z dev {delta_mz:+.1f} ppm (>{mz_dev_warn} ppm)")
             details.append({
                 "Name":             nm,
                 "RT (min)":         round(apex_rt, 4) if apex_rt is not None else None,
@@ -156,7 +164,7 @@ class MetabolomicsPreSearchQCModule(QCModule):
                 "In-run delta RT":  None,
                 "Delta m/z":        delta_mz,
                 "Warnings":         "; ".join(warns),
-                "Fails":            "" if is_detected else f"{nm} not detected",
+                "Fails":            "; ".join(fails),
             })
 
         # Build per-check grades
