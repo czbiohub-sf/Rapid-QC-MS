@@ -10,6 +10,7 @@ from __future__ import annotations
 import io
 import json
 import logging
+import re as _re
 
 import pandas as pd
 from sqlalchemy.orm import Session
@@ -20,6 +21,64 @@ from rapidqcms.db.models import QCResult as QCResultModel
 from rapidqcms.db.settings import get_run
 
 log = logging.getLogger(__name__)
+
+_POOL_SAMPLE_RE = _re.compile(r"^(QC|Pool)[_\-]", _re.IGNORECASE)
+
+
+def _compute_pool_qc_ref_rts(
+    rows: list[QCResultModel],
+    polarity_map: dict[str, str],
+    target_polarity: str,
+) -> dict[str, float]:
+    """Return {IS name: median RT (min)} from pooled QC injections for a polarity.
+
+    Pooled QC samples are identified by the prefix pattern ^(QC|Pool)[_-].
+    Returns an empty dict when no pooled QC samples are present.
+    """
+    pool_rts: dict[str, list[float]] = {}
+    for row in rows:
+        if polarity_map.get(row.sample_id, "Pos") != target_polarity:
+            continue
+        if not _POOL_SAMPLE_RE.match(row.sample_id):
+            continue
+        if not row.details:
+            continue
+        for entry in row.details:
+            name = entry.get("Name")
+            rt = entry.get("RT (min)")
+            if name and rt is not None:
+                pool_rts.setdefault(name, []).append(float(rt))
+    return {name: float(pd.Series(rts).median()) for name, rts in pool_rts.items()}
+
+
+def _compute_in_run_delta_rt(
+    rows: list[QCResultModel],
+    polarity_map: dict[str, str],
+    target_polarity: str,
+    ref_rt: dict[str, float],
+) -> pd.DataFrame | None:
+    """Compute in-run delta RT (sample RT − pooled QC median RT) for all samples.
+
+    Returns None when ref_rt is empty (no pooled QC available yet).
+    """
+    if not ref_rt:
+        return None
+    records: list[dict] = []
+    for row in rows:
+        if polarity_map.get(row.sample_id, "Pos") != target_polarity:
+            continue
+        if not row.details:
+            continue
+        record: dict = {"Specimen": row.sample_id}
+        for entry in row.details:
+            name = entry.get("Name")
+            rt = entry.get("RT (min)")
+            if name and rt is not None and name in ref_rt:
+                record[name] = round(float(rt) - ref_rt[name], 4)
+            elif name:
+                record[name] = None
+        records.append(record)
+    return pd.DataFrame(records) if records else None
 
 
 def get_results_for_run(
@@ -268,9 +327,15 @@ def get_run_dataframes(
             return None
         return df.to_json(orient="records")
 
+    # Compute pooled-QC reference RTs once per polarity for in-run delta RT
+    pos_pool_ref_rt = _compute_pool_qc_ref_rts(rows, polarity_map, "Pos")
+    neg_pool_ref_rt = _compute_pool_qc_ref_rts(rows, polarity_map, "Neg")
+    in_run_retention_times_dict: dict[str, float] = {**pos_pool_ref_rt, **neg_pool_ref_rt}
+
     result: dict = {}
 
     for pol_key, polarity in (("pos", "Pos"), ("neg", "Neg")):
+        ref_rt = pos_pool_ref_rt if polarity == "Pos" else neg_pool_ref_rt
         result[f"df_rt_{pol_key}"] = _to_json(
             _pivot_field(rows, "RT (min)", polarity_map, polarity)
         )
@@ -281,7 +346,7 @@ def get_run_dataframes(
             _pivot_field(rows, "Delta RT", polarity_map, polarity)
         )
         result[f"df_in_run_delta_rt_{pol_key}"] = _to_json(
-            _pivot_field(rows, "In-run delta RT", polarity_map, polarity)
+            _compute_in_run_delta_rt(rows, polarity_map, polarity, ref_rt)
         )
         result[f"df_delta_mz_{pol_key}"] = _to_json(
             _pivot_field(rows, "Delta m/z", polarity_map, polarity)
@@ -334,6 +399,7 @@ def get_run_dataframes(
         "chromatography": chromatography,
         "precursor_mass_dict": precursor_mz_dict,
         "retention_times_dict": retention_times_dict,
+        "in_run_retention_times_dict": in_run_retention_times_dict,
         "samples_completed": len(rows),
         "biological_standards": bio_names or None,
     }

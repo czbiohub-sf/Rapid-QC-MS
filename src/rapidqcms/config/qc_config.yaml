@@ -30,7 +30,6 @@ internal_standards:
       - {name: "1_HippuricAcid_d5",            mz: 185.0967,  rt: 3.0}
       - {name: "1_Lysine-d8",                  mz: 155.1628,  rt: 9.536}
       - {name: "1_Methionine_d8",              mz: 158.1082,  rt: 7.4}
-      - {name: "1_N-Methyl-D3-Histamine iSTD", mz: 129.1215,  rt: 7.4057}
       - {name: "1_Phenylalanine-d8",           mz: 174.1361,  rt: 6.9}
       - {name: "1_Serine_d3",                  mz: 109.0686,  rt: 8.645}
       - {name: "1_TMAO_d9",                    mz:  85.1328,  rt: 5.5965}

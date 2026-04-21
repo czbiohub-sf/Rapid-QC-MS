@@ -232,15 +232,19 @@ def generate_bio_standard_dataframe(
 # ---------------------------------------------------------------------------
 
 
-def load_istd_rt_plot(dataframe, samples, internal_standard, retention_times):
+def load_istd_rt_plot(dataframe, samples, internal_standard, retention_times,
+                      in_run_retention_times=None):
     """Line plot of retention times for a selected internal standard across samples."""
     df_filtered_by_samples = dataframe.loc[dataframe["Specimen"].isin(samples)]
     df_filtered_by_samples[internal_standard] = (
         df_filtered_by_samples[internal_standard].astype(float).round(3)
     )
 
-    y_min = retention_times[internal_standard] - 0.3
-    y_max = retention_times[internal_standard] + 0.3
+    # Prefer in-run pooled QC median RT as reference; fall back to library RT.
+    ref_rt = (in_run_retention_times or {}).get(internal_standard) \
+        or retention_times.get(internal_standard)
+    y_min = ref_rt - 0.3
+    y_max = ref_rt + 0.3
 
     fig = px.line(
         df_filtered_by_samples,
@@ -266,7 +270,7 @@ def load_istd_rt_plot(dataframe, samples, internal_standard, retention_times):
     )
     fig.update_xaxes(showticklabels=False, title="Specimen")
     fig.update_yaxes(title="Retention Time (min)", range=[y_min, y_max])
-    fig.add_hline(y=retention_times[internal_standard], line_width=2, line_dash="dash")
+    fig.add_hline(y=ref_rt, line_width=2, line_dash="dash")
     fig.update_traces(hovertemplate="Sample: %{x} <br>Retention Time: %{y} min<br>")
 
     return fig

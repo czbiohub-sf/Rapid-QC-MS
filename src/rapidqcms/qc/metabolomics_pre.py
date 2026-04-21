@@ -107,10 +107,12 @@ class MetabolomicsPreSearchQCModule(QCModule):
         mz_warn_is = [nm for nm in detected if abs(mz_devs_ppm.get(nm, 0.0)) > mz_dev_warn]
         mz_fail_is = [nm for nm in detected if abs(mz_devs_ppm.get(nm, 0.0)) > mz_dev_fail]
 
-        # Missing IS do not affect status — only detected-but-wrong IS can Warn/Fail.
-        if rt_fail_is or mz_fail_is:
+        # RT library comparison is warn-only: library RTs drift over time and are
+        # not a reliable hard-fail signal. m/z targets are physically fixed and
+        # remain the sole fail criterion.
+        if mz_fail_is:
             status = QCStatus.FAIL
-        elif rt_warn_is or mz_warn_is:
+        elif mz_warn_is or rt_warn_is or rt_fail_is:
             status = QCStatus.WARN
         else:
             status = QCStatus.PASS
@@ -148,9 +150,9 @@ class MetabolomicsPreSearchQCModule(QCModule):
             if is_detected:
                 if delta_rt is not None:
                     if abs(delta_rt) > rt_dev_fail:
-                        fails.append(f"RT dev {delta_rt:+.2f} min (>{rt_dev_fail} min)")
+                        warns.append(f"RT dev {delta_rt:+.2f} min (>{rt_dev_fail} min, library)")
                     elif abs(delta_rt) > rt_dev_warn:
-                        warns.append(f"RT dev {delta_rt:+.2f} min (>{rt_dev_warn} min)")
+                        warns.append(f"RT dev {delta_rt:+.2f} min (>{rt_dev_warn} min, library)")
                 if delta_mz is not None:
                     if abs(delta_mz) > mz_dev_fail:
                         fails.append(f"m/z dev {delta_mz:+.1f} ppm (>{mz_dev_fail} ppm)")
@@ -180,14 +182,14 @@ class MetabolomicsPreSearchQCModule(QCModule):
         if rt_fail_is:
             worst_nm = max(rt_fail_is, key=lambda k: abs(rt_devs[k]))
             grades["is_rt_deviation"] = {
-                "status": "Fail",
-                "message": f"{worst_nm}: {rt_devs[worst_nm]:+.2f} min (>{rt_dev_fail} min threshold)",
+                "status": "Warn",
+                "message": f"{worst_nm}: {rt_devs[worst_nm]:+.2f} min (>{rt_dev_fail} min library threshold)",
             }
         elif rt_warn_is:
             worst_nm = max(rt_warn_is, key=lambda k: abs(rt_devs[k]))
             grades["is_rt_deviation"] = {
                 "status": "Warn",
-                "message": f"{worst_nm}: {rt_devs[worst_nm]:+.2f} min (>{rt_dev_warn} min threshold)",
+                "message": f"{worst_nm}: {rt_devs[worst_nm]:+.2f} min (>{rt_dev_warn} min library threshold)",
             }
         else:
             grades["is_rt_deviation"] = {"status": "Pass", "message": None}
@@ -210,12 +212,10 @@ class MetabolomicsPreSearchQCModule(QCModule):
         msg_parts = [f"IS detected: {n_detected}/{n_total}"]
         if missing:
             msg_parts.append(f"missing: {', '.join(missing[:3])}{'...' if len(missing) > 3 else ''}")
-        if rt_fail_is:
-            worst_nm = max(rt_fail_is, key=lambda k: abs(rt_devs[k]))
-            msg_parts.append(f"RT fail {worst_nm}={rt_devs[worst_nm]:+.2f} min")
-        elif rt_warn_is:
-            worst_nm = max(rt_warn_is, key=lambda k: abs(rt_devs[k]))
-            msg_parts.append(f"RT warn {worst_nm}={rt_devs[worst_nm]:+.2f} min")
+        rt_large_dev = rt_fail_is or rt_warn_is
+        if rt_large_dev:
+            worst_nm = max(rt_large_dev, key=lambda k: abs(rt_devs[k]))
+            msg_parts.append(f"RT warn {worst_nm}={rt_devs[worst_nm]:+.2f} min (library)")
         if mz_warn_is:
             worst_nm = max(mz_warn_is, key=lambda k: abs(mz_devs_ppm[k]))
             msg_parts.append(f"m/z warn {worst_nm}={mz_devs_ppm[worst_nm]:+.1f} ppm")

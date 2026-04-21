@@ -152,8 +152,10 @@ def register(app):
         if resources is not None:
             resources = json.loads(resources)
             retention_times = resources.get("retention_times_dict", {})
+            in_run_retention_times = resources.get("in_run_retention_times_dict", {})
         else:
             retention_times = {}
+            in_run_retention_times = {}
 
         if rt_pos is None and rt_neg is None:
             return {}, None, None, None, {"display": "none"}
@@ -200,6 +202,7 @@ def register(app):
                     samples=selected_samples,
                     internal_standard=internal_standard,
                     retention_times=retention_times,
+                    in_run_retention_times=in_run_retention_times,
                 ),
                 None,
                 index,
