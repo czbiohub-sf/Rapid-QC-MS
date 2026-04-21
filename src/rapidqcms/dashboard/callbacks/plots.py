@@ -35,7 +35,19 @@ log = logging.getLogger(__name__)
 
 
 def _get_polarity_for_sample(session, instrument_id, run_id, sample_id, chromatography="HILIC"):
-    """Infer sample polarity from which IS library its details match."""
+    """Infer sample polarity — filename tokens first, IS library names as fallback.
+
+    HILIC has IS names shared between Pos and Neg (e.g. 1_CUDA iSTD, 1_Arginine_d7),
+    so IS-only detection is unreliable. Token-based detection matches the logic in
+    get_run_dataframes() and is the authoritative source.
+    """
+    for tok in sample_id.replace("-", "_").split("_"):
+        if tok.lower() == "neg":
+            return "Neg"
+        if tok.lower() == "pos":
+            return "Pos"
+
+    # Fallback: use exclusive-to-one-polarity IS names in stored details
     result = (
         session.query(QCResultModel)
         .filter_by(instrument_id=instrument_id, run_id=run_id, sample_id=sample_id)
@@ -49,9 +61,11 @@ def _get_polarity_for_sample(session, instrument_id, run_id, sample_id, chromato
     neg_is = get_internal_standards_df_lib(chromatography, "Neg")
     pos_names = set(pos_is["name"].tolist()) if not pos_is.empty else set()
     neg_names = set(neg_is["name"].tolist()) if not neg_is.empty else set()
+    neg_only = neg_names - pos_names
+    pos_only = pos_names - neg_names
 
     names_in_details = {e.get("Name") for e in result.details if e.get("Name")}
-    if names_in_details & neg_names and not (names_in_details & pos_names):
+    if names_in_details & neg_only and not (names_in_details & pos_only):
         return "Neg"
     return "Pos"
 
