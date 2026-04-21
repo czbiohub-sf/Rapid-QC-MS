@@ -239,8 +239,8 @@ def load_istd_rt_plot(dataframe, samples, internal_standard, retention_times):
         df_filtered_by_samples[internal_standard].astype(float).round(3)
     )
 
-    y_min = retention_times[internal_standard] - 0.1
-    y_max = retention_times[internal_standard] + 0.1
+    y_min = retention_times[internal_standard] - 0.3
+    y_max = retention_times[internal_standard] + 0.3
 
     fig = px.line(
         df_filtered_by_samples,
@@ -340,8 +340,8 @@ def load_istd_delta_mz_plot(dataframe, samples, internal_standard):
         margin=dict(t=75, b=75, l=0, r=0),
     )
     fig.update_xaxes(showticklabels=False, title="Specimen")
-    fig.update_yaxes(title="delta m/z", range=[-0.01, 0.01])
-    fig.update_traces(hovertemplate="Sample: %{x} <br>Delta m/z: %{y}<br>")
+    fig.update_yaxes(title="Δ m/z (ppm)", range=[-10, 10])
+    fig.update_traces(hovertemplate="Sample: %{x} <br>Δ m/z: %{y:.2f} ppm<br>")
 
     return fig
 

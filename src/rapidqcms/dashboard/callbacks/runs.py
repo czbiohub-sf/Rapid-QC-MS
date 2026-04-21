@@ -270,8 +270,9 @@ def register(app):
             log.exception("load_data failed")
             return _none29
 
-    _POOL_RE  = r"^(QC|Pool)[_\-]"
-    _BLANK_RE = r"^(BK|Blank)[_\-]"
+    _POOL_RE     = r"^(QC|Pool)[_\-]"
+    _BLANK_RE    = r"^(BK|Blank)[_\-]"
+    _COLCOND_RE  = r"^columnCond[_\-]?"
 
     @app.callback(
         Output("sample-table", "data"),
@@ -428,6 +429,10 @@ def register(app):
         if filter == "blanks":
             blanks = [s for s in sample_list if _re.match(_BLANK_RE, s)]
             return blanks, blanks, blanks
+
+        if filter == "column_cond":
+            colcond = [s for s in sample_list if _re.match(_COLCOND_RE, s, _re.IGNORECASE)]
+            return colcond, colcond, colcond
 
         return [], [], []
 

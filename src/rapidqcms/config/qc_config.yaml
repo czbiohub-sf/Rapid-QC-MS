@@ -38,7 +38,6 @@ internal_standards:
       - {name: "1_Valine_d8",                  mz: 126.1364,  rt: 7.66}
     Neg:
       - {name: "1_Arginine_d7",                mz: 180.1485,  rt: 9.495}
-      - {name: "1_CUDA",                       mz: 339.2653,  rt: 1.2052}
       - {name: "1_CUDA iSTD",                  mz: 339.2655,  rt: 1.205217}
       - {name: "1_D3-Alanine iSTD",            mz:  91.05797, rt: 8.1475}
       - {name: "1_D3-Aspartic acid iSTD",      mz: 135.0479,  rt: 9.288283}
@@ -46,13 +45,10 @@ internal_standards:
       - {name: "1_D3-Glutamic acid iSTD",      mz: 149.0636,  rt: 8.803884}
       - {name: "1_D5-L-Glutamine iSTD",        mz: 150.0922,  rt: 8.658283}
       - {name: "1_d5_Hippuric Acid",           mz: 183.0822,  rt: 3.2}
-      - {name: "1_Glutamine_d5",               mz: 150.0922,  rt: 8.575}
-      - {name: "1_Hippuric acid_d5",           mz: 183.082,   rt: 3.2}
       - {name: "1_Lysine_d8",                  mz: 153.1486,  rt: 9.5798}
       - {name: "1_Methionine_d8",              mz: 156.0941,  rt: 7.4717}
       - {name: "1_Serine_d8",                  mz: 107.0543,  rt: 8.7138}
       - {name: "1_TRYPTOPHAN-2,4,5,6,7-D5",   mz: 208.114,   rt: 6.849}
-      - {name: "1_Val-Tyr-Val iSTD",           mz: 378.2038,  rt: 6.96425}
 
 # ---------------------------------------------------------------------------
 # Future: instrument drift thresholds (one block per instrument ID)

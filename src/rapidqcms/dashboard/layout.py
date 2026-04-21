@@ -157,7 +157,8 @@ def serve_layout():
                                                 {"label": "All", "value": "all"},
                                                 {"label": "Specimens", "value": "specimens"},
                                                 {"label": "Pools", "value": "pools"},
-                                                {"label": "Blanks", "value": "blanks"}],
+                                                {"label": "Blanks", "value": "blanks"},
+                                                {"label": "Col. Cond.", "value": "column_cond"}],
                                         ),
                                     ])
                                 ]),

@@ -271,18 +271,11 @@ def register(app):
 
         if not selected_samples:
             selected_samples = all_samples
-            treatments = pd.DataFrame()
-        else:
-            treatments = pd.DataFrame()
-            if metadata is not None:
-                try:
-                    df_metadata = pd.read_json(metadata, orient="split")
-                    df_metadata = df_metadata.loc[
-                        df_metadata["Filename"].isin(selected_samples)
-                    ]
-                    treatments = df_metadata[["Filename", "Treatment"]]
-                except Exception:
-                    pass
+
+        treatments = pd.DataFrame({
+            "Filename": selected_samples,
+            "Treatment": [s.split("_")[0] for s in selected_samples],
+        })
 
         if trigger in ("intensity-prev-button", "intensity-next-button"):
             index = get_internal_standard_index(previous, next, len(internal_standards))
