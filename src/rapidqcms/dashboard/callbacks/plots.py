@@ -56,7 +56,10 @@ def _get_polarity_for_sample(session, instrument_id, run_id, sample_id, chromato
     return "Pos"
 
 
-def _build_details_modal_body(session, instrument_id, run_id, sample_id):
+_IN_RUN_RT_WARN_THRESHOLD = 0.2  # minutes — in-run delta RT beyond this gets highlighted
+
+
+def _build_details_modal_body(session, instrument_id, run_id, sample_id, in_run_delta_rt_df=None):
     """Build modal body from QCResult.details for the clicked sample.
 
     Returns (body_component, feature_table_json, csv_filename) or None if no details.
@@ -70,20 +73,33 @@ def _build_details_modal_body(session, instrument_id, run_id, sample_id):
     if result is None or not isinstance(result.details, list) or not result.details:
         return None
 
+    # Build per-IS in-run delta RT lookup for this sample
+    in_run_by_name: dict = {}
+    if in_run_delta_rt_df is not None and not in_run_delta_rt_df.empty and "Specimen" in in_run_delta_rt_df.columns:
+        mask = in_run_delta_rt_df["Specimen"] == sample_id
+        if mask.any():
+            sample_row = in_run_delta_rt_df[mask].iloc[0]
+            in_run_by_name = sample_row.drop("Specimen").to_dict()
+
     rows = []
     for e in result.details:
         delta_rt = e.get("Delta RT")
         delta_mz = e.get("Delta m/z")
         warns = e.get("Warnings", "")
         fails = e.get("Fails", "")
+        name = e.get("Name", "")
+        in_run_drt = in_run_by_name.get(name)
+        in_run_warn = "yes" if (in_run_drt is not None and abs(in_run_drt) > _IN_RUN_RT_WARN_THRESHOLD) else ""
         rows.append({
-            "Name":          e.get("Name", ""),
-            "Height":        f"{e.get('Height', 0):,.0f}" if e.get("Height") else "—",
-            "RT (min)":      f"{e['RT (min)']:.3f}" if e.get("RT (min)") is not None else "—",
-            "ΔRT (min)":     f"{delta_rt:+.3f}" if delta_rt is not None else "—",
-            "Δm/z (ppm)":    f"{delta_mz:+.1f}" if delta_mz is not None else "—",
-            "Warnings":      warns,
-            "Fails":         fails,
+            "Name":             name,
+            "Height":           f"{e.get('Height', 0):,.0f}" if e.get("Height") else "—",
+            "RT (min)":         f"{e['RT (min)']:.3f}" if e.get("RT (min)") is not None else "—",
+            "ΔRT lib (min)":    f"{delta_rt:+.3f}" if delta_rt is not None else "—",
+            "In-run ΔRT (min)": f"{in_run_drt:+.3f}" if in_run_drt is not None else "—",
+            "Δm/z (ppm)":       f"{delta_mz:+.1f}" if delta_mz is not None else "—",
+            "Warnings":         warns,
+            "Fails":            fails,
+            "InRunRTWarn":      in_run_warn,
         })
 
     df = pd.DataFrame(rows)
@@ -97,14 +113,22 @@ def _build_details_modal_body(session, instrument_id, run_id, sample_id):
         dbc.Col(html.Small(f"Run: {run_id}  |  Module: {result.qc_module}", className="text-muted")),
     ])
 
+    _hidden = {"Fails", "InRunRTWarn"}
     tbl = dash_table.DataTable(
         data=df.to_dict("records"),
-        columns=[{"name": c, "id": c} for c in df.columns if c != "Fails"],
+        columns=[{"name": c, "id": c} for c in df.columns if c not in _hidden],
         style_cell={"textAlign": "left", "fontSize": "13px", "padding": "6px 10px"},
         style_data={"whiteSpace": "normal"},
         style_data_conditional=[
             {"if": {"filter_query": '{Warnings} != ""'}, "backgroundColor": "rgba(255,193,7,0.15)"},
             {"if": {"filter_query": '{Fails} != ""'}, "backgroundColor": "rgba(220,53,69,0.15)"},
+            {
+                "if": {
+                    "filter_query": '{InRunRTWarn} = "yes"',
+                    "column_id": "In-run ΔRT (min)",
+                },
+                "backgroundColor": "rgba(13,202,240,0.20)",
+            },
         ],
         style_header={"fontWeight": "bold", "backgroundColor": "#f8f9fa"},
         page_action="none",
@@ -628,10 +652,21 @@ def register(app):
         instrument_id = resources["instrument"]
         run_id = resources["run_id"]
 
+        # Determine polarity to pick the right in-run delta RT store
+        with get_session() as session:
+            polarity = _get_polarity_for_sample(session, instrument_id, run_id, clicked_sample)
+
+        in_run_drt_json = in_run_delta_rt_pos if polarity == "Pos" else in_run_delta_rt_neg
+        try:
+            in_run_delta_rt_df = pd.DataFrame(json.loads(in_run_drt_json)) if in_run_drt_json else None
+        except Exception:
+            in_run_delta_rt_df = None
+
         # Build modal body from QCResult.details (DB-driven)
         with get_session() as session:
             detail_result = _build_details_modal_body(
-                session, instrument_id, run_id, clicked_sample
+                session, instrument_id, run_id, clicked_sample,
+                in_run_delta_rt_df=in_run_delta_rt_df,
             )
 
         if detail_result is not None:
