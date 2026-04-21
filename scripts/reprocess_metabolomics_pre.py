@@ -23,7 +23,7 @@ from rapidqcms.config.library import chromatography_from_filename
 from rapidqcms.db.connection import get_session
 from rapidqcms.db.models import QCResult as QCResultModel, Run
 from rapidqcms.db.results import update_run_cv, upsert_qc_result
-from rapidqcms.qc.metabolomics_pre import MetabolomicsPreSearchQCModule
+from rapidqcms.qc.registry import load_registry
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -67,7 +67,8 @@ def main():
     parser.add_argument("--run-id", help="Only reprocess this run_id (default: all metabolomics runs)")
     args = parser.parse_args()
 
-    module = MetabolomicsPreSearchQCModule(config={})
+    registry = load_registry()
+    module = registry["metabolomics_pre"]
 
     with get_session() as session:
         q = session.query(QCResultModel).join(Run, QCResultModel.run_id == Run.id)

@@ -20,7 +20,7 @@ from rapidqcms.config.library import chromatography_from_filename
 from rapidqcms.db.connection import get_session, init_db
 from rapidqcms.db.models import Instrument, Run
 from rapidqcms.db.results import update_run_cv, upsert_qc_result
-from rapidqcms.qc.metabolomics_pre import MetabolomicsPreSearchQCModule
+from rapidqcms.qc.registry import load_registry
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -109,7 +109,8 @@ def main() -> None:
         log.error("No mzML files found under %s", data_dir)
         sys.exit(1)
 
-    module = MetabolomicsPreSearchQCModule(config={})
+    registry = load_registry()
+    module = registry["metabolomics_pre"]
 
     for run_id, mzml_files in studies.items():
         now = datetime.datetime.now(datetime.timezone.utc)
