@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  dashboard:
+    build: .
+    ports:
+      - "8050:8050"
+    volumes:
+      - ./data:/app/data
+    environment:
+      # SQLite default — works out of the box with no extra services.
+      # For PostgreSQL, comment out the line below and uncomment the db
+      # service + the postgres RAPIDQCMS_DB_URL line.
+      RAPIDQCMS_DB_URL: "sqlite:////app/data/rapidqcms.db"
+      # RAPIDQCMS_DB_URL: "postgresql://rapidqcms:rapidqcms@db:5432/rapidqcms"
+      RAPIDQCMS_STORAGE_BACKEND: "local"
+    restart: unless-stopped
+
+  # PostgreSQL — production path.
+  # Uncomment the entire block below and update RAPIDQCMS_DB_URL above.
+  #
+  # db:
+  #   image: postgres:15
+  #   environment:
+  #     POSTGRES_USER: rapidqcms
+  #     POSTGRES_PASSWORD: rapidqcms
+  #     POSTGRES_DB: rapidqcms
+  #   volumes:
+  #     - pg_data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+  #
+  # volumes:
+  #   pg_data:

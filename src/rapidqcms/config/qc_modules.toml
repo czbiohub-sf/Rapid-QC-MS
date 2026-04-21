@@ -1,0 +1,62 @@
+# QC module configuration
+#
+# Each [modules.<name>] block configures one QC module.
+# Set enabled = false to disable a module without removing its config.
+# The registry loads all enabled modules at startup.
+#
+# WARN/FAIL thresholds can be updated here without code changes.
+# A UI for editing thresholds will be added in a future phase.
+
+[modules.metabolomics_pre]
+class           = "rapidqcms.qc.metabolomics_pre.MetabolomicsPreSearchQCModule"
+enabled         = true
+stage           = "pre_search"
+experiment_type = "metabolomics"
+
+[modules.metabolomics_pre.thresholds]
+mz_ppm              = 10.0   # m/z tolerance for XIC extraction (ppm)
+rt_window_min       = 0.75   # ±minutes around library RT to search for IS peak
+min_intensity       = 1e4    # minimum peak intensity to count as detected
+warn_fill_fraction  = 0.90   # IS detection rate below this → Warn
+fail_fill_fraction  = 0.70   # IS detection rate below this → Fail
+rt_deviation_warn   = 0.50   # IS RT shift above this (min) → Warn
+mz_deviation_warn_ppm = 5.0  # IS m/z shift above this (ppm) → Warn
+mz_deviation_fail_ppm = 10.0 # IS m/z shift above this (ppm) → Fail (matches XIC extraction tolerance)
+
+[modules.metabolomics_pre.checks]
+fill_fraction_enabled = true
+rt_deviation_enabled  = true
+
+
+[modules.lipidomics_pre]
+class           = "rapidqcms.qc.lipidomics_pre.LipidomicsPreSearchQCModule"
+enabled         = true
+stage           = "pre_search"
+experiment_type = "lipidomics"
+
+[modules.lipidomics_pre.thresholds]
+min_ms1_scans     = 50    # lipidomics runs are shorter — fewer MS1 scans expected
+min_ms2_scans     = 200   # lipid DDA triggers fewer MS2 events than proteomics
+min_ms2_ms1_ratio = 1.0   # lower ratio acceptable for lipidomics
+
+[modules.lipidomics_pre.checks]
+ms1_enabled   = true
+ms2_enabled   = true
+ratio_enabled = true
+
+
+[modules.proteomics_pre]
+class           = "rapidqcms.qc.proteomics_pre.ProteomicsPreSearchQCModule"
+enabled         = true
+stage           = "pre_search"
+experiment_type = "proteomics"
+
+[modules.proteomics_pre.thresholds]
+min_ms1_scans     = 100   # fewer MS1 scans → Fail
+min_ms2_scans     = 500   # fewer MS2 scans → Fail
+min_ms2_ms1_ratio = 2.0   # MS2/MS1 ratio below this → Warn
+
+[modules.proteomics_pre.checks]
+ms1_enabled   = true
+ms2_enabled   = true
+ratio_enabled = true

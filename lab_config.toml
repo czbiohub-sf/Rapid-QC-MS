@@ -1,0 +1,46 @@
+# lab_config.toml
+#
+# One-time lab setup. Pass to the watcher on startup:
+#   rapidqcms watch --config lab_config.toml --path /hpc/projects/mass_spec/projects
+#
+# The watcher upserts these values into the DB on every start.
+# To change a setting: edit this file and restart the watcher.
+
+# ---------------------------------------------------------------------------
+# Instruments
+# ---------------------------------------------------------------------------
+# Each key under [instruments] is the instrument ID as it appears as the
+# trailing _SUFFIX on sample filenames (e.g. QC_Neg_019702_TLG1025_QE2 → QE2).
+
+[instruments.QE2]
+name             = "Q Exactive 2"
+vendor           = "Thermo"
+experiment_type  = "metabolomics"
+
+[instruments.FL2]
+name             = "Exploris Flex 2"
+vendor           = "Thermo"
+experiment_type  = "proteomics"
+
+# ---------------------------------------------------------------------------
+# QC thresholds — metabolomics (PyCutter export)
+# ---------------------------------------------------------------------------
+
+[qc_thresholds.metabolomics]
+rt_shift_warn  = 0.3    # minutes  — IS alignment RT deviation → Warn
+rt_shift_fail  = 0.5    # minutes  — IS alignment RT deviation → Fail
+mz_shift_warn  = 0.005  # Da       — IS alignment m/z deviation → Warn
+mz_shift_fail  = 0.010  # Da       — IS alignment m/z deviation → Fail
+cv_warn        = 30.0   # %        — IS Pool %CV → Warn
+cv_fail        = 50.0   # %        — IS Pool %CV → Fail
+fill_warn      = 0.95   # fraction — IS detection rate in QC sample → Warn
+fill_fail      = 0.80   # fraction — IS detection rate in QC sample → Fail
+
+# ---------------------------------------------------------------------------
+# QC thresholds — proteomics (pre-search mzML scan counts)
+# ---------------------------------------------------------------------------
+
+[qc_thresholds.proteomics]
+min_ms1_scans     = 5000
+min_ms2_scans     = 10000
+min_ms2_ms1_ratio = 1.5

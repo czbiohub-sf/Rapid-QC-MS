@@ -1,0 +1,19 @@
+stack:
+  services:
+    web:
+      image:
+        tag: sha-a134154
+      replicaCount: 1
+      resources:
+        requests:
+          cpu: "250m"
+          memory: "512Mi"
+        limits:
+          cpu: "1000m"
+          memory: "2Gi"
+    postgres:
+      persistence:
+        pvc:
+          resources:
+            requests:
+              storage: 10Gi

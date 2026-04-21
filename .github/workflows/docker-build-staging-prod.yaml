@@ -1,0 +1,30 @@
+name: Docker Image Build - prod
+
+on:
+  - push
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+  issues: write
+
+jobs:
+  staging_prod_argus_builder:
+    uses: chanzuckerberg/github-actions/.github/workflows/argus-docker-build.yaml@v6
+    secrets: inherit
+    with:
+      envs: prod
+      path_filters: '!.infra/**'
+      branches_include: release-please--branches--main
+      force_update_manifests: true
+      arm_runner_labels: "['ubuntu-latest']"
+      amd_runner_labels: "['ubuntu-latest']"
+      images: |
+        {
+          "web": {
+            "context": ".",
+            "dockerfile": "Dockerfile",
+            "platform": "linux/amd64"
+          }
+        }

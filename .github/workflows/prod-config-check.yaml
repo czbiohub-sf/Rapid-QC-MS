@@ -1,0 +1,21 @@
+###### Generated using `argus bootstrap` command ######
+name: Prod Config Check
+
+on:
+  pull_request:
+    branches: [ main ]
+    types:
+      - edited
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  prod-config-check:
+    uses: chanzuckerberg/github-actions/.github/workflows/argus-prod-config-check.yaml@v6
+    secrets: inherit

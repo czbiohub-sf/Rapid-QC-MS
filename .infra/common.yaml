@@ -1,0 +1,103 @@
+stack:
+  global:
+    replicaCount: 1
+    autoscaling:
+      enabled: false
+    nodeSelector:
+      kubernetes.io/arch: amd64
+    oidcProxy:
+      enabled: false
+    ingress:
+      oidcProtected: false
+
+  services:
+    web:
+      image:
+        repository: 533267185808.dkr.ecr.us-west-2.amazonaws.com/core-platform/rapid-qc-ms/web
+        pullPolicy: IfNotPresent
+      service:
+        port: 8050
+      ingress:
+        enabled: true
+        className: nginx
+        oidcProtected: false
+        paths:
+          - path: /
+            pathType: Prefix
+      livenessProbe:
+        httpGet:
+          path: /
+          port: http
+        initialDelaySeconds: 30
+        periodSeconds: 30
+        failureThreshold: 3
+        timeoutSeconds: 5
+      readinessProbe:
+        httpGet:
+          path: /
+          port: http
+        initialDelaySeconds: 15
+        periodSeconds: 10
+        failureThreshold: 3
+        timeoutSeconds: 5
+      resources:
+        requests:
+          cpu: "250m"
+          memory: "512Mi"
+        limits:
+          cpu: "1000m"
+          memory: "2Gi"
+
+    postgres:
+      image:
+        repository: postgres
+        tag: "15-alpine"
+        pullPolicy: IfNotPresent
+      replicaCount: 1
+      command: []
+      args: []
+      service:
+        port: 5432
+      ingress:
+        enabled: false
+      autoscaling:
+        enabled: false
+      persistence:
+        enabled: true
+        mountPath: /var/lib/postgresql/data
+        pvc:
+          accessModes:
+            - ReadWriteOnce
+          storageClassName: ebs-csi-encrypted-gp3
+          resources:
+            requests:
+              storage: 50Gi
+      livenessProbe:
+        tcpSocket:
+          port: 5432
+        initialDelaySeconds: 30
+        periodSeconds: 10
+        failureThreshold: 3
+        timeoutSeconds: 5
+      readinessProbe:
+        tcpSocket:
+          port: 5432
+        initialDelaySeconds: 10
+        periodSeconds: 5
+        failureThreshold: 3
+        timeoutSeconds: 3
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "256Mi"
+        limits:
+          cpu: "500m"
+          memory: "1Gi"
+      env:
+        - name: POSTGRES_DB
+          value: rapidqcms
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        # POSTGRES_USER and POSTGRES_PASSWORD injected from Argus-managed secrets:
+        #   argus set secret --app rapidqcms --env <env> POSTGRES_USER rapidqcms
+        #   argus set secret --app rapidqcms --env <env> POSTGRES_PASSWORD <password>

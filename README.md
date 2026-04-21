@@ -1,72 +1,137 @@
-# Rapid QC-MS
-**Rapid QC-MS** is an all-in-one solution for automated quality control of liquid chromatography-mass spectrometry (LC-MS) instrument runs, both during and after data acquisition.
+# Rapid-QC-MS
 
-![](https://public.czbiohub.org/rapid-qc-ms-docs/Overview/rapidqcms-demo.gif)
+**Automated QC orchestrator for LC-MS instruments at CZ Biohub SF.**
 
-It offers a fast, straightforward approach to ensure collection of high-quality data, allowing for less time investigating raw data and more time conducting experiments.
+Rapid-QC-MS sits between instrument data acquisition and downstream HPC pipelines. It evaluates raw data at four checkpoints and gates each step: a Pass lets the pipeline proceed; a Fail drops a `.qc_fail` sidecar next to the raw file and blocks the next step.
 
-Developed at the [Mass Spectrometry Platform of CZ Biohub San Francisco](https://www.czbiohub.org/mass-spec/), Rapid QC-MS provides a host of key features to streamline untargeted metabolomics research, such as:
+---
 
-- **Automated and user-defined quality control checks** during instrument runs
-- **Realtime updates on QC fails** in the form of Slack or email notifications
-- **Interactive data visualization** of internal standard retention time, _m/z_, and intensity across samples
-- **Google Drive cloud sync** and secure, Google-authenticated access to QC results from any device
+## Checkpoint architecture
 
-![](https://public.czbiohub.org/rapid-qc-ms-docs/Home/intensity.png)
-![](https://public.czbiohub.org/rapid-qc-ms-docs/Overview/RapidQCMS-BioStndDemo.gif)
-![](https://public.czbiohub.org/rapid-qc-ms-docs/Overview/slack_example.png)
-
-# Requirements
-**Rapid QC-MS was designed to run on Windows platforms** because of its dependency on [MSConvert](https://proteowizard.sourceforge.io/tools/msconvert.html) for vendor format data conversion and [MS-DIAL](http://prime.psc.riken.jp/compms/msdial/main.html) for data processing and identification. However, MacOS users can still use Rapid QC-MS to monitor / view their instrument run data.
-
-In addition, Rapid QC-MS requires Python 3.8 to 3.11 and various Python packages, including:
-
-- Pandas
-- SQLAlchemy
-- Plotly Dash
-- Bootstrap
-- Watchdog
-- Google API
-- Slack API
-
-These are installed automatically during setup.
-
-**Note:** Installation of Python and various Python packages on MS instrument computers comes at no risk. For extra security and peace of mind, you can opt to install Rapid QC-MS in a virtual environment. To learn more, please read the [installation guide](https://czbiohub-sf.github.io/Rapid-QC-MS/installation.html#2-install-ms-autoqc).
-
-# Installation
-Installing Rapid QC-MS is easy. Simply open your Terminal or Command Prompt and enter:
-```python
-py -m pip install rapid-qc-ms
+```
+Instrument acquisition
+        │
+  ┌─────▼──────┐
+  │ C1: Pre-   │  Instrument health check (future)
+  │ acquisition│
+  └─────┬──────┘
+        │ .qc_pass
+  ┌─────▼──────────────┐
+  │ C2: Post-raw-file  │  metabolomics_pre / proteomics_pre modules
+  │    (pre-search)    │  Reads raw/.mzML; writes .qc_pass or .qc_fail
+  └─────┬──────────────┘
+        │ .qc_pass
+        ▼
+   FragPipe / MS-DIAL
+        │
+  ┌─────▼──────────────┐
+  │ C3: Post-search    │  (future) post_search module
+  │ (pre-stats)        │  Reads msstats.csv / report.tsv
+  └─────┬──────────────┘
+        │ .qc_pass
+        ▼
+   Statistical treatment
+        │
+  ┌─────▼──────────────┐
+  │ C4: Post-stats     │  (future) post_stats module
+  │ (pre-delivery)     │  Final delivery gate → ProteOhub
+  └─────┬──────────────┘
+        │ .qc_pass
+        ▼
+   CZB-MAP Nextflow / delivery
 ```
 
-If you have multiple versions of python on your system, you can specifiy the version you want to use this way
-```py -3.# -m pip install rapid-qc-ms```
+Gate files are JSON so downstream scripts can read the QC outcome and metrics without querying the database:
 
-Python dependencies are installed automatically, but dependencies such as MSConvert and MS-DIAL will need to be installed manually.
-
-You can also opt to download and install Rapid QC-MS manually, or in a virtual environment if you prefer. Check out the [installation guide](https://czbiohub-sf.github.io/Rapid-QC-MS/installation.html#2-install-ms-autoqc) for more details.
-
-[Example data](http://dx.doi.org/10.21228/M8Z119) can be downloaded from metabolomics workbench with [supplementary example files](https://doi.org/10.5281/zenodo.10525183) (sequence .csv, library .msp, and additional .raw files not published through workbench) available on zenodo.
-
-# Usage
-To start Rapid QC-MS, simply enter:
-```python
-rapidqcms
+```json
+{
+  "status": "Pass",
+  "stage": "pre_search",
+  "module": "pipeline",
+  "metrics": {"modules_run": 2, "per_module": {"metabolomics_pre": "Pass"}},
+  "timestamp": "2025-01-15T09:32:11+00:00"
+}
 ```
 
-Check out the [quickstart guide](https://czbiohub-sf.github.io/Rapid-QC-MS/quickstart.html) to learn how easy setting up new QC jobs is.
+---
 
-![](https://public.czbiohub.org/rapid-qc-ms-docs/Overview/new_job_process.gif)
+## Architecture
 
-# Supported instrument vendors
-Rapid QC-MS was designed to be a universal, open-source solution for data quality control. Because MSConvert converts raw acquired data into open mzML format before routing it to the data processing pipeline, the package will work seamlessly with data of all vendor formats.
+```
+src/rapidqcms/
+  config/           Settings dataclass (env vars), qc_config.yaml, lab_config.toml
+  db/               SQLAlchemy models, connection, results, migration
+  qc/               QCModule ABC + registry; metabolomics_pre, proteomics_pre modules
+  service/
+    pipeline.py     Orchestrator: load registry → run modules → write gate file
+    processor.py    MSConvert + MS-DIAL subprocess wrappers
+    events/         Gate file I/O (write_gate_file, read_gate_file, get_gate_status)
+    watchers/       File-system watchers (listener, watcher, mzml_watcher)
+  storage/          StorageBackend protocol; LocalStorageBackend, S3StorageBackend
+  dashboard/        Dash 2.x web app (app, layout, callbacks, plots, auth)
+```
 
-**However, Rapid QC-MS has only been tested extensively on Thermo Fisher mass spectrometers, Thermo acquisition sequences, and Thermo RAW files.** As such, it is expected that there may be bugs and issues with processing data of other vendor formats.
+**Database:** PostgreSQL on AWS RDS (prod) / SQLite (local dev).
+**Storage:** S3 (prod) / local filesystem (dev).
+**Auth:** Okta SSO (dashboard). No-op when Okta env vars are absent.
 
-If you encounter a bug, please report it by [opening an issue on GitHub](https://github.com/czbiohub-sf/Rapid-QC-MS/issues).
+---
 
-We are open to collaboration! If you would like to help us develop support for Agilent, Bruker, Sciex, or Waters acquisition sequences and data files, please send an email to [brian.defelice@czbiohub.org](mailto:brian.defelice@czbiohub.org).
+## Quick start
 
-# Publication
-https://pubs.acs.org/doi/full/10.1021/acs.analchem.4c00786
-If you found this useful, please cite the paper
+```bash
+# 1. Install
+pip install -e ".[dev]"
+
+# 2. Serve dashboard (SQLite, local dev)
+RAPIDQCMS_DB_URL="sqlite:////$(pwd)/data/rapidqcms.db" rapidqcms serve --no-browser
+
+# 3. Watch a directory for mzML files and run metabolomics QC automatically
+rapidqcms mzml-watch --path ./data/mzml
+```
+
+See [`docs/local_dev.md`](docs/local_dev.md) for full setup instructions.
+
+---
+
+## How to add a QC module
+
+1. Create `src/rapidqcms/qc/my_module.py` and subclass `QCModule`:
+
+```python
+from rapidqcms.qc.base import QCModule, QCResult, QCStatus
+
+class MyModule(QCModule):
+    name = "my_module"
+
+    def analyze(self, input_path, context):
+        # ... your checks ...
+        return QCResult(status=QCStatus.PASS, module=self.name, metrics={})
+```
+
+2. Register it in `src/rapidqcms/config/qc_modules.toml`:
+
+```toml
+[modules.my_module]
+enabled = true
+stage = "pre_search"
+experiment_type = "metabolomics"
+```
+
+3. Add checkpoint mapping in `src/rapidqcms/config/qc_config.yaml` under `checkpoints.c2.modules`.
+
+The `pipeline.run_qc()` orchestrator picks up registered modules automatically.
+
+---
+
+## Configuration files
+
+| File | Purpose |
+|------|---------|
+| `src/rapidqcms/config/qc_config.yaml` | IS library, checkpoint definitions |
+| `src/rapidqcms/config/qc_modules.toml` | Module registry (enabled, stage, experiment_type) |
+| `lab_config.toml` | Instrument registration (used by `rapidqcms watch`) |
+
+Key environment variables: `RAPIDQCMS_DB_URL`, `RAPIDQCMS_STORAGE_BACKEND`, `RAPIDQCMS_S3_BUCKET`, `RAPIDQCMS_SLACK_BOT_TOKEN`, `RAPIDQCMS_OKTA_DOMAIN/CLIENT_ID/CLIENT_SECRET`.
+
+Full env var table: [`docs/local_dev.md`](docs/local_dev.md#environment-variables).

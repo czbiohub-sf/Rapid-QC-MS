@@ -1,0 +1,32 @@
+name: Create/update prod stack
+
+on:
+  release:
+    types: [published]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  create-stack:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Create/update prod stack
+        id: upsert
+        uses: chanzuckerberg/argus-artifacts/ci/packages/create-stack@v0
+        with:
+          appName: rapidqcms
+          envName: prod
+          waitForDeploymentSeconds: 300
+          postStackDetails: body
+
+      - name: Notify
+        run: echo "Stack stable at $STACK_URL"
+        env:
+          STACK_URL: ${{ steps.upsert.outputs.baseURL }}

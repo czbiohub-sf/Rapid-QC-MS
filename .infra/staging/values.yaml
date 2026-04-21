@@ -1,0 +1,9 @@
+###### Generated using `argus bootstrap` command ######
+stack:
+  services:
+    web:
+      image:
+        tag: sha-TO-BE-REPLACED-BY-BUILDER-WORKFLOW
+      env:
+        - name: EXAMPLE_ENV
+          value: "hello world"
