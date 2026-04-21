@@ -20,6 +20,8 @@ min_intensity       = 1e4    # minimum peak intensity to count as detected
 warn_fill_fraction  = 0.90   # IS detection rate below this → Warn
 fail_fill_fraction  = 0.70   # IS detection rate below this → Fail
 rt_deviation_warn   = 0.50   # IS RT shift above this (min) → Warn
+mz_deviation_warn_ppm = 5.0  # IS m/z shift above this (ppm) → Warn
+mz_deviation_fail_ppm = 10.0 # IS m/z shift above this (ppm) → Fail (matches XIC extraction tolerance)
 
 [modules.metabolomics_pre.checks]
 fill_fraction_enabled = true
