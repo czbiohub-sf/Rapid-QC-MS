@@ -49,6 +49,43 @@ internal_standards:
       - {name: "1_Serine_d8",                  mz: 107.0543,  rt: 8.7138}
       - {name: "1_TRYPTOPHAN-2,4,5,6,7-D5",   mz: 208.114,   rt: 6.849}
 
+  shortHILIC:
+    Pos:
+      - {name: "1_CUDA iSTD",                  mz: 341.2798,  rt: 0.483}
+      - {name: "1_HippuricAcid_d5",            mz: 185.0967,  rt: 1.032}
+      - {name: "1_Creatinine_d3",              mz: 117.0851,  rt: 1.605}
+      - {name: "1_Choline_d9",                 mz: 113.1637,  rt: 1.759}
+      - {name: "1_TMAO_d9",                    mz:  85.1328,  rt: 1.823}
+      - {name: "1_Serotonin_d4",               mz: 181.1274,  rt: 1.893}
+      - {name: "1_1-Methylnicotinamide-d3",    mz: 140.0897,  rt: 2.055}
+      - {name: "1_Tryptophan-d5",              mz: 210.1283,  rt: 2.205}
+      - {name: "1_Phenylalanine-d8",           mz: 174.1361,  rt: 2.221}
+      - {name: "1_Acetylcarnitine_d3",         mz: 207.1419,  rt: 2.297}
+      - {name: "1_Methionine_d8",              mz: 158.1082,  rt: 2.373}
+      - {name: "1_Valine_d8",                  mz: 126.1364,  rt: 2.452}
+      - {name: "1_Carnitine_d3",               mz: 165.1313,  rt: 2.453}
+      - {name: "1_Creatine_d3",                mz: 135.0956,  rt: 2.600}
+      - {name: "1_Alanine_d3",                 mz:  93.0743,  rt: 2.603}
+      - {name: "1_Serine_d3",                  mz: 109.0686,  rt: 2.752}
+      - {name: "1_Glutamine_d5",               mz: 152.1078,  rt: 2.754}
+      - {name: "1_Glutamic Acid_d3",           mz: 151.0793,  rt: 2.785}
+      - {name: "1_Aspartic acid_d3",           mz: 137.0637,  rt: 2.946}
+      - {name: "1_Arginine_d7",                mz: 182.1627,  rt: 2.998}
+      - {name: "1_Lysine-d8",                  mz: 155.1628,  rt: 3.024}
+    Neg:
+      - {name: "1_CUDA iSTD",                  mz: 339.2655,  rt: 0.459}
+      - {name: "1_d5_Hippuric Acid",           mz: 183.0822,  rt: 1.073}
+      - {name: "1_D3-Creatinine iSTD",         mz: 115.0693,  rt: 1.591}
+      - {name: "1_TRYPTOPHAN-2,4,5,6,7-D5",   mz: 208.114,   rt: 2.196}
+      - {name: "1_Methionine_d8",              mz: 156.0941,  rt: 2.388}
+      - {name: "1_D3-Alanine iSTD",            mz:  91.0580,  rt: 2.596}
+      - {name: "1_D5-L-Glutamine iSTD",        mz: 150.0922,  rt: 2.753}
+      - {name: "1_Serine_d8",                  mz: 107.0543,  rt: 2.770}
+      - {name: "1_D3-Glutamic acid iSTD",      mz: 149.0636,  rt: 2.798}
+      - {name: "1_D3-Aspartic acid iSTD",      mz: 135.0479,  rt: 2.947}
+      - {name: "1_Arginine_d7",                mz: 180.1485,  rt: 3.011}
+      - {name: "1_Lysine_d8",                  mz: 153.1486,  rt: 3.037}
+
 # ---------------------------------------------------------------------------
 # Future: instrument drift thresholds (one block per instrument ID)
 # ---------------------------------------------------------------------------
