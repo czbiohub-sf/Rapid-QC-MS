@@ -301,10 +301,13 @@ def register(app):
             df = df.loc[df["Specimen"].str.contains(_POOL_RE, na=False, regex=True)]
         elif sample_filter == "blanks":
             df = df.loc[df["Specimen"].str.contains(_BLANK_RE, na=False, regex=True)]
+        elif sample_filter == "column_cond":
+            df = df.loc[df["Specimen"].str.contains(_COLCOND_RE, na=False, regex=True, case=False)]
         elif sample_filter == "specimens":
-            is_pool  = df["Specimen"].str.contains(_POOL_RE,  na=False, regex=True)
-            is_blank = df["Specimen"].str.contains(_BLANK_RE, na=False, regex=True)
-            df = df.loc[~(is_pool | is_blank)]
+            is_pool    = df["Specimen"].str.contains(_POOL_RE,    na=False, regex=True)
+            is_blank   = df["Specimen"].str.contains(_BLANK_RE,   na=False, regex=True)
+            is_colcond = df["Specimen"].str.contains(_COLCOND_RE, na=False, regex=True, case=False)
+            df = df.loc[~(is_pool | is_blank | is_colcond)]
 
         cols = [c for c in ["Specimen", "Status", "Notes"] if c in df.columns]
         return df[cols].to_dict("records")
