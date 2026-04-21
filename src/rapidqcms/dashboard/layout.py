@@ -150,7 +150,7 @@ def serve_layout():
                                             id="sample-filtering-options",
                                             className="btn-group",
                                             inputClassName="btn-check",
-                                            labelClassName="btn btn-outline-primary",
+                                            labelClassName="btn btn-outline-primary btn-sm",
                                             inputCheckedClassName="active",
                                             value="all",
                                             options=[
