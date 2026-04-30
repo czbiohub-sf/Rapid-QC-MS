@@ -3,12 +3,14 @@ process MSDIAL_CONSOLE {
     label 'process_high'
 
     publishDir "${params.outdir}/${polarity}", mode: 'copy', pattern: 'output/AlignResult-*.msdial'
+    publishDir "${params.outdir}/${polarity}", mode: 'copy', pattern: 'output/AlignResult-*.msp'
 
     input:
     tuple val(polarity), path(manifest), path(params_file)
 
     output:
     tuple val(polarity), path("output/AlignResult-*.msdial"), emit: align_result
+    tuple val(polarity), path("output/AlignResult-*.msp"),    emit: msp_library
     path "output/**",                                          emit: all_output
 
     script:
