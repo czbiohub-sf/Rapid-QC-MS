@@ -5,8 +5,8 @@ process STANDARDIZE {
     publishDir "${params.outdir}", mode: 'copy'
 
     input:
-    path pos_align
-    path neg_align
+    path pos_align, stageAs: 'pos_*'
+    path neg_align, stageAs: 'neg_*'
 
     output:
     path "feature_matrix.csv", emit: matrix
