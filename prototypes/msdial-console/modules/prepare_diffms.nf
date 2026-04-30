@@ -13,7 +13,7 @@ process PREPARE_DIFFMS {
     """
     set -euo pipefail
 
-    python3 ${projectDir}/scripts/sirius_to_diffms.py \
+    python3.9 ${projectDir}/scripts/sirius_to_diffms.py \
         --msp ${msp_file} \
         --sirius-summary ${sirius_summary} \
         --polarity ${polarity} \

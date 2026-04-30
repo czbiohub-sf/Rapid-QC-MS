@@ -45,12 +45,13 @@ workflow {
     MSDIAL_POS( ch_pos )
     MSDIAL_NEG( ch_neg )
 
-    // Standardize feature matrix
-    ch_align = MSDIAL_POS.out.align_result
-        .mix( MSDIAL_NEG.out.align_result )
-        .collect()
+    // Standardize feature matrix — pass pos and neg AlignResult files separately
+    ch_pos_align = MSDIAL_POS.out.align_result.map { pol, f -> f }
+        .ifEmpty( file('NO_FILE') )
+    ch_neg_align = MSDIAL_NEG.out.align_result.map { pol, f -> f }
+        .ifEmpty( file('NO_FILE') )
 
-    STANDARDIZE( ch_align )
+    STANDARDIZE( ch_pos_align, ch_neg_align )
 
     // --- Annotation pipeline (optional) ---
     if ( params.run_annotation ) {
