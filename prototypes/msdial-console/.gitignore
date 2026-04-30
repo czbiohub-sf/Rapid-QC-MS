@@ -1,5 +1,6 @@
 work/
 output/
+results/
 *.log
 *.tmp
 *.dcl
@@ -7,3 +8,7 @@ output/
 *.mtd
 *.mtd2
 *.msp2
+.nextflow/
+.nextflow.log*
+*.sif
+containers/MsdialConsoleApp_linux-x64/
