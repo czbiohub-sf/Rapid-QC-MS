@@ -9,9 +9,23 @@ params.tool_name     = 'msdial-console'
 params.outdir        = 'results'
 params.msdial_binary = '/hpc/mydata/anthony.goering/opt/msdial4/MsdialConsoleApp'
 
+// Annotation pipeline (optional)
+params.run_annotation   = false
+params.sirius_binary    = '/hpc/mydata/anthony.goering/opt/sirius/sirius/bin/sirius'
+params.sirius_profile   = 'orbitrap'
+params.sirius_candidates = 5
+params.sirius_ppm       = 10
+params.diffms_repo      = '/home/anthony.goering/repos/DiffMS'
+params.diffms_checkpoint = null
+params.diffms_samples   = 10
+
 include { MSDIAL_CONSOLE as MSDIAL_POS } from './modules/msdial'
 include { MSDIAL_CONSOLE as MSDIAL_NEG } from './modules/msdial'
 include { STANDARDIZE }                   from './modules/standardize'
+include { SIRIUS_FORMULAS as SIRIUS_POS } from './modules/sirius'
+include { SIRIUS_FORMULAS as SIRIUS_NEG } from './modules/sirius'
+include { PREPARE_DIFFMS }                from './modules/prepare_diffms'
+include { DIFFMS_PREDICT }                from './modules/diffms'
 
 workflow {
 
@@ -27,14 +41,48 @@ workflow {
         ? Channel.of( tuple('neg', file(params.manifest_neg), file(params.params_neg)) )
         : Channel.empty()
 
-    // Pos and neg run in parallel as independent SLURM jobs
+    // --- Feature detection ---
     MSDIAL_POS( ch_pos )
     MSDIAL_NEG( ch_neg )
 
-    // Collect AlignResult outputs from both polarities, then standardize
+    // Standardize feature matrix
     ch_align = MSDIAL_POS.out.align_result
         .mix( MSDIAL_NEG.out.align_result )
         .collect()
 
     STANDARDIZE( ch_align )
+
+    // --- Annotation pipeline (optional) ---
+    if ( params.run_annotation ) {
+
+        // Run SIRIUS on MSP files for formula prediction
+        SIRIUS_POS( MSDIAL_POS.out.msp_library )
+        SIRIUS_NEG( MSDIAL_NEG.out.msp_library )
+
+        // Prepare DiffMS input from each polarity
+        // Join MSP + SIRIUS summary by polarity
+        ch_diffms_pos = MSDIAL_POS.out.msp_library
+            .join( SIRIUS_POS.out.summary )
+
+        ch_diffms_neg = MSDIAL_NEG.out.msp_library
+            .join( SIRIUS_NEG.out.summary )
+
+        // Prepare DiffMS input for each polarity that has data
+        ch_prep = ch_diffms_pos.mix( ch_diffms_neg )
+
+        ch_prep.map { polarity, msp, summary ->
+            tuple( polarity, msp )
+        }.set { ch_msp_for_prep }
+
+        ch_prep.map { polarity, msp, summary ->
+            tuple( polarity, summary )
+        }.set { ch_summary_for_prep }
+
+        PREPARE_DIFFMS( ch_msp_for_prep, ch_summary_for_prep )
+
+        // Run DiffMS if checkpoint is provided
+        if ( params.diffms_checkpoint ) {
+            DIFFMS_PREDICT( PREPARE_DIFFMS.out.diffms_dir )
+        }
+    }
 }
