@@ -1,0 +1,9 @@
+work/
+output/
+*.log
+*.tmp
+*.dcl
+*.pai
+*.mtd
+*.mtd2
+*.msp2
