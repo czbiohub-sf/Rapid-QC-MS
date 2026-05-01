@@ -9,6 +9,14 @@ params.tool_name     = 'msdial-console'
 params.outdir        = 'results'
 params.msdial_binary = '/hpc/mydata/anthony.goering/opt/msdial4/MsdialConsoleApp'
 
+// Molecular networking (optional)
+params.run_molnet         = false
+params.molnet_binary      = '/hpc/mydata/anthony.goering/opt/molnet/molnet'
+params.molnet_min_cosine  = 0.7
+params.molnet_min_matched = 4
+params.molnet_top_k       = 10
+params.molnet_graphml     = true
+
 // Annotation pipeline (optional)
 params.run_annotation   = false
 params.sirius_binary    = '/hpc/mydata/anthony.goering/opt/sirius/sirius/bin/sirius'
@@ -26,6 +34,8 @@ include { SIRIUS_FORMULAS as SIRIUS_POS } from './modules/sirius'
 include { SIRIUS_FORMULAS as SIRIUS_NEG } from './modules/sirius'
 include { PREPARE_DIFFMS }                from './modules/prepare_diffms'
 include { DIFFMS_PREDICT }                from './modules/diffms'
+include { MOLNET as MOLNET_POS }          from './modules/molnet'
+include { MOLNET as MOLNET_NEG }          from './modules/molnet'
 
 workflow {
 
@@ -52,6 +62,12 @@ workflow {
         .ifEmpty( file('NO_FILE') )
 
     STANDARDIZE( ch_pos_align, ch_neg_align )
+
+    // --- Molecular networking (optional) ---
+    if ( params.run_molnet ) {
+        MOLNET_POS( MSDIAL_POS.out.msp_library )
+        MOLNET_NEG( MSDIAL_NEG.out.msp_library )
+    }
 
     // --- Annotation pipeline (optional) ---
     if ( params.run_annotation ) {
