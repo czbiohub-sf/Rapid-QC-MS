@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 #[derive(Debug, Clone, Copy)]
 pub struct Peak {
     pub mz: f64,
@@ -14,6 +16,8 @@ pub struct Spectrum {
     pub ion_mode: String,
     pub alignment_id: String,
     pub peaks: Vec<Peak>,
+    /// Extra metadata fields from MSP (FORMULA, SMILES, INCHIKEY, etc.)
+    pub extra: HashMap<String, String>,
 }
 
 impl Spectrum {
@@ -41,5 +45,10 @@ impl Spectrum {
         for p in &mut self.peaks {
             p.intensity = p.intensity.abs().sqrt();
         }
+    }
+
+    /// Get an extra metadata field, or empty string if absent.
+    pub fn get_meta(&self, key: &str) -> String {
+        self.extra.get(key).cloned().unwrap_or_default()
     }
 }

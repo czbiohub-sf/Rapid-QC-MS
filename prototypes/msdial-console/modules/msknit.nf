@@ -22,7 +22,7 @@ process MSKNIT {
 
     echo "[${polarity}] Running molecular networking"
 
-    ${params.msknit_binary} \
+    ${params.msknit_binary} network \
         --input ${msp_file} \
         --outdir msknit_out \
         --min-cosine ${cosine_thresh} \

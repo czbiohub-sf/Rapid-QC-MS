@@ -141,6 +141,7 @@ pub fn simple_cosine(a: &Spectrum, b: &Spectrum, tolerance: f64) -> SimilarityRe
 mod tests {
     use super::*;
     use crate::spectrum::Peak;
+    use std::collections::HashMap;
 
     fn make_spectrum(index: usize, precursor_mz: f64, peaks: &[(f64, f64)]) -> Spectrum {
         Spectrum {
@@ -155,6 +156,7 @@ mod tests {
                 .iter()
                 .map(|&(mz, intensity)| Peak { mz, intensity })
                 .collect(),
+            extra: HashMap::new(),
         }
     }
 

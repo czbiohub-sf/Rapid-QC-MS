@@ -1,4 +1,5 @@
 use crate::spectrum::{Peak, Spectrum};
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
@@ -16,6 +17,7 @@ fn parse_msp_str(content: &str, start_index: usize) -> Vec<Spectrum> {
     let mut retention_time = 0.0;
     let mut ion_mode = String::new();
     let mut alignment_id = String::new();
+    let mut extra: HashMap<String, String> = HashMap::new();
     let mut num_peaks: Option<usize> = None;
     let mut peaks: Vec<Peak> = Vec::new();
     let mut reading_peaks = false;
@@ -35,6 +37,7 @@ fn parse_msp_str(content: &str, start_index: usize) -> Vec<Spectrum> {
                     ion_mode: std::mem::take(&mut ion_mode),
                     alignment_id: std::mem::take(&mut alignment_id),
                     peaks: std::mem::take(&mut peaks),
+                    extra: std::mem::take(&mut extra),
                 };
                 spec.sort_peaks();
                 spectra.push(spec);
@@ -72,7 +75,9 @@ fn parse_msp_str(content: &str, start_index: usize) -> Vec<Spectrum> {
                     num_peaks = val.parse().ok();
                     reading_peaks = true;
                 }
-                _ => {}
+                _ => {
+                    extra.insert(key, val.to_string());
+                }
             }
         }
     }
@@ -88,6 +93,7 @@ fn parse_msp_str(content: &str, start_index: usize) -> Vec<Spectrum> {
             ion_mode,
             alignment_id,
             peaks,
+            extra,
         };
         spec.sort_peaks();
         spectra.push(spec);
@@ -142,5 +148,7 @@ Num Peaks: 2
         assert!((spectra[0].precursor_mz - 302.11472).abs() < 1e-5);
         assert_eq!(spectra[1].alignment_id, "99");
         assert_eq!(spectra[1].peaks.len(), 2);
+        // Extra metadata captured
+        assert!(spectra[0].extra.is_empty()); // no extra fields in this test MSP
     }
 }
