@@ -23,7 +23,7 @@ struct Cli {
     tolerance: f64,
 
     /// Minimum cosine similarity
-    #[arg(long, default_value_t = 0.6)]
+    #[arg(long, default_value_t = 0.7)]
     min_cosine: f64,
 
     /// Minimum matched peaks

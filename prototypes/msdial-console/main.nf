@@ -12,7 +12,7 @@ params.msdial_binary = '/hpc/mydata/anthony.goering/opt/msdial4/MsdialConsoleApp
 // Molecular networking (optional)
 params.run_msknit         = false
 params.msknit_binary      = '/hpc/mydata/anthony.goering/opt/msknit/msknit'
-params.msknit_min_cosine  = 0.6
+params.msknit_min_cosine  = 0.7
 params.msknit_min_matched = 4
 params.msknit_top_k       = 10
 params.msknit_graphml     = true
