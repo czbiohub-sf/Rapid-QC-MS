@@ -44,6 +44,7 @@ include { MSKNIT as MSKNIT_NEG }          from './modules/msknit'
 include { PYCUTTER_STEP1 as PYCUTTER_POS } from './modules/pycutter'
 include { PYCUTTER_STEP1 as PYCUTTER_NEG } from './modules/pycutter'
 include { PYCUTTER_STEP2 }                 from './modules/pycutter'
+include { BUILD_PSEUDOLIBRARY }            from './modules/pseudolibrary'
 
 workflow {
 
@@ -122,6 +123,17 @@ workflow {
         // Run DiffMS if checkpoint is provided
         if ( params.diffms_checkpoint ) {
             DIFFMS_PREDICT( PREPARE_DIFFMS.out.diffms_dir )
+
+            // Build pseudolibrary from original spectra + DiffMS predictions
+            ch_all_msp = MSDIAL_POS.out.msp_library.map { pol, f -> f }
+                .mix( MSDIAL_NEG.out.msp_library.map { pol, f -> f } )
+                .collect()
+
+            BUILD_PSEUDOLIBRARY(
+                ch_all_msp,
+                DIFFMS_PREDICT.out.predictions,
+                DIFFMS_PREDICT.out.input_data
+            )
         }
     }
 }
