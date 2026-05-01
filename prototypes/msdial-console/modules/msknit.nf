@@ -1,4 +1,4 @@
-process MOLNET {
+process MSKNIT {
     tag "${polarity}"
     label 'process_medium'
 

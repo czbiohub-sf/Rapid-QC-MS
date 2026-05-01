@@ -17,6 +17,11 @@ params.msknit_min_matched = 4
 params.msknit_top_k       = 10
 params.msknit_graphml     = true
 
+// PyCutter QC and preprocessing (optional)
+params.run_pycutter          = false
+params.pycutter_dir          = '/home/anthony.goering/repos/PyCutterForMetabolites'
+params.pycutter_experiment   = 'experiment'
+
 // Annotation pipeline (optional)
 params.run_annotation   = false
 params.sirius_binary    = '/hpc/mydata/anthony.goering/opt/sirius/sirius/bin/sirius'
@@ -36,6 +41,9 @@ include { PREPARE_DIFFMS }                from './modules/prepare_diffms'
 include { DIFFMS_PREDICT }                from './modules/diffms'
 include { MSKNIT as MSKNIT_POS }          from './modules/msknit'
 include { MSKNIT as MSKNIT_NEG }          from './modules/msknit'
+include { PYCUTTER_STEP1 as PYCUTTER_POS } from './modules/pycutter'
+include { PYCUTTER_STEP1 as PYCUTTER_NEG } from './modules/pycutter'
+include { PYCUTTER_STEP2 }                 from './modules/pycutter'
 
 workflow {
 
@@ -67,6 +75,20 @@ workflow {
     if ( params.run_msknit ) {
         MSKNIT_POS( MSDIAL_POS.out.msp_library )
         MSKNIT_NEG( MSDIAL_NEG.out.msp_library )
+    }
+
+    // --- PyCutter QC and preprocessing (optional) ---
+    if ( params.run_pycutter ) {
+        PYCUTTER_POS( MSDIAL_POS.out.align_result )
+        PYCUTTER_NEG( MSDIAL_NEG.out.align_result )
+
+        // Combine pos/neg after Step 1
+        ch_pyc_pos = PYCUTTER_POS.out.step1_xlsx.map { pol, f -> f }
+            .ifEmpty( file('NO_FILE') )
+        ch_pyc_neg = PYCUTTER_NEG.out.step1_xlsx.map { pol, f -> f }
+            .ifEmpty( file('NO_FILE') )
+
+        PYCUTTER_STEP2( ch_pyc_pos, ch_pyc_neg )
     }
 
     // --- Annotation pipeline (optional) ---
