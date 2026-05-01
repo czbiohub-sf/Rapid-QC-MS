@@ -1,4 +1,5 @@
 work/
+intermediate/
 output/
 results/
 *.log

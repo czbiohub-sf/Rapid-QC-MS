@@ -8,7 +8,7 @@ use log::info;
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "molnet", about = "Molecular networking from MSP spectral data")]
+#[command(name = "msknit", about = "Molecular networking from MSP spectral data")]
 struct Cli {
     /// One or more MSP files
     #[arg(short, long, required = true, num_args = 1..)]

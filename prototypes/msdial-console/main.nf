@@ -10,12 +10,12 @@ params.outdir        = 'results'
 params.msdial_binary = '/hpc/mydata/anthony.goering/opt/msdial4/MsdialConsoleApp'
 
 // Molecular networking (optional)
-params.run_molnet         = false
-params.molnet_binary      = '/hpc/mydata/anthony.goering/opt/molnet/molnet'
-params.molnet_min_cosine  = 0.7
-params.molnet_min_matched = 4
-params.molnet_top_k       = 10
-params.molnet_graphml     = true
+params.run_msknit         = false
+params.msknit_binary      = '/hpc/mydata/anthony.goering/opt/msknit/msknit'
+params.msknit_min_cosine  = 0.7
+params.msknit_min_matched = 4
+params.msknit_top_k       = 10
+params.msknit_graphml     = true
 
 // Annotation pipeline (optional)
 params.run_annotation   = false
@@ -34,8 +34,8 @@ include { SIRIUS_FORMULAS as SIRIUS_POS } from './modules/sirius'
 include { SIRIUS_FORMULAS as SIRIUS_NEG } from './modules/sirius'
 include { PREPARE_DIFFMS }                from './modules/prepare_diffms'
 include { DIFFMS_PREDICT }                from './modules/diffms'
-include { MOLNET as MOLNET_POS }          from './modules/molnet'
-include { MOLNET as MOLNET_NEG }          from './modules/molnet'
+include { MSKNIT as MSKNIT_POS }          from './modules/msknit'
+include { MSKNIT as MSKNIT_NEG }          from './modules/msknit'
 
 workflow {
 
@@ -64,9 +64,9 @@ workflow {
     STANDARDIZE( ch_pos_align, ch_neg_align )
 
     // --- Molecular networking (optional) ---
-    if ( params.run_molnet ) {
-        MOLNET_POS( MSDIAL_POS.out.msp_library )
-        MOLNET_NEG( MSDIAL_NEG.out.msp_library )
+    if ( params.run_msknit ) {
+        MSKNIT_POS( MSDIAL_POS.out.msp_library )
+        MSKNIT_NEG( MSDIAL_NEG.out.msp_library )
     }
 
     // --- Annotation pipeline (optional) ---
