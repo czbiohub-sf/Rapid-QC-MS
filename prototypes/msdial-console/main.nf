@@ -142,22 +142,22 @@ workflow {
         MIST_CF_POS( MSDIAL_POS.out.msp_library )
         MIST_CF_NEG( MSDIAL_NEG.out.msp_library )
 
-        // Join MSP + MIST-CF outputs by polarity for DiffMS prep
-        ch_diffms_pos = MSDIAL_POS.out.msp_library
-            .join( MIST_CF_POS.out.formulas )
-            .join( MIST_CF_POS.out.subforms )
-        ch_diffms_neg = MSDIAL_NEG.out.msp_library
-            .join( MIST_CF_NEG.out.formulas )
-            .join( MIST_CF_NEG.out.subforms )
-        ch_prep = ch_diffms_pos.mix( ch_diffms_neg )
-
-        ch_prep.map { polarity, msp, formulas, subforms -> tuple(polarity, msp) }.set { ch_msp_for_prep }
-        ch_prep.map { polarity, msp, formulas, subforms -> tuple(polarity, formulas) }.set { ch_formulas_for_prep }
-        ch_prep.map { polarity, msp, formulas, subforms -> tuple(polarity, subforms) }.set { ch_subforms_for_prep }
-
-        PREPARE_DIFFMS( ch_msp_for_prep, ch_formulas_for_prep, ch_subforms_for_prep )
-
+        // DiffMS de novo structure prediction (disabled — model not suitable
+        // for blind inference on unknowns; kept for future use)
         if ( params.diffms_checkpoint ) {
+            ch_diffms_pos = MSDIAL_POS.out.msp_library
+                .join( MIST_CF_POS.out.formulas )
+                .join( MIST_CF_POS.out.subforms )
+            ch_diffms_neg = MSDIAL_NEG.out.msp_library
+                .join( MIST_CF_NEG.out.formulas )
+                .join( MIST_CF_NEG.out.subforms )
+            ch_prep = ch_diffms_pos.mix( ch_diffms_neg )
+
+            ch_prep.map { polarity, msp, formulas, subforms -> tuple(polarity, msp) }.set { ch_msp_for_prep }
+            ch_prep.map { polarity, msp, formulas, subforms -> tuple(polarity, formulas) }.set { ch_formulas_for_prep }
+            ch_prep.map { polarity, msp, formulas, subforms -> tuple(polarity, subforms) }.set { ch_subforms_for_prep }
+
+            PREPARE_DIFFMS( ch_msp_for_prep, ch_formulas_for_prep, ch_subforms_for_prep )
             DIFFMS_PREDICT( PREPARE_DIFFMS.out.diffms_dir )
 
             // Build pseudolibrary from DiffMS predictions

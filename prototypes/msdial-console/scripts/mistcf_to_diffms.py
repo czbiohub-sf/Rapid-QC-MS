@@ -17,6 +17,8 @@ import re
 import shutil
 from pathlib import Path
 
+import numpy as np
+
 
 def parse_msp_entries(msp_path: Path) -> list[dict]:
     """Parse an MSP file into a list of spectrum entries."""
@@ -54,6 +56,24 @@ def parse_msp_entries(msp_path: Path) -> list[dict]:
 def safe_name(text: str) -> str:
     """Create a filesystem-safe name from text."""
     return re.sub(r"[^A-Za-z0-9_.-]", "_", text)
+
+
+def formula_to_smiles(formula: str) -> str:
+    """Convert a molecular formula to a disconnected-atom SMILES.
+
+    DiffMS generates bond structure (edges) conditioned on a fixed set of
+    atoms (nodes).  The atom identities and count come from the molecular
+    graph built from the SMILES.  By encoding the predicted formula as
+    disconnected atoms, DiffMS gets the correct atom inventory to wire up.
+    """
+    atoms: list[str] = []
+    for match in re.finditer(r"([A-Z][a-z]?)(\d*)", formula):
+        elem, num = match.groups()
+        if elem:
+            count = int(num) if num else 1
+            for _ in range(count):
+                atoms.append(f"[{elem}]")
+    return ".".join(atoms) if atoms else "[C]"
 
 
 def parse_mistcf_formulas(tsv_path: Path) -> dict[str, dict]:
@@ -100,6 +120,81 @@ def write_ms_file(out_path: Path, entry: dict, precursor_mz: str):
             f.write(f"{mz:.5f} {intensity:.1f}\n")
 
 
+def parse_formula(formula: str) -> dict[str, int]:
+    """Parse a molecular formula string into element counts."""
+    counts: dict[str, int] = {}
+    for match in re.finditer(r"([A-Z][a-z]?)(\d*)", formula):
+        elem, num = match.groups()
+        if elem:
+            counts[elem] = counts.get(elem, 0) + (int(num) if num else 1)
+    return counts
+
+
+def write_diffms_stats(out: Path, formulas: list[str], max_nodes: int = 128):
+    """Write dataset statistics for DiffMS marginal transition model.
+
+    DiffMS computes marginal distributions from the training split to use as
+    the prior (limit distribution) in the diffusion process.  With dummy
+    training molecules this produces degenerate/NaN marginals.
+
+    We derive atom-type and node-count statistics from the predicted molecular
+    formulas, which gives a data-driven prior matching our actual spectra.
+
+    Atom types (8): C, O, P, N, S, Cl, F, H
+    Edge types (5): no-edge, single, double, triple, aromatic
+    """
+    # DiffMS atom ordering
+    atom_order = ["C", "O", "P", "N", "S", "Cl", "F", "H"]
+
+    # Count atoms across all predicted formulas
+    atom_counts = np.zeros(len(atom_order))
+    node_sizes = []
+    for f in formulas:
+        parsed = parse_formula(f)
+        total_atoms = 0
+        for i, elem in enumerate(atom_order):
+            n = parsed.get(elem, 0)
+            atom_counts[i] += n
+            total_atoms += n
+        node_sizes.append(total_atoms)
+
+    # Atom-type distribution from real predicted formulas
+    if atom_counts.sum() > 0:
+        atom_types = atom_counts / atom_counts.sum()
+    else:
+        atom_types = np.ones(len(atom_order)) / len(atom_order)
+    print(f"Atom-type distribution from {len(formulas)} formulas: "
+          + ", ".join(f"{a}={v:.3f}" for a, v in zip(atom_order, atom_types)))
+
+    # Edge-type distribution: can't derive from formulas alone, use
+    # reasonable estimates for drug-like molecules
+    # [no-edge, single, double, triple, aromatic]
+    edge_types = np.array([0.90, 0.055, 0.015, 0.002, 0.028])
+    edge_types /= edge_types.sum()
+
+    # Node-count distribution from actual formula sizes
+    n_counts = np.zeros(max_nodes + 1)
+    for s in node_sizes:
+        if s <= max_nodes:
+            n_counts[s] += 1
+    if n_counts.sum() > 0:
+        n_counts /= n_counts.sum()
+    else:
+        # Fallback: Gaussian around 30
+        for i in range(max_nodes + 1):
+            n_counts[i] = np.exp(-0.5 * ((i - 30) / 10) ** 2)
+        n_counts /= n_counts.sum()
+
+    # Valency distribution: reasonable for organic molecules
+    valencies = np.array([0.05, 0.15, 0.30, 0.30, 0.20])
+
+    np.savetxt(out / "atom_types.txt", atom_types)
+    np.savetxt(out / "edge_types.txt", edge_types)
+    np.savetxt(out / "n_counts.txt", n_counts)
+    np.savetxt(out / "valencies.txt", valencies)
+    print(f"Wrote DiffMS stats files to {out}")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--msp", type=Path, required=True,
@@ -126,6 +221,10 @@ def main():
     # Parse MIST-CF formula results
     formulas = parse_mistcf_formulas(args.mistcf_output)
     print(f"Found {len(formulas)} formula predictions from MIST-CF")
+
+    # Write DiffMS stats derived from predicted formulas
+    all_formulas = [info["formula"] for info in formulas.values() if info["formula"]]
+    write_diffms_stats(out, all_formulas)
 
     # Build index of MSP entries by alignment ID
     entry_by_id = {}
@@ -168,21 +267,17 @@ def main():
         labels_rows.append({
             "spec": spec_name,
             "formula": formula,
-            "smiles": "CC",  # dummy SMILES; DiffMS requires valid mol with edges
+            "smiles": formula_to_smiles(formula),
             "instrument": "Orbitrap",
         })
         split_rows.append({"name": spec_name, "split": "test"})
 
     # DiffMS requires non-empty train/val splits even in test-only mode.
-    # Assign the first two entries as dummy train/val with a valid SMILES.
     if len(split_rows) >= 2:
         split_rows[0]["split"] = "train"
-        labels_rows[0]["smiles"] = "C"
         split_rows[1]["split"] = "val"
-        labels_rows[1]["smiles"] = "C"
     elif len(split_rows) == 1:
         split_rows[0]["split"] = "train"
-        labels_rows[0]["smiles"] = "C"
 
     # Write labels.tsv
     labels_path = out / "labels.tsv"
