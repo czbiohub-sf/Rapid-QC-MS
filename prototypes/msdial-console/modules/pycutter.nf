@@ -20,7 +20,7 @@ process PYCUTTER_STEP1 {
 
     echo "[${polarity}] Running PyCutter Step 1"
 
-    source /hpc/mydata/anthony.goering/anaconda/25.3.1/x86_64/etc/profile.d/conda.sh
+    source /hpc/apps/anaconda/25.3.1/etc/profile.d/conda.sh
     conda activate omni
 
     python ${projectDir}/scripts/run_pycutter.py \
@@ -55,7 +55,7 @@ process PYCUTTER_STEP2 {
 
     echo "Running PyCutter Step 2 (combine polarities)"
 
-    source /hpc/mydata/anthony.goering/anaconda/25.3.1/x86_64/etc/profile.d/conda.sh
+    source /hpc/apps/anaconda/25.3.1/etc/profile.d/conda.sh
     conda activate omni
 
     python ${projectDir}/scripts/run_pycutter.py \

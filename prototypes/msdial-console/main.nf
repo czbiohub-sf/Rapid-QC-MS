@@ -29,10 +29,16 @@ params.predicted_library    = null    // Tier 2: predicted spectral library MSP 
 params.search_min_cosine    = 0.7
 params.search_min_matched   = 4
 params.search_precursor_tol = 0.5
-params.sirius_binary        = '/hpc/mydata/anthony.goering/opt/sirius/sirius/bin/sirius'
-params.sirius_profile       = 'orbitrap'
-params.sirius_candidates    = 5
-params.sirius_ppm           = 10
+
+// MIST-CF formula prediction (Tier 3)
+params.mist_cf_dir           = '/hpc/mydata/anthony.goering/opt/mist-cf'
+params.mist_cf_model         = '/hpc/mydata/anthony.goering/opt/mist-cf/quickstart/models/mist_cf_best.ckpt'
+params.mist_cf_fast_model    = '/hpc/mydata/anthony.goering/opt/mist-cf/quickstart/models/fast_filter_best.ckpt'
+params.mist_cf_instrument    = 'Orbitrap (LCMS)'
+params.mist_cf_ppm           = 5
+params.sirius_decomp_binary  = '/hpc/mydata/anthony.goering/opt/sirius/bin/sirius'
+
+// DiffMS de novo structure prediction
 params.diffms_repo          = '/home/anthony.goering/repos/DiffMS'
 params.diffms_checkpoint    = null
 params.diffms_samples       = 10
@@ -49,13 +55,13 @@ include { SPECTRAL_SEARCH as SEARCH_T1_POS } from './modules/spectral_search'
 include { SPECTRAL_SEARCH as SEARCH_T1_NEG } from './modules/spectral_search'
 include { SPECTRAL_SEARCH as SEARCH_T2_POS } from './modules/spectral_search'
 include { SPECTRAL_SEARCH as SEARCH_T2_NEG } from './modules/spectral_search'
-include { SIRIUS_FORMULAS as SIRIUS_POS } from './modules/sirius'
-include { SIRIUS_FORMULAS as SIRIUS_NEG } from './modules/sirius'
-include { PREPARE_DIFFMS }                from './modules/prepare_diffms'
-include { DIFFMS_PREDICT }                from './modules/diffms'
-include { BUILD_PSEUDOLIBRARY }            from './modules/pseudolibrary'
-include { MERGE_ANNOTATIONS as MERGE_POS } from './modules/merge_annotations'
-include { MERGE_ANNOTATIONS as MERGE_NEG } from './modules/merge_annotations'
+include { MIST_CF as MIST_CF_POS }         from './modules/mist_cf'
+include { MIST_CF as MIST_CF_NEG }         from './modules/mist_cf'
+include { PREPARE_DIFFMS }                  from './modules/prepare_diffms'
+include { DIFFMS_PREDICT }                  from './modules/diffms'
+include { BUILD_PSEUDOLIBRARY }             from './modules/pseudolibrary'
+include { MERGE_ANNOTATIONS as MERGE_POS }  from './modules/merge_annotations'
+include { MERGE_ANNOTATIONS as MERGE_NEG }  from './modules/merge_annotations'
 
 workflow {
 
@@ -129,21 +135,27 @@ workflow {
             ch_t2_neg_hits = SEARCH_T2_NEG.out.hits.map { pol, tier, f -> tuple(pol, f) }
         }
 
-        // Tier 3: SIRIUS formula prediction → DiffMS de novo structure generation
+        // Tier 3: MIST-CF formula prediction → DiffMS de novo structure generation
         ch_t3_pos_hits = Channel.of( tuple('pos', file('NO_FILE')) )
         ch_t3_neg_hits = Channel.of( tuple('neg', file('NO_FILE')) )
 
-        SIRIUS_POS( MSDIAL_POS.out.msp_library )
-        SIRIUS_NEG( MSDIAL_NEG.out.msp_library )
+        MIST_CF_POS( MSDIAL_POS.out.msp_library )
+        MIST_CF_NEG( MSDIAL_NEG.out.msp_library )
 
-        ch_diffms_pos = MSDIAL_POS.out.msp_library.join( SIRIUS_POS.out.summary )
-        ch_diffms_neg = MSDIAL_NEG.out.msp_library.join( SIRIUS_NEG.out.summary )
+        // Join MSP + MIST-CF outputs by polarity for DiffMS prep
+        ch_diffms_pos = MSDIAL_POS.out.msp_library
+            .join( MIST_CF_POS.out.formulas )
+            .join( MIST_CF_POS.out.subforms )
+        ch_diffms_neg = MSDIAL_NEG.out.msp_library
+            .join( MIST_CF_NEG.out.formulas )
+            .join( MIST_CF_NEG.out.subforms )
         ch_prep = ch_diffms_pos.mix( ch_diffms_neg )
 
-        ch_prep.map { polarity, msp, summary -> tuple(polarity, msp) }.set { ch_msp_for_prep }
-        ch_prep.map { polarity, msp, summary -> tuple(polarity, summary) }.set { ch_summary_for_prep }
+        ch_prep.map { polarity, msp, formulas, subforms -> tuple(polarity, msp) }.set { ch_msp_for_prep }
+        ch_prep.map { polarity, msp, formulas, subforms -> tuple(polarity, formulas) }.set { ch_formulas_for_prep }
+        ch_prep.map { polarity, msp, formulas, subforms -> tuple(polarity, subforms) }.set { ch_subforms_for_prep }
 
-        PREPARE_DIFFMS( ch_msp_for_prep, ch_summary_for_prep )
+        PREPARE_DIFFMS( ch_msp_for_prep, ch_formulas_for_prep, ch_subforms_for_prep )
 
         if ( params.diffms_checkpoint ) {
             DIFFMS_PREDICT( PREPARE_DIFFMS.out.diffms_dir )

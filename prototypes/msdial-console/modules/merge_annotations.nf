@@ -5,9 +5,9 @@ process MERGE_ANNOTATIONS {
     publishDir "${params.outdir}/${polarity}/annotations", mode: 'copy'
 
     input:
-    tuple val(polarity), path(tier1_hits)
-    tuple val(polarity2), path(tier2_hits)
-    tuple val(polarity3), path(tier3_hits)
+    tuple val(polarity), path(tier1_hits, stageAs: 'tier1_*')
+    tuple val(polarity2), path(tier2_hits, stageAs: 'tier2_*')
+    tuple val(polarity3), path(tier3_hits, stageAs: 'tier3_*')
 
     output:
     tuple val(polarity), path("merged_annotations.csv"), emit: merged

@@ -4,7 +4,8 @@ process PREPARE_DIFFMS {
 
     input:
     tuple val(polarity), path(msp_file)
-    tuple val(polarity2), path(sirius_summary)
+    tuple val(polarity2), path(mistcf_output)
+    tuple val(polarity3), path(mistcf_subforms)
 
     output:
     path "diffms_input", emit: diffms_dir
@@ -13,9 +14,10 @@ process PREPARE_DIFFMS {
     """
     set -euo pipefail
 
-    python3.9 ${projectDir}/scripts/sirius_to_diffms.py \
+    python3.9 ${projectDir}/scripts/mistcf_to_diffms.py \
         --msp ${msp_file} \
-        --sirius-summary ${sirius_summary} \
+        --mistcf-output ${mistcf_output} \
+        --mistcf-subforms ${mistcf_subforms} \
         --polarity ${polarity} \
         --output diffms_input
     """
