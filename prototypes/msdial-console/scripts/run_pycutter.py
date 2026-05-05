@@ -20,7 +20,14 @@ def run_step1(pycutter_dir, input_file, output_file, polarity):
         import shutil
         shutil.copy2(lib_src, "MetaboliteAnnotationLibrary_v1.1.csv")
 
-    from MetabolitePyCutter_Step1_v1_1 import process_single_file
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "pycutter_step1",
+        os.path.join(pycutter_dir, "MetabolitePyCutter_Step1_v1.1.py"),
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    process_single_file = mod.process_single_file
     result, summary = process_single_file(input_file, output_file, polarity=polarity)
 
     if result is not None:

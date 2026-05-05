@@ -39,7 +39,7 @@ process SIRIUS_FORMULAS {
     mkdir -p sirius_summary
     ${params.sirius_binary} \
         --cores ${task.cpus} \
-        sirius_project \
+        --project sirius_project \
         summaries \
             --output sirius_summary
 

@@ -24,6 +24,11 @@ process MSDIAL_CONSOLE {
         -e 's|^[[:space:]]*Intermediate file output folder:.*|Intermediate file output folder: ${PWD}/intermediate|' \
         "${params_file}" > "\${PARAMS_RUNTIME}"
 
+    # Ensure intermediate folder is set even if not present in the original params
+    if ! grep -q 'Intermediate file output folder' "\${PARAMS_RUNTIME}"; then
+        echo "Intermediate file output folder: ${PWD}/intermediate" >> "\${PARAMS_RUNTIME}"
+    fi
+
     mkdir -p output intermediate
 
     echo "[$polarity] MS-DIAL Console starting"

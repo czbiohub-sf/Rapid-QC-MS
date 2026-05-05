@@ -1,102 +1,102 @@
-# MS-DIAL Console Prototype
+# MS-DIAL Console Pipeline
 
-This prototype carries forward the MS-DIAL Console work from `metabolomics-sandbox` so it can be rebuilt and tested on HPC before becoming a proper Nextflow module.
+Nextflow pipeline for LC-MS metabolomics feature detection with MS-DIAL Console, plus optional molecular networking, QC preprocessing, and tiered annotation.
 
-## What Is Here
+## Pipeline Steps
+
+| Step | Module | Flag | Description |
+|---|---|---|---|
+| Feature detection | `msdial.nf` | always on | MS-DIAL Console `lcmsdda` per polarity |
+| Standardize | `standardize.nf` | always on | Combine AlignResults into a unified feature matrix |
+| Molecular networking | `msknit.nf` | `--run_msknit` | MSKnit spectral similarity networks |
+| PyCutter QC | `pycutter.nf` | `--run_pycutter` | Blank subtraction, CV filtering, polarity merge |
+| Tiered annotation | `spectral_search.nf`, `sirius.nf`, `diffms.nf`, etc. | `--run_annotation` | Tier 1 (reference library), Tier 2 (predicted library), Tier 3 (SIRIUS + DiffMS) |
+
+## Directory Layout
 
 ```text
 prototypes/msdial-console/
-  config/tlg1025/
-    input_manifest_pos.csv
-    input_manifest_neg.csv
-    lcms_pos_v3_n100_qcoff.txt
-    lcms_neg_v3_n100_qcoff.txt
-    lcms_pos_v4_blankon_refmatchoff.txt
-    lcms_neg_v4_blankon_refmatchoff.txt
-  docs/
-    console_hpc_build_notes.md
-    msdial_cli_hpc_workflow_plan.md
-    v3_documented_parameter_summary.md
-  scripts/
-    run_msdial_console.sh
-    standardize_msdial_console.py
+  main.nf                    # Pipeline entrypoint
+  nextflow.config            # Default params, SLURM profiles, resource labels
+  modules/                   # Nextflow process definitions
+  scripts/                   # Python/bash helpers called by processes
+  config/tlg1025/            # MS-DIAL parameter files per version (v3, v4, v5)
+  hpc/tlg1025/               # SLURM run scripts and absolute-path manifests
+  notebooks/                 # Analysis notebooks (GUI vs CLI comparison, etc.)
+  docs/                      # Runbook, parameter docs, build notes
+  containers/                # Apptainer/Singularity definitions
 ```
 
-The main operating point is `v3_n100_qcoff`:
+## Quick Start
 
-- `QC at least filter: FALSE`
-- `N% detected in at least one group: 100`
-- blank fold-change removal off
-- one MS-DIAL Console run per polarity
+```bash
+# Load environment
+module load nextflow/24.10.5
 
-The stricter `v4_blankon_refmatchoff` configs are included as a comparison, but they reduced recall substantially in the TLG1025 benchmark.
+# Feature detection only
+nextflow run main.nf \
+    --manifest_pos hpc/tlg1025/input_manifest_pos.csv \
+    --manifest_neg hpc/tlg1025/input_manifest_neg.csv \
+    --params_pos   config/tlg1025/lcms_pos_v5_reflib.txt \
+    --params_neg   config/tlg1025/lcms_neg_v5_reflib.txt \
+    --outdir       results/tlg1025_v5 \
+    -profile standard
+
+# Full pipeline (networking + QC + annotation)
+nextflow run main.nf \
+    --manifest_pos hpc/tlg1025/input_manifest_pos.csv \
+    --manifest_neg hpc/tlg1025/input_manifest_neg.csv \
+    --params_pos   config/tlg1025/lcms_pos_v5_reflib.txt \
+    --params_neg   config/tlg1025/lcms_neg_v5_reflib.txt \
+    --outdir       results/tlg1025_v5 \
+    --run_msknit        true \
+    --run_pycutter      true \
+    --run_annotation    true \
+    --reference_library /path/to/tier1_reference.msp \
+    --predicted_library /path/to/tier2_predicted.msp \
+    -profile standard
+```
+
+Or submit via SLURM: `sbatch hpc/tlg1025/run_tlg1025_v5.sh`
+
+## Manifests
+
+The manifest CSV format expected by MS-DIAL Console:
+
+```csv
+file_path,file_name,type,class_id,batch,analytical_order,inject_volume
+/absolute/path/to/sample.mzML,sample_name,Sample,group1,1,1,5
+```
+
+- `file_path`: absolute path to mzML (required for Nextflow — relative paths break in work dirs)
+- `type`: one of `Sample`, `QC`, or `Blank`
+- `class_id`: biological group used by `N% detected in at least one group`
+
+Manifests with absolute paths live in `hpc/tlg1025/`. The originals with relative paths are in `config/tlg1025/`.
+
+## Parameter Versions
+
+See [docs/runbook.md](docs/runbook.md) for the full run history with configs, rationale, and outcomes.
+
+| Version | Key Change | Config Files |
+|---|---|---|
+| v3 | Recall-optimized baseline, no blank filtering | `lcms_{pos,neg}_v3_n100_qcoff.txt` |
+| v4 | Blank subtraction on, stricter filtering | `lcms_{pos,neg}_v4_blankon_refmatchoff.txt` |
+| v5 | + Jan2026 HILIC reference library for spectral matching | `lcms_{pos,neg}_v5_reflib.txt` |
 
 ## Patched MS-DIAL Fork
 
-Use the CZI fork branch:
+Uses the CZI fork with console patches for manifest-based runs:
 
 ```text
 https://github.com/chanzuckerberg/msdial-fork
 branch: console-hpc-manifest-qc
 ```
 
-That branch contains the console changes needed for manifest-based runs:
+Binary location on HPC: `/hpc/mydata/anthony.goering/opt/msdial4/MsdialConsoleApp`
 
-- parse `QC at least filter`
-- resolve relative CSV manifest paths against the manifest directory
-- route CSV-manifest internal project/temp paths to the output directory
-- build the console app as `net8`
+See [docs/console_hpc_build_notes.md](docs/console_hpc_build_notes.md) for build details.
 
-See `docs/console_hpc_build_notes.md` in the fork repo for build recipes (macOS, Linux/HPC), NuGet source requirements, and MSDIAL4 vs MSDIAL5 comparison.
+## Analysis Notebooks
 
-## Running The Prototype
-
-The copied TLG1025 manifests are examples from the sandbox. Before running on HPC, update or regenerate `file_path` values so they point to mzML files visible from compute nodes.
-
-Example:
-
-```bash
-export MSDIAL_CONSOLE=/hpc/mydata/anthony.goering/opt/msdial4/MsdialConsoleApp
-
-prototypes/msdial-console/scripts/run_msdial_console.sh \
-  pos \
-  prototypes/msdial-console/config/tlg1025/input_manifest_pos.csv \
-  prototypes/msdial-console/config/tlg1025/lcms_pos_v3_n100_qcoff.txt \
-  work/msdial-tlg1025/pos
-
-prototypes/msdial-console/scripts/run_msdial_console.sh \
-  neg \
-  prototypes/msdial-console/config/tlg1025/input_manifest_neg.csv \
-  prototypes/msdial-console/config/tlg1025/lcms_neg_v3_n100_qcoff.txt \
-  work/msdial-tlg1025/neg
-```
-
-Each output directory should contain one `AlignResult-*.msdial` file after a successful run.
-
-## Standardizing Output
-
-Convert positive and negative `AlignResult-*.msdial` files to the feature matrix format:
-
-```bash
-python prototypes/msdial-console/scripts/standardize_msdial_console.py \
-  --pos work/msdial-tlg1025/pos/AlignResult-*.msdial \
-  --neg work/msdial-tlg1025/neg/AlignResult-*.msdial \
-  --tool-name msdial-console-v3-n100-qcoff \
-  --output work/msdial-tlg1025/msdial-console-v3-n100-qcoff_feature_matrix.csv
-```
-
-The output schema is:
-
-```text
-feature_id,mz,rt,polarity,adduct,isotope_parent_id,occurrence_overall,intensity_<sample>...
-```
-
-## Nextflow Direction
-
-Once the HPC smoke test works:
-
-1. Convert `run_msdial_console.sh` into a Nextflow process.
-2. Generate manifests from staged mzML files inside the task work directory.
-3. Set `Number of threads` in params to match `task.cpus`.
-4. Publish `AlignResult-*.msdial`, logs, and the standardized feature matrix.
-5. Keep bulky per-file `.msdial`, `.pai`, and `.dcl` intermediates in scratch unless needed for debugging.
+- `notebooks/02_gui_vs_cli_head_to_head.ipynb` — Feature-level and behavior-level comparison of GUI vs CLI output. Run with `module load anaconda && conda activate omni`.

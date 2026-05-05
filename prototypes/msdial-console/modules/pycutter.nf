@@ -20,7 +20,10 @@ process PYCUTTER_STEP1 {
 
     echo "[${polarity}] Running PyCutter Step 1"
 
-    python3.9 ${projectDir}/scripts/run_pycutter.py \
+    source /hpc/mydata/anthony.goering/anaconda/25.3.1/x86_64/etc/profile.d/conda.sh
+    conda activate omni
+
+    python ${projectDir}/scripts/run_pycutter.py \
         --pycutter-dir ${params.pycutter_dir} \
         step1 \
         --input ${align_result} \
@@ -52,7 +55,10 @@ process PYCUTTER_STEP2 {
 
     echo "Running PyCutter Step 2 (combine polarities)"
 
-    python3.9 ${projectDir}/scripts/run_pycutter.py \
+    source /hpc/mydata/anthony.goering/anaconda/25.3.1/x86_64/etc/profile.d/conda.sh
+    conda activate omni
+
+    python ${projectDir}/scripts/run_pycutter.py \
         --pycutter-dir ${params.pycutter_dir} \
         step2 \
         --pos-xlsx ${pos_xlsx} \

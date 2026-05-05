@@ -1,0 +1,61 @@
+# LCMS Parameter File Example
+
+# Data type
+Ion mode: Negative
+MS1 data type: Centroid
+MS2 data type: Centroid
+
+# Data correction
+Retention time begin: 0
+Retention time end: 100
+Mass range begin: 0
+Mass range end: 2000
+MS2 mass range begin: 0
+MS2 mass range end: 2000
+
+# Centroid parameters
+MS1 tolerance for centroid: 0.01
+MS2 tolerance for centroid: 0.015
+
+# Isotope
+Maximum charged number: 2
+Number of threads: 14
+Intermediate file output folder: /tmp/msdial_intermediate
+
+# Peak detection
+Smoothing method: LinearWeightedMovingAverage
+Smoothing level: 3
+Minimum peak width: 5
+Minimum peak height: 50000
+Mass slice width: 0.01
+
+# Deconvolution
+Sigma window value: 0.5
+MSMS abundance cut off: 0
+Exclude after precursor ion: TRUE
+Keep isotope until: 0.5
+Keep original precursor isotopes: FALSE
+
+# Identification
+MSP file: /hpc/projects/mass_spec_chi/Team/Tony/metabolomics_libraries/internal/Jan2026/negMSP_HILIC_Jan2026.msp
+Retention time tolerance for identification: 0.4
+Accurate MS1 tolerance for identification: 0.01
+Accurate MS2 tolerance for identification: 0.015
+Identification score cut off: 40
+Use retention information for identification scoring: TRUE
+Use retention information for identification filtering: TRUE
+
+# Alignment
+Retention time tolerance for alignment: 0.1
+MS1 tolerance for alignment: 0.015
+Retention time factor for alignment: 0.5
+MS1 factor for alignment: 0.5
+Peak count filter: 0
+QC at least filter: FALSE
+N% detected in at least one group: 100
+Remove feature based on peak height fold-change: TRUE
+Sample max / blank average: 5
+Sample average / blank average: 5
+Keep identified and annotated metabolites: FALSE
+Alignment reference file name: QC_Neg_019822_TLG1025_QE2
+Alignment reference file ID: 58
