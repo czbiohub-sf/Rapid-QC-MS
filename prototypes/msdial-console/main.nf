@@ -62,6 +62,8 @@ include { DIFFMS_PREDICT }                  from './modules/diffms'
 include { BUILD_PSEUDOLIBRARY }             from './modules/pseudolibrary'
 include { MERGE_ANNOTATIONS as MERGE_POS }  from './modules/merge_annotations'
 include { MERGE_ANNOTATIONS as MERGE_NEG }  from './modules/merge_annotations'
+include { ANNOTATE_FEATURES as ANNOTATE_POS } from './modules/annotate_features'
+include { ANNOTATE_FEATURES as ANNOTATE_NEG } from './modules/annotate_features'
 
 workflow {
 
@@ -174,5 +176,9 @@ workflow {
         // Merge tiered annotations per polarity
         MERGE_POS( ch_t1_pos_hits, ch_t2_pos_hits, ch_t3_pos_hits )
         MERGE_NEG( ch_t1_neg_hits, ch_t2_neg_hits, ch_t3_neg_hits )
+
+        // Join annotations onto MS-DIAL feature table
+        ANNOTATE_POS( MSDIAL_POS.out.align_result, MERGE_POS.out.merged )
+        ANNOTATE_NEG( MSDIAL_NEG.out.align_result, MERGE_NEG.out.merged )
     }
 }
