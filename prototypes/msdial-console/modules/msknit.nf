@@ -8,9 +8,10 @@ process MSKNIT {
     tuple val(polarity), path(msp_file)
 
     output:
-    tuple val(polarity), path("msknit_out/edges.csv"),  emit: edges
-    tuple val(polarity), path("msknit_out/nodes.csv"),  emit: nodes
-    path "msknit_out/*",                                 emit: all_output
+    tuple val(polarity), path("msknit_out/edges.csv"),        emit: edges
+    tuple val(polarity), path("msknit_out/nodes.csv"),        emit: nodes
+    tuple val(polarity), path("msknit_out/network.graphml"),  emit: network, optional: true
+    path "msknit_out/*",                                       emit: all_output
 
     script:
     def graphml_flag = params.msknit_graphml ? '--graphml' : ''

@@ -67,6 +67,8 @@ include { MERGE_ANNOTATIONS as MERGE_POS }  from './modules/merge_annotations'
 include { MERGE_ANNOTATIONS as MERGE_NEG }  from './modules/merge_annotations'
 include { ANNOTATE_FEATURES as ANNOTATE_POS } from './modules/annotate_features'
 include { ANNOTATE_FEATURES as ANNOTATE_NEG } from './modules/annotate_features'
+include { ANNOTATE_NETWORK as ANNOTATE_NET_POS } from './modules/annotate_network'
+include { ANNOTATE_NETWORK as ANNOTATE_NET_NEG } from './modules/annotate_network'
 
 workflow {
 
@@ -192,5 +194,11 @@ workflow {
         // Join annotations onto MS-DIAL feature table
         ANNOTATE_POS( MSDIAL_POS.out.align_result, MERGE_POS.out.merged )
         ANNOTATE_NEG( MSDIAL_NEG.out.align_result, MERGE_NEG.out.merged )
+
+        // Annotate molecular network with tier annotations
+        if ( params.run_msknit && params.msknit_graphml ) {
+            ANNOTATE_NET_POS( MSKNIT_POS.out.network, MERGE_POS.out.merged )
+            ANNOTATE_NET_NEG( MSKNIT_NEG.out.network, MERGE_NEG.out.merged )
+        }
     }
 }
