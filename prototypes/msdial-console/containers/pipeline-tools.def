@@ -1,0 +1,8 @@
+Bootstrap: docker
+From: python:3.9-slim
+
+%post
+    pip install --no-cache-dir numpy openpyxl pandas
+
+%runscript
+    exec python3 "$@"

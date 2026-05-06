@@ -1,0 +1,23 @@
+Bootstrap: docker
+From: mcr.microsoft.com/dotnet/runtime:8.0-noble
+
+%labels
+    Author Anthony Goering
+    Description MS-DIAL Console 4.92
+
+%post
+    apt-get update && \
+    apt-get install -y --no-install-recommends python3 && \
+    rm -rf /var/lib/apt/lists/*
+
+%files
+    msdial/ /opt/
+
+%post
+    chmod +x /opt/msdial/MsdialConsoleApp
+
+%environment
+    export PATH="/opt/msdial:$PATH"
+
+%runscript
+    exec MsdialConsoleApp "$@"

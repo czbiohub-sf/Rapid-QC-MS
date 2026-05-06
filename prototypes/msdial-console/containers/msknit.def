@@ -1,0 +1,17 @@
+Bootstrap: docker
+From: debian:bookworm-slim
+
+%labels
+    Description msknit spectral search and molecular networking
+
+%files
+    msknit/msknit /usr/local/bin/msknit
+
+%post
+    apt-get update && \
+    apt-get install -y --no-install-recommends libssl3 ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+    chmod +x /usr/local/bin/msknit
+
+%runscript
+    exec msknit "$@"

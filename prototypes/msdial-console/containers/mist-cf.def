@@ -1,0 +1,40 @@
+Bootstrap: docker
+From: python:3.8-slim
+
+%labels
+    Description MIST-CF molecular formula prediction with SIRIUS decomp
+
+%post
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        openjdk-17-jre-headless \
+        libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+    pip install --no-cache-dir \
+        torch==1.9.1+cpu \
+        -f https://download.pytorch.org/whl/torch_stable.html \
+        pytorch-lightning==1.6.5 \
+        torch-geometric==2.0.4 \
+        torchmetrics==1.2.1 \
+        pandas==2.0.3 \
+        scipy==1.10.1 \
+        numpy==1.24.4 \
+        rdkit-pypi \
+        ray==2.8.1 \
+        ray-lightning==0.3.0 \
+        tqdm \
+        pyyaml
+
+%files
+    mist-cf /opt/mist-cf
+    sirius /opt/sirius
+
+%post
+    chmod +x /opt/sirius/bin/sirius || true
+    # Add MIST-CF to Python path instead of pip install
+    echo "/opt/mist-cf/src" > /usr/local/lib/python3.8/site-packages/mist-cf.pth
+
+%environment
+    export SIRIUS_PATH="/opt/sirius/bin/sirius"
+    export PYTHONPATH="/opt/mist-cf/src:$PYTHONPATH"
