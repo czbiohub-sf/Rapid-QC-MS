@@ -14,12 +14,11 @@ process DIFFMS_PREDICT {
     script:
     def checkpoint = params.diffms_checkpoint
     def n_samples  = params.diffms_samples ?: 10
+    def conda_setup = params.conda_init ?: ''
     """
     set -euo pipefail
 
-    source /hpc/apps/anaconda/25.3.1/etc/profile.d/conda.sh
-    conda activate diffms
-    export LD_LIBRARY_PATH=\$CONDA_PREFIX/lib:\$LD_LIBRARY_PATH
+    ${conda_setup ? conda_setup + ' && conda activate diffms && export LD_LIBRARY_PATH=\$CONDA_PREFIX/lib:\$LD_LIBRARY_PATH' : '# Running in container'}
 
     echo "Running DiffMS structure prediction"
     echo "Input: ${diffms_input}"

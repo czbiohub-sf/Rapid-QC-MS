@@ -15,13 +15,13 @@ process PYCUTTER_STEP1 {
     script:
     def pol_long = polarity == 'pos' ? 'positive' : 'negative'
     def out_name = "${params.pycutter_experiment}_${polarity == 'pos' ? 'Pos' : 'Neg'}Align_PyCutterStep1_Export.xlsx"
+    def conda_setup = params.conda_init ?: ''
     """
     set -euo pipefail
 
     echo "[${polarity}] Running PyCutter Step 1"
 
-    source /hpc/apps/anaconda/25.3.1/etc/profile.d/conda.sh
-    conda activate omni
+    ${conda_setup ? conda_setup + ' && conda activate omni' : '# Running in container'}
 
     python ${projectDir}/scripts/run_pycutter.py \
         --pycutter-dir ${params.pycutter_dir} \
@@ -50,13 +50,13 @@ process PYCUTTER_STEP2 {
     path "*_Perseus_*.txt",              emit: perseus, optional: true
 
     script:
+    def conda_setup = params.conda_init ?: ''
     """
     set -euo pipefail
 
     echo "Running PyCutter Step 2 (combine polarities)"
 
-    source /hpc/apps/anaconda/25.3.1/etc/profile.d/conda.sh
-    conda activate omni
+    ${conda_setup ? conda_setup + ' && conda activate omni' : '# Running in container'}
 
     python ${projectDir}/scripts/run_pycutter.py \
         --pycutter-dir ${params.pycutter_dir} \

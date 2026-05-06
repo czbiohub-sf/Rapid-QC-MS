@@ -14,15 +14,14 @@ process MIST_CF {
     script:
     def instrument = params.mist_cf_instrument ?: 'Orbitrap (LCMS)'
     def ppm        = params.mist_cf_ppm ?: 5
+    def conda_setup = params.conda_init ?: ''
     """
     set -euo pipefail
 
     echo "[${polarity}] Running MIST-CF formula prediction"
     echo "[${polarity}] Input MSP: ${msp_file}"
 
-    source /hpc/apps/anaconda/25.3.1/etc/profile.d/conda.sh
-    conda activate ms-gen
-    export LD_LIBRARY_PATH=\$CONDA_PREFIX/lib:\$LD_LIBRARY_PATH
+    ${conda_setup ? conda_setup + ' && conda activate ms-gen && export LD_LIBRARY_PATH=\$CONDA_PREFIX/lib:\$LD_LIBRARY_PATH' : '# Running in container — no conda needed'}
 
     # Convert MSP → MGF for MIST-CF
     python3 ${projectDir}/scripts/msp_to_mgf.py \
