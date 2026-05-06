@@ -135,12 +135,11 @@ workflow {
             ch_t2_neg_hits = SEARCH_T2_NEG.out.hits.map { pol, tier, f -> tuple(pol, f) }
         }
 
-        // Tier 3: MIST-CF formula prediction → DiffMS de novo structure generation
-        ch_t3_pos_hits = Channel.of( tuple('pos', file('NO_FILE')) )
-        ch_t3_neg_hits = Channel.of( tuple('neg', file('NO_FILE')) )
-
+        // Tier 3: MIST-CF formula prediction
         MIST_CF_POS( MSDIAL_POS.out.msp_library )
         MIST_CF_NEG( MSDIAL_NEG.out.msp_library )
+        ch_t3_pos_hits = MIST_CF_POS.out.formulas
+        ch_t3_neg_hits = MIST_CF_NEG.out.formulas
 
         // DiffMS de novo structure prediction (disabled — model not suitable
         // for blind inference on unknowns; kept for future use)
