@@ -14,12 +14,11 @@ module load nextflow/24.10.5
 # --- Paths ---
 PIPELINE_DIR="/hpc/mydata/anthony.goering/repos/Rapid-QC-MS/prototypes/msdial-console"
 CONFIG_DIR="$PIPELINE_DIR/config/tlg1025"
-OUTDIR="/hpc/projects/mass_spec_chi/Team/Tony/msdial-tlg1025/v6_reflib_diffms"
+OUTDIR="/hpc/projects/mass_spec_chi/Team/Tony/msdial-tlg1025/v6_annotated"
 LIBS_DIR="/hpc/projects/mass_spec_chi/Team/Tony/metabolomics_libraries"
-MODELS_DIR="/hpc/mydata/anthony.goering/models/diffms"
 
 echo "============================================"
-echo "Nextflow MS-DIAL TLG1025 v6 (reflib + DiffMS)"
+echo "Nextflow MS-DIAL TLG1025 v6 (annotated)"
 echo "============================================"
 echo "Node:      $(hostname)"
 echo "Started:   $(date)"
@@ -40,9 +39,9 @@ nextflow run main.nf \
     --run_msknit         true \
     --run_pycutter       true \
     --run_annotation     true \
-    --reference_library  "$LIBS_DIR/internal/Jan2026/combined_HILIC_Jan2026.msp" \
-    --predicted_library  "$LIBS_DIR/hmdb/hmdb_predicted.msp" \
-    --diffms_checkpoint  "$MODELS_DIR/checkpoints/diffms_msg.ckpt" \
+    --curated_library       "$LIBS_DIR/internal/Jan2026/combined_HILIC_Jan2026.msp" \
+    --experimental_library  "$LIBS_DIR/hmdb/hmdb_experimental.msp" \
+    --predicted_library     "$LIBS_DIR/hmdb/hmdb_predicted.msp" \
     -resume \
     -profile standard
 

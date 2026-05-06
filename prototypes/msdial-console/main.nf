@@ -23,14 +23,15 @@ params.pycutter_dir          = '/home/anthony.goering/repos/PyCutterForMetabolit
 params.pycutter_experiment   = 'experiment'
 
 // Tiered annotation pipeline (optional)
-params.run_annotation       = false
-params.reference_library    = null    // Tier 1: real spectral library MSP (e.g., GNPS, MoNA)
-params.predicted_library    = null    // Tier 2: predicted spectral library MSP (e.g., HMDB CFM-ID)
-params.search_min_cosine    = 0.7
-params.search_min_matched   = 4
-params.search_precursor_tol = 0.5
+params.run_annotation        = false
+params.curated_library       = null    // Tier 1: curated experimental spectral library MSP
+params.experimental_library  = null    // Tier 2: larger experimental spectral library MSP (e.g., HMDB experimental)
+params.predicted_library     = null    // Tier 3: predicted spectral library MSP (e.g., HMDB CFM-ID)
+params.search_min_cosine     = 0.7
+params.search_min_matched    = 4
+params.search_precursor_tol  = 0.5
 
-// MIST-CF formula prediction (Tier 3)
+// MIST-CF formula prediction (Tier 4)
 params.mist_cf_dir           = '/hpc/mydata/anthony.goering/opt/mist-cf'
 params.mist_cf_model         = '/hpc/mydata/anthony.goering/opt/mist-cf/quickstart/models/mist_cf_best.ckpt'
 params.mist_cf_fast_model    = '/hpc/mydata/anthony.goering/opt/mist-cf/quickstart/models/fast_filter_best.ckpt'
@@ -55,6 +56,8 @@ include { SPECTRAL_SEARCH as SEARCH_T1_POS } from './modules/spectral_search'
 include { SPECTRAL_SEARCH as SEARCH_T1_NEG } from './modules/spectral_search'
 include { SPECTRAL_SEARCH as SEARCH_T2_POS } from './modules/spectral_search'
 include { SPECTRAL_SEARCH as SEARCH_T2_NEG } from './modules/spectral_search'
+include { SPECTRAL_SEARCH as SEARCH_T3_POS } from './modules/spectral_search'
+include { SPECTRAL_SEARCH as SEARCH_T3_NEG } from './modules/spectral_search'
 include { MIST_CF as MIST_CF_POS }         from './modules/mist_cf'
 include { MIST_CF as MIST_CF_NEG }         from './modules/mist_cf'
 include { PREPARE_DIFFMS }                  from './modules/prepare_diffms'
@@ -113,35 +116,47 @@ workflow {
     // --- Tiered annotation pipeline (optional) ---
     if ( params.run_annotation ) {
 
-        // Tier 1: Search against real spectral library
+        // Tier 1: curated experimental spectral library
         ch_t1_pos_hits = Channel.of( tuple('pos', file('NO_FILE')) )
         ch_t1_neg_hits = Channel.of( tuple('neg', file('NO_FILE')) )
 
-        if ( params.reference_library ) {
-            ch_ref_lib = Channel.of( tuple('tier1_reference', file(params.reference_library)) )
-            SEARCH_T1_POS( MSDIAL_POS.out.msp_library, ch_ref_lib )
-            SEARCH_T1_NEG( MSDIAL_NEG.out.msp_library, ch_ref_lib )
+        if ( params.curated_library ) {
+            ch_curated_lib = Channel.of( tuple('tier1_curated', file(params.curated_library)) )
+            SEARCH_T1_POS( MSDIAL_POS.out.msp_library, ch_curated_lib )
+            SEARCH_T1_NEG( MSDIAL_NEG.out.msp_library, ch_curated_lib )
             ch_t1_pos_hits = SEARCH_T1_POS.out.hits.map { pol, tier, f -> tuple(pol, f) }
             ch_t1_neg_hits = SEARCH_T1_NEG.out.hits.map { pol, tier, f -> tuple(pol, f) }
         }
 
-        // Tier 2: Search against predicted spectral library (e.g., HMDB CFM-ID)
+        // Tier 2: larger experimental spectral library (e.g., HMDB experimental)
         ch_t2_pos_hits = Channel.of( tuple('pos', file('NO_FILE')) )
         ch_t2_neg_hits = Channel.of( tuple('neg', file('NO_FILE')) )
 
-        if ( params.predicted_library ) {
-            ch_pred_lib = Channel.of( tuple('tier2_predicted', file(params.predicted_library)) )
-            SEARCH_T2_POS( MSDIAL_POS.out.msp_library, ch_pred_lib )
-            SEARCH_T2_NEG( MSDIAL_NEG.out.msp_library, ch_pred_lib )
+        if ( params.experimental_library ) {
+            ch_exp_lib = Channel.of( tuple('tier2_experimental', file(params.experimental_library)) )
+            SEARCH_T2_POS( MSDIAL_POS.out.msp_library, ch_exp_lib )
+            SEARCH_T2_NEG( MSDIAL_NEG.out.msp_library, ch_exp_lib )
             ch_t2_pos_hits = SEARCH_T2_POS.out.hits.map { pol, tier, f -> tuple(pol, f) }
             ch_t2_neg_hits = SEARCH_T2_NEG.out.hits.map { pol, tier, f -> tuple(pol, f) }
         }
 
-        // Tier 3: MIST-CF formula prediction
+        // Tier 3: predicted spectral library (e.g., HMDB CFM-ID)
+        ch_t3_pos_hits = Channel.of( tuple('pos', file('NO_FILE')) )
+        ch_t3_neg_hits = Channel.of( tuple('neg', file('NO_FILE')) )
+
+        if ( params.predicted_library ) {
+            ch_pred_lib = Channel.of( tuple('tier3_predicted', file(params.predicted_library)) )
+            SEARCH_T3_POS( MSDIAL_POS.out.msp_library, ch_pred_lib )
+            SEARCH_T3_NEG( MSDIAL_NEG.out.msp_library, ch_pred_lib )
+            ch_t3_pos_hits = SEARCH_T3_POS.out.hits.map { pol, tier, f -> tuple(pol, f) }
+            ch_t3_neg_hits = SEARCH_T3_NEG.out.hits.map { pol, tier, f -> tuple(pol, f) }
+        }
+
+        // Tier 4: MIST-CF molecular formula prediction
         MIST_CF_POS( MSDIAL_POS.out.msp_library )
         MIST_CF_NEG( MSDIAL_NEG.out.msp_library )
-        ch_t3_pos_hits = MIST_CF_POS.out.formulas
-        ch_t3_neg_hits = MIST_CF_NEG.out.formulas
+        ch_t4_pos_hits = MIST_CF_POS.out.formulas
+        ch_t4_neg_hits = MIST_CF_NEG.out.formulas
 
         // DiffMS de novo structure prediction (disabled — model not suitable
         // for blind inference on unknowns; kept for future use)
@@ -161,21 +176,18 @@ workflow {
             PREPARE_DIFFMS( ch_msp_for_prep, ch_formulas_for_prep, ch_subforms_for_prep )
             DIFFMS_PREDICT( PREPARE_DIFFMS.out.diffms_dir )
 
-            // Build pseudolibrary from DiffMS predictions
-            ch_all_msp = MSDIAL_POS.out.msp_library.map { pol, f -> f }
-                .mix( MSDIAL_NEG.out.msp_library.map { pol, f -> f } )
-                .collect()
-
             BUILD_PSEUDOLIBRARY(
-                ch_all_msp,
+                MSDIAL_POS.out.msp_library.map { pol, f -> f }
+                    .mix( MSDIAL_NEG.out.msp_library.map { pol, f -> f } )
+                    .collect(),
                 DIFFMS_PREDICT.out.predictions,
                 DIFFMS_PREDICT.out.input_data
             )
         }
 
         // Merge tiered annotations per polarity
-        MERGE_POS( ch_t1_pos_hits, ch_t2_pos_hits, ch_t3_pos_hits )
-        MERGE_NEG( ch_t1_neg_hits, ch_t2_neg_hits, ch_t3_neg_hits )
+        MERGE_POS( ch_t1_pos_hits, ch_t2_pos_hits, ch_t3_pos_hits, ch_t4_pos_hits )
+        MERGE_NEG( ch_t1_neg_hits, ch_t2_neg_hits, ch_t3_neg_hits, ch_t4_neg_hits )
 
         // Join annotations onto MS-DIAL feature table
         ANNOTATE_POS( MSDIAL_POS.out.align_result, MERGE_POS.out.merged )
