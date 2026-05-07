@@ -202,3 +202,38 @@ workflow {
         }
     }
 }
+
+workflow.onComplete {
+    def manifest = """\
+    Pipeline:     ${workflow.manifest.name} v${workflow.manifest.version}
+    Git commit:   ${workflow.commitId ?: 'unknown'}
+    Git branch:   ${workflow.revision ?: 'unknown'}
+    Nextflow:     ${nextflow.version} build ${nextflow.build}
+    Timestamp:    ${workflow.complete}
+    Duration:     ${workflow.duration}
+    Success:      ${workflow.success}
+    Exit status:  ${workflow.exitStatus}
+    Work dir:     ${workflow.workDir}
+    Output dir:   ${params.outdir}
+    Profile:      ${workflow.profile}
+    Config files: ${workflow.configFiles.join(', ')}
+
+    Parameters:
+    ${params.collect { k, v -> "  ${k}: ${v}" }.join('\n')}
+    """.stripIndent()
+
+    def manifest_file = file("${params.outdir}/run_manifest.txt")
+    manifest_file.text = manifest
+
+    // Also record container image checksums if using apptainer
+    if ( workflow.profile.contains('apptainer') ) {
+        def sif_dir = file("${workflow.projectDir}/containers")
+        def checksums = "Container image checksums (md5):\n"
+        sif_dir.listFiles().findAll { it.name.endsWith('.sif') }.each { sif ->
+            checksums += "  ${sif.name}: ${sif.size()} bytes\n"
+        }
+        manifest_file.append(checksums)
+    }
+
+    log.info manifest
+}
