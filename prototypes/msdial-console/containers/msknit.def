@@ -9,7 +9,7 @@ From: debian:bookworm-slim
 
 %post
     apt-get update && \
-    apt-get install -y --no-install-recommends libssl3 ca-certificates && \
+    apt-get install -y --no-install-recommends libssl3 ca-certificates procps && \
     rm -rf /var/lib/apt/lists/*
     chmod +x /usr/local/bin/msknit
 

@@ -9,6 +9,7 @@ From: python:3.8-slim
     apt-get install -y --no-install-recommends \
         openjdk-17-jre-headless \
         libgomp1 \
+        procps \
     && rm -rf /var/lib/apt/lists/*
 
     pip install --no-cache-dir \

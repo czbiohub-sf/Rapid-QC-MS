@@ -6,6 +6,7 @@ params.manifest_neg  = null
 params.params_pos    = null
 params.params_neg    = null
 params.tool_name     = 'msdial-console'
+params.conda_init    = null
 params.outdir        = 'results'
 params.msdial_binary = '/hpc/mydata/anthony.goering/opt/msdial4/MsdialConsoleApp'
 
