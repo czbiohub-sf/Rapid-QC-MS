@@ -39,6 +39,12 @@ params.mist_cf_fast_model    = '/hpc/mydata/anthony.goering/opt/mist-cf/quicksta
 params.mist_cf_instrument    = 'Orbitrap (LCMS)'
 params.mist_cf_ppm           = 5
 params.sirius_decomp_binary  = '/hpc/mydata/anthony.goering/opt/sirius/bin/sirius'
+// MIST-CF's ION_LST and trained model are positive-mode only (NPLIB1/GNPS positive subset).
+// Running on negative-polarity features produces formulas off by H/H2 because the only
+// adducts considered are [M+H]+, [M+Na]+, [M+K]+, [M-H2O+H]+, [M+H3N+H]+, [M]+, [M-H4O2+H]+.
+// Default: skip MIST-CF in negative mode. Set to true only if MIST-CF source is patched
+// to support negative adducts.
+params.run_mist_cf_negative  = false
 
 // DiffMS de novo structure prediction
 params.diffms_repo          = '/home/anthony.goering/repos/DiffMS'
@@ -155,14 +161,21 @@ workflow {
             ch_t3_neg_hits = SEARCH_T3_NEG.out.hits.map { pol, tier, f -> tuple(pol, f) }
         }
 
-        // Tier 4: MIST-CF molecular formula prediction
+        // Tier 4: MIST-CF molecular formula prediction (positive mode only by default —
+        // see params.run_mist_cf_negative for why)
         MIST_CF_POS( MSDIAL_POS.out.msp_library )
-        MIST_CF_NEG( MSDIAL_NEG.out.msp_library )
         ch_t4_pos_hits = MIST_CF_POS.out.formulas
-        ch_t4_neg_hits = MIST_CF_NEG.out.formulas
+        ch_t4_neg_hits = Channel.of( tuple('neg', file('NO_FILE')) )
+        if ( params.run_mist_cf_negative ) {
+            MIST_CF_NEG( MSDIAL_NEG.out.msp_library )
+            ch_t4_neg_hits = MIST_CF_NEG.out.formulas
+        }
 
         // DiffMS de novo structure prediction (disabled — model not suitable
-        // for blind inference on unknowns; kept for future use)
+        // for blind inference on unknowns; kept for future use).
+        // NOTE: this branch references MIST_CF_NEG.out which only exists when
+        // params.run_mist_cf_negative is true. If reactivating DiffMS, ensure
+        // run_mist_cf_negative is also set, or restrict DiffMS to positive mode.
         if ( params.diffms_checkpoint ) {
             ch_diffms_pos = MSDIAL_POS.out.msp_library
                 .join( MIST_CF_POS.out.formulas )

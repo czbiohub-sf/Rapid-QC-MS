@@ -303,6 +303,18 @@ If MIST-CF runs out of memory on larger datasets, edit
   files. `--experimental_library` and `--predicted_library` follow the
   same convention.
 
+- **MIST-CF (Tier 4) is positive-mode only and skipped by default in
+  negative polarity.** MIST-CF's `ION_LST` and trained model are
+  hard-coded for `[M+H]+`, `[M+Na]+`, `[M+K]+`, `[M-H2O+H]+`,
+  `[M+H3N+H]+`, `[M]+`, `[M-H4O2+H]+` (NPLIB1/GNPS positive training
+  set). Running on negative-mode features without patching MIST-CF
+  produces formulas off by H/H2 because `[M-H]-` is never considered.
+  `main.nf` defaults `params.run_mist_cf_negative = false` and skips
+  `MIST_CF_NEG`, providing a `NO_FILE` placeholder to `MERGE_NEG`.
+  Override with `--run_mist_cf_negative true` only after patching
+  `chem_utils.py` to add negative adducts (and accepting the model
+  domain-shift, since training was positive-only).
+
 ## Per-run output layout
 
 ```
