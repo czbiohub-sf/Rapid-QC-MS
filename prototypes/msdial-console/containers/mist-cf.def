@@ -28,7 +28,10 @@ From: python:3.8-slim
         pyyaml \
         matplotlib \
         seaborn \
-        scikit-learn
+        scikit-learn \
+        pathos \
+        einops \
+        hyperopt
 
 %files
     mist-cf /opt/mist-cf
