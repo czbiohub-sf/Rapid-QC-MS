@@ -18,11 +18,13 @@ process MERGE_ANNOTATIONS {
     def t2 = tier2_hits.name != 'NO_FILE' ? "--tier2 ${tier2_hits}" : ''
     def t3 = tier3_hits.name != 'NO_FILE' ? "--tier3 ${tier3_hits}" : ''
     def t4 = tier4_hits.name != 'NO_FILE' ? "--tier4 ${tier4_hits}" : ''
+    def t4_top_k = params.merge_mistcf_top_k ?: 3
     """
     set -euo pipefail
 
     python3.9 ${projectDir}/scripts/merge_annotations.py \
         ${t1} ${t2} ${t3} ${t4} \
+        --tier4-top-k ${t4_top_k} \
         --output merged_annotations.csv
     """
 }

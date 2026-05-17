@@ -45,6 +45,9 @@ params.sirius_decomp_binary  = '/hpc/mydata/anthony.goering/opt/sirius/bin/siriu
 // Default: skip MIST-CF in negative mode. Set to true only if MIST-CF source is patched
 // to support negative adducts.
 params.run_mist_cf_negative  = false
+// Number of MIST-CF formula candidates to keep per feature in merged_annotations.csv.
+// Rank 1 in t4_*, ranks 2..K in t4_alt{2..K}_*.
+params.merge_mistcf_top_k    = 3
 
 // DiffMS de novo structure prediction
 params.diffms_repo          = '/home/anthony.goering/repos/DiffMS'

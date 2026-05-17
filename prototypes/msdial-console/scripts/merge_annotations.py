@@ -69,7 +69,6 @@ def load_mistcf_formulas(path: Path, top_k: int = 3) -> dict:
 
 SPECTRAL_FIELDS = ["name", "formula", "smiles", "inchikey", "cosine", "matched_peaks"]
 FORMULA_FIELDS = ["formula", "adduct", "score"]
-MISTCF_TOP_K = 3
 
 
 def main():
@@ -82,20 +81,23 @@ def main():
                         help="Tier 3 hits.csv (predicted library)")
     parser.add_argument("--tier4", type=Path, default=None,
                         help="Tier 4 MIST-CF formatted_output.tsv")
+    parser.add_argument("--tier4-top-k", type=int, default=3,
+                        help="Keep top-K MIST-CF formula candidates per feature "
+                             "(rank-1 in t4_*, rank-2..K in t4_alt{2..K}_*).")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
     t1_hits = load_spectral_hits(args.tier1)
     t2_hits = load_spectral_hits(args.tier2)
     t3_hits = load_spectral_hits(args.tier3)
-    t4_hits = load_mistcf_formulas(args.tier4, top_k=MISTCF_TOP_K)
+    t4_hits = load_mistcf_formulas(args.tier4, top_k=args.tier4_top_k)
 
     all_ids = set(t1_hits) | set(t2_hits) | set(t3_hits) | set(t4_hits)
 
     print(f"Tier 1 (curated experimental): {len(t1_hits)} hits")
     print(f"Tier 2 (experimental):         {len(t2_hits)} hits")
     print(f"Tier 3 (predicted):            {len(t3_hits)} hits")
-    print(f"Tier 4 (MIST-CF formula):      {len(t4_hits)} hits (up to top-{MISTCF_TOP_K} per feature)")
+    print(f"Tier 4 (MIST-CF formula):      {len(t4_hits)} hits (up to top-{args.tier4_top_k} per feature)")
     print(f"Unique features across tiers:  {len(all_ids)}")
 
     fieldnames = ["alignment_id", "best_tier"]
@@ -104,7 +106,7 @@ def main():
     # Tier 4: keep rank-1 in the bare t4_* columns for backwards compat,
     # plus rank-2/3 alternates in t4_alt2_*/t4_alt3_*.
     fieldnames += [f"t4_{f}" for f in FORMULA_FIELDS]
-    for k in range(2, MISTCF_TOP_K + 1):
+    for k in range(2, args.tier4_top_k + 1):
         fieldnames += [f"t4_alt{k}_{f}" for f in FORMULA_FIELDS]
 
     tier_order = [
@@ -146,7 +148,7 @@ def main():
                     row["t4_formula"] = candidates[0]["formula"]
                     row["t4_adduct"]  = candidates[0]["adduct"]
                     row["t4_score"]   = candidates[0]["score"]
-                for k, c in enumerate(candidates[1:MISTCF_TOP_K], start=2):
+                for k, c in enumerate(candidates[1:args.tier4_top_k], start=2):
                     row[f"t4_alt{k}_formula"] = c["formula"]
                     row[f"t4_alt{k}_adduct"]  = c["adduct"]
                     row[f"t4_alt{k}_score"]   = c["score"]
