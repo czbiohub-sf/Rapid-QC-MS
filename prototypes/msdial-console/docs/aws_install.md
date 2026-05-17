@@ -315,6 +315,19 @@ If MIST-CF runs out of memory on larger datasets, edit
   `chem_utils.py` to add negative adducts (and accepting the model
   domain-shift, since training was positive-only).
 
+## Tunable parameters
+
+Beyond the standard `--manifest_*`, `--params_*`, `--*_library` flags, the
+pipeline has a few knobs worth knowing:
+
+| Param                          | Default | Purpose |
+|--------------------------------|---------|---------|
+| `--run_mist_cf_negative`       | `false` | Run MIST-CF on negative-polarity features. Off because MIST-CF's `ION_LST` and trained model are positive-only — neg formulas come out systematically off by H/H2. See gotchas. |
+| `--merge_mistcf_top_k`         | `3`     | Number of MIST-CF formula candidates kept per feature in `merged_annotations.csv`. Rank 1 goes in `t4_*`; ranks 2..K go in `t4_alt2_*`..`t4_alt{K}_*`. Useful because at high mass accuracy the library formula is in MIST-CF top 3 ~96% of the time vs ~88% at rank 1 on TLG1025. |
+| `--run_msknit`                 | `false` | Build molecular networks from MS-DIAL MSP libraries. Outputs `msknit_out/{nodes,edges}.csv`, `network.graphml`. Cheap (~6 min on full TLG1025). |
+| `--run_pycutter`               | `false` | Blank subtraction / CV filtering. Currently **broken under apptainer** — see gotchas. Leave `false`. |
+| `--run_annotation`             | `false` | Master switch for Tier 1-4. Set `true` for any of the tier libraries to be searched. |
+
 ## Per-run output layout
 
 ```
@@ -326,13 +339,30 @@ If MIST-CF runs out of memory on larger datasets, edit
 ├── run_manifest.txt                              # params + container md5s
 ├── pos/
 │   ├── output/AlignResult-*.msdial, AlignResult-*.msp
-│   ├── annotated_feature_table.tsv               # MSDIAL + merged annotations
+│   ├── annotated_feature_table.tsv               # MSDIAL + merged annotations (per-sample intensities + Tier 1-4 cols)
 │   ├── annotations/
-│   │   ├── merged_annotations.csv
-│   │   ├── tier1_curated/hits.csv
+│   │   ├── merged_annotations.csv                # one row per feature, all tier hits joined
+│   │   ├── tier1_curated/hits.csv                # raw msknit search output
 │   │   ├── tier2_experimental/hits.csv
 │   │   └── tier3_predicted/hits.csv
 │   ├── msknit/msknit_out/{nodes,edges}.csv, network.graphml
-│   └── mist_cf/mist_cf_out/formatted_output.tsv  # Tier 4 formulas
-└── neg/  # same layout
+│   └── mist_cf/mist_cf_out/formatted_output.tsv  # all MIST-CF candidates (top-K selected into merged_annotations)
+└── neg/  # same layout; mist_cf/ absent when run_mist_cf_negative=false
 ```
+
+### `merged_annotations.csv` schema
+
+```
+alignment_id, best_tier,
+t1_name, t1_formula, t1_smiles, t1_inchikey, t1_cosine, t1_matched_peaks,
+t2_*  (same shape as t1),
+t3_*  (same shape as t1),
+t4_formula, t4_adduct, t4_score,                   # MIST-CF rank 1
+t4_alt2_formula, t4_alt2_adduct, t4_alt2_score,    # MIST-CF rank 2  (only if --merge_mistcf_top_k >= 2)
+t4_alt3_formula, t4_alt3_adduct, t4_alt3_score     # MIST-CF rank 3
+```
+
+`best_tier` is the highest-confidence tier that produced a hit for that
+feature: `tier1_curated` > `tier2_experimental` > `tier3_predicted` >
+`tier4_formula`. For neg with `run_mist_cf_negative=false`, all `t4_*`
+fields are blank.
