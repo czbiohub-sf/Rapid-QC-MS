@@ -1,0 +1,9 @@
+Bootstrap: docker
+From: python:3.9-slim
+
+%post
+    apt-get update && apt-get install -y --no-install-recommends procps && rm -rf /var/lib/apt/lists/*
+    pip install --no-cache-dir numpy openpyxl pandas
+
+%runscript
+    exec python3 "$@"

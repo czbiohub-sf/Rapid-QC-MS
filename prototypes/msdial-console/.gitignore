@@ -1,0 +1,25 @@
+work/
+intermediate/
+output/
+results/
+*.log
+*.tmp
+*.dcl
+*.pai
+*.mtd
+*.mtd2
+*.msp2
+.nextflow/
+.nextflow.log*
+*.sif
+containers/MsdialConsoleApp_linux-x64/
+
+# Locally staged container build inputs (binaries / external repos / SIRIUS install)
+# MS-DIAL Console binaries dropped into containers/msdial/ — keep only the Dockerfile
+containers/msdial/*
+!containers/msdial/Dockerfile
+# msknit Rust binary built from prototypes/msknit/
+containers/msknit/msknit
+# MIST-CF source + SIRIUS install staged as symlinks for apptainer build
+containers/mist-cf
+containers/sirius
